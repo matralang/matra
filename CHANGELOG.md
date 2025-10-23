@@ -13,16 +13,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `m-each="items" m-as="item"` - Array iteration on regular elements
   - `m-else` attribute - Alternative content when `m-if` is falsy
   - Fully compatible with jp-butchi's existing template syntax
+- **Template literal support** in `with_()`:
+  - Now accepts both plain strings and template literals
+  - Compatible with tagged template literal syntax: `` with_(ctx)`div { ... }` ``
 
 ### Changed
 - `transformWithScopes()` completely rewritten to prioritize attribute directives over tag directives
 - `transform()` now correctly handles single node inputs (returns null when filtered out)
 - `toHTML()` enhanced with HAST/MDAST node type support
+- `render.mjs` enhanced with `renderHastNode()` function for HAST format support
 
 ### Fixed
 - Attribute-based directives now work correctly with `m-else` siblings
 - Empty results from falsy `m-if` conditions are now properly handled
 - Scope management for nested `m-each` iterations
+- Template literal interpolation in `with_()` function
 
 ## [0.6.0] - 2025-10-22
 
