@@ -98,6 +98,12 @@ function transformWithScopes(nodeList, scopes) {
       continue
     }
 
+    // Comment node - pass through without modification
+    if (node.type === "comment") {
+      out.push(node)
+      continue
+    }
+
     // Element node
     if (node.type === "element") {
       const props = node.properties || {}
