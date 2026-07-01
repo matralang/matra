@@ -4,7 +4,7 @@
 
 import assert from "node:assert"
 import { describe, it } from "node:test"
-import { compile } from "../src/index.mjs"
+import { compile } from "../dist/index.js"
 
 describe("Backtick Text Syntax", () => {
   describe("Basic Usage", () => {

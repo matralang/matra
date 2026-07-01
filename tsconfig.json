@@ -3,15 +3,16 @@
     "allowJs": true,
     "checkJs": false,
     "declaration": true,
-    "emitDeclarationOnly": true,
-    "outDir": "dist/types",
-    "strict": true,
+    "esModuleInterop": true,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "rootDir": "src",
+    "sourceMap": true,
+    "strict": false,
     "target": "ES2022",
     "types": ["node"],
     "skipLibCheck": true
   },
-  "include": ["src/**/*.mjs"],
-  "exclude": ["src/parser.mjs"]
+  "include": ["src/**/*.ts", "src/parser.mjs"]
 }

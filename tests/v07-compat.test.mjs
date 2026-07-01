@@ -3,7 +3,7 @@
 
 import assert from "node:assert"
 import { describe, it } from "node:test"
-import { parse, compile } from "../src/index.mjs"
+import { parse, compile } from "../dist/index.js"
 
 describe("Matra v0.7 Compatibility", () => {
   it("parses simple element with text", () => {

@@ -3,7 +3,7 @@
 
 import assert from "node:assert"
 import { describe, it } from "node:test"
-import { parse, compile, transform } from "../src/index.mjs"
+import { parse, compile, transform } from "../dist/index.js"
 
 describe("Matra v0.8 Comprehensive Tests", () => {
   describe("Function Syntax Basics", () => {

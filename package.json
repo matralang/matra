@@ -3,24 +3,24 @@
   "description": "Matra core language runtime and parser",
   "version": "0.8.1",
   "type": "module",
-  "main": "src/index.mjs",
-  "types": "dist/types/index.d.mts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.mts",
-      "import": "./src/index.mjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "files": [
-    "src",
-    "dist/types"
+    "dist",
+    "src/matra.pegjs"
   ],
   "scripts": {
     "build": "npm run build:parser && npm run build:types",
     "build:parser": "peggy --format es --output src/parser.mjs src/matra.pegjs",
     "build:types": "tsc",
     "check": "tsc --noEmit",
-    "test": "node --test",
+    "test": "npm run build && node --test",
     "prepack": "npm run build"
   },
   "license": "MIT",

@@ -3,7 +3,7 @@
 
 import assert from "node:assert"
 import { describe, it } from "node:test"
-import { parse, compile } from "../src/index.mjs"
+import { parse, compile } from "../dist/index.js"
 
 describe("Matra v0.8 Mixed Syntax", () => {
   it("can parse function and block syntax in same document", () => {

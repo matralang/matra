@@ -1,6 +1,6 @@
 import { describe, test } from "node:test"
 import assert from "node:assert/strict"
-import { matra } from "../src/index.mjs"
+import { matra } from "../dist/index.js"
 
 describe("Tilde Syntax", () => {
   describe("Basic usage", () => {

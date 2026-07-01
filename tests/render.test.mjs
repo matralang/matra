@@ -1,7 +1,7 @@
 // render.test.mjs — Matra v0.5 mixed-format integration test
 // -----------------------------------------------------------
 
-import { renderHTML } from "../src/render.mjs"
+import { renderHTML } from "../dist/render.js"
 import assert from "node:assert"
 import { describe, it } from "node:test"
 

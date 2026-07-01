@@ -1,8 +1,13 @@
-// evaluate.mjs — Matra v0.5 Evaluator
+// evaluate.ts — Matra v0.5 Evaluator
 // ------------------------------------
 // Pure evaluation layer for Matrast (AST)
 
 import { parse } from "./parser.mjs"
+
+export interface EvaluationContext {
+  types?: Record<string, unknown>
+  [key: string]: unknown
+}
 
 /**
  * 評価関数
@@ -10,7 +15,7 @@ import { parse } from "./parser.mjs"
  * @param {object} ctx - 評価コンテキスト
  * @returns {any}
  */
-export function evaluate(node, ctx = {}) {
+export function evaluate(node: any, ctx: EvaluationContext = {}): any {
   if (node == null) return null
 
   // 文字列・数値などはそのまま返す
@@ -91,7 +96,7 @@ export function evaluate(node, ctx = {}) {
  * @param {object} ctx
  * @returns {any[]}
  */
-export function evaluateSource(source, ctx = {}) {
+export function evaluateSource(source: string, ctx: EvaluationContext = {}): any[] {
   const ast = parse(source)
   return ast.map(node => evaluate(node, ctx))
 }
@@ -101,7 +106,7 @@ if (process.argv[1] === new URL(import.meta.url).pathname) {
   const fs = await import("fs")
   const src = process.argv[2]
   if (!src) {
-    console.error("Usage: node src/evaluate.mjs <file.matra>")
+    console.error("Usage: node dist/evaluate.js <file.matra>")
     process.exit(1)
   }
   const text = fs.readFileSync(src, "utf-8")

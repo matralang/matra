@@ -321,9 +321,9 @@ function transformWithScopes(nodeList, scopes) {
 
 /**
  * Transform Matra AST with template context
- * @param {import('./types.mjs').MatraNode} ast
+ * @param {import('./types.js').MatraNode} ast
  * @param {Record<string, any>} context
- * @returns {import('./types.mjs').MatraNode}
+ * @returns {import('./types.js').MatraNode}
  */
 export function transform(ast, context = {}) {
   if (ast == null) return ast

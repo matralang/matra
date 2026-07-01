@@ -6,14 +6,29 @@
  */
 
 import { parse } from "./parser.mjs"
-import { toHTML, toJSON, toTeX, toESTree, toCanvas } from "./render.mjs"
-import { transform } from "./transform.mjs"
-import { MATRA_VERSION } from "./types.mjs"
+import { toHTML, toJSON, toTeX, toESTree, toCanvas } from "./render.js"
+import { transform } from "./transform.js"
+import { MATRA_VERSION } from "./types.js"
 
 export { parse } from "./parser.mjs"
-export { toHTML, toJSON, toTeX, toESTree, toCanvas } from "./render.mjs"
-export { transform } from "./transform.mjs"
-export { MATRA_VERSION } from "./types.mjs"
+export { toHTML, toJSON, toTeX, toESTree, toCanvas } from "./render.js"
+export { transform } from "./transform.js"
+export { MATRA_VERSION } from "./types.js"
+export type * from "./types.js"
+
+export type SyntaxMode = "mixed" | "document" | "application"
+export type OutputFormat = "html" | "json" | "tex" | "estree" | "canvas"
+
+export interface CompileOptions {
+  minify?: boolean
+  grammarSource?: string
+  context?: Record<string, unknown>
+  mode?: SyntaxMode
+}
+
+export interface MatraOptions extends CompileOptions {
+  output?: OutputFormat
+}
 
 /**
  * Compile Matra source code to HTML
@@ -28,7 +43,7 @@ export { MATRA_VERSION } from "./types.mjs"
  *   - 'application': Function syntax only (JSX-style)
  * @returns {string} HTML string
  */
-export function compile(source, opts = {}) {
+export function compile(source: string, opts: CompileOptions = {}): string {
   const mode = opts.mode ?? 'mixed'
   let ast = parse(source, { 
     grammarSource: opts.grammarSource,
@@ -46,8 +61,8 @@ export function compile(source, opts = {}) {
  * @param {Record<string, any>} context - Template context
  * @returns {Function} Template function
  */
-export function with_(context) {
-  return (source, ...values) => {
+export function with_(context: Record<string, unknown>) {
+  return (source: string | TemplateStringsArray, ...values: unknown[]): string => {
     // Support both plain string and template literal
     let templateSource
     if (typeof source === 'string') {
@@ -80,7 +95,7 @@ export function with_(context) {
  *   - 'application': Function syntax only (JSX-style)
  * @returns {string|Object|Array<unknown>} Rendered output in specified format
  */
-export function matra(input, options = {}) {
+export function matra(input: string, options: MatraOptions = {}) {
   const output = options.output ?? "html"
   const mode = options.mode ?? "mixed"
   let ast = parse(input, { 

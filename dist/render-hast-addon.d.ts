@@ -3,4 +3,4 @@
  * @param {Object} node
  * @returns {string}
  */
-export function renderHastNode(node: Object): string;
+export declare function renderHastNode(node: any): any;

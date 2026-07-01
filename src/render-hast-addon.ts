@@ -61,5 +61,5 @@ function escapeAttr(str) {
   return str.replace(/"/g, "&quot;").replace(/'/g, "&#039;")
 }
 
-// Import from render.mjs
-import { toHTML } from "./render.mjs"
+// Import from the compiled renderer module
+import { toHTML } from "./render.js"

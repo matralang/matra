@@ -6,7 +6,7 @@
  * alongside the existing block-style syntax from v0.7.
  */
 
-import { compile } from "../src/index.mjs"
+import { compile } from "../dist/index.js"
 
 console.log("=== Matra v0.8 Function Syntax Examples ===\n")
 

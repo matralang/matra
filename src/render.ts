@@ -1,9 +1,9 @@
-// render.mjs — Matra v0.5 Renderer
+// render.ts — Matra v0.5 Renderer
 // --------------------------------
 // Converts evaluated Matra objects into external representations
 // Supports: HTML, JSON, TeX (basic), ESTree stub
 
-import { evaluateSource } from "./evaluate.mjs"
+import { evaluateSource } from "./evaluate.js"
 
 /**
  * Render HAST/MDAST-style node {type, tagName, properties, children}
@@ -66,7 +66,7 @@ export function toHTML(node, _opts = {}) {
   if (Array.isArray(node)) {
     // Check if it's a Matrast node [tag, props, body]
     if (typeof node[0] === "string" && node.length <= 3) {
-      return renderMatrastNode(node)
+      return renderMatrastNode(node as [any, any, any])
     }
     // Otherwise it's an array of nodes
     return node.map(toHTML).join("")
@@ -152,7 +152,7 @@ function renderMatrastNode([tag, props, body]) {
  * @param {boolean} [opts.pretty] - Pretty print JSON
  * @returns {string}
  */
-export function toJSON(node, opts = {}) {
+export function toJSON(node: unknown, opts: { pretty?: boolean } = {}): string {
   return JSON.stringify(node, null, opts.pretty ? 2 : 0)
 }
 
@@ -383,7 +383,7 @@ if (process.argv[1] === new URL(import.meta.url).pathname) {
   const fs = await import("fs")
   const src = process.argv[2]
   if (!src) {
-    console.error("Usage: node src/render.mjs <file.matra>")
+    console.error("Usage: node dist/render.js <file.matra>")
     process.exit(1)
   }
   const text = fs.readFileSync(src, "utf-8")
