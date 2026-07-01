@@ -1,6 +1,16 @@
 {
+  "name": "matra-graphics",
+  "version": "0.2.0",
+  "description": "A tiny, expressive TypeScript API for composing SVG graphics.",
   "type": "module",
+  "exports": "./module.ts",
+  "scripts": {
+    "build": "node --import tsx build.ts",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "check": "npm test"
+  },
   "devDependencies": {
+    "esbuild": "^0.27.2",
     "tsx": "^4.21.0"
   }
 }
