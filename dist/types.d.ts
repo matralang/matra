@@ -27,4 +27,4 @@ export interface ParseOptions {
 export interface MatraParser<Output = MatraAST | MatraJSON> {
     parse(source: string, options?: ParseOptions): Output;
 }
-export declare const MATRA_VERSION = "0.1.1";
+export declare const MATRA_VERSION = "0.2.0";
