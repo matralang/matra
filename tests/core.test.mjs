@@ -11,10 +11,26 @@ import {
 
 describe("domain-neutral Matra Core", () => {
   it("parses to compact AST", () => {
-    assert.deepEqual(parse('sum({axis:"x"}, value("a"), 2)'), [
+    assert.deepEqual(parse('sum(value("a"), 2, axis="x")'), [
       "sum",
       { axis: "x" },
       [["value", {}, ["a"]], 2],
+    ])
+  })
+
+  it("parses Python-style keyword props", () => {
+    assert.deepEqual(parse("circle(x=10, y=20, r=5)"), [
+      "circle",
+      { x: 10, y: 20, r: 5 },
+      [],
+    ])
+  })
+
+  it("keeps object-style props as a compatibility syntax", () => {
+    assert.deepEqual(parse('circle({x:10}, "label")'), [
+      "circle",
+      { x: 10 },
+      ["label"],
     ])
   })
 
