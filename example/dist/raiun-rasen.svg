@@ -1,0 +1,252 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><rect width="100%" height="100%" fill="white"></rect>
+<line x1="128" y1="20" x2="76.89417145876976" y2="33.27045132122507" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="76.89417145876976" y1="33.27045132122507" x2="38.86156123669389" y2="69.60769515458674" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="38.86156123669389" y1="69.60769515458674" x2="23.514718625761432" y2="119.51471862576143" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="23.514718625761432" y1="119.51471862576143" x2="34.469256391280624" y2="170" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="34.469256391280624" y1="170" x2="68.4088900845312" y2="208.03261022207585" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="68.4088900845312" y1="208.03261022207585" x2="116" y2="224" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="116" y1="224" x2="164.40889008453115" y2="214.24426730453638" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="164.40889008453115" y1="214.24426730453638" x2="200.74613391789285" y2="182.00000000000003" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="200.74613391789285" y1="182.00000000000003" x2="215.51471862576142" y2="136.48528137423858" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="215.51471862576142" y1="136.48528137423858" x2="205.1384387633061" y2="90.39230484541325" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="205.1384387633061" y1="90.39230484541325" x2="172.8941714587698" y2="56.45267115216272" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="172.8941714587698" y1="56.45267115216272" x2="128.00000000000003" y2="44" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="128.00000000000003" y1="44" x2="83.10582854123024" y2="56.45267115216271" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="83.10582854123024" y1="56.45267115216271" x2="50.861561236693916" y2="90.39230484541322" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="50.861561236693916" y1="90.39230484541322" x2="40.48528137423857" y2="136.48528137423847" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="40.48528137423857" y1="136.48528137423847" x2="55.25386608210712" y2="181.99999999999994" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="55.25386608210712" y1="181.99999999999994" x2="91.59110991546885" y2="214.24426730453638" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="91.59110991546885" y1="214.24426730453638" x2="139.99999999999997" y2="224" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="139.99999999999997" y1="224" x2="187.59110991546873" y2="208.0326102220759" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="187.59110991546873" y1="208.0326102220759" x2="221.53074360871938" y2="169.99999999999997" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="221.53074360871938" y1="169.99999999999997" x2="232.48528137423858" y2="119.51471862576146" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="232.48528137423858" y1="119.51471862576146" x2="217.13843876330617" y2="69.60769515458682" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="217.13843876330617" y1="69.60769515458682" x2="179.10582854123038" y2="33.27045132122515" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="179.10582854123038" y1="33.27045132122515" x2="128.00000000000006" y2="20" fill="black" stroke="lightgreen" stroke-width="0.88"></line>
+<line x1="117.60769515458674" y1="38" x2="71.51471862576145" y2="53.346842610932455" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="71.51471862576145" y1="53.346842610932455" x2="38.86156123669389" y2="90.39230484541326" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="38.86156123669389" y1="90.39230484541326" x2="28.894171458769748" y2="139.59110991546882" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="28.894171458769748" y1="139.59110991546882" x2="44.86156123669389" y2="188" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="44.86156123669389" y1="188" x2="83.10582854123027" y2="222.72954867877493" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="83.10582854123027" y1="222.72954867877493" x2="134" y2="234.39230484541326" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="134" y1="234.39230484541326" x2="184.48528137423855" y2="219.6237201375447" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="184.48528137423855" y1="219.6237201375447" x2="221.53074360871938" y2="182.00000000000003" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="221.53074360871938" y1="182.00000000000003" x2="235.59110991546882" y2="131.10582854123027" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="235.59110991546882" y1="131.10582854123027" x2="223.1384387633061" y2="79.99999999999999" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="223.1384387633061" y1="79.99999999999999" x2="187.59110991546885" y2="41.755732695463664" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="187.59110991546885" y1="41.755732695463664" x2="138.3923048454133" y2="26" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="138.3923048454133" y1="26" x2="88.48528137423855" y2="36.37627986245532" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="88.48528137423855" y1="36.37627986245532" x2="50.861561236693916" y2="69.6076951545867" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="50.861561236693916" y1="69.6076951545867" x2="35.10582854123025" y2="116.40889008453108" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="35.10582854123025" y1="116.40889008453108" x2="44.86156123669386" y2="163.99999999999994" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="44.86156123669386" y1="163.99999999999994" x2="76.89417145876978" y2="199.54732884783732" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="76.89417145876978" y1="199.54732884783732" x2="121.99999999999997" y2="213.60769515458674" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="121.99999999999997" y1="213.60769515458674" x2="167.51471862576136" y2="202.6531573890676" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="167.51471862576136" y1="202.6531573890676" x2="200.74613391789285" y2="170" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="200.74613391789285" y1="170" x2="212.40889008453118" y2="124.89417145876978" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="212.40889008453118" y1="124.89417145876978" x2="199.13843876330617" y2="80.00000000000009" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="199.13843876330617" y1="80.00000000000009" x2="164.40889008453132" y2="47.96738977792421" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="164.40889008453132" y1="47.96738977792421" x2="117.60769515458678" y2="37.999999999999986" fill="black" stroke="pink" stroke-width="0.44"></line>
+<line x1="138.39230484541326" y1="38" x2="91.59110991546883" y2="47.96738977792414" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="91.59110991546883" y1="47.96738977792414" x2="56.86156123669389" y2="80" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="56.86156123669389" y1="80" x2="43.59110991546882" y2="124.89417145876976" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="43.59110991546882" y1="124.89417145876976" x2="55.25386608210715" y2="170" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="55.25386608210715" y1="170" x2="88.48528137423858" y2="202.65315738906753" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="88.48528137423858" y1="202.65315738906753" x2="134" y2="213.60769515458674" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="134" y1="213.60769515458674" x2="179.10582854123024" y2="199.5473288478373" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="179.10582854123024" y1="199.5473288478373" x2="211.1384387633061" y2="164.00000000000003" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="211.1384387633061" y1="164.00000000000003" x2="220.89417145876976" y2="116.4088900845312" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="220.89417145876976" y1="116.4088900845312" x2="205.1384387633061" y2="69.60769515458672" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="205.1384387633061" y1="69.60769515458672" x2="167.51471862576147" y2="36.376279862455334" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="167.51471862576147" y1="36.376279862455334" x2="117.60769515458676" y2="25.999999999999986" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="117.60769515458676" y1="25.999999999999986" x2="68.40889008453117" y2="41.755732695463635" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="68.40889008453117" y1="41.755732695463635" x2="32.861561236693916" y2="79.99999999999996" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="32.861561236693916" y1="79.99999999999996" x2="20.40889008453118" y2="131.10582854123012" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="20.40889008453118" y1="131.10582854123012" x2="34.469256391280595" y2="181.99999999999991" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="34.469256391280595" y1="181.99999999999991" x2="71.51471862576145" y2="219.6237201375447" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="71.51471862576145" y1="219.6237201375447" x2="121.99999999999996" y2="234.39230484541326" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="121.99999999999996" y1="234.39230484541326" x2="172.89417145876968" y2="222.72954867877496" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="172.89417145876968" y1="222.72954867877496" x2="211.1384387633061" y2="187.99999999999997" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="211.1384387633061" y1="187.99999999999997" x2="227.10582854123024" y2="139.59110991546885" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="227.10582854123024" y1="139.59110991546885" x2="217.13843876330614" y2="90.39230484541335" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="217.13843876330614" y1="90.39230484541335" x2="184.4852813742387" y2="53.34684261093254" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="184.4852813742387" y1="53.34684261093254" x2="138.3923048454133" y2="38.000000000000014" fill="black" stroke="lightblue" stroke-width="0.44"></line>
+<line x1="128" y1="86" x2="87.75735931288071" y2="123.75735931288071" fill="black" stroke="yellow" stroke-width="0.88"></line>
+<line x1="87.75735931288071" y1="123.75735931288071" x2="122" y2="164" fill="black" stroke="yellow" stroke-width="0.88"></line>
+<line x1="122" y1="164" x2="159.7573593128807" y2="132.2426406871193" fill="black" stroke="yellow" stroke-width="0.88"></line>
+<line x1="159.7573593128807" y1="132.2426406871193" x2="128" y2="98" fill="black" stroke="yellow" stroke-width="0.88"></line>
+<line x1="128" y1="98" x2="96.24264068711929" y2="132.24264068711926" fill="black" stroke="yellow" stroke-width="0.88"></line>
+<line x1="96.24264068711929" y1="132.24264068711926" x2="134" y2="164" fill="black" stroke="yellow" stroke-width="0.88"></line>
+<line x1="134" y1="164" x2="168.2426406871193" y2="123.75735931288072" fill="black" stroke="yellow" stroke-width="0.88"></line>
+<line x1="168.2426406871193" y1="123.75735931288072" x2="128.00000000000003" y2="86" fill="black" stroke="yellow" stroke-width="0.88"></line>
+<g><circle cx="128" cy="20" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="128" y="20" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">0</text></g>
+<g><circle cx="76.89417145876976" cy="33.27045132122507" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="76.89417145876976" y="33.27045132122507" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">1</text></g>
+<g><circle cx="38.86156123669389" cy="69.60769515458674" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="38.86156123669389" y="69.60769515458674" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">1</text></g>
+<g><circle cx="23.514718625761432" cy="119.51471862576143" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="23.514718625761432" y="119.51471862576143" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">2</text></g>
+<g><circle cx="34.469256391280624" cy="170" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="34.469256391280624" y="170" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">3</text></g>
+<g><circle cx="68.4088900845312" cy="208.03261022207585" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="68.4088900845312" y="208.03261022207585" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">5</text></g>
+<g><circle cx="116" cy="224" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="116" y="224" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">8</text></g>
+<g><circle cx="164.40889008453115" cy="214.24426730453638" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="164.40889008453115" y="214.24426730453638" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">4</text></g>
+<g><circle cx="200.74613391789285" cy="182.00000000000003" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="200.74613391789285" y="182.00000000000003" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">3</text></g>
+<g><circle cx="215.51471862576142" cy="136.48528137423858" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="215.51471862576142" y="136.48528137423858" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">7</text></g>
+<g><circle cx="205.1384387633061" cy="90.39230484541325" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="205.1384387633061" y="90.39230484541325" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">1</text></g>
+<g><circle cx="172.8941714587698" cy="56.45267115216272" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="172.8941714587698" y="56.45267115216272" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">8</text></g>
+<g><circle cx="128.00000000000003" cy="44" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="128.00000000000003" y="44" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">0</text></g>
+<g><circle cx="83.10582854123024" cy="56.45267115216271" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="83.10582854123024" y="56.45267115216271" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">8</text></g>
+<g><circle cx="50.861561236693916" cy="90.39230484541322" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="50.861561236693916" y="90.39230484541322" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">8</text></g>
+<g><circle cx="40.48528137423857" cy="136.48528137423847" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="40.48528137423857" y="136.48528137423847" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">7</text></g>
+<g><circle cx="55.25386608210712" cy="181.99999999999994" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="55.25386608210712" y="181.99999999999994" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">6</text></g>
+<g><circle cx="91.59110991546885" cy="214.24426730453638" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="91.59110991546885" y="214.24426730453638" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">4</text></g>
+<g><circle cx="139.99999999999997" cy="224" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="139.99999999999997" y="224" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">1</text></g>
+<g><circle cx="187.59110991546873" cy="208.0326102220759" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="187.59110991546873" y="208.0326102220759" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">5</text></g>
+<g><circle cx="221.53074360871938" cy="169.99999999999997" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="221.53074360871938" y="169.99999999999997" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">6</text></g>
+<g><circle cx="232.48528137423858" cy="119.51471862576146" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="232.48528137423858" y="119.51471862576146" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">2</text></g>
+<g><circle cx="217.13843876330617" cy="69.60769515458682" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="217.13843876330617" y="69.60769515458682" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">8</text></g>
+<g><circle cx="179.10582854123038" cy="33.27045132122515" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="179.10582854123038" y="33.27045132122515" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">1</text></g>
+<g><circle cx="128.00000000000006" cy="20" r="4" fill="lightgreen" stroke="green" stroke-width="1"></circle>
+<text x="128.00000000000006" y="20" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">0</text></g>
+<g><circle cx="117.60769515458674" cy="38" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="117.60769515458674" y="38" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">0</text></g>
+<g><circle cx="71.51471862576145" cy="53.346842610932455" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="71.51471862576145" y="53.346842610932455" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">4</text></g>
+<g><circle cx="38.86156123669389" cy="90.39230484541326" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="38.86156123669389" y="90.39230484541326" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">4</text></g>
+<g><circle cx="28.894171458769748" cy="139.59110991546882" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="28.894171458769748" y="139.59110991546882" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">8</text></g>
+<g><circle cx="44.86156123669389" cy="188" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="44.86156123669389" y="188" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">3</text></g>
+<g><circle cx="83.10582854123027" cy="222.72954867877493" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="83.10582854123027" y="222.72954867877493" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">2</text></g>
+<g><circle cx="134" cy="234.39230484541326" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="134" y="234.39230484541326" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">5</text></g>
+<g><circle cx="184.48528137423855" cy="219.6237201375447" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="184.48528137423855" y="219.6237201375447" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">7</text></g>
+<g><circle cx="221.53074360871938" cy="182.00000000000003" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="221.53074360871938" y="182.00000000000003" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">3</text></g>
+<g><circle cx="235.59110991546882" cy="131.10582854123027" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="235.59110991546882" y="131.10582854123027" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">1</text></g>
+<g><circle cx="223.1384387633061" cy="79.99999999999999" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="223.1384387633061" y="79.99999999999999" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">4</text></g>
+<g><circle cx="187.59110991546885" cy="41.755732695463664" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="187.59110991546885" y="41.755732695463664" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">5</text></g>
+<g><circle cx="138.3923048454133" cy="26" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="138.3923048454133" y="26" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">0</text></g>
+<g><circle cx="88.48528137423855" cy="36.37627986245532" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="88.48528137423855" y="36.37627986245532" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">5</text></g>
+<g><circle cx="50.861561236693916" cy="69.6076951545867" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="50.861561236693916" y="69.6076951545867" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">5</text></g>
+<g><circle cx="35.10582854123025" cy="116.40889008453108" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="35.10582854123025" y="116.40889008453108" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">1</text></g>
+<g><circle cx="44.86156123669386" cy="163.99999999999994" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="44.86156123669386" y="163.99999999999994" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">6</text></g>
+<g><circle cx="76.89417145876978" cy="199.54732884783732" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="76.89417145876978" y="199.54732884783732" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">7</text></g>
+<g><circle cx="121.99999999999997" cy="213.60769515458674" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="121.99999999999997" y="213.60769515458674" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">4</text></g>
+<g><circle cx="167.51471862576136" cy="202.6531573890676" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="167.51471862576136" y="202.6531573890676" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">2</text></g>
+<g><circle cx="200.74613391789285" cy="170" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="200.74613391789285" y="170" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">6</text></g>
+<g><circle cx="212.40889008453118" cy="124.89417145876978" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="212.40889008453118" y="124.89417145876978" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">8</text></g>
+<g><circle cx="199.13843876330617" cy="80.00000000000009" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="199.13843876330617" y="80.00000000000009" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">5</text></g>
+<g><circle cx="164.40889008453132" cy="47.96738977792421" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="164.40889008453132" y="47.96738977792421" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">4</text></g>
+<g><circle cx="117.60769515458678" cy="37.999999999999986" r="4" fill="pink" stroke="red" stroke-width="1"></circle>
+<text x="117.60769515458678" y="37.999999999999986" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">0</text></g>
+<g><circle cx="138.39230484541326" cy="38" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="138.39230484541326" y="38" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">0</text></g>
+<g><circle cx="91.59110991546883" cy="47.96738977792414" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="91.59110991546883" y="47.96738977792414" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">7</text></g>
+<g><circle cx="56.86156123669389" cy="80" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="56.86156123669389" y="80" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">7</text></g>
+<g><circle cx="43.59110991546882" cy="124.89417145876976" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="43.59110991546882" y="124.89417145876976" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">5</text></g>
+<g><circle cx="55.25386608210715" cy="170" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="55.25386608210715" y="170" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">3</text></g>
+<g><circle cx="88.48528137423858" cy="202.65315738906753" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="88.48528137423858" y="202.65315738906753" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">8</text></g>
+<g><circle cx="134" cy="213.60769515458674" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="134" y="213.60769515458674" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">2</text></g>
+<g><circle cx="179.10582854123024" cy="199.5473288478373" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="179.10582854123024" y="199.5473288478373" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">1</text></g>
+<g><circle cx="211.1384387633061" cy="164.00000000000003" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="211.1384387633061" y="164.00000000000003" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">3</text></g>
+<g><circle cx="220.89417145876976" cy="116.4088900845312" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="220.89417145876976" y="116.4088900845312" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">4</text></g>
+<g><circle cx="205.1384387633061" cy="69.60769515458672" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="205.1384387633061" y="69.60769515458672" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">7</text></g>
+<g><circle cx="167.51471862576147" cy="36.376279862455334" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="167.51471862576147" y="36.376279862455334" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">2</text></g>
+<g><circle cx="117.60769515458676" cy="25.999999999999986" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="117.60769515458676" y="25.999999999999986" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">0</text></g>
+<g><circle cx="68.40889008453117" cy="41.755732695463635" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="68.40889008453117" y="41.755732695463635" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">2</text></g>
+<g><circle cx="32.861561236693916" cy="79.99999999999996" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="32.861561236693916" y="79.99999999999996" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">2</text></g>
+<g><circle cx="20.40889008453118" cy="131.10582854123012" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="20.40889008453118" y="131.10582854123012" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">4</text></g>
+<g><circle cx="34.469256391280595" cy="181.99999999999991" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="34.469256391280595" y="181.99999999999991" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">6</text></g>
+<g><circle cx="71.51471862576145" cy="219.6237201375447" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="71.51471862576145" y="219.6237201375447" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">1</text></g>
+<g><circle cx="121.99999999999996" cy="234.39230484541326" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="121.99999999999996" y="234.39230484541326" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">7</text></g>
+<g><circle cx="172.89417145876968" cy="222.72954867877496" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="172.89417145876968" y="222.72954867877496" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">8</text></g>
+<g><circle cx="211.1384387633061" cy="187.99999999999997" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="211.1384387633061" y="187.99999999999997" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">6</text></g>
+<g><circle cx="227.10582854123024" cy="139.59110991546885" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="227.10582854123024" y="139.59110991546885" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">5</text></g>
+<g><circle cx="217.13843876330614" cy="90.39230484541335" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="217.13843876330614" y="90.39230484541335" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">2</text></g>
+<g><circle cx="184.4852813742387" cy="53.34684261093254" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="184.4852813742387" y="53.34684261093254" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">7</text></g>
+<g><circle cx="138.3923048454133" cy="38.000000000000014" r="4" fill="lightblue" stroke="blue" stroke-width="1"></circle>
+<text x="138.3923048454133" y="38.000000000000014" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">0</text></g>
+<undefined></undefined>
+<g><circle cx="128" cy="86" r="4" fill="yellow" stroke="gold" stroke-width="1"></circle>
+<text x="128" y="86" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">0</text></g>
+<g><circle cx="87.75735931288071" cy="123.75735931288071" r="4" fill="yellow" stroke="gold" stroke-width="1"></circle>
+<text x="87.75735931288071" y="123.75735931288071" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">3</text></g>
+<g><circle cx="122" cy="164" r="4" fill="yellow" stroke="gold" stroke-width="1"></circle>
+<text x="122" y="164" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">3</text></g>
+<g><circle cx="159.7573593128807" cy="132.2426406871193" r="4" fill="yellow" stroke="gold" stroke-width="1"></circle>
+<text x="159.7573593128807" y="132.2426406871193" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">6</text></g>
+<g><circle cx="128" cy="98" r="4" fill="yellow" stroke="gold" stroke-width="1"></circle>
+<text x="128" y="98" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">0</text></g>
+<g><circle cx="96.24264068711929" cy="132.24264068711926" r="4" fill="yellow" stroke="gold" stroke-width="1"></circle>
+<text x="96.24264068711929" y="132.24264068711926" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">6</text></g>
+<g><circle cx="134" cy="164" r="4" fill="yellow" stroke="gold" stroke-width="1"></circle>
+<text x="134" y="164" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">6</text></g>
+<g><circle cx="168.2426406871193" cy="123.75735931288072" r="4" fill="yellow" stroke="gold" stroke-width="1"></circle>
+<text x="168.2426406871193" y="123.75735931288072" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">3</text></g>
+<g><circle cx="128.00000000000003" cy="86" r="4" fill="yellow" stroke="gold" stroke-width="1"></circle>
+<text x="128.00000000000003" y="86" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">0</text></g>
+<g><circle cx="128" cy="128" r="4" fill="lightgray" stroke="gray" stroke-width="1"></circle>
+<text x="128" y="128" fill="black" font-size="4" text-anchor="center" dominant-baseline="middle">0</text></g></svg>
