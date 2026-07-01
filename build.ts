@@ -6,8 +6,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import esbuild from 'esbuild';
 
-const pageDir = path.resolve('page');
-const distDir = path.resolve('dist');
+const pageDir = path.resolve('example/page');
+const distDir = path.resolve('example/dist');
 fs.mkdirSync(distDir, { recursive: true });
 
 const sources = fs.readdirSync(pageDir)

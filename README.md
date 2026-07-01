@@ -31,4 +31,4 @@ npm test
 npm run build
 ```
 
-The build command renders each file in `page/` to `dist/<name>.svg`.
+The build command renders each file in `example/page/` to `example/dist/<name>.svg`.

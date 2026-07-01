@@ -9,5 +9,5 @@
     "checkJs": false,
     "skipLibCheck": true
   },
-  "include": ["module.ts", "build.ts", "page/**/*"]
+  "include": ["module.ts", "build.ts", "example/**/*"]
 }
