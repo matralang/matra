@@ -1,5 +1,5 @@
 {
-  "name": "@butchi/matra-html",
+  "name": "@matralang/matra-html",
   "description": "HTML renderer for Matra AST",
   "version": "0.9.0",
   "type": "module",
@@ -18,10 +18,10 @@
     "test": "npm run build && node --test"
   },
   "peerDependencies": {
-    "@butchi/matra-core": "0.9.0"
+    "@matralang/core": "0.9.0"
   },
   "peerDependenciesMeta": {
-    "@butchi/matra-core": {
+    "@matralang/core": {
       "optional": true
     }
   },

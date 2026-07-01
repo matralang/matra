@@ -1,5 +1,5 @@
 {
-  "name": "@butchi/matra-core",
+  "name": "@matralang/core",
   "description": "Domain-neutral AST, parser, visitor, and transformer for Matra",
   "version": "0.9.0",
   "type": "module",
@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "build": "npm run build:parser && npm run build:types",
-    "build:all": "npm run build && npm run build --workspace @butchi/matra-html",
+    "build:all": "npm run build && npm run build --workspace @matralang/matra-html",
     "build:parser": "peggy --format es --output src/matra-parser.mjs src/matra-parser.pegjs",
     "build:types": "tsc",
     "check": "tsc --noEmit",

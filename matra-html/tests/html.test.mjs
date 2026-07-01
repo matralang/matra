@@ -6,7 +6,7 @@ const htmlSource = await import("../dist/index.js")
 const core = await import(coreURL)
 const { toHTML } = htmlSource
 
-describe("@butchi/matra-html", () => {
+describe("@matralang/matra-html", () => {
   it("renders AST using HTML semantics", () => {
     const ast = ["div", { class: "card", hidden: true }, [
       ["p", {}, ["<Hello>"]],

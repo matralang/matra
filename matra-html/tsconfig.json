@@ -5,7 +5,7 @@
     "moduleResolution": "NodeNext",
     "baseUrl": ".",
     "paths": {
-      "@butchi/matra-core": ["../dist/index.d.ts"]
+      "@matralang/core": ["../dist/index.d.ts"]
     },
     "outDir": "dist",
     "rootDir": "src",

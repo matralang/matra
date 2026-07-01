@@ -2,7 +2,7 @@ import type {
   MatraAST,
   MatraASTChild,
   MatraProps,
-} from "@butchi/matra-core"
+} from "@matralang/core"
 
 const VOID_ELEMENTS = new Set([
   "area", "base", "br", "col", "embed", "hr", "img", "input",
