@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>bmath TeX Processor</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell,
+        sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 800px;
+      padding: 40px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: "Monaco", "Courier New", monospace;
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus,
+    select:focus {
+      outline: none;
+      border-color: #667eea;
+      background-color: #f8f9ff;
+    }
+
+    .options-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .option-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-process {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-process:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-clear {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-clear:hover {
+      background: #e0e0e0;
+    }
+
+    .output-section {
+      background: #f8f9fa;
+      border-radius: 6px;
+      padding: 20px;
+      margin-top: 25px;
+      border: 2px solid #e9ecef;
+    }
+
+    .output-section h2 {
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 12px;
+    }
+
+    .output-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      border-bottom: 2px solid #ddd;
+    }
+
+    .tab-btn {
+      padding: 8px 16px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: #666;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+
+    .tab-btn.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+
+    .tab-btn:hover {
+      color: #667eea;
+    }
+
+    .output-content {
+      background: white;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: "Monaco", "Courier New", monospace;
+      font-size: 13px;
+      color: #333;
+      word-break: break-all;
+      line-height: 1.6;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .error {
+      background: #fee;
+      border: 2px solid #f99;
+      color: #c00;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 20px;
+      font-size: 13px;
+    }
+
+    .success {
+      background: #efe;
+      border: 2px solid #9f9;
+      color: #060;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+
+    .examples {
+      background: #f0f7ff;
+      border: 2px solid #b3d9ff;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 20px;
+      font-size: 13px;
+    }
+
+    .examples h3 {
+      color: #0066cc;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .example-item {
+      margin: 6px 0;
+      color: #333;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 3px;
+      transition: background 0.2s;
+    }
+
+    .example-item:hover {
+      background: #e0eeff;
+    }
+
+    .example-code {
+      font-family: "Monaco", "Courier New", monospace;
+      color: #0066cc;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>bmath TeX Processor</h1>
+    <p class="subtitle">TeX形式の数式を処理・変換します</p>
+
+    <div class="input-group">
+      <label for="texInput">TeX数式を入力:</label>
+      <input
+        type="text"
+        id="texInput"
+        placeholder="例: 2x + 1, \sin(x), \frac{1}{2}"
+        value="2x + 1"
+      />
+    </div>
+
+    <div class="options-row">
+      <div class="option-group">
+        <label for="modeSelect">出力モード:</label>
+        <select id="modeSelect">
+          <option value="conventional">Conventional (デフォルト)</option>
+          <option value="consistent">Consistent</option>
+        </select>
+      </div>
+      <div class="option-group">
+        <label for="formatSelect">出力形式:</label>
+        <select id="formatSelect">
+          <option value="tex">TeX形式</option>
+          <option value="expr">Expr（式）</option>
+          <option value="formula">Formula（JSON）</option>
+          <option value="morphion">Morphion（JSON）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="button-row">
+      <button class="btn-process" onclick="processTeX()">処理</button>
+      <button class="btn-clear" onclick="clearAll()">クリア</button>
+    </div>
+
+    <div id="successMessage" style="display: none" class="success"></div>
+    <div id="errorMessage" style="display: none" class="error"></div>
+
+    <div id="outputSection" style="display: none" class="output-section">
+      <h2>処理結果</h2>
+      <div class="output-tabs">
+        <button class="tab-btn active" onclick="switchTab('texOutput')">TeX</button>
+        <button class="tab-btn" onclick="switchTab('exprOutput')">Expr</button>
+        <button class="tab-btn" onclick="switchTab('formulaOutput')">Formula</button>
+        <button class="tab-btn" onclick="switchTab('morphionOutput')">Morphion</button>
+      </div>
+      <div id="texOutput" class="tab-content active">
+        <div class="output-content" id="texOutputContent"></div>
+      </div>
+      <div id="exprOutput" class="tab-content">
+        <div class="output-content" id="exprOutputContent"></div>
+      </div>
+      <div id="formulaOutput" class="tab-content">
+        <div class="output-content" id="formulaOutputContent"></div>
+      </div>
+      <div id="morphionOutput" class="tab-content">
+        <div class="output-content" id="morphionOutputContent"></div>
+      </div>
+    </div>
+
+    <div class="examples">
+      <h3>📝 使用例</h3>
+      <div class="example-item" onclick="loadExample('x + 1')">
+        <span class="example-code">x + 1</span> - 簡単な加算
+      </div>
+      <div class="example-item" onclick="loadExample('2x')">
+        <span class="example-code">2x</span> - 乗算表記
+      </div>
+      <div class="example-item" onclick="loadExample('x^2 + y^2')">
+        <span class="example-code">x^2 + y^2</span> - 累乗
+      </div>
+      <div class="example-item" onclick="loadExample('\\frac{1}{2}')">
+        <span class="example-code">\frac{1}{2}</span> - 分数
+      </div>
+      <div class="example-item" onclick="loadExample('\\sin(x)')">
+        <span class="example-code">\sin(x)</span> - sin関数
+      </div>
+      <div class="example-item" onclick="loadExample('\\pi + e')">
+        <span class="example-code">\pi + e</span> - 定数
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Stub functions for browser environment
+    // In a real setup, these would be bundled via webpack/esbuild
+    const bmath = {
+      processMatrixTeX: (tex, mode = "conventional") => {
+        // Mock implementation for demonstration
+        if (tex === "2x + 1") return mode === "conventional" ? "2 x + 1" : "2 \\cdot x + 1"
+        if (tex === "x^2") return "x^{2}"
+        if (tex === "\\sin(x)") return mode === "conventional" ? "\\sin x" : "\\sin(x)"
+        return tex
+      },
+      texToExpr: (tex) => {
+        // Mock - in real implementation would be actual function
+        return `Expr: { head: "${tex.includes("+") ? "Plus" : "Symbol"}" }`
+      },
+      texToFormulaNode: (tex) => {
+        return ["Formula", {}, [["Symbol", { name: "x" }, []]]]
+      },
+      texToMorphion: (tex) => {
+        return { base: "x", terms: new Map() }
+      },
+    }
+
+    function processTeX() {
+      const texInput = document.getElementById("texInput").value.trim()
+      const mode = document.getElementById("modeSelect").value
+      const format = document.getElementById("formatSelect").value
+
+      document.getElementById("errorMessage").style.display = "none"
+      document.getElementById("successMessage").style.display = "none"
+
+      if (!texInput) {
+        showError("TeX数式を入力してください")
+        return
+      }
+
+      try {
+        let result
+
+        // Process each format
+        if (format === "tex") {
+          result = bmath.processMatrixTeX(texInput, mode)
+          document.getElementById("texOutputContent").textContent = result
+        } else if (format === "expr") {
+          result = bmath.texToExpr(texInput)
+          document.getElementById("exprOutputContent").textContent = result
+        } else if (format === "formula") {
+          result = JSON.stringify(bmath.texToFormulaNode(texInput), null, 2)
+          document.getElementById("formulaOutputContent").textContent = result
+        } else if (format === "morphion") {
+          result = JSON.stringify(bmath.texToMorphion(texInput), null, 2)
+          document.getElementById("morphionOutputContent").textContent = result
+        }
+
+        // Also populate other tabs
+        try {
+          const texResult = bmath.processMatrixTeX(texInput, mode)
+          document.getElementById("texOutputContent").textContent = texResult
+
+          const exprResult = bmath.texToExpr(texInput)
+          document.getElementById("exprOutputContent").textContent = exprResult
+
+          const formulaResult = JSON.stringify(bmath.texToFormulaNode(texInput), null, 2)
+          document.getElementById("formulaOutputContent").textContent = formulaResult
+
+          const morphionResult = JSON.stringify(bmath.texToMorphion(texInput), null, 2)
+          document.getElementById("morphionOutputContent").textContent = morphionResult
+        } catch (e) {
+          // Silently fail for stub implementations
+        }
+
+        document.getElementById("outputSection").style.display = "block"
+        showSuccess(`処理完了: ${texInput}`)
+      } catch (error) {
+        showError(`エラー: ${error.message}`)
+      }
+    }
+
+    function switchTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll(".tab-content").forEach((tab) => {
+        tab.classList.remove("active")
+      })
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.classList.remove("active")
+      })
+
+      // Show selected tab
+      document.getElementById(tabName).classList.add("active")
+      event.target.classList.add("active")
+    }
+
+    function loadExample(example) {
+      document.getElementById("texInput").value = example
+      processTeX()
+    }
+
+    function clearAll() {
+      document.getElementById("texInput").value = ""
+      document.getElementById("outputSection").style.display = "none"
+      document.getElementById("errorMessage").style.display = "none"
+      document.getElementById("successMessage").style.display = "none"
+      document.getElementById("texInput").focus()
+    }
+
+    function showError(message) {
+      const errorEl = document.getElementById("errorMessage")
+      errorEl.textContent = "❌ " + message
+      errorEl.style.display = "block"
+    }
+
+    function showSuccess(message) {
+      const successEl = document.getElementById("successMessage")
+      successEl.textContent = "✅ " + message
+      successEl.style.display = "block"
+    }
+
+    // Focus input on load
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("texInput").focus()
+    })
+
+    // Process on Enter key
+    document.getElementById("texInput").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        processTeX()
+      }
+    })
+  </script>
+</body>
+</html>
