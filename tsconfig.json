@@ -1,13 +1,14 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "declaration": true,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "rootDir": "src",
+    "sourceMap": true,
     "strict": true,
-    "noEmit": true,
-    "allowJs": true,
-    "checkJs": false,
+    "target": "ES2022",
     "skipLibCheck": true
   },
-  "include": ["module.ts", "build.ts", "example/**/*"]
+  "include": ["src/**/*.ts"]
 }
