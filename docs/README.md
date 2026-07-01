@@ -53,11 +53,13 @@ Welcome to the @butchi/matra-core documentation!
 ## Quick Start
 
 Install:
+
 ```bash
 npm install @butchi/matra-core
 ```
 
 Basic usage:
+
 ```javascript
 import { compile } from '@butchi/matra-core';
 

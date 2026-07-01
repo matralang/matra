@@ -137,7 +137,7 @@ div.container { h1#title { "Hello" } }
 div({class:"container"}, h1({id:"title"}, "Hello"))
 ```
 
-### Both produce:
+### Both produce
 
 ```html
 <div class="container"><h1 id="title">Hello</h1></div>

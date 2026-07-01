@@ -134,14 +134,14 @@ const html = compile('ul(li({"m-each":"items", "m-as":"item"}, "{{item}}"))', {
 
 ## When to Use Which Syntax
 
-### Use Block Syntax When:
+### Use Block Syntax When
 
 - Working with deeply nested structures
 - Want CSS-like selector convenience (`.class`, `#id`, `[attr="val"]`)
 - Prefer visual hierarchy with indentation
 - Writing template-heavy documents
 
-### Use Function Syntax When:
+### Use Function Syntax When
 
 - Programmatic template generation
 - Inline, concise expressions

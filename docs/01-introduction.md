@@ -7,6 +7,7 @@ Matra is a **lightweight template language** designed for generating HTML with a
 ## Design Philosophy
 
 ### 1. **Familiar Syntax**
+
 Matra uses CSS selector syntax that web developers already know:
 
 ```matra
@@ -14,12 +15,15 @@ div.container#main { h1.title { "Hello" } }
 ```
 
 ### 2. **Minimal Learning Curve**
+
 - CSS-like selectors for elements
 - `{{mustache}}` for variables
 - Intuitive directive names (`m-if`, `m-each`)
 
 ### 3. **Zero Dependencies**
+
 Pure ESM module with no external dependencies. Perfect for:
+
 - Static site generators
 - Server-side rendering
 - Build tools
@@ -28,6 +32,7 @@ Pure ESM module with no external dependencies. Perfect for:
 ## Use Cases
 
 ### Static Site Generation
+
 ```javascript
 import { compile } from '@butchi/matra-core'
 
@@ -39,6 +44,7 @@ const pages = posts.map(post => {
 ```
 
 ### Component Libraries
+
 ```javascript
 import { with_ } from '@butchi/matra-core'
 
@@ -53,6 +59,7 @@ const html = Card({ title: 'Hello', description: 'World' })
 ```
 
 ### Dynamic HTML Generation
+
 ```javascript
 const template = `
   ul.items {
@@ -64,7 +71,7 @@ const template = `
 ## Comparison with Other Template Engines
 
 | Feature | Matra | Mustache | Pug | JSX |
-|---------|-------|----------|-----|-----|
+| ------- | ----- | -------- | --- | --- |
 | CSS-like Syntax | ✅ | ❌ | ✅ | ❌ |
 | Conditionals | ✅ | ✅ | ✅ | ✅ |
 | Loops | ✅ | ✅ | ✅ | ✅ |
@@ -75,19 +82,25 @@ const template = `
 ## Key Features
 
 ### 🎯 Simple Syntax
+
 No angle brackets or verbose tags:
+
 ```matra
 div { h1 { "Title" } }
 ```
+
 vs HTML:
+
 ```html
 <div><h1>Title</h1></div>
 ```
 
 ### 🔀 Two Directive Styles
+
 Choose the style that fits your use case:
 
 **Tag-based (for complex logic):**
+
 ```matra
 m-if[test="isLoggedIn"] {
   nav.user-menu { ... }
@@ -95,17 +108,21 @@ m-if[test="isLoggedIn"] {
 ```
 
 **Attribute-based (for simple conditions):**
+
 ```matra
 div.notice[m-if="showNotice"] { "Important!" }
 ```
 
 ### 📝 Powerful Interpolation
+
 - Variables: `{{name}}`
 - Nested properties: `{{user.profile.email}}`
 - Array indices: `{{index}}`
 
 ### 🌳 AST-Based
+
 Matra compiles to an Abstract Syntax Tree (AST), making it:
+
 - Easy to transform
 - Compatible with unified/remark ecosystem
 - Suitable for advanced processing
@@ -113,11 +130,13 @@ Matra compiles to an Abstract Syntax Tree (AST), making it:
 ## Getting Started
 
 Install:
+
 ```bash
 npm install @butchi/matra-core
 ```
 
 Your first template:
+
 ```javascript
 import { compile } from '@butchi/matra-core'
 

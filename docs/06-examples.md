@@ -67,6 +67,7 @@ console.log(html);
 ```
 
 **Output:**
+
 ```html
 <article class="post-card">
   <span class="badge">Featured</span>
@@ -116,6 +117,7 @@ console.log(render(context));
 ```
 
 **Output:**
+
 ```html
 <nav class="main-nav">
   <ul>

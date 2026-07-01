@@ -53,7 +53,7 @@ div.container { h1 { "Title" } p { "Content" } }
 
 ## Test Results
 
-```
+```text
 ✔ Matra v0.8 Comprehensive Tests (30 tests)
 ✔ Matra v0.8 Function-Style Syntax (10 tests)
 ✔ Matra v0.8 Mixed Syntax (9 tests)
@@ -166,7 +166,7 @@ Potential future enhancements:
 
 Matra v0.8 successfully extends the language with modern function syntax while maintaining the elegant block syntax that makes Matra unique. Both approaches coexist seamlessly, giving developers the flexibility to choose the style that best fits their needs.
 
-**Implementation Status: Complete ✅**
+## Implementation Status: Complete ✅
 
 ---
 

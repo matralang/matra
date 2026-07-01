@@ -215,6 +215,7 @@ This ensures that attribute directives on the same element are processed before 
 ### Choose the Right Style
 
 **Use attribute style when:**
+
 - Wrapping a single element
 - Condition is simple
 - Template is more compact
@@ -224,6 +225,7 @@ div.notice[m-if="showNotice"] { "Important!" }
 ```
 
 **Use tag style when:**
+
 - Multiple elements depend on the condition
 - Complex nested structure
 - Logic is more prominent
@@ -238,6 +240,7 @@ m-if[test="isLoggedIn"] {
 ### Avoid Deep Nesting
 
 Instead of:
+
 ```matra
 m-if[test="a"] {
   m-if[test="b"] {
@@ -249,6 +252,7 @@ m-if[test="a"] {
 ```
 
 Use combined conditions in your context:
+
 ```javascript
 const context = {
   showContent: a && b && c

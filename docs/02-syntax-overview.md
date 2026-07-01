@@ -25,6 +25,7 @@ article[class="post"] {
 ```
 
 **Output:**
+
 ```html
 <article class="post">
   <h1>Hello, World!</h1>
@@ -94,6 +95,7 @@ input[type="checkbox" checked disabled]
 ```
 
 **Output:**
+
 ```html
 <input type="checkbox" checked disabled>
 ```
@@ -115,11 +117,13 @@ a[href="${url}" class="${active ? 'active' : ''}"] { "${label}" }
 ```
 
 With context:
+
 ```js
 { url: "/home", active: true, label: "Home" }
 ```
 
 **Output:**
+
 ```html
 <a href="/home" class="active">Home</a>
 ```
@@ -145,6 +149,7 @@ p { "Hello, ${name}!" }
 With context `{ name: "Alice" }`:
 
 **Output:**
+
 ```html
 <p>Hello, Alice!</p>
 ```
@@ -259,6 +264,7 @@ p { "  Spaces at the start and end are preserved.  " }
 ```
 
 **Output:**
+
 ```html
 <p>  Spaces at the start and end are preserved.  </p>
 ```
@@ -286,6 +292,7 @@ p { "She said, \"Hello!\"" }
 ```
 
 **Output:**
+
 ```html
 <p>She said, "Hello!"</p>
 ```
@@ -299,6 +306,7 @@ p { "The syntax is \${variable}" }
 ```
 
 **Output:**
+
 ```html
 <p>The syntax is ${variable}</p>
 ```
@@ -355,6 +363,7 @@ article[class="blog-post" data-id="${post.id}"] {
 ```
 
 With context:
+
 ```js
 {
   post: {

@@ -352,7 +352,7 @@ export function compile(source, opts = {}) {
 
 When using the wrong syntax for a mode, you'll get clear error messages:
 
-```
+```text
 // Document mode + Function syntax
 SyntaxError: Function syntax is not allowed in document mode
 

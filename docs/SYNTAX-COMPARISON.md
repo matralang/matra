@@ -236,7 +236,7 @@ Both produce: `<ul><li>A</li><li>B</li><li>C</li></ul>` (when `items=["A","B","C
 
 ## Which Should I Use?
 
-### Use Block Syntax When:
+### Use Block Syntax When
 
 - Building HTML-like templates
 - Working with CSS-heavy layouts
@@ -244,7 +244,7 @@ Both produce: `<ul><li>A</li><li>B</li><li>C</li></ul>` (when `items=["A","B","C
 - Writing document templates
 - Team familiar with CSS/SCSS
 
-### Use Function Syntax When:
+### Use Function Syntax When
 
 - Building component libraries
 - Generating templates programmatically
@@ -252,7 +252,7 @@ Both produce: `<ul><li>A</li><li>B</li><li>C</li></ul>` (when `items=["A","B","C
 - Need explicit type control
 - Building data-driven UIs
 
-### Mix Both When:
+### Mix Both When
 
 - Different parts suit different syntaxes
 - Transitioning between styles
