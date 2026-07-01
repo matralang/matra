@@ -62,6 +62,7 @@ Arg
   / StringLiteral
   / Number
   / Boolean
+  / Null
   / Identifier
 
 KeywordProp
@@ -73,6 +74,7 @@ PropValue
   = StringLiteral
   / Number
   / Boolean
+  / Null
   / Identifier
 
 BareObject
@@ -95,13 +97,16 @@ StringLiteral
   }
 
 Number
-  = digits:[0-9]+ ("." [0-9]+)? {
-    return parseFloat(text())
+  = value:$("-"? (([0-9]+ "." [0-9]*) / ("." [0-9]+) / [0-9]+) ([eE] [+-]? [0-9]+)?) {
+    return Number(value)
   }
 
 Boolean
   = "true" { return true }
   / "false" { return false }
+
+Null
+  = "null" { return null }
 
 Identifier
   = !ReservedWord first:[a-zA-Z_] rest:[a-zA-Z0-9_\-]* {
@@ -109,7 +114,7 @@ Identifier
   }
 
 ReservedWord
-  = ("true" / "false") ![a-zA-Z0-9_\-]
+  = ("true" / "false" / "null") ![a-zA-Z0-9_\-]
 
 TagBody
   = "$root" _ body:Body? {
