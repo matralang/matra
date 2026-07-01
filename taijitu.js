@@ -1,4 +1,4 @@
-import { fill, strokeStyle, strokeWeight, circle, path } from './module';
+import { fill, strokeStyle, strokeWeight, circle, path, push, pop } from './module.ts';
 
 const rightCircle = (cx, cy, r) => {
   fill('black');
@@ -14,9 +14,11 @@ const leftCircle = (cx, cy, r) => {
   return matraElm;
 }
 
-const taijitsu = (x, y, size) => {
+const taijitu = (x, y, size) => {
   const matraElmArr = [];
   const dotSize = size / 8;
+
+  push();
 
   strokeWeight(5);
 
@@ -44,7 +46,9 @@ const taijitsu = (x, y, size) => {
   fill('black');
   matraElmArr.push(circle(x + size / 2, y + size / 2 - size / 4, dotSize / 2));
 
+  pop();
+
   return matraElmArr;
 }
 
-export default taijitsu;
+export default taijitu;
