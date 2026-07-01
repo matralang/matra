@@ -1,45 +1,45 @@
-// @ts-ignore
-import fs from 'fs';
-// @ts-ignore
-import path from 'path';
-
+// @ts-ignore Node types are intentionally not required by this tiny package.
+import fs from 'node:fs';
+// @ts-ignore Node types are intentionally not required by this tiny package.
+import path from 'node:path';
+// @ts-ignore Node types are intentionally not required by this tiny package.
+import { pathToFileURL } from 'node:url';
 import esbuild from 'esbuild';
 
-const pageDir = path.resolve('./page');
+const pageDir = path.resolve('page');
+const distDir = path.resolve('dist');
+fs.mkdirSync(distDir, { recursive: true });
 
-for (const file of fs.readdirSync(pageDir)) {
-  if (file.endsWith('.ts')) {
-    const tsFilePath = path.join(pageDir, file);
-    const jsFilePath = tsFilePath.replace(/\.ts$/, '.js');
+const sources = fs.readdirSync(pageDir)
+  .filter((file: string) => file.endsWith('.ts') || file.endsWith('.js'))
+  .filter((file: string, _index: number, files: string[]) => {
+    if (!file.endsWith('.js')) return true;
+    return !files.includes(file.replace(/\.js$/, '.ts'));
+  });
 
-    // Transpile TypeScript to JavaScript using esbuild
+for (const file of sources) {
+  const name = file.replace(/\.(ts|js)$/, '');
+  const temporaryModule = path.join(distDir, `.${name}.mjs`);
+
+  try {
     esbuild.buildSync({
-      entryPoints: [tsFilePath],
-      outfile: jsFilePath,
+      entryPoints: [path.join(pageDir, file)],
+      outfile: temporaryModule,
       bundle: true,
       platform: 'node',
-      format: 'cjs',
-      target: ['es2024'],
+      format: 'esm',
+      target: ['es2022'],
     });
-  }
 
-  const jsFilePath = path.join(pageDir, file.replace(/\.ts$/, '.js'));
-  if (fs.existsSync(jsFilePath)) {
-    const kamiPageModule = await import(jsFilePath);
-    const kamiPage = kamiPageModule.default;
-
-    const distDir = path.resolve('./dist');
-    if (!fs.existsSync(distDir)) {
-      fs.mkdirSync(distDir, { recursive: true });
+    const pageModule = await import(`${pathToFileURL(temporaryModule).href}?time=${Date.now()}`);
+    if (typeof pageModule.default !== 'string') {
+      throw new TypeError(`${file} must export an SVG string as its default export`);
     }
 
-    const buildDir = path.resolve(distDir);
-    if (!fs.existsSync(buildDir)) {
-      fs.mkdirSync(buildDir, { recursive: true });
-    }
-
-    const outputPath = path.join(buildDir, file.replace(/\.ts$|\.js$/, '.svg'));
-    fs.writeFileSync(outputPath, kamiPage, 'utf-8');
-    console.log(`Built: ${outputPath}`);
+    const outputPath = path.join(distDir, `${name}.svg`);
+    fs.writeFileSync(outputPath, `${pageModule.default}\n`, 'utf8');
+    console.log(`Built: ${path.relative(process.cwd(), outputPath)}`);
+  } finally {
+    if (fs.existsSync(temporaryModule)) fs.unlinkSync(temporaryModule);
   }
 }

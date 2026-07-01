@@ -1,32 +1,16 @@
-type SvgTag =
-  | 'svg'
-  | 'g'
-  | 'circle'
-  | 'rect'
-  | 'path'
-  | 'line'
-  | 'ellipse'
-  | 'polygon'
-  | 'polyline'
-  | 'text';
+export type SvgTag =
+  | 'svg' | 'g' | 'circle' | 'rect' | 'path' | 'line'
+  | 'ellipse' | 'polygon' | 'polyline' | 'text' | 'title' | 'desc';
 
-type TagStr = SvgTag;
-type PropObj = Record<string, string | number>;
-type BodyArr = MatraElm[];
+export type PropValue = string | number | boolean | null | undefined;
+export type PropObj = Record<string, PropValue>;
+export type MatraElm = [SvgTag | null, PropObj | null, string | MatraElm[] | null];
+export type Matrast = MatraElm[];
 
-type Tag = TagStr | null;
-type Prop = PropObj | null;
-type Body = string | BodyArr | null;
+export type CanvasTextAlign = 'start' | 'end' | 'left' | 'right' | 'center';
+export type CanvasTextBaseline = 'auto' | 'middle' | 'central' | 'hanging' | 'text-top' | 'text-bottom' | 'alphabetic' | 'ideographic';
 
-type MatraElm = [
-  Tag, Prop, Body
-]
-
-type Matrast = MatraElm[];
-
-type CanvasTextAlign = 'start' | 'end' | 'left' | 'right' | 'center';
-
-type Context = {
+export type Context = {
   cvsW: number;
   cvsH: number;
   fillStyle: string;
@@ -34,246 +18,151 @@ type Context = {
   strokeWidth: number;
   textSize: number;
   textAnchor: CanvasTextAlign;
-  textBaseline: CanvasTextAlign;
+  textBaseline: CanvasTextBaseline;
 };
 
-const ctx: Context = {
+const initialContext: Context = {
   cvsW: 256,
   cvsH: 256,
-  fillStyle: '',
-  strokeStyle: '',
+  fillStyle: 'none',
+  strokeStyle: 'none',
   strokeWidth: 1,
   textSize: 12,
-  textAnchor: 'start' as CanvasTextAlign,
-  textBaseline: 'middle' as CanvasTextAlign,
+  textAnchor: 'start',
+  textBaseline: 'middle',
 };
 
-const getCtx = (): Context => {
-  return ctx;
-}
+let ctx: Context = { ...initialContext };
+const contextStack: Context[] = [];
 
-const setCanvasSize = (w: number, h: number) => {
-  ctx.cvsW = w;
-  ctx.cvsH = h;
-}
+export const getCtx = (): Readonly<Context> => ({ ...ctx });
 
-const fromAst = (matraElm: MatraElm): string => {
-  const [tag, prop, body] = matraElm;
-  const propStr = prop
-    ? ' ' + Object.entries(prop)
-        .map(([key, val]) => `${key}="${val}"`)
-        .join(' ')
+const finite = (value: number, name: string): number => {
+  if (!Number.isFinite(value)) throw new TypeError(`${name} must be a finite number`);
+  return value;
+};
+
+export const setCanvasSize = (width: number, height: number): void => {
+  finite(width, 'width');
+  finite(height, 'height');
+  if (width <= 0 || height <= 0) throw new RangeError('Canvas dimensions must be greater than zero');
+  ctx.cvsW = width;
+  ctx.cvsH = height;
+};
+
+export const reset = (): void => {
+  ctx = { ...initialContext };
+  contextStack.length = 0;
+};
+
+export const push = (): void => { contextStack.push({ ...ctx }); };
+export const pop = (): void => {
+  const previous = contextStack.pop();
+  if (!previous) throw new Error('Cannot pop an empty graphics state stack');
+  ctx = previous;
+};
+
+const escapeXml = (value: PropValue): string => String(value)
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&apos;');
+
+export const fromAst = ([tag, prop, body]: MatraElm): string => {
+  const bodyStr = typeof body === 'string'
+    ? escapeXml(body)
+    : Array.isArray(body)
+      ? body.map(fromAst).join('\n')
+      : '';
+
+  if (tag === null) return bodyStr;
+
+  const attributes = prop
+    ? Object.entries(prop)
+        .filter(([, value]) => value !== null && value !== undefined && value !== false)
+        .map(([key, value]) => ` ${key}="${escapeXml(value === true ? key : value)}"`)
+        .join('')
     : '';
 
-  const tagStr = tag;
+  return `<${tag}${attributes}>${bodyStr}</${tag}>`;
+};
 
-  let bodyStr = '';
-  if (body === null) {
-    bodyStr = '';
-  } else if (typeof body === 'string') {
-    bodyStr = body;
-  } else if (Array.isArray(body)) {
-    bodyStr = body.map(elem => fromAst(elem)).join('\n');
-  }
-
-  if (tagStr == null) {
-    return bodyStr;
-  }
-
-  return `<${tagStr}${propStr}>${bodyStr}</${tagStr}>`;
-}
-
-const background = (col: string) => {
-  ctx.fillStyle = col;
-
-  const matraElm: MatraElm = [
-    'rect',
-    { width: ctx.cvsW, height: ctx.cvsH, fill: ctx.fillStyle },
-    []
-  ];
-
-  return matraElm;
-}
-
-const fill = (col: string) => {
-  ctx.fillStyle = col;
-}
-
-const strokeWeight = (weight: number) => {
+export const fill = (colour: string): void => { ctx.fillStyle = colour; };
+export const noFill = (): void => { ctx.fillStyle = 'none'; };
+export const strokeWeight = (weight: number): void => {
+  finite(weight, 'stroke weight');
+  if (weight < 0) throw new RangeError('Stroke weight cannot be negative');
   ctx.strokeWidth = weight;
-}
-
-const strokeStyle = (col: string) => {
-  ctx.strokeStyle = col;
-}
-
-const textSize = (size: number) => {
+};
+export const strokeStyle = (colour: string): void => { ctx.strokeStyle = colour; };
+export const noStroke = (): void => { ctx.strokeStyle = 'none'; };
+export const textSize = (size: number): void => {
+  finite(size, 'text size');
+  if (size <= 0) throw new RangeError('Text size must be greater than zero');
   ctx.textSize = size;
-}
+};
+export const textAnchor = (align: CanvasTextAlign): void => { ctx.textAnchor = align; };
+export const textBaseline = (align: CanvasTextBaseline): void => { ctx.textBaseline = align; };
 
-const textAnchor = (align: CanvasTextAlign) => {
-  ctx.textAnchor = align;
-}
+export const element = (tag: SvgTag, prop: PropObj = {}, body: string | MatraElm[] | null = null): MatraElm => [tag, prop, body];
+export const g = (content: MatraElm[], prop: PropObj | null = null): MatraElm => ['g', prop, content];
 
-const textBaseline = (align: CanvasTextAlign) => {
-  ctx.textBaseline = align;
-}
+const shape = (tag: SvgTag, prop: PropObj): MatraElm => [tag, {
+  ...prop,
+  fill: ctx.fillStyle,
+  stroke: ctx.strokeStyle,
+  'stroke-width': ctx.strokeWidth,
+}, []];
 
-const svg = (content: MatraElm[], width: number = 256, height: number = 256) => {
-  const svgMatrast: Matrast = [[
-    'svg',
-    {
-      xmlns: "http://www.w3.org/2000/svg",
-      viewBox: `0 0 ${width} ${height}`,
-      width: width,
-      height: height
-    },
-    content
-  ]];
+export const background = (colour: string): MatraElm => ['rect', {
+  width: '100%', height: '100%', fill: colour,
+}, []];
+export const circle = (cx: number, cy: number, r: number): MatraElm => shape('circle', { cx, cy, r });
+export const rect = (x: number, y: number, width: number, height: number, radius = 0): MatraElm => shape('rect', {
+  x, y, width, height, ...(radius > 0 ? { rx: radius, ry: radius } : {}),
+});
+export const ellipse = (cx: number, cy: number, rx: number, ry: number): MatraElm => shape('ellipse', { cx, cy, rx, ry });
+export const line = (x1: number, y1: number, x2: number, y2: number): MatraElm => shape('line', { x1, y1, x2, y2 });
+export const path = (d: string): MatraElm => shape('path', { d });
+export const polygon = (points: string): MatraElm => shape('polygon', { points });
+export const polyline = (points: string): MatraElm => shape('polyline', { points });
 
-  return svgMatrast;
-}
+export const text = (content: string, x: number, y: number): MatraElm => ['text', {
+  x, y,
+  fill: ctx.fillStyle,
+  'font-size': ctx.textSize,
+  'text-anchor': ctx.textAnchor,
+  'dominant-baseline': ctx.textBaseline,
+}, content];
 
-const g = (content: MatraElm[], prop: PropObj | null = null) => {
-  const gMatraElm: MatraElm = [
-    'g',
-    prop,
-    content
-  ];
+export type SvgOptions = {
+  width?: number;
+  height?: number;
+  background?: string | null;
+  title?: string;
+  description?: string;
+  attributes?: PropObj;
+};
 
-  return gMatraElm;
-}
+export const svg = (content: MatraElm[], width = ctx.cvsW, height = ctx.cvsH, attributes: PropObj = {}): Matrast => [[
+  'svg',
+  { xmlns: 'http://www.w3.org/2000/svg', viewBox: `0 0 ${width} ${height}`, width, height, ...attributes },
+  content,
+]];
 
-const shape = (shapeType: SvgTag, prop: PropObj) => {
-  const ctx = getCtx();
+export const svgLayout = (content: MatraElm[], width = ctx.cvsW, height = ctx.cvsH, options: Omit<SvgOptions, 'width' | 'height'> = {}): string => {
+  const { background: backgroundColour = 'white', title, description, attributes = {} } = options;
+  const labelledBy: string[] = [];
+  const children: MatraElm[] = [];
 
-  const shapeMatraElm: MatraElm = [
-    shapeType,
-    {
-      ...prop,
-      fill: ctx.fillStyle,
-      stroke: ctx.strokeStyle || 'none',
-      'stroke-width': ctx.strokeWidth
-    },
-    []
-  ];
+  if (title) { labelledBy.push('matra-title'); children.push(element('title', { id: 'matra-title' }, title)); }
+  if (description) { labelledBy.push('matra-description'); children.push(element('desc', { id: 'matra-description' }, description)); }
+  if (backgroundColour !== null) children.push(background(backgroundColour));
+  children.push(...content);
 
-  return shapeMatraElm;
-}
-
-const circle = (cx: number, cy: number, r: number) => {
-  const circleMatraElm = shape('circle', {
-    cx: cx,
-    cy: cy,
-    r: r
-  });
-
-  return circleMatraElm;
-}
-
-const rect = (x: number, y: number, width: number, height: number) => {
-  const rectMatraElm = shape('rect', {
-    x: x,
-    y: y,
-    width: width,
-    height: height
-  });
-
-  return rectMatraElm;
-}
-
-const path = (d: string) => {
-  const pathMatraElm = shape('path', {
-    d: d,
-  });
-
-  return pathMatraElm;
-}
-
-const line = (x1: number, y1: number, x2: number, y2: number) => {
-  const lineMatraElm = shape('line', {
-    x1: x1,
-    y1: y1,
-    x2: x2,
-    y2: y2
-  });
-
-  return lineMatraElm;
-}
-
-// const ellipse = (cx: number, cy: number, rx: number, ry: number) => {
-//   const ellipseMatraElm = shape('ellipse', {
-//     cx: cx,
-//     cy: cy,
-//     rx: rx,
-//     ry: ry
-//   });
-
-//   return ellipseMatraElm;
-// }
-
-// const polygon = (points: string) => {
-//   const polygonMatraElm = shape('polygon', {
-//     points: points
-//   });
-
-//   return polygonMatraElm;
-// }
-
-// const polyline = (points: string) => {
-//   const polylineMatraElm = shape('polyline', {
-//     points: points
-//   });
-
-//   return polylineMatraElm;
-// }
-
-const text = (content: string, x: number, y: number) => {
-  const ctx = getCtx();
-
-  const textMatraElm: MatraElm = [
-    'text',
-    {
-      x: x,
-      y: y,
-      fill: ctx.fillStyle,
-      'font-size': ctx.textSize,
-      'text-anchor': ctx.textAnchor,
-      'dominant-baseline': ctx.textBaseline
-    },
-    content
-  ];
-
-  return textMatraElm;
-}
-
-const svgLayout = (content: MatraElm[], width: number = 256, height: number = 256) => {
-  const svgMatrast: Matrast = svg([
-    background('white'),
-    ...content
-  ], width, height);
-
-  return fromAst(svgMatrast[0]);
-}
-
-export {
-  Matrast,
-  MatraElm,
-  setCanvasSize,
-  fill,
-  strokeWeight,
-  strokeStyle,
-  textSize,
-  textAnchor,
-  textBaseline,
-  g,
-  circle,
-  rect,
-  path,
-  line,
-  // ellipse,
-  // polygon,
-  // polyline,
-  text,
-  svgLayout,
+  const accessibility = labelledBy.length
+    ? { role: 'img', 'aria-labelledby': labelledBy.join(' ') }
+    : {};
+  return fromAst(svg(children, width, height, { ...accessibility, ...attributes })[0]);
 };
