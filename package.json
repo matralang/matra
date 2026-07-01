@@ -4,14 +4,24 @@
   "version": "0.8.1",
   "type": "module",
   "main": "src/index.mjs",
+  "types": "dist/types/index.d.mts",
   "exports": {
-    ".": "./src/index.mjs"
+    ".": {
+      "types": "./dist/types/index.d.mts",
+      "import": "./src/index.mjs"
+    }
   },
   "files": [
-    "src"
+    "src",
+    "dist/types"
   ],
   "scripts": {
-    "build": "peggy --format es --output src/parser.mjs src/matra.pegjs"
+    "build": "npm run build:parser && npm run build:types",
+    "build:parser": "peggy --format es --output src/parser.mjs src/matra.pegjs",
+    "build:types": "tsc",
+    "check": "tsc --noEmit",
+    "test": "node --test",
+    "prepack": "npm run build"
   },
   "license": "MIT",
   "repository": "https://github.com/butchi/matra-core",
