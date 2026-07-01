@@ -26,6 +26,14 @@ describe("domain-neutral Matra Core", () => {
     })
   })
 
+  it("parses JSON-compatible numeric and null literals", () => {
+    assert.deepEqual(parse("values(-7, .5, 1., 6.02e23, missing=null)"), {
+      tag: "values",
+      props: { missing: null },
+      children: [-7, 0.5, 1, 6.02e23],
+    })
+  })
+
   it("keeps object-style props as a compatibility syntax", () => {
     assert.deepEqual(parse('circle({x:10}, "label")'), {
       tag: "circle",
