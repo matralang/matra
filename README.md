@@ -18,3 +18,16 @@ former private node shape (`head`, `attributes`, `children`).
 Matra props are rejected during MathJSON conversion because silently dropping
 them would corrupt the expression. `Formula(expr)` is accepted as an optional
 document wrapper and is unwrapped at the MathJSON boundary.
+
+## Computation
+
+Cortex Compute Engine integration is an optional workspace package:
+
+```ts
+import { evaluateMatra } from "@matra/math-compute-engine"
+
+evaluateMatra("Add(1, 2, 3)") // 6
+```
+
+Keeping this adapter separate allows `@matra/math` to define syntax and data
+without requiring a particular symbolic computation implementation.
