@@ -2,7 +2,7 @@
 
 [English](./README.md) | [日本語](./README.ja.md)
 
-HTML semantics for the domain-neutral Matra AST.
+ドメイン非依存なMatra ASTにHTMLのセマンティクスを与えるパッケージです。
 
 ```ts
 import { parse } from "@matra/core"
