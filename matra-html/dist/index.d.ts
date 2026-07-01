@@ -1,4 +1,4 @@
-import type { MatraAST, MatraASTChild } from "@matralang/core";
+import type { MatraAST, MatraASTChild } from "@matra/core";
 export interface HTMLOptions {
     /** Render the domain-neutral $root tag as a fragment. */
     rootTag?: string;
