@@ -1,0 +1,19 @@
+{
+  "name": "@matra/math",
+  "version": "0.1.0",
+  "description": "Matra syntax and MathJSON bridge",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "license": "MIT",
+  "dependencies": { "@matra/core": "file:../matra-core" },
+  "devDependencies": { "@types/node": "^22.20.0", "typescript": "^5.9.3" }
+}
