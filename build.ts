@@ -38,6 +38,7 @@ for (const file of sources) {
 
     const outputPath = path.join(distDir, `${name}.svg`);
     fs.writeFileSync(outputPath, `${pageModule.default}\n`, 'utf8');
+    // @ts-ignore Node types are intentionally not required by this tiny package.
     console.log(`Built: ${path.relative(process.cwd(), outputPath)}`);
   } finally {
     if (fs.existsSync(temporaryModule)) fs.unlinkSync(temporaryModule);
