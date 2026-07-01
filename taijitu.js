@@ -1,23 +1,21 @@
-import { fill, strokeStyle, strokeWeight, circle, path } from './module.js';
-import type { MatraElm } from './module.js';
+import { fill, strokeStyle, strokeWeight, circle, path } from './module';
 
-const rightCircle = (cx: number, cy: number, r: number) => {
+const rightCircle = (cx, cy, r) => {
   fill('black');
 
-  const matraElm: MatraElm = path(`M ${cx},${cy - r} A ${r} ${r} 0 0 1 ${cx},${cy + r} L ${cx},${cy} Z`);
+  const matraElm = path(`M ${cx},${cy - r} A ${r} ${r} 0 0 1 ${cx},${cy + r} L ${cx},${cy} Z`);
 
   return matraElm;
 }
 
-const leftCircle = (cx: number, cy: number, r: number) => {
-  const matraElm: MatraElm = path(`M ${cx},${cy - r} A ${r} ${r} 0 0 0 ${cx},${cy + r} L ${cx},${cy} Z`);
+const leftCircle = (cx, cy, r) => {
+  const matraElm = path(`M ${cx},${cy - r} A ${r} ${r} 0 0 0 ${cx},${cy + r} L ${cx},${cy} Z`);
 
   return matraElm;
 }
 
-const taijitsu = (x: number, y: number, size: number): MatraElm[] => {
-  const matraElmArr: MatraElm[] = [];
-
+const taijitsu = (x, y, size) => {
+  const matraElmArr = [];
   const dotSize = size / 8;
 
   strokeWeight(5);
