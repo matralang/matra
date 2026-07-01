@@ -1,4 +1,5 @@
-import { setCanvasSize, strokeStyle, strokeWeight, fill, circle, svgLayout } from './module.js';
+import { setCanvasSize, strokeWeight, strokeStyle, fill, circle, svgLayout } from './module.js';
+import type { MatraElm } from './module.js';
 import taijitsu from './taijitu.js';
 
 const cvsSize = 512;
@@ -12,23 +13,27 @@ setCanvasSize(cvsW, cvsH);
 
 strokeWeight(3);
 
-const circleElmArr = [
-  'blue',
-  'red',
-].map((col, i) => {
-  fill(col);
-  const dx = outerR * cos(2 * PI * i / 2 - PI / 2);
-  const dy = outerR * sin(2 * PI * i / 2 - PI / 2);
+const circleElmArr: MatraElm = [
+  'g',
+  {},
+  [
+    'blue',
+    'red',
+  ].map((col, i) => {
+    fill(col);
+    const dx = outerR * cos(2 * PI * i / 2 - PI / 2);
+    const dy = outerR * sin(2 * PI * i / 2 - PI / 2);
 
-  strokeWeight(3);
-  strokeStyle('black');
+    strokeWeight(3);
+    strokeStyle('black');
 
-  return circle(cvsW / 2 + dx, cvsH / 2 - dy, elmSize / 2);
-})
+    return circle(cvsW / 2 + dx, cvsH / 2 - dy, elmSize / 2);
+  })
+];
 
-const svgTxt = svgLayout(`
-  ${circleElmArr.join('\n  ')}
-  ${taijitsu(cvsW / 2 - elmSize / 2, cvsH / 2 - elmSize / 2, elmSize)}
-`, cvsW, cvsH);
+const svgTxt = svgLayout([
+  circleElmArr,
+  ...taijitsu(cvsW / 2 - elmSize / 2, cvsH / 2 - elmSize / 2, elmSize)
+], cvsW, cvsH);
 
 console.log(svgTxt);
