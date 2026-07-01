@@ -4,7 +4,7 @@
 
 import assert from "node:assert"
 import { describe, it } from "node:test"
-import { parse } from "../src/parser.mjs"
+import { parse } from "../src/matra-parser.mjs"
 
 describe("Matra v0.8 Function-Style Syntax", () => {
   it('parses simple function call: p("Hello")', () => {
