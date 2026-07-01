@@ -23,12 +23,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/matralang/html.git"
+    "url": "git+https://github.com/matralang/matra-html.git"
   },
   "bugs": {
-    "url": "https://github.com/matralang/html/issues"
+    "url": "https://github.com/matralang/matra-html/issues"
   },
-  "homepage": "https://github.com/matralang/html#readme",
+  "homepage": "https://github.com/matralang/matra-html#readme",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org"
