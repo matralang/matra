@@ -30,25 +30,47 @@ TagApply
       if (syntaxMode === 'document') {
         error('Function syntax is not allowed in document mode');
       }
-      let props = null, body = []
-      if (args?.length) {
-        if (args[0]?.__kind === "bare-object") {
-          props = args[0].value
-          body = args.slice(1)
+      const props = {}, body = []
+      for (const arg of args ?? []) {
+        if (arg?.__kind === "keyword-prop") {
+          if (Object.prototype.hasOwnProperty.call(props, arg.key)) {
+            error(`Duplicate prop: ${arg.key}`)
+          }
+          props[arg.key] = arg.value
+        } else if (arg?.__kind === "bare-object") {
+          // Legacy compatibility: tag({ key: value }, child)
+          for (const [key, value] of Object.entries(arg.value)) {
+            if (Object.prototype.hasOwnProperty.call(props, key)) {
+              error(`Duplicate prop: ${key}`)
+            }
+            props[key] = value
+          }
         } else {
-          body = args
+          body.push(arg)
         }
       }
-      return [tag, props || {}, body]
+      return [tag, props, body]
     }
 
 ArgList
   = first:Arg rest:(_ "," _ Arg)* { return [first, ...rest.map(t => t[3])] }
 
 Arg
-  = BareObject
+  = KeywordProp
+  / BareObject
   / TagApply
   / StringLiteral
+  / Number
+  / Boolean
+  / Identifier
+
+KeywordProp
+  = key:Identifier _ "=" _ value:PropValue {
+      return { __kind: "keyword-prop", key, value }
+    }
+
+PropValue
+  = StringLiteral
   / Number
   / Boolean
   / Identifier
