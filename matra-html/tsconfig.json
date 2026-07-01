@@ -5,7 +5,7 @@
     "moduleResolution": "NodeNext",
     "baseUrl": ".",
     "paths": {
-      "@matralang/core": ["../dist/index.d.ts"]
+      "@matra/core": ["../dist/index.d.ts"]
     },
     "outDir": "dist",
     "rootDir": "src",
