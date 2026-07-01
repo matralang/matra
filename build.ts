@@ -1,39 +1,45 @@
-import { setCanvasSize, strokeWeight, strokeStyle, fill, circle, svgLayout } from './module.js';
-import type { MatraElm } from './module.js';
-import taijitsu from './taijitu.js';
+// @ts-ignore
+import fs from 'fs';
+// @ts-ignore
+import path from 'path';
 
-const cvsSize = 512;
-const [cvsW, cvsH] = [cvsSize, cvsSize];
-const outerR = 128
-const elmSize = 64
+import esbuild from 'esbuild';
 
-const { cos, sin, PI } = Math;
+const pageDir = path.resolve('./page');
 
-setCanvasSize(cvsW, cvsH);
+for (const file of fs.readdirSync(pageDir)) {
+  if (file.endsWith('.ts')) {
+    const tsFilePath = path.join(pageDir, file);
+    const jsFilePath = tsFilePath.replace(/\.ts$/, '.js');
 
-strokeWeight(3);
+    // Transpile TypeScript to JavaScript using esbuild
+    esbuild.buildSync({
+      entryPoints: [tsFilePath],
+      outfile: jsFilePath,
+      bundle: true,
+      platform: 'node',
+      format: 'cjs',
+      target: ['es2024'],
+    });
+  }
 
-const circleElmArr: MatraElm = [
-  'g',
-  {},
-  [
-    'blue',
-    'red',
-  ].map((col, i) => {
-    fill(col);
-    const dx = outerR * cos(2 * PI * i / 2 - PI / 2);
-    const dy = outerR * sin(2 * PI * i / 2 - PI / 2);
+  const jsFilePath = path.join(pageDir, file.replace(/\.ts$/, '.js'));
+  if (fs.existsSync(jsFilePath)) {
+    const kamiPageModule = await import(jsFilePath);
+    const kamiPage = kamiPageModule.default;
 
-    strokeWeight(3);
-    strokeStyle('black');
+    const distDir = path.resolve('./dist');
+    if (!fs.existsSync(distDir)) {
+      fs.mkdirSync(distDir, { recursive: true });
+    }
 
-    return circle(cvsW / 2 + dx, cvsH / 2 - dy, elmSize / 2);
-  })
-];
+    const buildDir = path.resolve(distDir);
+    if (!fs.existsSync(buildDir)) {
+      fs.mkdirSync(buildDir, { recursive: true });
+    }
 
-const svgTxt = svgLayout([
-  circleElmArr,
-  ...taijitsu(cvsW / 2 - elmSize / 2, cvsH / 2 - elmSize / 2, elmSize)
-], cvsW, cvsH);
-
-console.log(svgTxt);
+    const outputPath = path.join(buildDir, file.replace(/\.ts$|\.js$/, '.svg'));
+    fs.writeFileSync(outputPath, kamiPage, 'utf-8');
+    console.log(`Built: ${outputPath}`);
+  }
+}

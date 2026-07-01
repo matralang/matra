@@ -24,12 +24,17 @@ type MatraElm = [
 
 type Matrast = MatraElm[];
 
+type CanvasTextAlign = 'start' | 'end' | 'left' | 'right' | 'center';
+
 type Context = {
   cvsW: number;
   cvsH: number;
   fillStyle: string;
   strokeStyle: string;
-  lineWidth: number;
+  strokeWidth: number;
+  textSize: number;
+  textAnchor: CanvasTextAlign;
+  textBaseline: CanvasTextAlign;
 };
 
 const ctx: Context = {
@@ -37,7 +42,10 @@ const ctx: Context = {
   cvsH: 256,
   fillStyle: '',
   strokeStyle: '',
-  lineWidth: 1,
+  strokeWidth: 1,
+  textSize: 12,
+  textAnchor: 'start' as CanvasTextAlign,
+  textBaseline: 'middle' as CanvasTextAlign,
 };
 
 const getCtx = (): Context => {
@@ -51,7 +59,11 @@ const setCanvasSize = (w: number, h: number) => {
 
 const fromAst = (matraElm: MatraElm): string => {
   const [tag, prop, body] = matraElm;
-  const propStr = prop && Object.keys(prop).length > 0 ? ' ' + Object.entries(prop).map(([key, val]) => `${key}="${val}"`).join(' ') : '';
+  const propStr = prop
+    ? ' ' + Object.entries(prop)
+        .map(([key, val]) => `${key}="${val}"`)
+        .join(' ')
+    : '';
 
   const tagStr = tag;
 
@@ -62,6 +74,10 @@ const fromAst = (matraElm: MatraElm): string => {
     bodyStr = body;
   } else if (Array.isArray(body)) {
     bodyStr = body.map(elem => fromAst(elem)).join('\n');
+  }
+
+  if (tagStr == null) {
+    return bodyStr;
   }
 
   return `<${tagStr}${propStr}>${bodyStr}</${tagStr}>`;
@@ -84,68 +100,26 @@ const fill = (col: string) => {
 }
 
 const strokeWeight = (weight: number) => {
-  ctx.lineWidth = weight;
+  ctx.strokeWidth = weight;
 }
 
 const strokeStyle = (col: string) => {
   ctx.strokeStyle = col;
 }
 
-const circle = (x: number, y: number, r: number) => {
-  const ctx = getCtx();
-
-  const circleMatraElm: MatraElm = [
-    'circle', {
-      cx: x,
-      cy: y,
-      r: r,
-      fill: ctx.fillStyle,
-      stroke: ctx.strokeStyle || 'none',
-      'stroke-width': ctx.lineWidth
-    },
-    []
-  ];
-
-  return circleMatraElm;
+const textSize = (size: number) => {
+  ctx.textSize = size;
 }
 
-const rect = (x: number, y: number, w: number, h: number) => {
-  const ctx = getCtx();
-
-  const rectMatraElm: MatraElm = [
-    'rect', {
-      x: x,
-      y: y,
-      width: w,
-      height: h,
-      fill: ctx.fillStyle,
-      stroke: ctx.strokeStyle || 'none',
-      'stroke-width': ctx.lineWidth
-    },
-    []
-  ];
-
-  return rectMatraElm;
+const textAnchor = (align: CanvasTextAlign) => {
+  ctx.textAnchor = align;
 }
 
-const path = (d: string) => {
-  const ctx = getCtx();
-
-  const pathMatraElm: MatraElm = [
-    'path',
-    {
-      d: d,
-      fill: ctx.fillStyle,
-      stroke: ctx.strokeStyle || 'none',
-      'stroke-width': ctx.lineWidth
-    },
-    []
-  ];
-
-  return pathMatraElm;
+const textBaseline = (align: CanvasTextAlign) => {
+  ctx.textBaseline = align;
 }
 
-const svgLayout = (content: MatraElm[], width: number = 256, height: number = 256) => {
+const svg = (content: MatraElm[], width: number = 256, height: number = 256) => {
   const svgMatrast: Matrast = [[
     'svg',
     {
@@ -154,11 +128,130 @@ const svgLayout = (content: MatraElm[], width: number = 256, height: number = 25
       width: width,
       height: height
     },
-    [
-      background('white'),
-      ...content
-    ]
+    content
   ]];
+
+  return svgMatrast;
+}
+
+const g = (content: MatraElm[], prop: PropObj | null = null) => {
+  const gMatraElm: MatraElm = [
+    'g',
+    prop,
+    content
+  ];
+
+  return gMatraElm;
+}
+
+const shape = (shapeType: SvgTag, prop: PropObj) => {
+  const ctx = getCtx();
+
+  const shapeMatraElm: MatraElm = [
+    shapeType,
+    {
+      ...prop,
+      fill: ctx.fillStyle,
+      stroke: ctx.strokeStyle || 'none',
+      'stroke-width': ctx.strokeWidth
+    },
+    []
+  ];
+
+  return shapeMatraElm;
+}
+
+const circle = (cx: number, cy: number, r: number) => {
+  const circleMatraElm = shape('circle', {
+    cx: cx,
+    cy: cy,
+    r: r
+  });
+
+  return circleMatraElm;
+}
+
+const rect = (x: number, y: number, width: number, height: number) => {
+  const rectMatraElm = shape('rect', {
+    x: x,
+    y: y,
+    width: width,
+    height: height
+  });
+
+  return rectMatraElm;
+}
+
+const path = (d: string) => {
+  const pathMatraElm = shape('path', {
+    d: d,
+  });
+
+  return pathMatraElm;
+}
+
+const line = (x1: number, y1: number, x2: number, y2: number) => {
+  const lineMatraElm = shape('line', {
+    x1: x1,
+    y1: y1,
+    x2: x2,
+    y2: y2
+  });
+
+  return lineMatraElm;
+}
+
+// const ellipse = (cx: number, cy: number, rx: number, ry: number) => {
+//   const ellipseMatraElm = shape('ellipse', {
+//     cx: cx,
+//     cy: cy,
+//     rx: rx,
+//     ry: ry
+//   });
+
+//   return ellipseMatraElm;
+// }
+
+// const polygon = (points: string) => {
+//   const polygonMatraElm = shape('polygon', {
+//     points: points
+//   });
+
+//   return polygonMatraElm;
+// }
+
+// const polyline = (points: string) => {
+//   const polylineMatraElm = shape('polyline', {
+//     points: points
+//   });
+
+//   return polylineMatraElm;
+// }
+
+const text = (content: string, x: number, y: number) => {
+  const ctx = getCtx();
+
+  const textMatraElm: MatraElm = [
+    'text',
+    {
+      x: x,
+      y: y,
+      fill: ctx.fillStyle,
+      'font-size': ctx.textSize,
+      'text-anchor': ctx.textAnchor,
+      'dominant-baseline': ctx.textBaseline
+    },
+    content
+  ];
+
+  return textMatraElm;
+}
+
+const svgLayout = (content: MatraElm[], width: number = 256, height: number = 256) => {
+  const svgMatrast: Matrast = svg([
+    background('white'),
+    ...content
+  ], width, height);
 
   return fromAst(svgMatrast[0]);
 }
@@ -170,8 +263,17 @@ export {
   fill,
   strokeWeight,
   strokeStyle,
+  textSize,
+  textAnchor,
+  textBaseline,
+  g,
   circle,
   rect,
   path,
+  line,
+  // ellipse,
+  // polygon,
+  // polyline,
+  text,
   svgLayout,
 };
