@@ -19,6 +19,8 @@
     "registry": "https://npm.pkg.github.com"
   },
   "devDependencies": {
-    "peggy": "^5.0.6"
+    "@types/node": "^22.20.0",
+    "peggy": "^5.0.6",
+    "typescript": "^5.9.3"
   }
 }
