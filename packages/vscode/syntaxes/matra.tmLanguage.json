@@ -1,0 +1,144 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Matra",
+  "scopeName": "source.matra",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#interpolation" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#constants" },
+    { "include": "#root" },
+    { "include": "#attributes" },
+    { "include": "#selectors" },
+    { "include": "#function-tags" },
+    { "include": "#block-tags" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.block.html.matra",
+          "begin": "<!--",
+          "beginCaptures": { "0": { "name": "punctuation.definition.comment.begin.matra" } },
+          "end": "-->",
+          "endCaptures": { "0": { "name": "punctuation.definition.comment.end.matra" } }
+        }
+      ]
+    },
+    "interpolation": {
+      "patterns": [
+        {
+          "name": "meta.embedded.expression.matra",
+          "begin": "\\{\\{",
+          "beginCaptures": { "0": { "name": "punctuation.section.embedded.begin.matra" } },
+          "end": "\\}\\}",
+          "endCaptures": { "0": { "name": "punctuation.section.embedded.end.matra" } },
+          "patterns": [
+            { "match": "[A-Za-z_][A-Za-z0-9_-]*", "name": "variable.other.matra" },
+            { "match": "\\.", "name": "punctuation.accessor.matra" }
+          ]
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.matra",
+          "begin": "\"",
+          "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.matra" } },
+          "end": "\"",
+          "endCaptures": { "0": { "name": "punctuation.definition.string.end.matra" } },
+          "patterns": [{ "include": "#interpolation" }]
+        },
+        {
+          "name": "string.quoted.other.backtick.matra",
+          "begin": "`",
+          "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.matra" } },
+          "end": "`",
+          "endCaptures": { "0": { "name": "punctuation.definition.string.end.matra" } },
+          "patterns": [{ "include": "#interpolation" }]
+        },
+        {
+          "name": "string.quoted.other.tilde.matra",
+          "begin": "~",
+          "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.matra" } },
+          "end": "~",
+          "endCaptures": { "0": { "name": "punctuation.definition.string.end.matra" } },
+          "patterns": [{ "include": "#interpolation" }]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        { "match": "(?<![\\w.-])-?(?:\\d+\\.\\d*|\\.\\d+|\\d+)(?:[eE][+-]?\\d+)?(?![\\w.-])", "name": "constant.numeric.matra" }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        { "match": "\\b(?:true|false)\\b", "name": "constant.language.boolean.matra" },
+        { "match": "\\bnull\\b", "name": "constant.language.null.matra" }
+      ]
+    },
+    "root": {
+      "patterns": [
+        { "match": "\\$root\\b", "name": "variable.language.root.matra" }
+      ]
+    },
+    "attributes": {
+      "patterns": [
+        {
+          "match": "([A-Za-z_][A-Za-z0-9_-]*)(\\s*)(=)",
+          "captures": {
+            "1": { "name": "entity.other.attribute-name.matra" },
+            "3": { "name": "keyword.operator.assignment.matra" }
+          }
+        }
+      ]
+    },
+    "selectors": {
+      "patterns": [
+        {
+          "match": "(\\.)([^\\s`~\"'()\\[\\]{}<>=|#.,]+)",
+          "captures": {
+            "1": { "name": "punctuation.definition.class.matra" },
+            "2": { "name": "entity.other.attribute-name.class.matra" }
+          }
+        },
+        {
+          "match": "(#)([^\\s`~\"'()\\[\\]{}<>=|#.,]+)",
+          "captures": {
+            "1": { "name": "punctuation.definition.id.matra" },
+            "2": { "name": "entity.other.attribute-name.id.matra" }
+          }
+        }
+      ]
+    },
+    "function-tags": {
+      "patterns": [
+        {
+          "match": "\\b([A-Za-z_][A-Za-z0-9_-]*)(?=\\s*\\()",
+          "captures": { "1": { "name": "entity.name.tag.matra" } }
+        }
+      ]
+    },
+    "block-tags": {
+      "patterns": [
+        {
+          "match": "(?<![A-Za-z0-9_$.-])([^\\s`~\"'()\\[\\]{}<>=|#.,]+)(?=\\s*(?:[.#\\[]|\\{|`|~))",
+          "captures": { "1": { "name": "entity.name.tag.matra" } }
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        { "match": "[{}]", "name": "punctuation.section.block.matra" },
+        { "match": "[()]", "name": "punctuation.section.group.matra" },
+        { "match": "[\\[\\]]", "name": "punctuation.section.attributes.matra" },
+        { "match": ",", "name": "punctuation.separator.arguments.matra" },
+        { "match": ":", "name": "punctuation.separator.key-value.matra" }
+      ]
+    }
+  }
+}
