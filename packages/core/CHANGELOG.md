@@ -24,9 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `Boolean` - `true`/`false` literal support
 - **Property value types** - Support for strings, numbers, and booleans in properties
 - **Comprehensive documentation**:
-  - `../../spec/archive/core-v0.8/function-syntax.md` - Complete syntax guide
-  - `../../spec/archive/core-v0.8/QUICK-REFERENCE.md` - Side-by-side syntax comparison
-  - `../../spec/archive/core-v0.8/examples/function-syntax-demo.mjs` - 11 practical examples
+  - `../../spec/archive/core-v0.8/function-syntax.md` - Complete syntax
+    guide
+  - `../../spec/archive/core-v0.8/QUICK-REFERENCE.md` - Side-by-side
+    syntax comparison
+  - `../../spec/archive/core-v0.8/examples/function-syntax-demo.mjs` -
+    11 practical examples
 - **Test coverage** - 30 new tests:
   - Function syntax tests (10)
   - v0.7 compatibility tests (11)
@@ -57,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.0] - 2025-10-23
 
-### Added
+### [0.7.0] Added
 
 - **Attribute-based directives** support in `transform()`:
   - `m-if="condition"` - Conditional rendering on regular elements
@@ -68,14 +71,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Now accepts both plain strings and template literals
   - Compatible with tagged template literal syntax: `` with_(ctx)`div { ... }` ``
 
-### Changed
+### [0.7.0] Changed
 
-- `transformWithScopes()` completely rewritten to prioritize attribute directives over tag directives
-- `transform()` now correctly handles single node inputs (returns null when filtered out)
+- `transformWithScopes()` completely rewritten to prioritize attribute
+  directives over tag directives
+- `transform()` now correctly handles single node inputs (returns null when
+  filtered out)
 - `toHTML()` enhanced with HAST/MDAST node type support
 - `render.mjs` enhanced with `renderHastNode()` function for HAST format support
 
-### Fixed
+### [0.7.0] Fixed
 
 - Attribute-based directives now work correctly with `m-else` siblings
 - Empty results from falsy `m-if` conditions are now properly handled
@@ -84,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.0] - 2025-10-22
 
-### Added
+### [0.6.0] Added
 
 - Template transformation engine (`transform.mjs`)
   - Tag-based directives: `m-if[test="..."]`, `m-each[of="..." as="..."]`, `m-else`
@@ -93,14 +98,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `with_(context)` helper function for creating reusable template functions
 - `compile()` now accepts `opts.context` for template evaluation
 
-### Changed
+### [0.6.0] Changed
 
 - API expanded with `transform`, `with_()` exports
 - `matra()` unified API now supports context parameter
 
 ## [0.5.0] - 2025-10-21
 
-### Added
+### [0.5.0] Added
 
 - Multiple output formats:
   - `toTeX()` - LaTeX output
@@ -110,7 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] - 2025-10-20
 
-### Added
+### [0.4.0] Added
 
 - Initial ESM module structure
 - Peggy parser integration (`matra-parser.mjs` generated from `matra-parser.pegjs`)
@@ -119,20 +124,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.0] - 2025-10-19
 
-### Added
+### [0.3.0] Added
 
 - Core parser functionality
 - HAST-compatible AST structure
 
 ## [0.2.0] - 2025-10-18
 
-### Added
+### [0.2.0] Added
 
 - Project initialization
 - Basic package configuration
 
 ## [0.1.0] - 2025-10-17
 
-### Added
+### [0.1.0] Added
 
 - Initial repository setup
