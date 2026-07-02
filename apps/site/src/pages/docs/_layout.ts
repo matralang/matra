@@ -3,7 +3,7 @@ import defaultLayout from "../../layouts/default-layout"
 
 export const specNav = matra`
   aside.docs-nav {
-    p { "SPECIFICATION 0.1" }
+    p { "SPECIFICATION 0.2" }
     nav[aria-label="仕様書"] {
       a[href="/docs/data-model/"] { span { "01" } "Data Model" }
       a[href="/docs/ast/"] { span { "02" } "AST" }
@@ -20,7 +20,7 @@ export function docsLayout(content: string, title: string): string {
       article.docs-content { ${content} }
     }
   `, {
-    title: `${title} — Matra Specification v0.1`,
-    description: `Matra Specification v0.1 ${title}`,
+    title: `${title} — Matra Specification v0.2`,
+    description: `Matra Specification v0.2 ${title}`,
   })
 }

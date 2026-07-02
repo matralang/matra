@@ -5,7 +5,7 @@ const page = defaultLayout(matra`
   section.hero {
     div.shell.hero-grid {
       div.hero-copy {
-        p.eyebrow { "Matra Specification v0.1" }
+        p.eyebrow { "Matra Specification v0.2" }
         h1 { "意味より先に、構造を書く。" }
         p.lede {
           "Matraは、tag・props・childrenからなるツリーを記述するための、"

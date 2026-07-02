@@ -12,7 +12,7 @@ const playgroundBundle = await readFile(new URL("../dist/assets/playground.js", 
 assert.match(index, /^<!DOCTYPE html>/)
 assert.match(index, /<title>Matra — Structure first/)
 assert.match(index, /意味より先に、構造を書く/)
-assert.match(docs, /<title>Index — Matra Specification v0.1/)
+assert.match(docs, /<title>Index — Matra Specification v0.2/)
 assert.match(docs, /Data Model/)
 assert.match(playground, /<title>Playground — Matra/)
 assert.match(playground, /id="matra-source"/)

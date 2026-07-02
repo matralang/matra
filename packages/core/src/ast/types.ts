@@ -36,4 +36,8 @@ export interface MatraParser<Output = MatraAST | MatraJSON> {
   parse(source: string, options?: ParseOptions): Output
 }
 
-export const MATRA_VERSION = "0.2.0"
+/** Version of the @matra/core package API. */
+export const CORE_VERSION = "0.2.0"
+
+/** Version of the Matra language specification implemented by this release. */
+export const SPEC_VERSION = "0.2"

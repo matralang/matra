@@ -29,7 +29,7 @@ const footer = matra`
         strong { "Matra" }
         p { "Structure first. Domain later." }
       }
-      p { "Matra Specification v0.1" }
+      p { "Matra Specification v0.2" }
     }
   }
 `
