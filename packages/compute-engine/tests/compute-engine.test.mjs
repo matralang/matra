@@ -24,4 +24,11 @@ describe("Cortex Compute Engine adapter", () => {
   it("computes numeric approximations", () => {
     assert.equal(numericEvaluateMatra("Divide(1, 2)"), 0.5)
   })
+
+  it("binds scoped values into Matra formulas", () => {
+    assert.equal(
+      numericEvaluateMatra("Add(Power(x, 2), y)", { x: 3, y: 4 }),
+      13,
+    )
+  })
 })

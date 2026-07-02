@@ -8,4 +8,5 @@ import { evaluateMatra, simplify } from "@matra/math-compute-engine"
 
 evaluateMatra("Add(1, 2, 3)") // 6
 simplify(["Add", "x", "x"]) // ["Multiply", 2, "x"]
+numericEvaluateMatra("Multiply(radius, Cos(angle))", { radius: 10, angle: 0 }) // 10
 ```
