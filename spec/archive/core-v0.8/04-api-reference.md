@@ -498,4 +498,4 @@ m-if[test="\${a && b && c}"] {
 
 ---
 
-For more information, see the [main README](../README.md).
+For more information, see the [Core README](../../../packages/core/README.md).

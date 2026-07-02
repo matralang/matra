@@ -3,6 +3,11 @@
 Matra is maintained as an npm workspaces monorepo. Published packages keep the
 `@matra/*` scope.
 
+## Specification
+
+- [Matra Specification v0.1](spec/README.md)
+- [Matra Specification v0.1（日本語）](spec/README.ja.md)
+
 ## Packages
 
 - [`@matra/core`](packages/core)

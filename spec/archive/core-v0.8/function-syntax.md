@@ -255,6 +255,6 @@ Both syntaxes have equivalent performance. Choose based on readability and maint
 
 ## See Also
 
-- [Matra Core README](../README.md)
-- [Syntax Examples](../examples/function-syntax-demo.mjs)
-- [API Reference](../docs/04-api-reference.md)
+- [Matra Core README](../../../packages/core/README.md)
+- [Syntax Examples](../../../packages/core/examples/function-syntax-demo.mjs)
+- [API Reference](./04-api-reference.md)

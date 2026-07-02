@@ -24,8 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `Boolean` - `true`/`false` literal support
 - **Property value types** - Support for strings, numbers, and booleans in properties
 - **Comprehensive documentation**:
-  - `docs/function-syntax.md` - Complete syntax guide
-  - `docs/QUICK-REFERENCE.md` - Side-by-side syntax comparison
+  - `../../spec/archive/core-v0.8/function-syntax.md` - Complete syntax guide
+  - `../../spec/archive/core-v0.8/QUICK-REFERENCE.md` - Side-by-side syntax comparison
   - `examples/function-syntax-demo.mjs` - 11 practical examples
 - **Test coverage** - 30 new tests:
   - Function syntax tests (10)

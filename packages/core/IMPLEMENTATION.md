@@ -108,7 +108,7 @@ Created comprehensive test files:
 
 ### 4. Documentation
 
-#### `docs/function-syntax.md`
+#### `../../spec/archive/core-v0.8/function-syntax.md`
 
 - Complete syntax guide
 - Quick reference
@@ -230,7 +230,7 @@ Block
 1. `tests/function-syntax.test.mjs` - Function syntax tests
 2. `tests/v07-compat.test.mjs` - Compatibility tests
 3. `tests/mixed-syntax.test.mjs` - Mixed usage tests
-4. `docs/function-syntax.md` - Documentation
+4. `../../spec/archive/core-v0.8/function-syntax.md` - Documentation
 5. `examples/function-syntax-demo.mjs` - Examples
 6. `IMPLEMENTATION.md` - This file
 

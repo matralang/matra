@@ -449,4 +449,4 @@ console.log(render({ widget }));
 
 ---
 
-For more information, see the [main README](../README.md).
+For more information, see the [Core README](../../../packages/core/README.md).

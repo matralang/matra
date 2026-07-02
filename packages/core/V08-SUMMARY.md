@@ -37,8 +37,8 @@ div.container { h1 { "Title" } p { "Content" } }
 
 ### Documentation
 
-- Complete syntax guide (`docs/function-syntax.md`)
-- Quick reference card (`docs/QUICK-REFERENCE.md`)
+- Complete syntax guide (`../../spec/archive/core-v0.8/function-syntax.md`)
+- Quick reference card (`../../spec/archive/core-v0.8/QUICK-REFERENCE.md`)
 - Implementation details (`IMPLEMENTATION.md`)
 - Demo with 11 examples (`examples/function-syntax-demo.mjs`)
 - Updated CHANGELOG
@@ -76,8 +76,8 @@ Total: 60/60 passing ✅
 - `tests/v07-compat.test.mjs` - Compatibility verification
 - `tests/mixed-syntax.test.mjs` - Mixed usage tests
 - `tests/comprehensive-v08.test.mjs` - End-to-end tests
-- `docs/function-syntax.md` - Complete guide
-- `docs/QUICK-REFERENCE.md` - Quick reference
+- `../../spec/archive/core-v0.8/function-syntax.md` - Complete guide
+- `../../spec/archive/core-v0.8/QUICK-REFERENCE.md` - Quick reference
 - `examples/function-syntax-demo.mjs` - Working examples
 - `IMPLEMENTATION.md` - Technical details
 - `V08-SUMMARY.md` - This file

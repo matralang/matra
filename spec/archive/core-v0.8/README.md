@@ -1,4 +1,9 @@
-# Matra Documentation
+# Archived Matra Core v0.8 Documentation
+
+> [!WARNING]
+> This is non-normative historical documentation for the earlier,
+> HTML-oriented Core implementation. See the current
+> [Matra Specification v0.1](../../README.md).
 
 Welcome to the @matra/core documentation!
 
@@ -45,8 +50,8 @@ Welcome to the @matra/core documentation!
 
 ## Quick Links
 
-- [Main README](../README.md)
-- [CHANGELOG](../CHANGELOG.md)
+- [Core README](../../../packages/core/README.md)
+- [CHANGELOG](../../../packages/core/CHANGELOG.md)
 - [GitHub Repository](https://github.com/matralang/matra/tree/main/packages/core)
 - [npm Package](https://www.npmjs.com/package/@matra/core)
 
@@ -87,7 +92,7 @@ All documentation is now complete! 🎉
 
 ## Contributing
 
-Contributions are welcome! Please see the main [README](../README.md) for contribution guidelines.
+Contributions are welcome! Please see the [Core README](../../../packages/core/README.md) for contribution guidelines.
 
 ## License
 
