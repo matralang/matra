@@ -36,6 +36,9 @@ for (const file of sources) {
       entryPoints: [path.join(pageDir, file)],
       outfile: temporaryModule,
       bundle: true,
+      // Compute Engine loads runtime dictionaries that must not be folded into
+      // each generated example bundle.
+      external: ['@matra/math-compute-engine'],
       platform: 'node',
       format: 'esm',
       target: ['es2022'],

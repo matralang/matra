@@ -42,6 +42,7 @@
   },
   "devDependencies": {
     "@matra/core": "file:../matra-core",
+    "@matra/math-compute-engine": "file:../matra-math/packages/compute-engine",
     "esbuild": "^0.27.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
