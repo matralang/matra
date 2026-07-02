@@ -12,7 +12,7 @@ import { astToMatraJSON, matraJSONToAST } from "./ast/convert.js";
 import { printJSON } from "./printer.js";
 import { transform, visit } from "./ast/transform.js";
 import { renderWith } from "./render.js";
-export declare const VERSION = "0.2.0";
+export declare const VERSION = "0.2.1";
 declare const _default: {
     parse: typeof parse;
     parseWith: typeof parseWith;
