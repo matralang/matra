@@ -31,7 +31,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/matralang/matra-graphics.git"
+    "url": "git+https://github.com/matralang/matra.git",
+    "directory": "packages/graphics"
   },
   "publishConfig": {
     "access": "public",
@@ -41,8 +42,8 @@
     "@matra/core": "^0.2.0"
   },
   "devDependencies": {
-    "@matra/core": "file:../matra-core",
-    "@matra/math-compute-engine": "file:../matra-math/packages/compute-engine",
+    "@matra/core": "^0.2.0",
+    "@matra/math-compute-engine": "^0.1.0",
     "esbuild": "^0.27.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"

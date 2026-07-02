@@ -23,18 +23,19 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/matralang/matra-html.git"
+    "url": "git+https://github.com/matralang/matra.git",
+    "directory": "packages/html"
   },
   "bugs": {
-    "url": "https://github.com/matralang/matra-html/issues"
+    "url": "https://github.com/matralang/matra/issues"
   },
-  "homepage": "https://github.com/matralang/matra-html#readme",
+  "homepage": "https://github.com/matralang/matra/tree/main/packages/html#readme",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org"
   },
   "peerDependencies": {
-    "@matra/core": "^0.1.0"
+    "@matra/core": "^0.2.0"
   },
   "peerDependenciesMeta": {
     "@matra/core": {
@@ -42,7 +43,7 @@
     }
   },
   "devDependencies": {
-    "@matra/core": "^0.1.1",
+    "@matra/core": "^0.2.0",
     "typescript": "^5.9.3"
   }
 }

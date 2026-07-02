@@ -19,9 +19,14 @@
     "prepack": "npm run build"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matralang/matra.git",
+    "directory": "packages/math-compute-engine"
+  },
   "dependencies": {
     "@cortex-js/compute-engine": "^0.64.0",
-    "@matra/math": "file:../.."
+    "@matra/math": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",

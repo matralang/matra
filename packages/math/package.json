@@ -7,17 +7,18 @@
   "types": "dist/index.d.ts",
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
   "files": ["dist"],
-  "workspaces": ["packages/*"],
   "scripts": {
     "build": "tsc",
-    "build:all": "npm run build && npm run build --workspace @matra/math-compute-engine",
     "check": "tsc --noEmit",
-    "check:all": "npm run check && npm run check --workspace @matra/math-compute-engine",
     "test": "npm run build && node --test tests/*.test.mjs",
-    "test:all": "npm test && npm test --workspace @matra/math-compute-engine",
     "prepack": "npm run build"
   },
   "license": "MIT",
-  "dependencies": { "@matra/core": "file:../matra-core" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matralang/matra.git",
+    "directory": "packages/math"
+  },
+  "dependencies": { "@matra/core": "^0.2.0" },
   "devDependencies": { "@types/node": "^22.20.0", "typescript": "^5.9.3" }
 }
