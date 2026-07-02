@@ -1,0 +1,62 @@
+{
+  "name": "matra-vscode",
+  "displayName": "Matra Language Support",
+  "description": "Language support for Matra, including syntax highlighting, editing configuration, and snippets.",
+  "version": "0.1.0",
+  "publisher": "matralang",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "keywords": [
+    "matra",
+    "template",
+    "markup"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/matralang/matra.git",
+    "directory": "packages/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/matralang/matra/issues"
+  },
+  "homepage": "https://github.com/matralang/matra/tree/main/packages/vscode#readme",
+  "scripts": {
+    "build": "npm run check",
+    "check": "node scripts/check.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "matra",
+        "aliases": [
+          "Matra",
+          "matra"
+        ],
+        "extensions": [
+          ".matra"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "matra",
+        "scopeName": "source.matra",
+        "path": "./syntaxes/matra.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "matra",
+        "path": "./snippets/matra.json"
+      }
+    ]
+  }
+}
