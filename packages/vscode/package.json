@@ -8,6 +8,10 @@
   "engines": {
     "vscode": "^1.85.0"
   },
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "onLanguage:matra"
+  ],
   "categories": [
     "Programming Languages",
     "Snippets"

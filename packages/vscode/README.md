@@ -6,7 +6,12 @@ VS Code language support for [Matra](https://github.com/matralang/matra).
 
 - Syntax highlighting for function and block syntax
 - Highlighting for selectors, attributes, literals, comments, and `{{interpolation}}`
-- Bracket matching, auto-closing pairs, indentation, and region folding
+- Document formatting with **Format Document**
+- Outline symbols for Matra elements
+- Folding ranges for nested elements and comments
+- Hover help for elements, directives, and Matra literals
+- Live diagnostics for unmatched brackets and comments
+- Bracket matching, auto-closing pairs, and indentation
 - Snippets for elements, directives, and interpolation
 
 ## Development

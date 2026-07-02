@@ -1,6 +1,10 @@
 import assert from "node:assert/strict"
+import { createRequire } from "node:module"
 import { readFile } from "node:fs/promises"
 import test from "node:test"
+
+const require = createRequire(import.meta.url)
+const { analyze, format } = require("../src/analyzer.js")
 
 const load = async (path) =>
   JSON.parse(await readFile(new URL(`../${path}`, import.meta.url), "utf8"))
@@ -46,4 +50,30 @@ test("editor and grammar regular expressions compile", async () => {
     Object.values(value).forEach(visit)
   }
   visit(grammar)
+})
+
+test("analyzer reports bracket errors and produces folding ranges", () => {
+  const valid = analyze('div {\n  p("Hello")\n}')
+  assert.deepEqual(valid.errors, [])
+  assert.deepEqual(valid.folds, [
+    { start: 1, end: 1 },
+    { start: 0, end: 2 },
+  ].filter(({ start, end }) => end > start))
+
+  const invalid = analyze("div {\n  p(\"Hello\")")
+  assert.equal(invalid.errors.length, 1)
+  assert.match(invalid.errors[0].message, /閉じ括弧/)
+})
+
+test("analyzer supplies symbols for function and block syntax", () => {
+  const names = analyze('main {\n  h1("Title")\n  p { "Text" }\n}').symbols.map(({ name }) => name)
+  assert.deepEqual(names, ["main", "h1", "p"])
+})
+
+test("formatter indents nested Matra structures", () => {
+  const source = 'div {\np("Hello")\nsection {\nspan("Text")\n}\n}'
+  assert.equal(
+    format(source, { insertSpaces: true, tabSize: 2 }),
+    'div {\n  p("Hello")\n  section {\n    span("Text")\n  }\n}',
+  )
 })
