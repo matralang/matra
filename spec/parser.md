@@ -1,4 +1,4 @@
-# Matra Parser v0.1
+# Matra Parser v0.2
 
 [English](./parser.md) | [日本語](./parser.ja.md) | [Index](./README.md)
 
@@ -55,7 +55,7 @@ duplicate-property, or mode error.
 
 ## Replaceability
 
-Parser implementations are replaceable when they accept the same v0.1 source
+Parser implementations are replaceable when they accept the same v0.2 source
 subset and produce data-model-equivalent output. Consumers MUST NOT depend on
 parser-internal node identities or grammar-engine details.
 

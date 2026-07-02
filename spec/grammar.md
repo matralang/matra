@@ -1,4 +1,4 @@
-# Matra Grammar v0.1
+# Matra Grammar v0.2
 
 [English](./grammar.md) | [日本語](./grammar.ja.md) | [Index](./README.md)
 
@@ -23,7 +23,7 @@ An identifier begins with an ASCII letter or `_`, followed by ASCII letters,
 digits, `_`, or `-`. `true`, `false`, and `null` are reserved.
 
 Literals are double-quoted strings, numbers, booleans, and `null`. Numbers may
-be signed and may contain a decimal fraction or exponent. v0.1 does not define
+be signed and may contain a decimal fraction or exponent. v0.2 does not define
 string escape sequences. A bare identifier in value position denotes a
 string.
 
@@ -53,7 +53,7 @@ p`hello`
 p~hello~
 ```
 
-Their delimiters cannot be escaped in v0.1. `$root { ... }` MAY provide a
+Their delimiters cannot be escaped in v0.2. `$root { ... }` MAY provide a
 synthetic root for several children. `<!-- text -->` produces a `#comment`
 node whose single child is the comment text.
 

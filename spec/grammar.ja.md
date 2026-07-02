@@ -1,4 +1,4 @@
-# Matra Grammar v0.1
+# Matra Grammar v0.2
 
 [English](./grammar.md) | [日本語](./grammar.ja.md) | [索引](./README.ja.md)
 
@@ -23,7 +23,7 @@ identifierはASCII letterまたは`_`で始まり、以降はASCII letter、digi
 `-`を使用できます。`true`、`false`、`null`は予約語です。
 
 literalは二重引用符string、number、boolean、`null`です。numberには符号、小数部、
-指数表記を使用できます。v0.1はstring escape sequenceを定義しません。valueの
+指数表記を使用できます。v0.2はstring escape sequenceを定義しません。valueの
 位置にある裸のidentifierはstringを表します。
 
 互換性のため、引数の`{key: value}`からpropertyを指定できます（MAY）。keyword
@@ -52,7 +52,7 @@ p`hello`
 p~hello~
 ```
 
-v0.1ではdelimiterをescapeできません。複数のchildに仮想rootを与えるため、
+v0.2ではdelimiterをescapeできません。複数のchildに仮想rootを与えるため、
 `$root { ... }`を使用できます（MAY）。`<!-- text -->`はcomment textを唯一の
 childに持つ`#comment` nodeを生成します。
 

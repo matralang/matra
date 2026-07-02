@@ -1,4 +1,4 @@
-# Matra Data Model v0.1
+# Matra Data Model v0.2
 
 [English](./data-model.md) | [日本語](./data-model.ja.md) | [Index](./README.md)
 
