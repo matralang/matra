@@ -1,0 +1,32 @@
+{
+  "name": "@matra/kernel",
+  "version": "0.1.0",
+  "description": "Jupyter kernel for the Matra language",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": "./src/index.js",
+  "bin": {
+    "matra-kernel": "bin/matra-kernel.js"
+  },
+  "files": ["bin", "src", "kernelspec", "README.md"],
+  "scripts": {
+    "build": "node --check src/kernel.js && node --check src/runtime.js && node --check bin/matra-kernel.js",
+    "check": "npm run build",
+    "test": "node --test tests/*.test.mjs",
+    "prepack": "npm test"
+  },
+  "keywords": ["matra", "jupyter", "kernel", "notebook", "colab"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matralang/matra.git",
+    "directory": "packages/kernel"
+  },
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org" },
+  "dependencies": {
+    "@matra/core": "^0.2.0",
+    "@matra/graphics": "^0.1.0",
+    "@matra/html": "^0.1.0",
+    "zeromq": "^6.5.0"
+  }
+}
