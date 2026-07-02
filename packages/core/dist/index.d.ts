@@ -5,7 +5,7 @@ export { printJSON } from "./printer.js";
 export { transform, visit } from "./ast/transform.js";
 export { renderWith } from "./render.js";
 export type { MatraRenderer } from "./render.js";
-export { MATRA_VERSION } from "./ast/types.js";
+export { CORE_VERSION, SPEC_VERSION } from "./ast/types.js";
 export type * from "./ast/types.js";
 import { parse, parseWith } from "./parser/index.js";
 import { astToMatraJSON, matraJSONToAST } from "./ast/convert.js";
