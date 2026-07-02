@@ -67,24 +67,28 @@ export class MatraKernel {
     const request = decode(frames, this.connection.key, this.connection.signature_scheme)
     const type = request.header.msg_type
     if (type === "execute_request") return this.execute(socket, request)
-
-    let content
-    switch (type) {
-      case "kernel_info_request": content = kernelInfo(); break
-      case "complete_request": content = complete(request.content.code, request.content.cursor_pos); break
-      case "inspect_request": content = inspect(request.content.code, request.content.cursor_pos); break
-      case "is_complete_request": content = completeness(request.content.code); break
-      case "history_request": content = { status: "ok", history: this.history }; break
-      case "comm_info_request": content = { status: "ok", comms: {} }; break
-      case "interrupt_request": content = { status: "ok" }; break
-      case "shutdown_request":
-        content = { status: "ok", restart: Boolean(request.content.restart) }
-        await this.reply(socket, request, "shutdown_reply", content)
-        setTimeout(() => this.stop(), 10)
-        return
-      default: content = { status: "ok" }
+    await this.publish(request, "status", { execution_state: "busy" })
+    try {
+      let content
+      switch (type) {
+        case "kernel_info_request": content = kernelInfo(); break
+        case "complete_request": content = complete(request.content.code, request.content.cursor_pos); break
+        case "inspect_request": content = inspect(request.content.code, request.content.cursor_pos); break
+        case "is_complete_request": content = completeness(request.content.code); break
+        case "history_request": content = { status: "ok", history: this.history }; break
+        case "comm_info_request": content = { status: "ok", comms: {} }; break
+        case "interrupt_request": content = { status: "ok" }; break
+        case "shutdown_request":
+          content = { status: "ok", restart: Boolean(request.content.restart) }
+          await this.reply(socket, request, "shutdown_reply", content)
+          setTimeout(() => this.stop(), 10)
+          return
+        default: content = { status: "ok" }
+      }
+      await this.reply(socket, request, type.replace(/_request$/, "_reply"), content)
+    } finally {
+      await this.publish(request, "status", { execution_state: "idle" })
     }
-    await this.reply(socket, request, type.replace(/_request$/, "_reply"), content)
   }
 
   async execute(socket, request) {
