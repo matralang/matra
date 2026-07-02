@@ -56,7 +56,7 @@ HTML rendering is provided by the separate workspace package:
 
 ```ts
 import { parse } from "@matra/core"
-import { toHTML } from "@matralang/matra-html"
+import { toHTML } from "@matra/html"
 
 toHTML(parse('p("Hello", class="lead")'))
 ```
@@ -70,6 +70,25 @@ circle(x=10, y=20, r=5)
 Ordinary positional arguments become children. The earlier
 `circle({x: 10, y: 20, r: 5})` form remains available for compatibility but
 is not the canonical notation.
+
+## Package structure
+
+```text
+src/
+├── ast/       # types, conversion, traversal, transformation
+├── parser/    # public parser boundary, grammar, generated parser
+├── index.ts   # public exports
+├── printer.ts # domain-neutral JSON serialization
+└── render.ts  # replaceable renderer boundary
+tests/
+├── ast.test.mjs
+├── parser.test.mjs
+└── render.test.mjs
+```
+
+The generated parser is rebuilt from `src/parser/grammar.pegjs`; edit the
+grammar rather than `generated.mjs`. Language-level behavior is defined by the
+[Matra Specification](../../spec/README.md).
 
 ## Documentation languages
 
