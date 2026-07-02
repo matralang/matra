@@ -1,0 +1,35 @@
+{
+  "name": "bmath",
+  "version": "0.1.0",
+  "description": "butchi math library",
+  "homepage": "https://github.com/butchi/bmath#readme",
+  "bugs": {
+    "url": "https://github.com/butchi/bmath/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/butchi/bmath.git"
+  },
+  "license": "MIT",
+  "author": "IWABUCHI Yuki butchi",
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "bmath": "./src/cli.ts"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "build:matra-parser": "peggy --format commonjs --dts --output parser/matra-parser.cjs parser/matra-parser.peggy && mv parser/matra-parser.d.ts parser/matra-parser.d.cts",
+    "cli": "tsx src/cli.ts",
+    "lint": "tsc --project tsconfig.lint.json",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@cortex-js/compute-engine": "^0.64.0",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.4.2",
+    "peggy": "^5.1.0",
+    "ts-jest": "^29.4.11",
+    "tsx": "^4.22.4"
+  }
+}
