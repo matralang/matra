@@ -8,11 +8,12 @@
     "dev": "npm run css:dev",
     "css:dev": "tailwindcss -i ./src/styles/app.css -o ./dist/app.css --watch",
     "css:build": "tailwindcss -i ./src/styles/app.css -o ./dist/app.css",
-    "build": "npm run css:build && node --import tsx src/build.ts",
+    "build": "node --import tsx src/build.ts && npm run css:build",
     "serve": "serve dist"
   },
   "dependencies": {
-    "hast-util-to-html": "^9.0.5"
+    "@matra/core": "^0.2.0",
+    "@matra/html": "^0.1.0"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.18",

@@ -1,157 +1,80 @@
-import { $m } from "../../modules/matra"
+import { matra } from "../matra"
 import defaultLayout from "../layouts/default-layout"
 
-const heroImage = $m`
-  div.w-full.md:w-1/2.flex.justify-center {
-    div.w-80.sm:w-96.h-56.sm:h-64.relative {
-      div.absolute.-left-6.-top-6.w-60.h-40.bg-white/10.rounded-2xl.shadow-lg.transform.rotate-6 {}
-      div.absolute.left-6.top-6.w-64.h-44.bg-white/20.rounded-2xl.shadow-2xl.transform.-rotate-3.flex.items-center.justify-center {
-        svg.w-24.h-24.text-white/90[
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        ] {
-          rect[x="3" y="3" width="18" height="14" rx="2" ry="2"]
-          path[d="M7 21h10"]
-          path[d="M7 7h10"]
-          path[d="M12 3v18"]
+const page = defaultLayout(matra`
+  section.hero {
+    div.shell.hero-grid {
+      div.hero-copy {
+        p.eyebrow { "Matra Specification v0.1" }
+        h1 { "意味より先に、構造を書く。" }
+        p.lede {
+          "Matraは、tag・props・childrenからなるツリーを記述するための、"
+          "小さくドメイン非依存な言語です。"
+        }
+        div.actions {
+          a.button.primary[href="/docs/"] { "仕様を読む" }
+          a.button.secondary[href="https://github.com/matralang/matra"] { "ソースを見る" }
+        }
+      }
+      div.code-window[aria-label="Matraコード例"] {
+        div.window-bar {
+          span {}
+          span {}
+          span {}
+          small { "hello.matra" }
+        }
+        pre { code~group(
+  item("one"),
+  item("two"),
+  role="list"
+)~ }
+        div.output {
+          span { "AST" }
+          code~{ tag, props, children }~
         }
       }
     }
   }
-`
-
-const secHero = $m`
-  section.relative.bg-gradient-to-r.from-blue-900.via-blue-600.to-sky-300.text-white.overflow-hidden {
-    div.absolute.inset-0.pointer-events-none {
-      svg.absolute.-left-24.-top-24.w-96.h-96.opacity-20[
-        viewBox="0 0 200 200"
-        xmlns="http://www.w3.org/2000/svg"
-      ] {
-        defs {
-          linearGradient#g[x1="0" x2="1"] {
-            stop[offset="0" stop-color="#fff"]
-            stop[offset="1" stop-color="#000"]
-          }
+  section.principles {
+    div.shell {
+      p.eyebrow { "One language, many domains" }
+      h2 { "構造は共通。意味は交換可能。" }
+      div.card-grid {
+        article.feature-card {
+          span.card-number { "01" }
+          h3 { "Domain neutral" }
+          p { "HTML、数式、Graphics。tagの意味はrendererが決めます。" }
         }
-        circle[cx="100" cy="100" r="80" fill="url(#g)"]
-      }
-    }
-    div.relative.max-w-7xl.mx-auto.px-6.py-20.md:py-28.flex.flex-col-reverse.md:flex-row.items-center.gap-12 {
-      div.w-full.md:w-1/2 {
-        h1.text-3xl.sm:text-4xl.md:text-5xl.font-extrabold.leading-tight {
-          "クリエイティブを、もっと速く、もっと自由に"
+        article.feature-card {
+          span.card-number { "02" }
+          h3 { "Two representations" }
+          p { "交換用のMatraJSONと、操作しやすいobject形式ASTを往復できます。" }
         }
-        p.mt-4.text-lg.sm:text-xl.max-w-xl.opacity-90 {
-          "MatraMagicはテンプレート、エフェクト、コラボレーションを一つにまとめたクリエイティブツールです。"
-          "アイデアをすばやく形にしましょう。"
-        }
-        div.mt-6.flex.flex-wrap.gap-3 {
-          a.btn.px-5.py-3.bg-white.text-indigo-600.font-semibold.shadow.transform.hover:scale-105[
-            href="#"
-          ] {
-            "今すぐはじめる"
-          }
-          a.btn.px-5.py-3.border.border-white/30.text-white.hover:bg-white/10[
-            href="#"
-          ] {
-            "機能を見る"
-          }
-        }
-      }
-      ${heroImage}
-    }
-  }
-`
-
-const secLang = $m`
-  section.bg-white.text-gray-800.py-20 {
-    div.max-w-7xl.mx-auto.px-6 {
-      div.grid.md:grid-cols-2.gap-12.items-center {
-        div {
-          h2.text-2xl.font-bold.mb-4 { "マトラ言語 — 表現に特化した専用記法" }
-          p.text-lg.mb-4 {
-            "マトラ言語はテンプレート記述とUI構築をシンプルにするための、特定の用途に特化したやさしい記法です。"
-            "直感的な構文でコンポーネントを組み立て、拡張可能なレンダリングを実現します。"
-          }
-          ul.list-disc.pl-5.space-y-2 {
-            li { "宣言的なテンプレート構文" }
-            li { "型安全なデータバインディング（オプション）" }
-            li { "プラグインで機能拡張可能" }
-          }
-          div.mt-6 {
-            a.btn.px-4.py-2.bg-indigo-600.text-white[href="#"] {
-              "マトラ言語を始める"
-            }
-          }
-        }
-        div {
-          div.bg-gray-100.rounded-lg.p-4.shadow {
-            pre.bg-transparent.text-sm.overflow-x-auto {
-              "const greet = (name) => $page { div { \"こんにちは、\" name } }"
-            }
-          }
+        article.feature-card {
+          span.card-number { "03" }
+          h3 { "Replaceable parser" }
+          p { "parserは小さな契約。文法エンジンとdomain実装を切り離します。" }
         }
       }
     }
   }
-`
-
-const secContact = $m`
-  section.bg-gray-50.text-gray-900.py-20 {
-    div.max-w-7xl.mx-auto.px-6 {
-      h2.text-2xl.font-bold.mb-6 { "マトラ研究所 — 研究とコミュニティ" }
-      div.grid.md:grid-cols-3.gap-6 {
-        div.card {
-          h3.card-title { "屋号" }
-          p.card-content { "マトラ研究所" }
-        }
-        div.card {
-          h3.card-title { "代表者" }
-          p.card-content { "岩淵勇樹" }
-        }
-        div.card {
-          h3.card-title { "所在地" }
-          p.card-content { "福井県大野市" }
-        }
+  section.spec-callout {
+    div.shell.callout-inner {
+      div {
+        p.eyebrow { "The foundation" }
+        h2 { "4つの仕様から始める" }
       }
-      div.mt-6 {
-        h3.text-lg.font-semibold.mb-2 { "事業内容" }
-        ul.list-disc.pl-5.space-y-1 {
-          li { "ITサービス・ソフトウェア開発" }
-          li { "技術書・技術記事執筆" }
-          li { "技術コミュニティ運営" }
-        }
-      }
-      div.mt-6.flex.items-center.gap-4 {
-        a.btn.btn-primary.px-5.py-3.bg-indigo-600.text-white[
-          href="mailto:butchiyu+matra@gmail.com"
-        ] {
-          "お問い合わせ（butchiyu+matra@gmail.com）"
-        }
-        a.btn.px-5.py-3.border.border-gray-300.text-gray-700.rounded-lg[
-          href="#"
-        ] {
-          "詳細を見る"
-        }
+      ol.spec-mini-list {
+        li { a[href="/docs/data-model/"] { span { "01" } strong { "Data Model" } } }
+        li { a[href="/docs/ast/"] { span { "02" } strong { "AST" } } }
+        li { a[href="/docs/grammar/"] { span { "03" } strong { "Grammar" } } }
+        li { a[href="/docs/parser/"] { span { "04" } strong { "Parser" } } }
       }
     }
-  }
-`
-
-const pageIndex = defaultLayout($m`
-  div#app {
-    ${secHero}
-    ${secLang}
-    ${secContact}
   }
 `, {
-  lang: "ja",
-  title: "MatraMagic - クリエイティブツール",
-  description: "MatraMagicは、クリエイティブなプロジェクトを支援するための多機能ツールです。"
+  title: "Matra — Structure first. Domain later.",
+  description: "Matraはtag・props・childrenからなるドメイン非依存のツリー記法です。",
 })
 
-export default pageIndex
+export default page

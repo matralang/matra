@@ -8,7 +8,9 @@ const index = await readFile(new URL("../dist/index.html", import.meta.url), "ut
 const docs = await readFile(new URL("../dist/docs/index.html", import.meta.url), "utf8")
 
 assert.match(index, /^<!DOCTYPE html>/)
-assert.match(index, /<title>MatraMagic/)
-assert.match(docs, /<title>ドキュメント/)
+assert.match(index, /<title>Matra — Structure first/)
+assert.match(index, /意味より先に、構造を書く/)
+assert.match(docs, /<title>Index — Matra Specification v0.1/)
+assert.match(docs, /Data Model/)
 
 console.log("site build test passed")

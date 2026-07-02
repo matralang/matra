@@ -1,6 +1,7 @@
 # @matra/site
 
-Matra の公式サイトです。現在は静的サイトを生成し、今後はドキュメントと Playground もこの app にまとめます。
+Matra の公式サイトです。`@matra/core` でpage sourceをparseし、`@matra/html`で
+静的HTMLを生成します。Matra Specification v0.1の入口もこのappにまとめます。
 
 ## 開発
 
@@ -12,9 +13,10 @@ npm run site:serve
 ```
 
 ページは `src/pages`、共通レイアウトは `src/layouts`、スタイルは `src/styles` に置きます。
+page moduleはMatra source stringをdefault exportします。
 
 ## 拡張方針
 
-- 公式サイト: `src/pages` の静的ページ
-- ドキュメント: `/docs/` 以下
+- 公式サイト: `src/pages/index.ts`
+- 仕様書: `/docs/` 以下
 - Playground: `/playground/` 以下

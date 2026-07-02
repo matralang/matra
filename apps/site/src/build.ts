@@ -8,7 +8,8 @@ import { pathToFileURL } from "url"
 // Declare the Node `process` global when @types/node is not installed.
 declare const process: any;
 
-import { toAst, toHtml } from "../modules/matra"
+import { parse } from "@matra/core"
+import { toHTML } from "@matra/html"
 
 function isIgnoredPath(relFromPages: string): boolean {
   // Normalize to POSIX-style for stable checks across OSes
@@ -86,6 +87,7 @@ function assertNoOutputCollisions(pagesDirAbs: string, filesAbs: string[]) {
 
 async function handler() {
   const pagesDir = path.join(process.cwd(), "src", "pages")
+  const outputDir = path.join(process.cwd(), "dist")
   const pageFiles = collectTsFiles(pagesDir).filter(fp => {
     const rel = path.relative(pagesDir, fp)
     return !isIgnoredPath(rel)
@@ -97,12 +99,12 @@ async function handler() {
 
   // Fail fast if multiple pages map to the same output file.
   assertNoOutputCollisions(pagesDir, pageFiles)
+  fs.rmSync(outputDir, { recursive: true, force: true })
 
   await Promise.all(pageFiles.map(async (filePath: string) => {
     const pageModule = await import(pathToFileURL(filePath).toString())
 
     if (pageModule.default) {
-      const outputDir = path.join(process.cwd(), "dist")
       const outRel = toNuxtLikeOutputPath(pagesDir, filePath)
       const outputPath = path.join(outputDir, outRel)
       const outDir = path.dirname(outputPath)
@@ -111,8 +113,8 @@ async function handler() {
       }
 
       // pageModule.default is Matra DSL string
-      const ast = toAst(pageModule.default)
-      const htmlContent = DOCTYPE + toHtml(ast)
+      const ast = parse(pageModule.default)
+      const htmlContent = DOCTYPE + toHTML(ast)
 
       fs.writeFileSync(outputPath, htmlContent)
       console.log(`Generated HTML file at: ${outputPath}`)
