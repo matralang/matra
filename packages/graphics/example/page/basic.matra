@@ -1,0 +1,7 @@
+svg(
+  rect(x=0, y=0, width=256, height=256, fill="#fffaf0"),
+  circle(cx=128, cy=128, r=72, fill="#ff4d6d", stroke="#171717", stroke-width=4),
+  text("Matra", x=128, y=132, fill="white", text-anchor="middle", dominant-baseline="middle"),
+  width=256,
+  height=256
+)

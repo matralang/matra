@@ -1,0 +1,50 @@
+{
+  "name": "@matra/graphics",
+  "version": "0.1.0",
+  "description": "SVG renderer and vector graphics library for the Matra language.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./legacy": {
+      "types": "./dist/legacy.d.ts",
+      "import": "./dist/legacy.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "npm run build:lib && npm run build:examples",
+    "build:lib": "tsc",
+    "build:examples": "node --import tsx build.ts",
+    "check": "tsc --noEmit",
+    "test": "npm run build:lib && node --import tsx --test tests/*.test.ts",
+    "prepack": "npm run build:lib"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matralang/matra-graphics.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "peerDependencies": {
+    "@matra/core": "^0.2.0"
+  },
+  "devDependencies": {
+    "@matra/core": "file:../matra-core",
+    "@matra/math-compute-engine": "file:../matra-math/packages/compute-engine",
+    "esbuild": "^0.27.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
