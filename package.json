@@ -1,10 +1,13 @@
 {
   "name": "matra",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "build": "npm run build -w @matra/core && npm run build -w @matra/math && npm run build -w @matra/math-compute-engine && npm run build -w @matra/graphics && npm run build -w @matra/html && npm run build -w @matra/kernel",
+    "build": "npm run build -w @matra/core && npm run build -w @matra/math && npm run build -w @matra/math-compute-engine && npm run build -w @matra/graphics && npm run build -w @matra/html && npm run build -w @matra/kernel && npm run build -w @matra/site",
     "check": "npm run build && npm run check --workspaces --if-present",
-    "test": "npm test --workspaces --if-present"
+    "test": "npm test --workspaces --if-present",
+    "site:build": "npm run build -w @matra/site",
+    "site:dev": "npm run dev -w @matra/site",
+    "site:serve": "npm run serve -w @matra/site"
   }
 }

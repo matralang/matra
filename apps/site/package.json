@@ -1,0 +1,23 @@
+{
+  "name": "@matra/site",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test/run.js",
+    "dev": "npm run css:dev",
+    "css:dev": "tailwindcss -i ./src/styles/app.css -o ./dist/app.css --watch",
+    "css:build": "tailwindcss -i ./src/styles/app.css -o ./dist/app.css",
+    "build": "npm run css:build && node --import tsx src/build.ts",
+    "serve": "serve dist"
+  },
+  "dependencies": {
+    "hast-util-to-html": "^9.0.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.18",
+    "serve": "^14.2.5",
+    "tailwindcss": "^4.1.18",
+    "tsx": "^4.20.6"
+  }
+}
