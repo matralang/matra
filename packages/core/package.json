@@ -1,0 +1,41 @@
+{
+  "name": "@matra/core",
+  "description": "Domain-neutral AST, parser, visitor, and transformer for Matra",
+  "version": "0.2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src/matra-parser.pegjs"
+  ],
+  "scripts": {
+    "build": "npm run build:parser && npm run build:types",
+    "build:parser": "peggy --format es --output src/matra-parser.mjs src/matra-parser.pegjs",
+    "build:types": "tsc",
+    "check": "tsc --noEmit",
+    "test": "npm run build && node --test tests/core.test.mjs tests/render-with.test.mjs",
+    "test:legacy": "npm run build && node --test tests/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matralang/matra-core.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "peggy": "^5.0.6",
+    "typescript": "^5.9.3"
+  }
+}

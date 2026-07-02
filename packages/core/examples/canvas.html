@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Matra Canvas Demo</title>
+    <style>
+      body {
+        background: #fafafa;
+        font-family: system-ui, sans-serif;
+        text-align: center;
+      }
+      canvas {
+        border: 1px solid #ccc;
+        margin-top: 1em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Matra Canvas Demo</h1>
+    <p>Rendered from Matra structural commands</p>
+    <canvas id="matraCanvas" width="400" height="300"></canvas>
+
+    <script type="module">
+      // === Matra命令列をここにペースト（またはfetchで読み込み） ===
+      const commands = [
+        { op: "text", text: "Canvas Example" },
+        {
+          op: "text",
+          text: "Below is a simple shape drawn using Matra's structural representation.",
+        },
+        { op: "circle", x: 100, y: 100, r: 30, color: "red" },
+        { op: "text", x: 90, y: 180, text: "Matra!", color: "blue" },
+      ]
+
+      const canvas = document.getElementById("matraCanvas")
+      const ctx = canvas.getContext("2d")
+
+      // === Canvas命令を描画 ===
+      ctx.font = "16px sans-serif"
+      ctx.textBaseline = "top"
+
+      for (const cmd of commands) {
+        switch (cmd.op) {
+          case "circle":
+            ctx.beginPath()
+            ctx.arc(cmd.x, cmd.y, cmd.r, 0, Math.PI * 2)
+            ctx.fillStyle = cmd.color || "black"
+            ctx.fill()
+            break
+          case "rect":
+            ctx.fillStyle = cmd.color || "black"
+            ctx.fillRect(cmd.x, cmd.y, cmd.w, cmd.h)
+            break
+          case "text":
+            ctx.fillStyle = cmd.color || "black"
+            ctx.fillText(cmd.text, cmd.x || 10, cmd.y || 10)
+            break
+        }
+      }
+    </script>
+  </body>
+</html>

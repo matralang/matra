@@ -1,0 +1,7 @@
+div {
+  h1 { "Canvas Example" }
+  p { "Below is a simple shape drawn using Matra's structural representation." }
+  code[fileType=js] { "draw(circle[x=100,y=100,r=30,color='red'])" }
+  circle[x=100, y=100, r=30, color="red"]
+  text[x=90, y=180, color="blue"] { "Matra!" }
+}

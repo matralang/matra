@@ -1,0 +1,5 @@
+div {
+  h1 { "Matra Render Test" }
+  p { "Matra v0.5 rendering to HTML works correctly." }
+  code[fileType="js"] { "console.log('Hello Matra!')" }
+}
