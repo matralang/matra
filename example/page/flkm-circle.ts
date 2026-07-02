@@ -1,11 +1,10 @@
 import { setCanvasSize, strokeWeight, strokeStyle, fill, circle, svgLayout } from '../../module.js';
+import { calculate, polarOffset } from '../math.js';
 
 const cvsSize = 256;
 const [cvsW, cvsH] = [cvsSize, cvsSize];
 const outerR = 48
 const outerRIn = 32
-
-const { cos, sin, PI } = Math;
 
 setCanvasSize(cvsW, cvsH);
 
@@ -22,11 +21,10 @@ const torusCircleElmArr: any[] = [];
 
 // 重なり順を三角形対称にしたい
 Array.from({ length: 3 }).map((_, j) => {
-  const dx = - outerRIn * cos(2 * PI * j / 3 - PI / 2);
-  const dy = - outerRIn * sin(2 * PI * j / 3 - PI / 2);
+  const [dx, dy] = polarOffset(outerRIn, j, 3, -0.5);
 
   fill('transparent');
-  strokeStyle(flkmArr[2 ** j - 1].col);
+  strokeStyle(flkmArr[calculate('Subtract(Power(2, j), 1)', { j })].col);
 
   const circleElm = circle(cvsW / 2 + dx, cvsH / 2 - dy, outerR);
 

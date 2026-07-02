@@ -1,12 +1,11 @@
 import { setCanvasSize, strokeWeight, strokeStyle, fill, circle, svgLayout, g, text, textAnchor, textBaseline, textSize } from '../../module.js';
 import taijitsu from '../mixin/taijitu.js';
+import { polarOffset } from '../math.js';
 
 const cvsSize = 512;
 const [cvsW, cvsH] = [cvsSize, cvsSize];
 const outerR = 128
 const elmSize = 85
-
-const { cos, sin, PI } = Math;
 
 setCanvasSize(cvsW, cvsH);
 
@@ -20,8 +19,7 @@ const kamomiArr = [
 
 const circleElmArr = kamomiArr.map(({ col, name }, i) => {
   fill(col);
-  const dx = - outerR * cos(2 * PI * i / 3 - PI / 2);
-  const dy = - outerR * sin(2 * PI * i / 3 - PI / 2);
+  const [dx, dy] = polarOffset(outerR, i, 3, -0.5);
 
   strokeWeight(3);
   strokeStyle('black');

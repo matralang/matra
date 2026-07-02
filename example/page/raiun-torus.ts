@@ -1,4 +1,5 @@
 import { setCanvasSize, strokeWeight, strokeStyle, fill, circle, svgLayout, g, line, text, textAnchor, textBaseline, textSize } from '../../module.js';
+import { calculate, fibonacciDigit, polarOffset } from '../math.js';
 
 const cvsSize = 256;
 const [cvsW, cvsH] = [cvsSize, cvsSize];
@@ -6,16 +7,9 @@ const outerR = 96
 const outerRIn = 6
 const elmSize = 6
 
-const { cos, sin, PI } = Math;
-
 setCanvasSize(cvsW, cvsH);
 
 strokeWeight(3);
-
-function fib(n: number): number {
-  if (n <= 1) return n;
-  return fib(n - 1) + fib(n - 2);
-}
 
 const flkmArr = [
   { name: 'F', col: 'green' },
@@ -29,11 +23,10 @@ const circleElmArr: any[] = []
 const torusCircleElmArr: any[] = [];
 
 Array.from({ length: 3 }).map((_, j) => {
-  const dx = - outerRIn * cos(2 * PI * j / 3 - PI / 2);
-  const dy = - outerRIn * sin(2 * PI * j / 3 - PI / 2);
+  const [dx, dy] = polarOffset(outerRIn, j, 3, -0.5);
 
   fill('none');
-  strokeStyle(flkmArr[2 ** j - 1].col);
+  strokeStyle(flkmArr[calculate('Subtract(Power(2, j), 1)', { j })].col);
 
   const circleElm = circle(cvsW / 2 + dx, cvsH / 2 - dy, outerR);
 
@@ -51,10 +44,12 @@ Array.from({ length: 1 }).map(_ => {
 
 circleElmArr.push([...Array.from({ length: 3 }).map((_, j) => {
   return Array.from({ length: 25 }).map((_, i) => {
-    const dx = - outerR * cos(2 * PI * i / 24 - PI / 2) - outerRIn * cos(2 * PI * j / 3 - PI / 2);
-    const dy = - outerR * sin(2 * PI * i / 24 - PI / 2) - outerRIn * sin(2 * PI * j / 3 - PI / 2);
+    const outer = polarOffset(outerR, i, 24, -0.5);
+    const inner = polarOffset(outerRIn, j, 3, -0.5);
+    const dx = calculate('Add(outer, inner)', { outer: outer[0], inner: inner[0] });
+    const dy = calculate('Add(outer, inner)', { outer: outer[1], inner: inner[1] });
 
-    strokeStyle(flkmArr[2 ** j - 1].col);
+    strokeStyle(flkmArr[calculate('Subtract(Power(2, j), 1)', { j })].col);
 
     fill('white');
     strokeStyle('none');
@@ -65,7 +60,8 @@ circleElmArr.push([...Array.from({ length: 3 }).map((_, j) => {
     textAnchor('center');
     textBaseline('middle');
     textSize(elmSize * 0.5);
-    const textElm = text(String((4 ** j * fib(i)) % 9), cvsW / 2 + dx, cvsH / 2 - dy);
+    const factor = calculate('Power(4, j)', { j });
+    const textElm = text(String(fibonacciDigit(i, factor)), cvsW / 2 + dx, cvsH / 2 - dy);
 
     const gElm = g([
       circleElm,
@@ -77,8 +73,7 @@ circleElmArr.push([...Array.from({ length: 3 }).map((_, j) => {
 }).flat()]);
 
 Array.from({ length: 9 }).map((_, i) => {
-  const dx = - outerR * cos(2 * PI * i / 8 - PI / 2);
-  const dy = - outerR * sin(2 * PI * i / 8 - PI / 2);
+  const [dx, dy] = polarOffset(outerR, i, 8, -0.5);
 
   strokeStyle(flkmArr[2].col);
 
@@ -91,7 +86,7 @@ Array.from({ length: 9 }).map((_, i) => {
   textAnchor('center');
   textBaseline('middle');
   textSize(elmSize * 0.5);
-  const textElm = text(String((3 * fib(i)) % 9), cvsW / 2 + dx, cvsH / 2 - dy);
+  const textElm = text(String(fibonacciDigit(i, 3)), cvsW / 2 + dx, cvsH / 2 - dy);
 
   const gElm = g([
     circleElm,
