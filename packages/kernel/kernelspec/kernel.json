@@ -1,0 +1,7 @@
+{
+  "argv": ["node", "matra-kernel", "-f", "{connection_file}"],
+  "display_name": "Matra",
+  "language": "matra",
+  "interrupt_mode": "message",
+  "metadata": { "debugger": false }
+}
