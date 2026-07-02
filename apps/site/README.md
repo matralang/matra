@@ -19,4 +19,4 @@ page moduleはMatra source stringをdefault exportします。
 
 - 公式サイト: `src/pages/index.ts`
 - 仕様書: `/docs/` 以下
-- Playground: `/playground/` 以下
+- Playground: `/playground/`（Core parserとHTML rendererをbrowser bundleでも使用）
