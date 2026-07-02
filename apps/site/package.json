@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.18",
+    "esbuild": "^0.27.7",
     "serve": "^14.2.5",
     "tailwindcss": "^4.1.18",
     "tsx": "^4.20.6"

@@ -4,6 +4,7 @@ import * as fs from "fs"
 import * as path from "path"
 // @ts-ignore: allow importing url without @types/node installed
 import { pathToFileURL } from "url"
+import { build } from "esbuild"
 
 // Declare the Node `process` global when @types/node is not installed.
 declare const process: any;
@@ -122,6 +123,19 @@ async function handler() {
       console.warn(`No default export found in module: ${path.relative(pagesDir, filePath)}`)
     }
   }))
+
+  const assetsDir = path.join(outputDir, "assets")
+  fs.mkdirSync(assetsDir, { recursive: true })
+  await build({
+    entryPoints: [path.join(process.cwd(), "src", "client", "playground.ts")],
+    outfile: path.join(assetsDir, "playground.js"),
+    bundle: true,
+    format: "esm",
+    minify: true,
+    sourcemap: true,
+    target: ["es2022"],
+  })
+  console.log(`Generated browser bundle at: ${path.join(assetsDir, "playground.js")}`)
 }
 
 handler().catch(err => {

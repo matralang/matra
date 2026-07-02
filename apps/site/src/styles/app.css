@@ -108,6 +108,62 @@ code { font-family: "DM Mono", monospace; }
 .source-link { margin-top: 48px; }
 .source-link a { color: #526600; font-weight: 700; }
 
+.playground-page { min-height: calc(100vh - 72px); padding: 54px 0 80px; }
+.playground-heading { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 30px; }
+.playground-heading h1 { margin: 0; font-size: clamp(44px, 6vw, 70px); line-height: 1; letter-spacing: -.055em; }
+.playground-heading > p { max-width: 480px; margin: 0 0 5px; color: var(--muted); line-height: 1.7; }
+.playground-workspace {
+  display: grid; grid-template-columns: minmax(360px, 1fr) minmax(360px, 1fr);
+  width: min(1440px, calc(100% - 40px)); min-height: 650px; margin-inline: auto;
+  overflow: hidden; border: 1px solid #26332c; border-radius: 16px; background: var(--ink);
+  box-shadow: 0 26px 70px #15251b1f;
+}
+.editor-panel, .result-panel { min-width: 0; display: flex; flex-direction: column; }
+.editor-panel { border-right: 1px solid #34423a; }
+.panel-header, .result-tabs {
+  min-height: 56px; display: flex; align-items: center; gap: 10px;
+  padding: 0 18px; border-bottom: 1px solid #34423a; color: #d7ded9;
+}
+.panel-title { display: flex; align-items: center; gap: 10px; font: 11px "DM Mono", monospace; letter-spacing: .1em; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--acid); box-shadow: 0 0 0 4px #c8f13516; }
+.editor-tools { display: flex; align-items: center; gap: 8px; margin-left: auto; color: #87948c; font: 11px "DM Mono", monospace; }
+.editor-tools select {
+  border: 1px solid #435149; border-radius: 6px; padding: 5px 8px;
+  color: #d7ded9; background: #1a251f; font: inherit;
+}
+.example-bar { display: flex; gap: 7px; padding: 12px 18px; border-bottom: 1px solid #2d3a33; }
+.example-button, .result-tab, .copy-button {
+  border: 0; color: #98a39d; background: transparent; cursor: pointer; font: 11px "DM Mono", monospace;
+}
+.example-button { padding: 6px 10px; border: 1px solid #3b4941; border-radius: 999px; }
+.example-button:hover { border-color: var(--acid); color: var(--acid); }
+#matra-source {
+  width: 100%; min-height: 500px; flex: 1; resize: none; outline: 0; border: 0; padding: 28px;
+  color: #ebf0ec; caret-color: var(--acid); background: #101814;
+  font: 14px/1.8 "DM Mono", monospace; tab-size: 2;
+}
+.editor-footer { display: flex; justify-content: space-between; padding: 11px 18px; border-top: 1px solid #34423a; color: #7f8c84; font: 10px "DM Mono", monospace; }
+#playground-status { color: var(--acid); }
+#playground-status.is-error { color: #ff8f7d; }
+.result-tabs { background: #151f1a; }
+.result-tab { align-self: stretch; padding: 0 12px; border-bottom: 2px solid transparent; }
+.result-tab.active { color: white; border-color: var(--acid); }
+.copy-button { margin-left: auto; padding: 7px 11px; border: 1px solid #435149; border-radius: 6px; }
+.copy-button:hover { color: white; }
+.result-body { position: relative; min-height: 0; flex: 1; background: #f8f7f1; }
+.result-view { display: none; width: 100%; height: 100%; margin: 0; border-radius: 0; }
+.result-view.active { display: block; }
+#preview-frame { width: 100%; height: 100%; min-height: 592px; border: 0; background: #fbfaf5; }
+pre.result-view { min-height: 592px; padding: 28px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.error-card {
+  position: absolute; inset: auto 20px 20px; z-index: 2; padding: 18px;
+  border: 1px solid #e97562; border-radius: 10px; color: #5d1d14; background: #fff0ed;
+  box-shadow: 0 12px 30px #4e130f18;
+}
+.error-card[hidden] { display: none; }
+.error-card pre { max-height: 150px; margin: 10px 0 0; padding: 0; color: #7a2c20; background: transparent; white-space: pre-wrap; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+
 @media (max-width: 800px) {
   .hero-grid, .callout-inner, .docs-shell { grid-template-columns: 1fr; gap: 48px; }
   .hero { padding-top: 64px; }
@@ -115,6 +171,12 @@ code { font-family: "DM Mono", monospace; }
   .feature-card { min-height: 220px; }
   .feature-card h3 { margin-top: 48px; }
   .docs-nav { position: static; }
+  .playground-heading { display: block; }
+  .playground-heading > p { margin-top: 20px; }
+  .playground-workspace { grid-template-columns: 1fr; }
+  .editor-panel { border-right: 0; border-bottom: 1px solid #34423a; }
+  #matra-source { min-height: 390px; }
+  #preview-frame, pre.result-view { min-height: 460px; }
 }
 
 @media (max-width: 520px) {
