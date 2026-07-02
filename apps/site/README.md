@@ -1,7 +1,7 @@
 # @matra/site
 
 Matra の公式サイトです。`@matra/core` でpage sourceをparseし、`@matra/html`で
-静的HTMLを生成します。Matra Specification v0.1の入口もこのappにまとめます。
+静的HTMLを生成します。Matra Specification v0.2の入口もこのappにまとめます。
 
 ## 開発
 

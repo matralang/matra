@@ -5,8 +5,8 @@ Matra is maintained as an npm workspaces monorepo. Published packages keep the
 
 ## Specification
 
-- [Matra Specification v0.1](spec/README.md)
-- [Matra Specification v0.1（日本語）](spec/README.ja.md)
+- [Matra Specification v0.2](spec/README.md)
+- [Matra Specification v0.2（日本語）](spec/README.ja.md)
 
 ## Packages
 

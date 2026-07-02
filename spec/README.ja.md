@@ -1,4 +1,4 @@
-# Matra Specification v0.1
+# Matra Specification v0.2
 
 [English](./README.md) | [日本語](./README.ja.md)
 
@@ -20,7 +20,7 @@ Matraはルート付きツリーを記述する、ドメイン非依存の記法
 ## 適用範囲
 
 tagとproperty名に組み込みのドメイン的意味はありません。HTML rendering、
-interpolation、directive、評価処理はdomain packageに属し、v0.1の範囲外です。
+interpolation、directive、評価処理はdomain packageに属し、v0.2の範囲外です。
 
 ## 過去の文書
 
