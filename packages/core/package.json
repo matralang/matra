@@ -13,15 +13,15 @@
   },
   "files": [
     "dist",
-    "src/matra-parser.pegjs"
+    "src/parser/grammar.pegjs"
   ],
   "scripts": {
-    "build": "npm run build:parser && npm run build:types",
-    "build:parser": "peggy --format es --output src/matra-parser.mjs src/matra-parser.pegjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && npm run build:parser && npm run build:types",
+    "build:parser": "peggy --format es --output src/parser/generated.mjs src/parser/grammar.pegjs",
     "build:types": "tsc",
     "check": "tsc --noEmit",
-    "test": "npm run build && node --test tests/core.test.mjs tests/render-with.test.mjs",
-    "test:legacy": "npm run build && node --test tests/*.test.mjs",
+    "test": "npm run build && node --test tests/*.test.mjs",
     "prepack": "npm run build"
   },
   "license": "MIT",

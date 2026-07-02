@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Comprehensive documentation**:
   - `../../spec/archive/core-v0.8/function-syntax.md` - Complete syntax guide
   - `../../spec/archive/core-v0.8/QUICK-REFERENCE.md` - Side-by-side syntax comparison
-  - `examples/function-syntax-demo.mjs` - 11 practical examples
+  - `../../spec/archive/core-v0.8/examples/function-syntax-demo.mjs` - 11 practical examples
 - **Test coverage** - 30 new tests:
   - Function syntax tests (10)
   - v0.7 compatibility tests (11)

@@ -271,4 +271,4 @@ See also:
 
 - [Function Syntax Guide](function-syntax.md)
 - [Quick Reference](QUICK-REFERENCE.md)
-- [Examples](../../../packages/core/examples/function-syntax-demo.mjs)
+- [Examples](./examples/function-syntax-demo.mjs)

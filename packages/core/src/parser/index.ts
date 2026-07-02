@@ -1,6 +1,6 @@
-import { isMatraAST, isMatraJSON, matraJSONToAST } from "./convert.js"
-import type { MatraAST, MatraParser, ParseOptions } from "./types.js"
-import { parse as peggyParse } from "./matra-parser.mjs"
+import { isMatraAST, isMatraJSON, matraJSONToAST } from "../ast/convert.js"
+import type { MatraAST, MatraParser, ParseOptions } from "../ast/types.js"
+import { parse as peggyParse } from "./generated.mjs"
 
 /** Parse source with the bundled Peggy implementation. */
 export function parse(source: string, options?: ParseOptions): MatraAST {

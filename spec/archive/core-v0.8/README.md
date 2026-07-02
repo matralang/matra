@@ -4,6 +4,8 @@
 > This is non-normative historical documentation for the earlier,
 > HTML-oriented Core implementation. See the current
 > [Matra Specification v0.1](../../README.md).
+> Archived examples and tests are preserved as historical snapshots and are
+> not part of the current Core build.
 
 Welcome to the @matra/core documentation!
 

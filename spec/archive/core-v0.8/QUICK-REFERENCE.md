@@ -224,5 +224,5 @@ form({action:"/submit", method:"post"},
 ---
 
 **Full docs**: [docs/function-syntax.md](function-syntax.md)  
-**Examples**: [examples/function-syntax-demo.mjs](../../../packages/core/examples/function-syntax-demo.mjs)
-**Tests**: [tests/function-syntax.test.mjs](../../../packages/core/tests/function-syntax.test.mjs)
+**Examples**: [examples/function-syntax-demo.mjs](./examples/function-syntax-demo.mjs)
+**Tests**: [tests/function-syntax.test.mjs](./tests/function-syntax.test.mjs)
