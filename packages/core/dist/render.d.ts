@@ -1,4 +1,4 @@
-import type { MatraAST } from "./types.js";
+import type { MatraAST } from "./ast/types.js";
 /** Domain renderer implemented by packages such as HTML, Math, and Graphics. */
 export interface MatraRenderer<Output, Options = undefined> {
     render(ast: MatraAST, options?: Options): Output;

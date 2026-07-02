@@ -1,16 +1,16 @@
 /** @matra/core — domain-neutral Matra tree primitives. */
-export { parse, parseWith } from "./parse.js";
-export { astToMatraJSON, isMatraAST, isMatraJSON, matraJSONToAST, } from "./convert.js";
+export { parse, parseWith } from "./parser/index.js";
+export { astToMatraJSON, isMatraAST, isMatraJSON, matraJSONToAST, } from "./ast/convert.js";
 export { printJSON } from "./printer.js";
-export { transform, visit } from "./transform.js";
+export { transform, visit } from "./ast/transform.js";
 export { renderWith } from "./render.js";
-export { MATRA_VERSION } from "./types.js";
-import { parse, parseWith } from "./parse.js";
-import { astToMatraJSON, matraJSONToAST } from "./convert.js";
+export { MATRA_VERSION } from "./ast/types.js";
+import { parse, parseWith } from "./parser/index.js";
+import { astToMatraJSON, matraJSONToAST } from "./ast/convert.js";
 import { printJSON } from "./printer.js";
-import { transform, visit } from "./transform.js";
+import { transform, visit } from "./ast/transform.js";
 import { renderWith } from "./render.js";
-import { MATRA_VERSION } from "./types.js";
+import { MATRA_VERSION } from "./ast/types.js";
 export const VERSION = MATRA_VERSION;
 export default {
     parse,
