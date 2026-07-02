@@ -3,7 +3,7 @@
   "private": true,
   "workspaces": ["packages/*"],
   "scripts": {
-    "build": "npm run build -w @matra/core && npm run build -w @matra/math && npm run build -w @matra/math-compute-engine && npm run build -w @matra/graphics && npm run build -w @matra/html",
+    "build": "npm run build -w @matra/core && npm run build -w @matra/math && npm run build -w @matra/math-compute-engine && npm run build -w @matra/graphics && npm run build -w @matra/html && npm run build -w @matra/kernel",
     "check": "npm run build && npm run check --workspaces --if-present",
     "test": "npm test --workspaces --if-present"
   }
