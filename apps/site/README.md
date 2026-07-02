@@ -12,6 +12,15 @@ npm run site:build
 npm run site:serve
 ```
 
+GitHub Pages向けのサブパス付き出力は、リポジトリのルートで次のように確認できます。
+
+```sh
+SITE_BASE_PATH=/matra npm run site:build
+```
+
+`main`ブランチへのサイト関連の変更、または手動実行でGitHub Pagesへデプロイされます。
+初回のみ、GitHubのリポジトリ設定でPagesのSourceを「GitHub Actions」にしてください。
+
 ページは `src/pages`、共通レイアウトは `src/layouts`、スタイルは `src/styles` に置きます。
 page moduleはMatra source stringをdefault exportします。
 

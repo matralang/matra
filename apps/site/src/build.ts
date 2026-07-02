@@ -12,6 +12,20 @@ declare const process: any;
 import { parse } from "@matra/core"
 import { toHTML } from "@matra/html"
 
+function getBasePath(): string {
+  const raw = process.env.SITE_BASE_PATH?.trim() ?? ""
+  if (!raw || raw === "/") return ""
+
+  return `/${raw.replace(/^\/+|\/+$/g, "")}`
+}
+
+function applyBasePath(html: string, basePath: string): string {
+  if (!basePath) return html
+
+  // Prefix site-root URLs while leaving protocol-relative URLs (//example.com) alone.
+  return html.replace(/\b(href|src)="\/(?!\/)/g, `$1="${basePath}/`)
+}
+
 function isIgnoredPath(relFromPages: string): boolean {
   // Normalize to POSIX-style for stable checks across OSes
   const rel = relFromPages.split(path.sep).join("/")
@@ -97,6 +111,7 @@ async function handler() {
   console.log(`Found page files: ${pageFiles.map(p => path.relative(pagesDir, p)).join(", ")}`)
 
   const DOCTYPE = "<!DOCTYPE html>"
+  const basePath = getBasePath()
 
   // Fail fast if multiple pages map to the same output file.
   assertNoOutputCollisions(pagesDir, pageFiles)
@@ -115,7 +130,7 @@ async function handler() {
 
       // pageModule.default is Matra DSL string
       const ast = parse(pageModule.default)
-      const htmlContent = DOCTYPE + toHTML(ast)
+      const htmlContent = DOCTYPE + applyBasePath(toHTML(ast), basePath)
 
       fs.writeFileSync(outputPath, htmlContent)
       console.log(`Generated HTML file at: ${outputPath}`)
