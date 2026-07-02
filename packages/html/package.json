@@ -1,0 +1,48 @@
+{
+  "name": "@matra/html",
+  "description": "HTML renderer for Matra AST",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "test": "npm run build && node --test",
+    "prepack": "npm run build"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matralang/matra-html.git"
+  },
+  "bugs": {
+    "url": "https://github.com/matralang/matra-html/issues"
+  },
+  "homepage": "https://github.com/matralang/matra-html#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "peerDependencies": {
+    "@matra/core": "^0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@matra/core": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@matra/core": "^0.1.1",
+    "typescript": "^5.9.3"
+  }
+}
