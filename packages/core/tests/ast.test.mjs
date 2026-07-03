@@ -55,4 +55,18 @@ describe("Matra AST", () => {
     })
     assert.equal(ast.children[0].tag, "p")
   })
+
+  it("preserves source positions while transforming", () => {
+    const position = {
+      start: { offset: 0, line: 1, column: 1 },
+      end: { offset: 3, line: 1, column: 4 },
+    }
+    const ast = { tag: "old", props: {}, children: [], position }
+    assert.deepEqual(transform(ast, node => ({ ...node, tag: "new" })), {
+      tag: "new",
+      props: {},
+      children: [],
+      position,
+    })
+  })
 })

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { parse, parseWith } from "../dist/index.js"
+import { MatraSyntaxError, parse, parseWith } from "../dist/index.js"
 
 describe("Matra parser", () => {
   it("parses function syntax and preserves literal types", () => {
@@ -136,5 +136,46 @@ describe("Matra parser", () => {
       props: {},
       children: ["Hello"],
     })
+  })
+
+  it("attaches source positions only when requested", () => {
+    const source = "circle(cx=Cos(theta))"
+    assert.equal(parse(source).position, undefined)
+    assert.deepEqual(parse(source, { locations: true, sourceId: "shape.matra" }), {
+      tag: "circle",
+      props: {
+        cx: {
+          tag: "Cos",
+          props: {},
+          children: ["theta"],
+          position: {
+            start: { offset: 10, line: 1, column: 11 },
+            end: { offset: 20, line: 1, column: 21 },
+            source: "shape.matra",
+          },
+        },
+      },
+      children: [],
+      position: {
+        start: { offset: 0, line: 1, column: 1 },
+        end: { offset: 21, line: 1, column: 22 },
+        source: "shape.matra",
+      },
+    })
+  })
+
+  it("reports syntax errors with locations and a code frame", () => {
+    assert.throws(
+      () => parse("circle(\n  cx=Cos(theta)\n", { sourceId: "broken.matra" }),
+      error => {
+        assert.ok(error instanceof MatraSyntaxError)
+        assert.equal(error.location.start.line, 3)
+        assert.equal(error.location.start.column, 1)
+        assert.equal(error.location.source, "broken.matra")
+        assert.match(error.message, /broken\.matra:3:1/)
+        assert.match(error.codeFrame, /3 \| /)
+        return true
+      },
+    )
   })
 })
