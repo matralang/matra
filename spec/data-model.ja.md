@@ -77,6 +77,15 @@ ASTでは、object形式のnodeとして保持します。
 再帰的に等しい場合にdata model上で等価です。propertyのserialize順序は
 意味を持ちません。
 
+## source position
+
+object形式のAST nodeは、`start`と`end`のsource pointを持つ`position`
+memberを保持できます（MAY）。各pointは0始まりの`offset`と1始まりの
+`line`、`column`を持ちます。positionにsource識別子を含めてもかまいません。
+
+source positionはparser metadataであり、data modelの等価性には含めません。
+標準の3要素MatraJSON形式では意図的に除外します。
+
 ## ドメインの意味論
 
 data modelはrendering、interpolation、directive、tagの動作を定義しません。

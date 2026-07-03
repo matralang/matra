@@ -80,6 +80,15 @@ Two Matra documents are data-model-equivalent when their tags, property keys
 and values, child values, and child order are recursively equal. Property
 serialization order is not significant.
 
+## Source positions
+
+An object-shaped AST node MAY have a `position` member containing `start` and
+`end` source points. Each point contains a zero-based `offset` and one-based
+`line` and `column`. A position MAY also contain a source identifier.
+
+Source positions are parser metadata, not part of data-model equality. The
+canonical three-element MatraJSON representation intentionally omits them.
+
 ## Domain semantics
 
 The data model does not define rendering, interpolation, directives, or tag
