@@ -108,7 +108,7 @@ function normalizeAttributeName(key) {
     return ATTRIBUTE_ALIASES[key] ?? key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
 }
 function isStyleRecord(value) {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
+    return typeof value === 'object' && value !== null && !Array.isArray(value) && !isAst(value);
 }
 function serializeStyle(style) {
     return Object.entries(style)

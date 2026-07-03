@@ -257,7 +257,10 @@ function peg$parse(input, options) {
         body.push(arg)
       }
     }
-    return [tag, props, body]
+    // Function calls are emitted as object-shaped AST nodes. This keeps a
+    // call used as a prop value distinguishable from an ordinary value
+    // array while preserving the same public AST shape at every depth.
+    return { tag, props, children: body }
   }
   function peg$f2(first, rest) {    return [first, ...rest.map(t => t[3])]  }
   function peg$f3(key, value) {
@@ -296,15 +299,15 @@ function peg$parse(input, options) {
     }
     const path = [first, ...rest]
     return path.length === 1
-      ? ["$var", { name: first }, []]
-      : ["$get", { path }, []]
+      ? { tag: "$var", props: { name: first }, children: [] }
+      : { tag: "$get", props: { path }, children: [] }
   }
   function peg$f15(first, rest) {
     const syntaxMode = options.syntaxMode || 'mixed';
     if (syntaxMode === 'document') {
       error('Expression syntax is not allowed in document mode');
     }
-    return ["$get", { path: [first, ...rest] }, []]
+    return { tag: "$get", props: { path: [first, ...rest] }, children: [] }
   }
   function peg$f16(body) {
     return ["$root", {}, body ?? []]
@@ -788,15 +791,18 @@ function peg$parse(input, options) {
   function peg$parsePropValue() {
     let s0;
 
-    s0 = peg$parseStringLiteral();
+    s0 = peg$parseTagApply();
     if (s0 === peg$FAILED) {
-      s0 = peg$parseNumber();
+      s0 = peg$parseStringLiteral();
       if (s0 === peg$FAILED) {
-        s0 = peg$parseBoolean();
+        s0 = peg$parseNumber();
         if (s0 === peg$FAILED) {
-          s0 = peg$parseNull();
+          s0 = peg$parseBoolean();
           if (s0 === peg$FAILED) {
-            s0 = peg$parseIdentifier();
+            s0 = peg$parseNull();
+            if (s0 === peg$FAILED) {
+              s0 = peg$parseIdentifier();
+            }
           }
         }
       }
