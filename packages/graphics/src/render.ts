@@ -1,4 +1,4 @@
-import type { MatraAST, MatraASTChild, MatraRenderer, MatraValue } from '@matra/core';
+import type { MatraAST, MatraASTChild, MatraPropValue, MatraRenderer, MatraValue } from '@matra/core';
 import { isSvgNode, svgNode } from './ast.js';
 import type { SVGRenderOptions } from './types.js';
 
@@ -84,7 +84,7 @@ function serializeChild(child: MatraASTChild, indent: number, depth: number): st
   return escapeXML(child);
 }
 
-function serializeAttribute(key: string, value: MatraValue): string {
+function serializeAttribute(key: string, value: MatraPropValue): string {
   if (value === null || value === false) return '';
   if (key === 'style' && isStyleRecord(value)) {
     return ` style="${escapeXML(serializeStyle(value))}"`;
@@ -118,8 +118,8 @@ function normalizeAttributeName(key: string): string {
   return ATTRIBUTE_ALIASES[key] ?? key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
 }
 
-function isStyleRecord(value: MatraValue): value is Record<string, MatraValue> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+function isStyleRecord(value: MatraPropValue): value is Record<string, MatraValue> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && !isAst(value);
 }
 
 function serializeStyle(style: Record<string, MatraValue>): string {
@@ -141,7 +141,7 @@ function escapeXML(value: Attribute): string {
     .replaceAll("'", '&apos;');
 }
 
-function scalarNumber(value: MatraValue | undefined): number | undefined {
+function scalarNumber(value: MatraPropValue | undefined): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 

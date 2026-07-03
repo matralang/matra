@@ -46,6 +46,9 @@ function renderProps(props: MatraProps): string {
   return Object.entries(props)
     .filter(([, value]) => value !== null && value !== false)
     .map(([key, value]) => {
+      if (isMatraAST(value)) {
+        throw new TypeError(`Unresolved expression in HTML attribute: ${key}`)
+      }
       if (value === true) return ` ${key}`
       const serialized = Array.isArray(value) ? value.join(" ") : String(value)
       return ` ${key}="${escapeAttribute(serialized)}"`

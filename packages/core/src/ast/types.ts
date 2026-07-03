@@ -5,7 +5,9 @@ export type MatraValue =
   | MatraValue[]
   | { [key: string]: MatraValue }
 
-export type MatraProps = Record<string, MatraValue>
+/** A property may contain an unevaluated expression represented by an AST. */
+export type MatraPropValue = MatraValue | MatraAST
+export type MatraProps = Record<string, MatraPropValue>
 
 /** Object-shaped tree used by Core visitors, transformers, and renderers. */
 export interface MatraAST {
@@ -19,11 +21,13 @@ export type MatraASTChild = MatraAST | MatraValue
 /** Compact three-element representation used for parser interchange. */
 export type MatraJSON = [
   tag: string,
-  props: MatraProps,
+  props: MatraJSONProps,
   children: MatraJSONChild[],
 ]
 
 export type MatraJSONChild = MatraJSON | MatraValue
+export type MatraJSONPropValue = MatraValue | MatraJSON
+export type MatraJSONProps = Record<string, MatraJSONPropValue>
 
 export interface ParseOptions {
   grammarSource?: string

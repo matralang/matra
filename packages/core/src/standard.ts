@@ -1,4 +1,5 @@
 import { isMatraAST } from "./ast/convert.js"
+import { evaluatePropExpressions } from "./ast/evaluate.js"
 import type { MatraAST, MatraASTChild, MatraValue } from "./ast/types.js"
 
 export type StandardFunction = (
@@ -46,6 +47,14 @@ export function evaluateStandard(
   options: StandardEvaluationOptions = {},
 ): MatraValue {
   return evaluateExpression(expression, options.functions ?? {})
+}
+
+/** Evaluate standard expressions embedded in props throughout an AST. */
+export function evaluateStandardProps(
+  ast: MatraAST,
+  options: StandardEvaluationOptions = {},
+): MatraAST {
+  return evaluatePropExpressions(ast, expression => evaluateStandard(expression, options))
 }
 
 function evaluateExpression(

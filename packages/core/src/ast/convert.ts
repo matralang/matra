@@ -3,6 +3,8 @@ import type {
   MatraASTChild,
   MatraJSON,
   MatraJSONChild,
+  MatraJSONPropValue,
+  MatraPropValue,
   MatraValue,
 } from "./types.js"
 
@@ -29,7 +31,9 @@ export function isMatraJSON(value: unknown): value is MatraJSON {
 export function astToMatraJSON(ast: MatraAST): MatraJSON {
   return [
     ast.tag,
-    cloneValue(ast.props),
+    Object.fromEntries(
+      Object.entries(ast.props).map(([key, value]) => [key, propToJSON(value)]),
+    ),
     ast.children.map(childToJSON),
   ]
 }
@@ -39,7 +43,9 @@ export function matraJSONToAST(node: MatraJSON): MatraAST {
   const [tag, props, children] = node
   return {
     tag,
-    props: cloneValue(props),
+    props: Object.fromEntries(
+      Object.entries(props).map(([key, value]) => [key, propToAST(value)]),
+    ),
     children: children.map(childToAST),
   }
 }
@@ -50,6 +56,14 @@ function childToJSON(child: MatraASTChild): MatraJSONChild {
 
 function childToAST(child: MatraJSONChild): MatraASTChild {
   return isMatraJSON(child) ? matraJSONToAST(child) : cloneValue(child)
+}
+
+function propToJSON(value: MatraPropValue): MatraJSONPropValue {
+  return isMatraAST(value) ? astToMatraJSON(value) : cloneValue(value)
+}
+
+function propToAST(value: MatraJSONPropValue): MatraPropValue {
+  return isMatraJSON(value) ? matraJSONToAST(value) : cloneValue(value)
 }
 
 function isRecord(value: unknown): value is Record<string, any> {

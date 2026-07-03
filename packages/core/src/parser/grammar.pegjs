@@ -45,7 +45,10 @@ TagApply
           body.push(arg)
         }
       }
-      return [tag, props, body]
+      // Function calls are emitted as object-shaped AST nodes. This keeps a
+      // call used as a prop value distinguishable from an ordinary value
+      // array while preserving the same public AST shape at every depth.
+      return { tag, props, children: body }
     }
 
 ArgList
@@ -68,7 +71,8 @@ KeywordProp
     }
 
 PropValue
-  = StringLiteral
+  = TagApply
+  / StringLiteral
   / Number
   / Boolean
   / Null
@@ -129,8 +133,8 @@ ReferenceExpression
     }
     const path = [first, ...rest]
     return path.length === 1
-      ? ["$var", { name: first }, []]
-      : ["$get", { path }, []]
+      ? { tag: "$var", props: { name: first }, children: [] }
+      : { tag: "$get", props: { path }, children: [] }
   }
 
 MemberExpression
@@ -139,7 +143,7 @@ MemberExpression
     if (syntaxMode === 'document') {
       error('Expression syntax is not allowed in document mode');
     }
-    return ["$get", { path: [first, ...rest] }, []]
+    return { tag: "$get", props: { path: [first, ...rest] }, children: [] }
   }
 
 TagBody

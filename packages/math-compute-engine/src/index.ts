@@ -1,5 +1,6 @@
 import { evaluate as computeEvaluate, N, simplify as computeSimplify } from "@cortex-js/compute-engine"
-import { parseMath, type MathJson } from "@matra/math"
+import { evaluatePropExpressions, type MatraAST, type MatraValue } from "@matra/core"
+import { astToMathJson, parseMath, type MathJson } from "@matra/math"
 
 export type MathScope = Readonly<Record<string, MathJson>>
 
@@ -33,6 +34,13 @@ export function numericEvaluateMatra(source: string, scope: MathScope = {}): unk
   return numericEvaluate(bind(parseMath(source), scope))
 }
 
+/** Numerically evaluate math expressions embedded in props throughout an AST. */
+export function numericEvaluateProps(ast: MatraAST, scope: MathScope = {}): MatraAST {
+  return evaluatePropExpressions(ast, expression =>
+    requireMatraValue(numericEvaluate(bind(astToMathJson(expression), scope))),
+  )
+}
+
 /** Replace symbol operands with MathJSON values before computation. */
 function bind(expression: MathJson, scope: MathScope): MathJson {
   if (typeof expression === "string") {
@@ -41,4 +49,19 @@ function bind(expression: MathJson, scope: MathScope): MathJson {
   if (!Array.isArray(expression)) return expression
   const [head, ...operands] = expression
   return [head, ...operands.map((operand) => bind(operand, scope))]
+}
+
+function requireMatraValue(value: unknown): MatraValue {
+  if (value === null || typeof value === "string" || typeof value === "boolean") return value
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw new TypeError("Computed prop value must be finite")
+    return value
+  }
+  if (Array.isArray(value)) return value.map(requireMatraValue)
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, requireMatraValue(item)]),
+    )
+  }
+  throw new TypeError("Computed prop value must be JSON-compatible")
 }

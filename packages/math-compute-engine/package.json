@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@cortex-js/compute-engine": "^0.64.0",
+    "@matra/core": "^0.2.0",
     "@matra/math": "^0.1.0"
   },
   "devDependencies": {

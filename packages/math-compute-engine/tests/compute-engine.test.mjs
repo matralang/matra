@@ -4,8 +4,10 @@ import {
   evaluate,
   evaluateMatra,
   numericEvaluateMatra,
+  numericEvaluateProps,
   simplifyMatra,
 } from "../dist/index.js"
+import { parse } from "@matra/core"
 
 describe("Cortex Compute Engine adapter", () => {
   it("evaluates MathJSON without going through the Matra parser", () => {
@@ -29,6 +31,22 @@ describe("Cortex Compute Engine adapter", () => {
     assert.equal(
       numericEvaluateMatra("Add(Power(x, 2), y)", { x: 3, y: 4 }),
       13,
+    )
+  })
+
+  it("evaluates math expressions embedded in props", () => {
+    assert.deepEqual(
+      numericEvaluateProps(parse("circle(cx=Cos(theta), r=Divide(3, 8))"), {
+        theta: ["Divide", "Pi", 3],
+      }),
+      {
+        tag: "circle",
+        props: {
+          cx: "0.500000000000000000001",
+          r: 0.375,
+        },
+        children: [],
+      },
     )
   })
 })
