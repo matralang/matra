@@ -67,7 +67,7 @@ document       = expression ;
 expression     = function-node | document-node | root-node | comment ;
 function-node  = identifier, "(", [ argument, { ",", argument } ], ")" ;
 argument       = property | object-props | function-node | literal | identifier ;
-property       = identifier, "=", value ;
+property       = identifier, "=", (value | function-node) ;
 object-props   = "{", [ pair, { ",", pair } ], "}" ;
 pair           = (identifier | string), ":", value ;
 value          = string | number | boolean | null | identifier ;

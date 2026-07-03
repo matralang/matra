@@ -28,6 +28,24 @@ A value is one of:
 Values MUST be JSON-compatible. `undefined`, functions, symbols, big integers,
 non-finite numbers, and cyclic structures are not Matra values.
 
+A property value MAY be a node. Such a node represents an unevaluated
+expression. Domains evaluate property expressions before rendering; a renderer
+MAY reject an expression that reaches it unevaluated.
+
+```matra
+circle(cx=Cos(theta))
+```
+
+```json
+{
+  "tag": "circle",
+  "props": {
+    "cx": { "tag": "Cos", "props": {}, "children": ["theta"] }
+  },
+  "children": []
+}
+```
+
 ## MatraJSON
 
 MatraJSON is the canonical interchange representation of the data model. A
@@ -52,6 +70,9 @@ be a list. Child order and scalar types MUST be preserved.
 Within `children`, a three-element array matching this shape is interpreted as
 a node. Producers SHOULD avoid value arrays that are indistinguishable from a
 MatraJSON node.
+
+Within `props`, an expression node uses the same three-element MatraJSON
+encoding. Object-shaped ASTs preserve it as an object-shaped node.
 
 ## Equality
 
