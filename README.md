@@ -11,6 +11,7 @@ Matra is maintained as an npm workspaces monorepo. Published packages keep the
 ## Packages
 
 - [`@matra/core`](packages/core)
+- [`@matra/command`](packages/command)
 - [`@matra/graphics`](packages/graphics)
 - [`@matra/html`](packages/html)
 - [`@matra/math`](packages/math)
