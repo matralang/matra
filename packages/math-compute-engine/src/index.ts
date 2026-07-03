@@ -34,11 +34,17 @@ export function numericEvaluateMatra(source: string, scope: MathScope = {}): unk
   return numericEvaluate(bind(parseMath(source), scope))
 }
 
-/** Numerically evaluate math expressions embedded in props throughout an AST. */
+/**
+ * Evaluate math expressions embedded in props throughout an AST.
+ * Exact finite numbers and rationals are preferred; other expressions fall
+ * back to numeric approximation.
+ */
 export function numericEvaluateProps(ast: MatraAST, scope: MathScope = {}): MatraAST {
-  return evaluatePropExpressions(ast, expression =>
-    requireMatraValue(numericEvaluate(bind(astToMathJson(expression), scope))),
-  )
+  return evaluatePropExpressions(ast, expression => {
+    const bound = bind(astToMathJson(expression), scope)
+    const exact = exactScalarNumber(evaluate(bound))
+    return exact ?? requireMatraValue(numericEvaluate(bound))
+  })
 }
 
 /** Replace symbol operands with MathJSON values before computation. */
@@ -64,4 +70,22 @@ function requireMatraValue(value: unknown): MatraValue {
     )
   }
   throw new TypeError("Computed prop value must be JSON-compatible")
+}
+
+function exactScalarNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (
+    Array.isArray(value) &&
+    value.length === 3 &&
+    value[0] === "Rational" &&
+    typeof value[1] === "number" &&
+    typeof value[2] === "number" &&
+    Number.isFinite(value[1]) &&
+    Number.isFinite(value[2]) &&
+    value[2] !== 0
+  ) {
+    const quotient = value[1] / value[2]
+    return Number.isFinite(quotient) ? quotient : undefined
+  }
+  return undefined
 }

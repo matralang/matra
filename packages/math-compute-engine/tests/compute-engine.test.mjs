@@ -42,9 +42,20 @@ describe("Cortex Compute Engine adapter", () => {
       {
         tag: "circle",
         props: {
-          cx: "0.500000000000000000001",
+          cx: 0.5,
           r: 0.375,
         },
+        children: [],
+      },
+    )
+  })
+
+  it("falls back to approximation when an exact expression is not scalar", () => {
+    assert.deepEqual(
+      numericEvaluateProps(parse("circle(cx=Sqrt(4), cy=Sqrt(3))")),
+      {
+        tag: "circle",
+        props: { cx: 2, cy: "1.73205080756887729353" },
         children: [],
       },
     )
