@@ -16,9 +16,10 @@ Matra is maintained as an npm workspaces monorepo. Published packages keep the
 - [`@matra/math`](packages/math)
 - [`@matra/math-compute-engine`](packages/math-compute-engine)
 
-## Apps
+## Website
 
-- [`@matra/site`](apps/site) — 公式サイト・ドキュメント・Playground
+公式サイト・ドキュメント・Playgroundは
+[`matralang/website`](https://github.com/matralang/website) で管理しています。
 
 ## Development
 
@@ -27,5 +28,3 @@ npm install
 npm run build
 npm test
 ```
-
-サイトだけをビルドする場合は `npm run site:build` を実行します。
