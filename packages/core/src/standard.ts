@@ -11,6 +11,8 @@ export interface StandardEvaluationOptions {
   functions?: Readonly<Record<string, StandardFunction>>
 }
 
+type StandardScope = Readonly<Record<string, MatraValue>>
+
 /** Wolfram-style inclusive Range. */
 export function Range(end: number): number[]
 export function Range(start: number, end: number): number[]
@@ -46,7 +48,7 @@ export function evaluateStandard(
   expression: MatraAST | MatraASTChild,
   options: StandardEvaluationOptions = {},
 ): MatraValue {
-  return evaluateExpression(expression, options.functions ?? {})
+  return evaluateExpression(expression, options.functions ?? {}, {})
 }
 
 /** Evaluate standard expressions embedded in props throughout an AST. */
@@ -60,6 +62,7 @@ export function evaluateStandardProps(
 function evaluateExpression(
   expression: MatraASTChild,
   functions: Readonly<Record<string, StandardFunction>>,
+  scope: StandardScope,
 ): MatraValue {
   if (!isMatraAST(expression)) return expression
   if (Object.keys(expression.props).length > 0) {
@@ -67,7 +70,7 @@ function evaluateExpression(
   }
 
   if (expression.tag === "Range") {
-    const args = expression.children.map(child => requireNumber(evaluateExpression(child, functions), "Range"))
+    const args = expression.children.map(child => requireNumber(evaluateExpression(child, functions, scope), "Range"))
     if (args.length < 1 || args.length > 3) throw new TypeError("Range expects 1 to 3 arguments")
     return args.length === 1
       ? Range(args[0])
@@ -78,27 +81,64 @@ function evaluateExpression(
 
   if (expression.tag === "Map") {
     if (expression.children.length !== 2) throw new TypeError("Map expects 2 arguments")
-    const fn = resolveFunction(expression.children[0], functions)
-    const values = evaluateExpression(expression.children[1], functions)
+    const fn = resolveFunction(expression.children[0], functions, scope)
+    const values = evaluateExpression(expression.children[1], functions, scope)
     if (!Array.isArray(values)) throw new TypeError("Map expects a collection as its second argument")
     return Map(fn, values)
   }
 
+  if (expression.tag === "Var") {
+    if (expression.children.length !== 1 || typeof expression.children[0] !== "string") {
+      throw new TypeError("Var expects one variable name")
+    }
+    const name = expression.children[0]
+    if (!Object.prototype.hasOwnProperty.call(scope, name)) {
+      throw new ReferenceError(`Unknown standard variable: ${name}`)
+    }
+    return scope[name]
+  }
+
+  if (expression.tag === "Lambda") {
+    throw new TypeError("Lambda is only valid where a function is expected")
+  }
+
   const fn = functions[expression.tag]
   if (!fn) throw new ReferenceError(`Unknown standard function: ${expression.tag}`)
-  return fn(...expression.children.map(child => evaluateExpression(child, functions)))
+  return fn(...expression.children.map(child => evaluateExpression(child, functions, scope)))
 }
 
 function resolveFunction(
   expression: MatraASTChild,
   functions: Readonly<Record<string, StandardFunction>>,
+  scope: StandardScope,
 ): StandardFunction {
+  if (isMatraAST(expression)) {
+    if (expression.tag !== "Lambda") {
+      throw new TypeError("Map expects a function name or Lambda as its first argument")
+    }
+    return createLambda(expression, functions, scope)
+  }
   if (typeof expression !== "string") {
-    throw new TypeError("Map expects a function name as its first argument")
+    throw new TypeError("Map expects a function name or Lambda as its first argument")
   }
   const fn = functions[expression]
   if (!fn) throw new ReferenceError(`Unknown Map function: ${expression}`)
   return fn
+}
+
+function createLambda(
+  expression: MatraAST,
+  functions: Readonly<Record<string, StandardFunction>>,
+  closure: StandardScope,
+): StandardFunction {
+  if (Object.keys(expression.props).length > 0 || expression.children.length !== 2) {
+    throw new TypeError("Lambda expects a parameter name and a body")
+  }
+  const [parameter, body] = expression.children
+  if (typeof parameter !== "string" || !/^[A-Za-z_][A-Za-z0-9_-]*$/.test(parameter)) {
+    throw new TypeError("Lambda parameter must be an identifier")
+  }
+  return value => evaluateExpression(body, functions, { ...closure, [parameter]: value })
 }
 
 function requireNumber(value: MatraValue, name: string): number {
