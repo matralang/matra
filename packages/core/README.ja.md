@@ -42,6 +42,21 @@ const ast = parseWith(peggyParser, source)
 
 同梱しているPeggy実装はMatraJSONを生成します。Coreの公開`parse()`はその出力をASTへ変換するため、Parserを交換可能な状態に保てます。
 
+diagnosticやeditor統合で必要な場合は、source positionを付与できます。
+構文エラーは常にlocationとcode frameを持ちます。
+
+```ts
+const ast = parse(source, {
+  locations: true,
+  sourceId: "drawing.matra",
+})
+
+ast.position
+// { start: { offset: 0, line: 1, column: 1 }, ... }
+```
+
+MatraJSON変換時にpositionは除外します。
+
 ## HTML
 
 HTMLレンダリングは、独立したworkspaceパッケージから提供します。
