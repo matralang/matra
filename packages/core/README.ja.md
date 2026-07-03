@@ -102,6 +102,17 @@ evaluateStandard(parse("Map(square, Range(1, 4))"), {
 // [1, 4, 9, 16]
 ```
 
+`Map`は単一引数の`Lambda`も受け付けます。現行のJSON互換構文で
+識別子と文字列値を区別できるよう、字句参照には`Var(name)`を使います。
+
+```ts
+evaluateStandard(
+  parse("Map(Lambda(n, multiply(Var(n), Var(n))), Range(1, 4))"),
+  { functions: { multiply: (a, b) => Number(a) * Number(b) } },
+)
+// [1, 4, 9, 16]
+```
+
 ## パッケージ構造
 
 ```text

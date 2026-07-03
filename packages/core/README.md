@@ -114,6 +114,18 @@ evaluateStandard(parse("Map(square, Range(1, 4))"), {
 // [1, 4, 9, 16]
 ```
 
+`Map` also accepts a single-parameter `Lambda`. Use `Var(name)` for lexical
+variable references; this keeps identifiers distinct from string values in the
+current JSON-compatible syntax.
+
+```ts
+evaluateStandard(
+  parse("Map(Lambda(n, multiply(Var(n), Var(n))), Range(1, 4))"),
+  { functions: { multiply: (a, b) => Number(a) * Number(b) } },
+)
+// [1, 4, 9, 16]
+```
+
 ## Package structure
 
 ```text
