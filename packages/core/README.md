@@ -71,6 +71,24 @@ Ordinary positional arguments become children. The earlier
 `circle({x: 10, y: 20, r: 5})` form remains available for compatibility but
 is not the canonical notation.
 
+## Standard collection functions
+
+`Range` creates an inclusive sequence, and `Map` applies a registered function
+to each value. `evaluateStandard()` evaluates their application-style Matra
+syntax without storing JavaScript functions in the JSON-compatible AST.
+
+```ts
+import { evaluateStandard, parse } from "@matra/core"
+
+evaluateStandard(parse("Range(1, 4)"))
+// [1, 2, 3, 4]
+
+evaluateStandard(parse("Map(square, Range(1, 4))"), {
+  functions: { square: value => Number(value) ** 2 },
+})
+// [1, 4, 9, 16]
+```
+
 ## Package structure
 
 ```text
@@ -79,11 +97,13 @@ src/
 ├── parser/    # public parser boundary, grammar, generated parser
 ├── index.ts   # public exports
 ├── printer.ts # domain-neutral JSON serialization
-└── render.ts  # replaceable renderer boundary
+├── render.ts  # replaceable renderer boundary
+└── standard.ts # Range, Map, and standard evaluation
 tests/
 ├── ast.test.mjs
 ├── parser.test.mjs
-└── render.test.mjs
+├── render.test.mjs
+└── standard.test.mjs
 ```
 
 The generated parser is rebuilt from `src/parser/grammar.pegjs`; edit the

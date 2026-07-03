@@ -61,6 +61,23 @@ circle(x=10, y=20, r=5)
 
 通常の位置引数はchildrenになります。従来の`circle({x: 10, y: 20, r: 5})`形式も互換性のため利用できますが、標準記法ではありません。
 
+## 標準コレクション関数
+
+`Range`は終端を含む数列を生成し、`Map`は登録済み関数を各値に適用します。
+`evaluateStandard()`は、JSON互換ASTにJavaScript関数を格納せずに、それらのMatra関数構文を評価します。
+
+```ts
+import { evaluateStandard, parse } from "@matra/core"
+
+evaluateStandard(parse("Range(1, 4)"))
+// [1, 2, 3, 4]
+
+evaluateStandard(parse("Map(square, Range(1, 4))"), {
+  functions: { square: value => Number(value) ** 2 },
+})
+// [1, 4, 9, 16]
+```
+
 ## パッケージ構造
 
 ```text
@@ -69,11 +86,13 @@ src/
 ├── parser/    # 公開parser境界、grammar、生成parser
 ├── index.ts   # 公開export
 ├── printer.ts # ドメイン非依存のJSON serialize
-└── render.ts  # 交換可能なrenderer境界
+├── render.ts  # 交換可能なrenderer境界
+└── standard.ts # Range、Map、標準評価
 tests/
 ├── ast.test.mjs
 ├── parser.test.mjs
-└── render.test.mjs
+├── render.test.mjs
+└── standard.test.mjs
 ```
 
 生成parserは`src/parser/grammar.pegjs`から再構築します。`generated.mjs`ではなく
