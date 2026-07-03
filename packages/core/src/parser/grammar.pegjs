@@ -72,6 +72,7 @@ Arg
   = KeywordProp
   / BareObject
   / TagApply
+  / ArrayLiteral
   / StringLiteral
   / Number
   / Boolean
@@ -86,24 +87,45 @@ KeywordProp
 
 PropValue
   = TagApply
+  / LiteralValue
+
+BareObject
+  = value:ObjectLiteral {
+      return { __kind:"bare-object", value }
+    }
+
+LiteralValue
+  = ArrayLiteral
+  / ObjectLiteral
   / StringLiteral
   / Number
   / Boolean
   / Null
   / Identifier
 
-BareObject
-  = "{" _ pairs:(BarePair (_ "," _ BarePair)*)? _ "}" {
-      if (!pairs) return { __kind:"bare-object", value:{} }
-      const xs = [pairs[0], ...(pairs[1] ? pairs[1].map(t => t[3]) : [])]
-      return { __kind:"bare-object", value:Object.fromEntries(xs) }
+ArrayLiteral
+  = "[" _ values:(LiteralValue (_ "," _ LiteralValue)*)? _ "]" {
+      if (!values) return []
+      return [values[0], ...values[1].map(item => item[3])]
     }
 
-BarePair
-  = key:(Identifier / StringLiteral) _ ":" _ val:(StringLiteral / Number / Boolean / Identifier) {
-      const k = typeof key === "string" ? key.replace(/^\"|\"$/g, "") : key
-      const v = typeof val === "string" && val.startsWith('"') ? val.slice(1, -1) : val
-      return [k, v]
+ObjectLiteral
+  = "{" _ pairs:(ObjectPair (_ "," _ ObjectPair)*)? _ "}" {
+      if (!pairs) return {}
+      const entries = [pairs[0], ...pairs[1].map(item => item[3])]
+      const result = {}
+      for (const [key, value] of entries) {
+        if (Object.prototype.hasOwnProperty.call(result, key)) {
+          error(`Duplicate object key: ${key}`)
+        }
+        result[key] = value
+      }
+      return result
+    }
+
+ObjectPair
+  = key:(Identifier / StringLiteral) _ ":" _ value:LiteralValue {
+      return [key, value]
     }
 
 StringLiteral
