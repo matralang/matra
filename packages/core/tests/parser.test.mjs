@@ -114,6 +114,21 @@ describe("Matra parser", () => {
     assert.throws(() => parse('circle(x=1, x=2)'), /Duplicate prop: x/)
   })
 
+  it("parses function calls in props as unevaluated AST expressions", () => {
+    assert.deepEqual(parse("circle(cx=Cos(theta), cy=Add(2, Sin(theta)))"), {
+      tag: "circle",
+      props: {
+        cx: { tag: "Cos", props: {}, children: ["theta"] },
+        cy: {
+          tag: "Add",
+          props: {},
+          children: [2, { tag: "Sin", props: {}, children: ["theta"] }],
+        },
+      },
+      children: [],
+    })
+  })
+
   it("normalizes replaceable parser output", () => {
     const parser = { parse: () => ["doc", {}, ["Hello"]] }
     assert.deepEqual(parseWith(parser, "ignored"), {

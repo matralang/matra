@@ -19,6 +19,19 @@ describe("Matra AST", () => {
     assert.deepEqual(matraJSONToAST(json), ast)
   })
 
+  it("round-trips expression nodes stored in props", () => {
+    const ast = {
+      tag: "circle",
+      props: {
+        cx: { tag: "Cos", props: {}, children: ["theta"] },
+      },
+      children: [],
+    }
+    const json = ["circle", { cx: ["Cos", {}, ["theta"]] }, []]
+    assert.deepEqual(astToMatraJSON(ast), json)
+    assert.deepEqual(matraJSONToAST(json), ast)
+  })
+
   it("visits and immutably transforms only AST children", () => {
     const ast = {
       tag: "doc",

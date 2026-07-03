@@ -1,6 +1,13 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { evaluateStandard, Map, parse, Range } from "../dist/index.js"
+import {
+  evaluatePropExpressions,
+  evaluateStandard,
+  evaluateStandardProps,
+  Map,
+  parse,
+  Range,
+} from "../dist/index.js"
 
 describe("Matra standard collection functions", () => {
   it("creates inclusive ranges", () => {
@@ -34,6 +41,23 @@ describe("Matra standard collection functions", () => {
     assert.throws(
       () => evaluateStandard(parse("Map(missing, Range(3))")),
       /Unknown Map function: missing/,
+    )
+  })
+
+  it("evaluates expressions embedded in props", () => {
+    const ast = parse("circle(cx=double(4), fill=red)")
+    assert.deepEqual(
+      evaluateStandardProps(ast, { functions: { double: value => Number(value) * 2 } }),
+      { tag: "circle", props: { cx: 8, fill: "red" }, children: [] },
+    )
+
+    assert.deepEqual(
+      evaluatePropExpressions(parse("g(circle(cx=value()))"), () => 12),
+      {
+        tag: "g",
+        props: {},
+        children: [{ tag: "circle", props: { cx: 12 }, children: [] }],
+      },
     )
   })
 })
