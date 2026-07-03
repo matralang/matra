@@ -71,6 +71,16 @@ Ordinary positional arguments become children. The earlier
 `circle({x: 10, y: 20, r: 5})` form remains available for compatibility but
 is not the canonical notation.
 
+Function calls are also accepted as unevaluated prop expressions:
+
+```matra
+circle(cx=Cos(theta), r=Divide(3, 8))
+```
+
+They are represented as AST nodes inside `props`. Use
+`evaluatePropExpressions(ast, evaluator)` to replace them immutably before
+rendering.
+
 ## Standard collection functions
 
 `Range` creates an inclusive sequence, and `Map` applies a registered function

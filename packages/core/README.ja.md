@@ -61,6 +61,15 @@ circle(x=10, y=20, r=5)
 
 通常の位置引数はchildrenになります。従来の`circle({x: 10, y: 20, r: 5})`形式も互換性のため利用できますが、標準記法ではありません。
 
+関数適用を未評価のproperty式として記述できます。
+
+```matra
+circle(cx=Cos(theta), r=Divide(3, 8))
+```
+
+式は`props`内のAST nodeとして表現します。rendering前に
+`evaluatePropExpressions(ast, evaluator)`で非破壊的に評価できます。
+
 ## 標準コレクション関数
 
 `Range`は終端を含む数列を生成し、`Map`は登録済み関数を各値に適用します。
