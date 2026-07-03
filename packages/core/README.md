@@ -96,6 +96,20 @@ They are represented as AST nodes inside `props`. Use
 `evaluatePropExpressions(ast, evaluator)` to replace them immutably before
 rendering.
 
+Array and object literals may be nested in prop values. They remain ordinary
+JSON-compatible values in the AST:
+
+```matra
+command(
+  args=["solve.py", "--format", "json"],
+  env={MODE: "production"},
+  stdin={format: "json", value: {items: [1, 2, 3]}}
+)
+```
+
+A positional object such as `circle({x: 10})` retains its legacy meaning of
+merging entries into props.
+
 ## Standard collection functions
 
 `Range` creates an inclusive sequence, and `Map` applies a registered function

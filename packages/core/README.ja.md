@@ -85,6 +85,20 @@ circle(cx=Cos(theta), r=Divide(3, 8))
 式は`props`内のAST nodeとして表現します。rendering前に
 `evaluatePropExpressions(ast, evaluator)`で非破壊的に評価できます。
 
+property valueに配列とobjectリテラルを再帰的に記述できます。ASTでは
+通常のJSON互換valueとして保持します。
+
+```matra
+command(
+  args=["solve.py", "--format", "json"],
+  env={MODE: "production"},
+  stdin={format: "json", value: {items: [1, 2, 3]}}
+)
+```
+
+`circle({x: 10})`のような位置引数objectは、要素をpropsへmergeする
+従来の意味を維持します。
+
 ## 標準コレクション関数
 
 `Range`は終端を含む数列を生成し、`Map`は登録済み関数を各値に適用します。
