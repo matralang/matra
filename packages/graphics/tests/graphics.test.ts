@@ -40,3 +40,24 @@ test('wraps a Matra document fragment in an SVG root', () => {
   assert.match(result, /<circle/);
   assert.match(result, /<rect/);
 });
+
+test('supports richer SVG elements, camel-case attributes, and style objects', () => {
+  const result = compile(`svg(
+    defs(linearGradient(stop(offset="0%", stopColor="#fff"), id="shine")),
+    text(tspan("Matra", fontWeight=700), x=10, y=20),
+    filter(feGaussianBlur(stdDeviation=3), id="blur"),
+    width=120, height=40
+  )`);
+  assert.match(result, /stop-color="#fff"/);
+  assert.match(result, /font-weight="700"/);
+  assert.match(result, /<feGaussianBlur stdDeviation="3">/);
+
+  const styled = toSVG(svgNode('svg', { style: { backgroundColor: '#fff', opacity: 0.8 } }));
+  assert.match(styled, /style="background-color:#fff;opacity:0.8"/);
+});
+
+test('can format SVG for source views', () => {
+  const result = compile('svg(circle(cx=5, cy=5, r=4), width=10, height=10)', { pretty: true });
+  assert.match(result, /<svg[^>]*>\n  <circle/);
+  assert.match(result, /\n<\/svg>$/);
+});
