@@ -19,6 +19,78 @@ describe("Matra parser", () => {
     })
   })
 
+  it("distinguishes member access from dotted node construction", () => {
+    assert.deepEqual(parse("foo"), {
+      tag: "$var",
+      props: { name: "foo" },
+      children: [],
+    })
+    assert.deepEqual(parse("foo.bar"), {
+      tag: "$get",
+      props: { path: ["foo", "bar"] },
+      children: [],
+    })
+    assert.deepEqual(parse("foo.bar.baz"), {
+      tag: "$get",
+      props: { path: ["foo", "bar", "baz"] },
+      children: [],
+    })
+    assert.deepEqual(parse("foo.bar.baz;"), {
+      tag: "foo",
+      props: { class: "bar baz" },
+      children: [],
+    })
+  })
+
+  it("constructs empty nodes with selectors and attributes", () => {
+    assert.deepEqual(parse('foo.bar#main[x="1"];'), {
+      tag: "foo",
+      props: { x: "1", id: "main", class: "bar" },
+      children: [],
+    })
+    assert.deepEqual(parse("expr;"), { tag: "expr", props: {}, children: [] })
+    assert.deepEqual(parse("a;"), { tag: "a", props: {}, children: [] })
+    assert.deepEqual(parse("foo.bar { baz.qux; }"), {
+      tag: "foo",
+      props: { class: "bar" },
+      children: [{ tag: "baz", props: { class: "qux" }, children: [] }],
+    })
+  })
+
+  it("parses explicit expressions, including inside document bodies", () => {
+    assert.deepEqual(parse("= expr"), {
+      tag: "$var",
+      props: { name: "expr" },
+      children: [],
+    })
+    assert.deepEqual(parse("output {= user.profile.name }"), {
+      tag: "output",
+      props: {},
+      children: [{
+        tag: "$get",
+        props: { path: ["user", "profile", "name"] },
+        children: [],
+      }],
+    })
+  })
+
+  it("parses qualified calls before member expressions", () => {
+    assert.deepEqual(parse('foo.bar("x")'), {
+      tag: "foo.bar",
+      props: {},
+      children: ["x"],
+    })
+    assert.deepEqual(parse("consume(foo.bar)"), {
+      tag: "consume",
+      props: {},
+      children: [{
+        tag: "$get",
+        props: { path: ["foo", "bar"] },
+        children: [],
+      }],
+    })
+  })
+
   it("enforces syntax modes", () => {
     assert.throws(
       () => parse('p("Hello")', { syntaxMode: "document" }),
@@ -26,6 +98,14 @@ describe("Matra parser", () => {
     )
     assert.throws(
       () => parse('p`Hello`', { syntaxMode: "application" }),
+      /Block syntax is not allowed/,
+    )
+    assert.throws(
+      () => parse("foo.bar", { syntaxMode: "document" }),
+      /Expression syntax is not allowed/,
+    )
+    assert.throws(
+      () => parse("foo.bar;", { syntaxMode: "application" }),
       /Block syntax is not allowed/,
     )
   })
