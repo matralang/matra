@@ -1,10 +1,15 @@
 import { isMatraAST, isMatraJSON, matraJSONToAST } from "../ast/convert.js"
 import type { MatraAST, MatraParser, ParseOptions } from "../ast/types.js"
 import { parse as peggyParse } from "./generated.mjs"
+import { normalizeSyntaxError } from "./error.js"
 
 /** Parse source with the bundled Peggy implementation. */
 export function parse(source: string, options?: ParseOptions): MatraAST {
-  return normalizeParserOutput(peggyParse(source, options))
+  try {
+    return normalizeParserOutput(peggyParse(source, options))
+  } catch (error) {
+    throw normalizeSyntaxError(error, source, options?.sourceId)
+  }
 }
 
 /**
@@ -16,7 +21,11 @@ export function parseWith(
   source: string,
   options?: ParseOptions,
 ): MatraAST {
-  return normalizeParserOutput(parser.parse(source, options))
+  try {
+    return normalizeParserOutput(parser.parse(source, options))
+  } catch (error) {
+    throw normalizeSyntaxError(error, source, options?.sourceId)
+  }
 }
 
 function normalizeParserOutput(output: unknown): MatraAST {

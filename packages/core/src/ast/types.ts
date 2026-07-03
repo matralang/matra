@@ -9,11 +9,29 @@ export type MatraValue =
 export type MatraPropValue = MatraValue | MatraAST
 export type MatraProps = Record<string, MatraPropValue>
 
+export interface SourcePoint {
+  /** Zero-based UTF-16 offset in the source text. */
+  offset: number
+  /** One-based line number. */
+  line: number
+  /** One-based column number. */
+  column: number
+}
+
+export interface SourcePosition {
+  start: SourcePoint
+  end: SourcePoint
+  /** Optional filename, URL, or other source identifier. */
+  source?: string
+}
+
 /** Object-shaped tree used by Core visitors, transformers, and renderers. */
 export interface MatraAST {
   tag: string
   props: MatraProps
   children: MatraASTChild[]
+  /** Parser metadata. It is intentionally omitted from MatraJSON. */
+  position?: SourcePosition
 }
 
 export type MatraASTChild = MatraAST | MatraValue
@@ -32,6 +50,10 @@ export type MatraJSONProps = Record<string, MatraJSONPropValue>
 export interface ParseOptions {
   grammarSource?: string
   syntaxMode?: "mixed" | "document" | "application"
+  /** Attach source positions to every parsed AST node. */
+  locations?: boolean
+  /** Filename, URL, or other identifier copied into source positions. */
+  sourceId?: string
   [key: string]: unknown
 }
 

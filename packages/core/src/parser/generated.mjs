@@ -260,7 +260,7 @@ function peg$parse(input, options) {
     // Function calls are emitted as object-shaped AST nodes. This keeps a
     // call used as a prop value distinguishable from an ordinary value
     // array while preserving the same public AST shape at every depth.
-    return { tag, props, children: body }
+    return node(tag, props, body, location())
   }
   function peg$f2(first, rest) {    return [first, ...rest.map(t => t[3])]  }
   function peg$f3(key, value) {
@@ -299,18 +299,18 @@ function peg$parse(input, options) {
     }
     const path = [first, ...rest]
     return path.length === 1
-      ? { tag: "$var", props: { name: first }, children: [] }
-      : { tag: "$get", props: { path }, children: [] }
+      ? node("$var", { name: first }, [], location())
+      : node("$get", { path }, [], location())
   }
   function peg$f15(first, rest) {
     const syntaxMode = options.syntaxMode || 'mixed';
     if (syntaxMode === 'document') {
       error('Expression syntax is not allowed in document mode');
     }
-    return { tag: "$get", props: { path: [first, ...rest] }, children: [] }
+    return node("$get", { path: [first, ...rest] }, [], location())
   }
   function peg$f16(body) {
-    return ["$root", {}, body ?? []]
+    return node("$root", {}, body ?? [], location())
   }
   function peg$f17(tagName, selectors, setRuleArr, text) {
     const syntaxMode = options.syntaxMode || 'mixed';
@@ -319,7 +319,7 @@ function peg$parse(input, options) {
     }
     const classList = selectors.filter(s => s.type === 'class').map(s => s.value);
     const id = selectors.find(s => s.type === 'id')?.value;
-    return [
+    return node(
       tagName,
       Object.assign(
         {},
@@ -328,7 +328,8 @@ function peg$parse(input, options) {
         classList.length > 0 ? { class: classList.join(" ") } : {}
       ),
       [text],
-    ]
+      location(),
+    )
   }
   function peg$f18(tagName, selectors, setRuleArr, text) {
     const syntaxMode = options.syntaxMode || 'mixed';
@@ -337,7 +338,7 @@ function peg$parse(input, options) {
     }
     const classList = selectors.filter(s => s.type === 'class').map(s => s.value);
     const id = selectors.find(s => s.type === 'id')?.value;
-    return [
+    return node(
       tagName,
       Object.assign(
         {},
@@ -346,7 +347,8 @@ function peg$parse(input, options) {
         classList.length > 0 ? { class: classList.join(" ") } : {}
       ),
       [text],
-    ]
+      location(),
+    )
   }
   function peg$f19(tagName, selectors, setRuleArr, terminator) {
     const syntaxMode = options.syntaxMode || 'mixed';
@@ -355,7 +357,7 @@ function peg$parse(input, options) {
     }
     const classList = selectors.filter(s => s.type === 'class').map(s => s.value);
     const id = selectors.find(s => s.type === 'id')?.value;
-    return [
+    return node(
       tagName,
       Object.assign(
         {},
@@ -364,7 +366,8 @@ function peg$parse(input, options) {
         classList.length > 0 ? { class: classList.join(" ") } : {}
       ),
       terminator === ";" ? [] : terminator,
-    ]
+      location(),
+    )
   }
   function peg$f20(value) {    return { type: "class", value }  }
   function peg$f21(value) {    return { type: "id", value }  }
@@ -379,7 +382,7 @@ function peg$parse(input, options) {
     return str.join("")
   }
   function peg$f26(strMatch) {
-    return ["#comment", {}, [strMatch.map(item => item[1]).join("")]]
+    return node("#comment", {}, [strMatch.map(item => item[1]).join("")], location())
   }
   function peg$f27(str) {
     return str.join("").trim()
@@ -2437,6 +2440,19 @@ function peg$parse(input, options) {
     peg$silentFails--;
 
     return s0;
+  }
+
+
+  function node(tag, props, children, loc) {
+    const result = { tag, props, children }
+    if (options.locations) {
+      result.position = {
+        start: loc.start,
+        end: loc.end,
+        ...(options.sourceId ? { source: options.sourceId } : {}),
+      }
+    }
+    return result
   }
 
   peg$result = peg$startRuleFunction();

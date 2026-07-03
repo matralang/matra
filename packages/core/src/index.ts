@@ -1,6 +1,7 @@
 /** @matra/core — domain-neutral Matra tree primitives. */
 
 export { parse, parseWith } from "./parser/index.js"
+export { formatCodeFrame, MatraSyntaxError } from "./parser/error.js"
 export {
   astToMatraJSON,
   isMatraAST,

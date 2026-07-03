@@ -12,7 +12,7 @@ export function evaluatePropExpressions(
   evaluator: PropExpressionEvaluator,
 ): MatraAST {
   return {
-    tag: ast.tag,
+    ...ast,
     props: Object.fromEntries(
       Object.entries(ast.props).map(([key, value]) => [
         key,

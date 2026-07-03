@@ -8,6 +8,20 @@
 // - selectors followed by `;`, a body, text, or attributes construct a node
 // - otherwise a bare/qualified name is an expression
 
+{
+  function node(tag, props, children, loc) {
+    const result = { tag, props, children }
+    if (options.locations) {
+      result.position = {
+        start: loc.start,
+        end: loc.end,
+        ...(options.sourceId ? { source: options.sourceId } : {}),
+      }
+    }
+    return result
+  }
+}
+
 Package
   = _ block:Block _ { return block }
 
@@ -48,7 +62,7 @@ TagApply
       // Function calls are emitted as object-shaped AST nodes. This keeps a
       // call used as a prop value distinguishable from an ordinary value
       // array while preserving the same public AST shape at every depth.
-      return { tag, props, children: body }
+      return node(tag, props, body, location())
     }
 
 ArgList
@@ -133,8 +147,8 @@ ReferenceExpression
     }
     const path = [first, ...rest]
     return path.length === 1
-      ? { tag: "$var", props: { name: first }, children: [] }
-      : { tag: "$get", props: { path }, children: [] }
+      ? node("$var", { name: first }, [], location())
+      : node("$get", { path }, [], location())
   }
 
 MemberExpression
@@ -143,12 +157,12 @@ MemberExpression
     if (syntaxMode === 'document') {
       error('Expression syntax is not allowed in document mode');
     }
-    return { tag: "$get", props: { path: [first, ...rest] }, children: [] }
+    return node("$get", { path: [first, ...rest] }, [], location())
   }
 
 TagBody
   = "$root" _ body:Body? {
-    return ["$root", {}, body ?? []]
+    return node("$root", {}, body ?? [], location())
   }
   / _ tagName:Identifier selectors:(ClassOrId)* setRuleArr:("[" @SetRule+ "]")? _ text:TildeText {
     const syntaxMode = options.syntaxMode || 'mixed';
@@ -157,7 +171,7 @@ TagBody
     }
     const classList = selectors.filter(s => s.type === 'class').map(s => s.value);
     const id = selectors.find(s => s.type === 'id')?.value;
-    return [
+    return node(
       tagName,
       Object.assign(
         {},
@@ -166,7 +180,8 @@ TagBody
         classList.length > 0 ? { class: classList.join(" ") } : {}
       ),
       [text],
-    ]
+      location(),
+    )
   }
   / _ tagName:Identifier selectors:(ClassOrId)* setRuleArr:("[" @SetRule+ "]")? _ text:BacktickText {
     const syntaxMode = options.syntaxMode || 'mixed';
@@ -175,7 +190,7 @@ TagBody
     }
     const classList = selectors.filter(s => s.type === 'class').map(s => s.value);
     const id = selectors.find(s => s.type === 'id')?.value;
-    return [
+    return node(
       tagName,
       Object.assign(
         {},
@@ -184,7 +199,8 @@ TagBody
         classList.length > 0 ? { class: classList.join(" ") } : {}
       ),
       [text],
-    ]
+      location(),
+    )
   }
   / _ tagName:Identifier selectors:(ClassOrId)* setRuleArr:("[" @SetRule+ "]")? _ terminator:(Body / ";") {
     const syntaxMode = options.syntaxMode || 'mixed';
@@ -193,7 +209,7 @@ TagBody
     }
     const classList = selectors.filter(s => s.type === 'class').map(s => s.value);
     const id = selectors.find(s => s.type === 'id')?.value;
-    return [
+    return node(
       tagName,
       Object.assign(
         {},
@@ -202,7 +218,8 @@ TagBody
         classList.length > 0 ? { class: classList.join(" ") } : {}
       ),
       terminator === ";" ? [] : terminator,
-    ]
+      location(),
+    )
   }
 
 ClassOrId
@@ -234,7 +251,7 @@ StringNode
 
 CommentNode
   = "<!--" _ strMatch:((!("-->") .)*) _ "-->" {
-    return ["#comment", {}, [strMatch.map(item => item[1]).join("")]]
+    return node("#comment", {}, [strMatch.map(item => item[1]).join("")], location())
   }
 
 Template

@@ -47,7 +47,7 @@ function transformNode(
         : child,
     )
     .filter((child): child is MatraASTChild => child !== null)
-  const next: MatraAST = { tag: node.tag, props: { ...node.props }, children }
+  const next: MatraAST = { ...node, props: { ...node.props }, children }
   const result = transformer(next, { parent, index })
   return result === undefined ? next : result
 }
