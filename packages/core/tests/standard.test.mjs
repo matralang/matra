@@ -44,6 +44,44 @@ describe("Matra standard collection functions", () => {
     )
   })
 
+  it("maps a scalar Lambda with explicit variable references", () => {
+    const functions = {
+      multiply: (left, right) => Number(left) * Number(right),
+    }
+    assert.deepEqual(
+      evaluateStandard(
+        parse("Map(Lambda(n, multiply(Var(n), Var(n))), Range(1, 4))"),
+        { functions },
+      ),
+      [1, 4, 9, 16],
+    )
+  })
+
+  it("captures outer Lambda variables in nested maps", () => {
+    const functions = { pair: (left, right) => [left, right] }
+    assert.deepEqual(
+      evaluateStandard(
+        parse("Map(Lambda(n, Map(Lambda(m, pair(Var(n), Var(m))), Range(2))), Range(2))"),
+        { functions },
+      ),
+      [
+        [[1, 1], [1, 2]],
+        [[2, 1], [2, 2]],
+      ],
+    )
+  })
+
+  it("reports invalid Lambda use and unresolved variables", () => {
+    assert.throws(
+      () => evaluateStandard(parse("Lambda(n, Var(n))")),
+      /only valid where a function is expected/,
+    )
+    assert.throws(
+      () => evaluateStandard(parse("Map(Lambda(n, Var(m)), Range(1))")),
+      /Unknown standard variable: m/,
+    )
+  })
+
   it("evaluates expressions embedded in props", () => {
     const ast = parse("circle(cx=double(4), fill=red)")
     assert.deepEqual(
