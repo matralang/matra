@@ -5,6 +5,8 @@ export { printJSON } from "./printer.js";
 export { transform, visit } from "./ast/transform.js";
 export { renderWith } from "./render.js";
 export type { MatraRenderer } from "./render.js";
+export { evaluateStandard, Map, Range } from "./standard.js";
+export type { StandardEvaluationOptions, StandardFunction } from "./standard.js";
 export { CORE_VERSION, SPEC_VERSION } from "./ast/types.js";
 export type * from "./ast/types.js";
 import { parse, parseWith } from "./parser/index.js";
@@ -12,6 +14,7 @@ import { astToMatraJSON, matraJSONToAST } from "./ast/convert.js";
 import { printJSON } from "./printer.js";
 import { transform, visit } from "./ast/transform.js";
 import { renderWith } from "./render.js";
+import { evaluateStandard, Map, Range } from "./standard.js";
 export declare const VERSION = "0.2.1";
 declare const _default: {
     parse: typeof parse;
@@ -22,6 +25,9 @@ declare const _default: {
     transform: typeof transform;
     visit: typeof visit;
     renderWith: typeof renderWith;
+    evaluateStandard: typeof evaluateStandard;
+    Map: typeof Map;
+    Range: typeof Range;
     VERSION: string;
 };
 export default _default;
