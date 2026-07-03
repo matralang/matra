@@ -114,6 +114,40 @@ describe("Matra parser", () => {
     assert.throws(() => parse('circle(x=1, x=2)'), /Duplicate prop: x/)
   })
 
+  it("parses recursive array and object prop values", () => {
+    assert.deepEqual(parse(`command(
+      args=["solve.py", "--format", "json"],
+      env={MODE: "production", DEBUG: false},
+      stdin={format: "json", value: {items: [1, 2, 3], missing: null}}
+    )`), {
+      tag: "command",
+      props: {
+        args: ["solve.py", "--format", "json"],
+        env: { MODE: "production", DEBUG: false },
+        stdin: {
+          format: "json",
+          value: { items: [1, 2, 3], missing: null },
+        },
+      },
+      children: [],
+    })
+  })
+
+  it("keeps a positional object as legacy merged props", () => {
+    assert.deepEqual(parse('circle({x: 10, labels: ["a", "b"]})'), {
+      tag: "circle",
+      props: { x: 10, labels: ["a", "b"] },
+      children: [],
+    })
+  })
+
+  it("rejects duplicate object keys", () => {
+    assert.throws(
+      () => parse('command(env={MODE: "one", MODE: "two"})'),
+      /Duplicate object key: MODE/,
+    )
+  })
+
   it("parses function calls in props as unevaluated AST expressions", () => {
     assert.deepEqual(parse("circle(cx=Cos(theta), cy=Add(2, Sin(theta)))"), {
       tag: "circle",
