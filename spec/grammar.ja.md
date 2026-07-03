@@ -65,11 +65,13 @@ childに持つ`#comment` nodeを生成します。
 document       = expression ;
 expression     = function-node | document-node | root-node | comment ;
 function-node  = identifier, "(", [ argument, { ",", argument } ], ")" ;
-argument       = property | object-props | function-node | literal | identifier ;
+argument       = property | object-props | function-node | array | literal | identifier ;
 property       = identifier, "=", (value | function-node) ;
 object-props   = "{", [ pair, { ",", pair } ], "}" ;
 pair           = (identifier | string), ":", value ;
-value          = string | number | boolean | null | identifier ;
+value          = array | object | string | number | boolean | null | identifier ;
+array          = "[", [ value, { ",", value } ], "]" ;
+object         = "{", [ pair, { ",", pair } ], "}" ;
 document-node  = tag, { class | id }, [ attributes ], [ body | short-text ] ;
 attributes     = "[", { tag, "=", string }, "]" ;
 body           = "{", { expression }, "}" | "{", string, "}" ;
