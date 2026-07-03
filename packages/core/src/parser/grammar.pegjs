@@ -3,10 +3,10 @@
 //
 // Accepts expressions like "p`Hello, world!`" and computes their value.
 //
-// Syntax Modes:
-// - 'mixed' (default): Both Block and Function syntax
-// - 'document': Block syntax only (Pug-style with .class, #id, [attr])
-// - 'application': Function syntax only (JSX-style)
+// Syntax profiles (the default `mixed` grammar is context-sensitive):
+// - a qualified name followed by `(` is a call
+// - selectors followed by `;`, a body, text, or attributes construct a node
+// - otherwise a bare/qualified name is an expression
 
 Package
   = _ block:Block _ { return block }
@@ -14,18 +14,14 @@ Package
 Block
   = TagApply
   / TagBody
-  / Tag
+  / ExplicitExpression
+  / ReferenceExpression
   / SetRule
   / StringNode
   / CommentNode
 
-Tag
-  = _ tag:Slug _ {
-    return [tag, {}, []]
-  }
-
 TagApply
-  = tag:Identifier _ "(" _ args:ArgList? _ ")" {
+  = tag:QualifiedName _ "(" _ args:ArgList? _ ")" {
       const syntaxMode = options.syntaxMode || 'mixed';
       if (syntaxMode === 'document') {
         error('Function syntax is not allowed in document mode');
@@ -63,6 +59,7 @@ Arg
   / Number
   / Boolean
   / Null
+  / MemberExpression
   / Identifier
 
 KeywordProp
@@ -116,11 +113,40 @@ Identifier
 ReservedWord
   = ("true" / "false" / "null") ![a-zA-Z0-9_\-]
 
+QualifiedName
+  = first:Identifier rest:("." @Identifier)* {
+    return [first, ...rest].join(".")
+  }
+
+ExplicitExpression
+  = _ "=" _ expression:ReferenceExpression { return expression }
+
+ReferenceExpression
+  = _ first:Identifier rest:("." @Identifier)* _ {
+    const syntaxMode = options.syntaxMode || 'mixed';
+    if (syntaxMode === 'document') {
+      error('Expression syntax is not allowed in document mode');
+    }
+    const path = [first, ...rest]
+    return path.length === 1
+      ? ["$var", { name: first }, []]
+      : ["$get", { path }, []]
+  }
+
+MemberExpression
+  = _ first:Identifier rest:("." @Identifier)+ _ {
+    const syntaxMode = options.syntaxMode || 'mixed';
+    if (syntaxMode === 'document') {
+      error('Expression syntax is not allowed in document mode');
+    }
+    return ["$get", { path: [first, ...rest] }, []]
+  }
+
 TagBody
   = "$root" _ body:Body? {
     return ["$root", {}, body ?? []]
   }
-  / _ tagName:Slug selectors:(ClassOrId)* setRuleArr:("[" @SetRule+ "]")? _ text:TildeText {
+  / _ tagName:Identifier selectors:(ClassOrId)* setRuleArr:("[" @SetRule+ "]")? _ text:TildeText {
     const syntaxMode = options.syntaxMode || 'mixed';
     if (syntaxMode === 'application') {
       error('Block syntax is not allowed in application mode');
@@ -138,7 +164,7 @@ TagBody
       [text],
     ]
   }
-  / _ tagName:Slug selectors:(ClassOrId)* setRuleArr:("[" @SetRule+ "]")? _ text:BacktickText {
+  / _ tagName:Identifier selectors:(ClassOrId)* setRuleArr:("[" @SetRule+ "]")? _ text:BacktickText {
     const syntaxMode = options.syntaxMode || 'mixed';
     if (syntaxMode === 'application') {
       error('Block syntax is not allowed in application mode');
@@ -156,7 +182,7 @@ TagBody
       [text],
     ]
   }
-  / _ tagName:Slug selectors:(ClassOrId)* setRuleArr:("[" @SetRule+ "]")? _ body:Body? {
+  / _ tagName:Identifier selectors:(ClassOrId)* setRuleArr:("[" @SetRule+ "]")? _ terminator:(Body / ";") {
     const syntaxMode = options.syntaxMode || 'mixed';
     if (syntaxMode === 'application') {
       error('Block syntax is not allowed in application mode');
@@ -171,17 +197,16 @@ TagBody
         id ? { id } : {},
         classList.length > 0 ? { class: classList.join(" ") } : {}
       ),
-      body ?? [],
+      terminator === ";" ? [] : terminator,
     ]
   }
 
 ClassOrId
-  = "." value:Slug { return { type: "class", value } }
-  / "#" value:Slug { return { type: "id", value } }
+  = "." value:Identifier { return { type: "class", value } }
+  / "#" value:Identifier { return { type: "id", value } }
 
 Body
   = "{" _ @Expression _ "}"
-  / "{" _ node:StringNode _ "}" { return [node] }
 
 Expression
   = Array
