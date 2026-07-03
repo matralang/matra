@@ -18,7 +18,7 @@ Compile it directly to SVG:
 ```ts
 import { compile } from "@matra/graphics"
 
-const output = compile(source)
+const output = compile(source, { pretty: true })
 ```
 
 ## AST and renderer API
@@ -37,6 +37,13 @@ const output = toSVG(artwork)
 
 `svgRenderer` implements the `MatraRenderer` contract from `@matra/core`, so
 it can also be used with `renderWith()`.
+
+The renderer supports shapes, text and `tspan`, images, reusable definitions,
+gradients, patterns, masks, markers, and the standard SVG filter primitives.
+JavaScript callers may use camel-case presentation attributes and a style
+object; they are serialized to SVG attribute names automatically. Set
+`pretty: true` (or an indentation width) when the SVG source is intended for
+people to read.
 
 ## Legacy JavaScript API
 
