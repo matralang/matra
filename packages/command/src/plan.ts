@@ -1,4 +1,5 @@
 import { isMatraAST, type MatraAST, type MatraPropValue, type MatraValue } from "@matra/core"
+import process from "node:process"
 import { CommandValidationError } from "./errors.js"
 import type {
   CommandCapabilities,
@@ -15,6 +16,7 @@ const COMMAND_PROPS = new Set([
   "timeout", "allowFail", "bind", "requires", "produces", "capabilities",
 ])
 const CAPABILITY_PROPS = new Set(["commands", "read", "write", "network"])
+const NODEJS_PROPS = new Set([...COMMAND_PROPS].filter(key => key !== "program"))
 
 /** Validate command nodes and compile them into a deterministic execution plan. */
 export function planCommands(ast: MatraAST): ExecutionPlan {
@@ -31,13 +33,14 @@ export function planCommands(ast: MatraAST): ExecutionPlan {
 }
 
 function collectCommands(node: MatraAST, output: MatraAST[]): void {
-  if (node.tag === "command") output.push(node)
+  if (node.tag === "command" || node.tag === "nodejs") output.push(node)
   for (const child of node.children) {
     if (isMatraAST(child)) collectCommands(child, output)
   }
 }
 
 function commandFromNode(node: MatraAST, index: number): CommandSpec {
+  if (node.tag === "nodejs") return nodejsFromNode(node, index)
   if (node.children.length > 0) fail("command does not accept children in protocol v0.1", node)
   for (const [key, value] of Object.entries(node.props)) {
     if (!COMMAND_PROPS.has(key)) fail(`Unknown command prop: ${key}`, node)
@@ -84,6 +87,68 @@ function commandFromNode(node: MatraAST, index: number): CommandSpec {
     },
     ...optionalField("position", node.position),
   }
+}
+
+function nodejsFromNode(node: MatraAST, index: number): CommandSpec {
+  for (const [key, value] of Object.entries(node.props)) {
+    if (!NODEJS_PROPS.has(key)) fail(`Unknown nodejs prop: ${key}`, node)
+    if (isMatraAST(value)) fail("nodejs props must be evaluated before planning", node)
+  }
+  if (node.children.length !== 1 || typeof node.children[0] !== "string") {
+    fail("nodejs expects exactly one text code block", node)
+  }
+  const stdout = optionalString(node.props.stdout, "stdout", node) ?? "json"
+  if (!OUTPUT_FORMATS.has(stdout as CommandOutputFormat)) {
+    fail(`nodejs stdout must be one of: ${[...OUTPUT_FORMATS].join(", ")}`, node)
+  }
+  const userArgs = stringArray(node.props.args, "args", node)
+  const declared = objectValue(node.props.capabilities, "capabilities", node)
+  const extraCommands = stringArray(declared?.commands, "capabilities.commands", node)
+  const synthetic: MatraAST = {
+    tag: "command",
+    props: {
+      ...node.props,
+      program: process.execPath,
+      args: [
+        "--input-type=module",
+        "--eval",
+        nodejsProgram(node.children[0], stdout as CommandOutputFormat),
+        ...(userArgs.length ? ["--", ...userArgs] : []),
+      ],
+      capabilities: { ...(declared ?? {}), commands: [] },
+    },
+    children: [],
+    ...(node.position ? { position: node.position } : {}),
+  }
+  const command = commandFromNode(synthetic, index)
+  return {
+    ...command,
+    capabilities: {
+      ...command.capabilities,
+      commands: unique(["node", ...extraCommands]),
+    },
+  }
+}
+
+function nodejsProgram(code: string, format: CommandOutputFormat): string {
+  return `const __chunks = [];
+for await (const __chunk of process.stdin) __chunks.push(__chunk);
+const __raw = Buffer.concat(__chunks).toString("utf8");
+let input = null;
+if (__raw.length) { try { input = JSON.parse(__raw); } catch { input = __raw; } }
+const __format = ${JSON.stringify(format)};
+let __emitted = false;
+const emit = value => {
+  __emitted = true;
+  if (__format === "binary") process.stdout.write(value instanceof Uint8Array ? value : String(value));
+  else if (__format === "json") process.stdout.write(JSON.stringify(value));
+  else if (__format === "ndjson") process.stdout.write(JSON.stringify(value) + "\\n");
+  else process.stdout.write(typeof value === "string" ? value : String(value));
+};
+const __result = await (async () => {
+${code}
+})();
+if (__result !== undefined && !__emitted) emit(__result);`
 }
 
 function validateNames(commands: CommandSpec[]): void {
