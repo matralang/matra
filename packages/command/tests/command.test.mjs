@@ -101,6 +101,26 @@ describe("Matra command authorization", () => {
 })
 
 describe("Matra local process execution", () => {
+  it("executes the same nodejs block syntax through the Node adapter", async () => {
+    const source = `nodejs[stdout="json" bind="answer"] \`
+return { answer: 6 * 7 }
+\``
+    const plan = planCommands(parse(source))
+    assert.deepEqual(plan.capabilities.commands, ["node"])
+    const result = await executePlan(authorizePlan(plan, { commands: ["node"] }))
+    assert.deepEqual(result.bindings.answer, { answer: 42 })
+  })
+
+  it("provides structured stdin to Node code as input", async () => {
+    const ast = {
+      tag: "nodejs",
+      props: { stdin: { value: 21 }, stdout: "json", bind: "doubled" },
+      children: ["return { value: input.value * 2 }"],
+    }
+    const result = await executePlan(authorizePlan(planCommands(ast), { commands: ["node"] }))
+    assert.deepEqual(result.bindings.doubled, { value: 42 })
+  })
+
   it("executes an authorized shell-free plan and binds structured output", async () => {
     const producer = {
       tag: "command",
