@@ -40,6 +40,24 @@ const authorized = authorizePlan(plan, {
 const result = await executePlan(authorized)
 ```
 
+## Node.js code blocks
+
+For small integration code, `nodejs` is a managed convenience adapter. The
+block receives parsed standard input as `input`; either return a value or call
+`emit(value)`. Async code and `await` are supported.
+
+```matra
+nodejs[stdout="json" bind="answer"] `
+return { answer: 6 * 7 }
+`
+```
+
+Use the alternative `~...~` delimiter when JavaScript template literals need
+backticks. Browser applications can import `@matra/command/browser` and call
+`executeNodejsBlock()`. Browser blocks run in a disposable Web Worker; Node
+APIs and arbitrary terminal commands are unavailable. This is not an OS
+security sandbox, so only execute code the user has chosen to run.
+
 ## Protocol v0.1
 
 The standard node is `command` with no children and these props:

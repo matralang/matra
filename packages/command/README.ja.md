@@ -39,6 +39,23 @@ const authorized = authorizePlan(plan, {
 const result = await executePlan(authorized)
 ```
 
+## Node.js code block
+
+小さな連携コードには、managed convenience adapterの`nodejs`を利用できます。
+標準入力をparseした値は`input`へ渡されます。値を`return`するか`emit(value)`を
+呼び出してください。async codeと`await`も利用できます。
+
+```matra
+nodejs[stdout="json" bind="answer"] `
+return { answer: 6 * 7 }
+`
+```
+
+JavaScript template literalでbacktickが必要な場合は`~...~` delimiterを使えます。
+browserでは`@matra/command/browser`の`executeNodejsBlock()`を利用します。使い捨て
+Web Worker内で動作し、Node APIや任意のterminal commandは利用できません。これは
+OS security sandboxではないため、ユーザーが実行を選んだcodeだけを対象にしてください。
+
 標準nodeはchildrenを持たない`command`です。`program`、`args`、`cwd`、`env`、
 `stdin`、`stdout`、`stderr`、`timeout`、`allowFail`、`id`、`bind`、`requires`、
 `produces`、`capabilities`をpropsとして受け取ります。
