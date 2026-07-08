@@ -6,3 +6,34 @@ export type MathJson = MathJsonScalar | MathJsonFunction
 export interface MathJsonFunction extends Array<MathJson> {
   0: string
 }
+
+export type MathExpression = MathJson | MathObjectForm
+export type MathExpressionList = MathExpression | MathExpression[]
+
+export type MathObjectForm = {
+  base?: MathExpression
+
+  // structured numeric literals
+  re?: MathExpression
+  im?: MathExpression
+  rational?: [MathExpression, MathExpression]
+
+  // elementary functions
+  sin?: MathExpression
+  cos?: MathExpression
+  tan?: MathExpression
+  exp?: MathExpression
+  log?: MathExpression
+  abs?: MathExpression
+
+  // EML primitive
+  eml?: [MathExpression, MathExpression]
+
+  // operation layers
+  power?: MathExpression
+  root?: MathExpression
+  times?: MathExpressionList
+  divide?: MathExpressionList
+  plus?: MathExpressionList
+  minus?: MathExpressionList
+}
