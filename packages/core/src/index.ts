@@ -16,6 +16,15 @@ export { renderWith } from "./render.js"
 export type { MatraRenderer } from "./render.js"
 export { evaluateStandard, evaluateStandardProps, Map, Range } from "./standard.js"
 export type { StandardEvaluationOptions, StandardFunction } from "./standard.js"
+export { loadMatra, matra, normalizeMatra } from "./jsonmatra.js"
+export type {
+  JSONMatraPrimitive,
+  JSONMatraNode,
+  JSONMatraValue,
+  MatraDocumentSource,
+  MatraExpressionSource,
+  MatraFactory,
+} from "./jsonmatra.js"
 export { CORE_VERSION, SPEC_VERSION } from "./ast/types.js"
 export type * from "./ast/types.js"
 
@@ -26,6 +35,7 @@ import { transform, visit } from "./ast/transform.js"
 import { evaluatePropExpressions } from "./ast/evaluate.js"
 import { renderWith } from "./render.js"
 import { evaluateStandard, evaluateStandardProps, Map, Range } from "./standard.js"
+import { loadMatra, matra, normalizeMatra } from "./jsonmatra.js"
 import { CORE_VERSION } from "./ast/types.js"
 
 export const VERSION = CORE_VERSION
@@ -42,6 +52,9 @@ export default {
   renderWith,
   evaluateStandard,
   evaluateStandardProps,
+  loadMatra,
+  normalizeMatra,
+  matra,
   Map,
   Range,
   VERSION,

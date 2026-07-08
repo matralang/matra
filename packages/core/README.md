@@ -50,6 +50,57 @@ const ast = parseWith(peggyParser, source)
 The bundled Peggy implementation emits MatraJSON. Core's public `parse()`
 adapts that output to AST, keeping the parser replaceable.
 
+## JSONMatra file family
+
+Matra data can enter Core through three related JSONMatra formats:
+
+```text
+.matra.json  = strict JSON-compatible Matra exchange format
+.matra.js    = JavaScript-compatible Matra generation module
+.jsonm       = JSONMatra custom human-readable data format
+```
+
+Use `.matra.json` for storage, exchange, and other-language integration. It is
+read with `JSON.parse`, so comments, trailing commas, `undefined`, `BigInt`,
+functions, imports, and `matra(...)` calls are rejected.
+
+Use `.matra.js` for TypeScript and JavaScript application integration. It is a
+trusted JavaScript module whose default export is normalized as a Matra value:
+
+```js
+import { matra } from "@matra/core"
+
+export default matra.ast({
+  tag: "tag",
+  props: { prop1: "value1" },
+  children: ["child1", "child2"],
+})
+```
+
+Because `.matra.js` is loaded with dynamic `import()`, it executes arbitrary
+JavaScript and should only be used for trusted code. Use `.matra.json`, or a
+future safe `.jsonm` parser, for untrusted input.
+
+Use `.jsonm` for hand-written, experimental, and DSL-mixed data. It aims to be
+a JSON superset for Matra, but it is not JavaScript and is not evaluated. The
+initial implementation only preserves `matra.doc\`...\`` and
+`matra.expr\`...\`` sources as placeholder values.
+
+All three formats pass through the same normalization layer:
+
+```ts
+import { loadMatra, matra, normalizeMatra } from "@matra/core"
+
+await loadMatra("example.matra.json")
+await loadMatra("example.matra.js")
+await loadMatra("example.jsonm")
+
+normalizeMatra({ tag: "tag", children: ["child"] })
+matra.tuple("tag", { prop1: "value1" }, ["child1", "child2"])
+matra.doc`tag { child }`
+matra.expr`Divide(Plus(1, Sqrt(5)), 2)`
+```
+
 Request optional source positions when diagnostics or editor integration need
 them. Syntax errors always include a location and code frame.
 

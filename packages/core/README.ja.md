@@ -42,6 +42,57 @@ const ast = parseWith(peggyParser, source)
 
 同梱しているPeggy実装はMatraJSONを生成します。Coreの公開`parse()`はその出力をASTへ変換するため、Parserを交換可能な状態に保てます。
 
+## JSONMatraファイルファミリー
+
+Matraへ取り込むデータ形式は、関連する3つのJSONMatra形式に分けます。
+
+```text
+.matra.json  = strict JSON-compatible Matra exchange format
+.matra.js    = JavaScript-compatible Matra generation module
+.jsonm       = JSONMatra custom human-readable data format
+```
+
+`.matra.json`は、保存・交換・他言語連携向けです。読み込みは必ず
+`JSON.parse`で行うため、コメント、trailing comma、`undefined`、`BigInt`、
+関数、import、`matra(...)`呼び出しは拒否されます。
+
+`.matra.js`は、TypeScript / JavaScriptアプリ連携向けです。信頼済みの
+JavaScriptモジュールとして扱い、default exportをMatra値へ正規化します。
+
+```js
+import { matra } from "@matra/core"
+
+export default matra.ast({
+  tag: "tag",
+  props: { prop1: "value1" },
+  children: ["child1", "child2"],
+})
+```
+
+`.matra.js`はdynamic `import()`で読み込むため、任意のJavaScriptコードが
+実行されます。信頼済みコード用の形式とし、非信頼入力には`.matra.json`か、
+将来の安全な`.jsonm` parserを使います。
+
+`.jsonm`は、手書き・実験・DSL混在向けです。Matra向けのJSONスーパーセットを
+目指しますが、JavaScriptをそのまま実行する形式ではありません。初期実装では
+`matra.doc\`...\``と`matra.expr\`...\``のsourceをplaceholder値として
+保持します。
+
+どの形式も、読み込み後は共通の正規化レイヤーを通ります。
+
+```ts
+import { loadMatra, matra, normalizeMatra } from "@matra/core"
+
+await loadMatra("example.matra.json")
+await loadMatra("example.matra.js")
+await loadMatra("example.jsonm")
+
+normalizeMatra({ tag: "tag", children: ["child"] })
+matra.tuple("tag", { prop1: "value1" }, ["child1", "child2"])
+matra.doc`tag { child }`
+matra.expr`Divide(Plus(1, Sqrt(5)), 2)`
+```
+
 diagnosticやeditor統合で必要な場合は、source positionを付与できます。
 構文エラーは常にlocationとcode frameを持ちます。
 
