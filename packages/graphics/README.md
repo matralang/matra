@@ -1,5 +1,7 @@
 # Matra Graphics
 
+[English](./README.md) | [日本語](./README.ja.md)
+
 SVG renderer and vector graphics library for the Matra language.
 
 ## Matra source

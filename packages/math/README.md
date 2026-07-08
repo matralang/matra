@@ -1,5 +1,7 @@
 # Matra Math
 
+[English](./README.md) | [日本語](./README.ja.md)
+
 Matra Math defines the math-domain layer built on the domain-neutral
 `@matra/core` AST. Its first stable boundary is conversion between Matra
 function syntax and recursive MathJSON.

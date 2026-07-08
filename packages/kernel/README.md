@@ -1,5 +1,7 @@
 # @matra/kernel
 
+[English](./README.md) | [日本語](./README.ja.md)
+
 Jupyter protocol kernel for Matra. It works with JupyterLab/Notebook, the VS Code
 Jupyter extension, and Google Colab connected to a local Jupyter runtime.
 

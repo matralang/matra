@@ -1,5 +1,7 @@
 # Matra Language Support for VS Code
 
+[English](./README.md) | [日本語](./README.ja.md)
+
 VS Code language support for [Matra](https://github.com/matralang/matra).
 
 ## Features
