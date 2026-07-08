@@ -1,5 +1,7 @@
 # Directives
 
+[English](./03-directives.md) | [日本語](./03-directives.ja.md)
+
 Matra provides powerful directives for conditional rendering and loops, available in two styles: tag-based and attribute-based.
 
 ## Conditional Rendering

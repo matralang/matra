@@ -1,5 +1,7 @@
 # Matra Syntax Comparison: Block vs Function
 
+[English](./SYNTAX-COMPARISON.md) | [日本語](./SYNTAX-COMPARISON.ja.md)
+
 ## Side-by-Side Examples
 
 ### Simple Element with Text

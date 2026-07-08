@@ -2,6 +2,9 @@
 
 [English](./QUICK-REFERENCE.md) | [日本語](./QUICK-REFERENCE.ja.md)
 
+> [!WARNING]
+> これはCore v0.8向けのhistorical quick referenceです。
+
 ## Function Syntax (NEW in v0.8)
 
 ### Basic Elements
@@ -83,90 +86,57 @@ compile('p("Hello, {{name}}")', { context: { name: "World" } })
 ### Conditional Rendering (m-if)
 
 ```javascript
-// Function syntax
 compile('p({"m-if":"show"}, "Text")', { context: { show: true } })
-
-// Block syntax
 compile('p[m-if="show"] { "Text" }', { context: { show: true } })
-
-// Both → <p>Text</p> (or empty if show=false)
 ```
 
 ### Array Iteration (m-each)
 
 ```javascript
-// Function syntax
 compile('ul(li({"m-each":"items", "m-as":"item"}, "{{item}}"))', {
   context: { items: ["A", "B", "C"] },
 })
-
-// Block syntax
-compile('ul { li[m-each="items" m-as="item"] { "{{item}}" } }', {
-  context: { items: ["A", "B", "C"] },
-})
-
-// Both → <ul><li>A</li><li>B</li><li>C</li></ul>
 ```
 
 ## When to Use Which
 
-| Feature             | Function Syntax  | Block Syntax      |
-| ------------------- | ---------------- | ----------------- |
-| Concise inline      | ✅ Great         | ❌ Verbose        |
-| Deep nesting        | ⚠️ Can get long  | ✅ Readable       |
-| CSS-like selectors  | ❌ Not available | ✅ `.class #id`   |
-| Programmatic        | ✅ Natural       | ⚠️ Less natural   |
-| JSX-like            | ✅ Similar       | ❌ Different      |
-| Attribute shortcuts | ❌ Full object   | ✅ `[attr="val"]` |
+| Feature | Function Syntax | Block Syntax |
+| --- | --- | --- |
+| Concise inline | 得意 | 冗長になりやすい |
+| Deep nesting | 長くなりやすい | 読みやすい |
+| CSS-like selectors | なし | `.class #id`が使える |
+| Programmatic | 自然 | ややtemplate寄り |
+| JSX-like | 近い | 違いが大きい |
+| Attribute shortcuts | 明示的に書く | `[attr="val"]`が使える |
 
 ## Equivalence Examples
 
 ### Simple Element
 
 ```matra
-// Function
 p("Hello")
-
-// Block
 p { "Hello" }
-
-// Both → <p>Hello</p>
 ```
 
 ### With Class
 
 ```matra
-// Function
 div({class:"container"}, "Content")
-
-// Block
 div.container { "Content" }
-
-// Both → <div class="container">Content</div>
 ```
 
 ### With ID
 
 ```matra
-// Function
 h1({id:"title"}, "Main")
-
-// Block
 h1#title { "Main" }
-
-// Both → <h1 id="title">Main</h1>
 ```
 
 ### Multiple Properties
 
 ```matra
-// Function
 a({href:"/", class:"link", target:"_blank"}, "Click")
-
-// Block
 a.link[href="/" target="_blank"] { "Click" }
-
-// Both → <a href="/" class="link" target="_blank">Click</a>
 ```
 
 ## API Usage
@@ -174,19 +144,11 @@ a.link[href="/" target="_blank"] { "Click" }
 ```javascript
 import { parse, compile } from "@matra/core"
 
-// Parse function syntax
 const ast = parse('p("Hello")')
-// → { type: "element", tagName: "p", ... }
-
-// Compile function syntax
 const html = compile('div(p("A"), p("B"))')
-// → <div><p>A</p><p>B</p></div>
-
-// With context
 const result = compile('h1("{{title}}")', {
   context: { title: "Welcome" },
 })
-// → <h1>Welcome</h1>
 ```
 
 ## Common Patterns
@@ -225,6 +187,5 @@ form({action:"/submit", method:"post"},
 
 ---
 
-**Full docs**: [docs/function-syntax.md](function-syntax.md)  
-**Examples**: [examples/function-syntax-demo.mjs](./examples/function-syntax-demo.mjs)
-**Tests**: [tests/function-syntax.test.mjs](./tests/function-syntax.test.mjs)
+**Full docs**: [Function Syntax Guide](./function-syntax.ja.md)  
+**Examples**: [Examples](./06-examples.ja.md)

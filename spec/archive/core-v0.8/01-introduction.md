@@ -1,5 +1,7 @@
 # Introduction to Matra
 
+[English](./01-introduction.md) | [日本語](./01-introduction.ja.md)
+
 ## What is Matra?
 
 Matra is a **lightweight template language** designed for generating HTML with an intuitive, CSS-like syntax. It combines the simplicity of template engines like Mustache with the power of modern frameworks like Vue and React.

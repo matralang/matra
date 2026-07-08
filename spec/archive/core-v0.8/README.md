@@ -1,5 +1,7 @@
 # Archived Matra Core v0.8 Documentation
 
+[English](./README.md) | [日本語](./README.ja.md)
+
 > [!WARNING]
 > This is non-normative historical documentation for the earlier,
 > HTML-oriented Core implementation. See the current

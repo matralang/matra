@@ -1,5 +1,7 @@
 # Integration Guide
 
+[English](./05-integration.md) | [日本語](./05-integration.ja.md)
+
 Learn how to integrate @matra/core into your project.
 
 ## Table of Contents

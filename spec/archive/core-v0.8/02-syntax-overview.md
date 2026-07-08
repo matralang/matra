@@ -1,5 +1,7 @@
 # Syntax Overview
 
+[English](./02-syntax-overview.md) | [日本語](./02-syntax-overview.ja.md)
+
 This document provides a comprehensive overview of Matra's syntax, covering elements, attributes, text content, and special constructs.
 
 ## Table of Contents

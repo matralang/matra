@@ -1,5 +1,7 @@
 # Examples
 
+[English](./06-examples.md) | [日本語](./06-examples.ja.md)
+
 Real-world examples demonstrating @matra/core usage.
 
 ## Table of Contents

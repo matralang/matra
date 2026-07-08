@@ -1,5 +1,7 @@
 # API Reference
 
+[English](./04-api-reference.md) | [日本語](./04-api-reference.ja.md)
+
 Complete API documentation for @matra/core.
 
 ## Table of Contents

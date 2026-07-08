@@ -1,5 +1,7 @@
 # Matra v0.8 - Function Syntax Implementation Complete ✅
 
+[English](./V08-SUMMARY.md) | [日本語](./V08-SUMMARY.ja.md)
+
 ## Summary
 
 Successfully implemented **function-style syntax** for Matra v0.8 as a JSX-like alternative to the existing block-style syntax, with **100% backward compatibility** and full integration with all template features.

@@ -1,5 +1,7 @@
 # Matra v0.8 Implementation Summary
 
+[English](./IMPLEMENTATION.md) | [日本語](./IMPLEMENTATION.ja.md)
+
 ## Overview
 
 Successfully implemented function-style syntax for Matra v0.8 while maintaining full backward compatibility with v0.7 block-style syntax.

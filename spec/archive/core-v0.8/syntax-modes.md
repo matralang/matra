@@ -1,5 +1,7 @@
 # Syntax Modes Guide
 
+[English](./syntax-modes.md) | [日本語](./syntax-modes.ja.md)
+
 Matra v0.8+ supports **syntax modes** to control which syntax style is allowed in your templates. This feature helps maintain consistency in large projects and provides better error detection.
 
 ## Overview

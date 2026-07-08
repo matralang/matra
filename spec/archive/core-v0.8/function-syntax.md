@@ -1,5 +1,7 @@
 # Matra v0.8 Function Syntax Guide
 
+[English](./function-syntax.md) | [日本語](./function-syntax.ja.md)
+
 ## Overview
 
 Matra v0.8 introduces a new **function-style syntax** that provides an alternative way to write Matra templates. This syntax coexists with the existing block-style syntax, giving you the flexibility to choose the style that best fits your needs.

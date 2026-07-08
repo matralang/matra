@@ -1,5 +1,7 @@
 # Backtick Text Syntax
 
+[English](./backtick-syntax.md) | [日本語](./backtick-syntax.ja.md)
+
 Matra v0.8+ supports a concise **backtick syntax** for creating elements with simple text content, eliminating the need for curly braces and quotes.
 
 ## Overview
