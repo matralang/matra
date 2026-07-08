@@ -1,5 +1,7 @@
 # `legacy/bmath` migration map
 
+[English](./MIGRATION.md) | [日本語](./MIGRATION.ja.md)
+
 | `legacy/bmath` area | Destination | Policy |
 | --- | --- | --- |
 | private Peggy parser | `@matra/core` | replaced, not copied |
