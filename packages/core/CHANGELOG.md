@@ -1,5 +1,7 @@
 # Changelog
 
+[English](./CHANGELOG.md) | [日本語](./CHANGELOG.ja.md)
+
 All notable changes to @matra/core will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),

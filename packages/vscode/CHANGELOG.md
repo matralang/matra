@@ -1,5 +1,7 @@
 # Changelog
 
+[English](./CHANGELOG.md) | [日本語](./CHANGELOG.ja.md)
+
 ## 0.1.0
 
 - Register the Matra language and `.matra` files.
