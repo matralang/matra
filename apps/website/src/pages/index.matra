@@ -4,7 +4,9 @@ html[lang="ja"] {
     meta[name="viewport", content="width=device-width, initial-scale=1"];
     meta[name="description", content="Matraはtag・props・childrenからなるドメイン非依存のツリー記法です。"];
     meta[name="theme-color", content="#101814"];
-    title { "Matra — Structure first. Domain later." }
+    title {
+      "Matra — Structure first. Domain later."
+    }
     link[rel="preconnect", href="https://fonts.googleapis.com"];
     link[rel="preconnect", href="https://fonts.gstatic.com", crossorigin="anonymous"];
     link[href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap", rel="stylesheet"];
@@ -12,16 +14,196 @@ html[lang="ja"] {
     script~(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-T8JD7GH9');~
   }
   body {
-    noscript { iframe[src="https://www.googletagmanager.com/ns.html?id=GTM-T8JD7GH9", height="0", width="0", style="display:none;visibility:hidden"] {} }
-    header.site-header { div.shell.nav-shell { a.brand[href="/"] { span.brand-mark { "M" } span { "Matra" } } nav.site-nav[aria-label="メインナビゲーション"] { a[href="/docs/"] { "Docs" } a[href="/spec/"] { "Specification" } a[href="/play/"] { "Playground" } a[href="https://github.com/matralang/matra"] { "GitHub" } } } }
+    noscript {
+      iframe[src="https://www.googletagmanager.com/ns.html?id=GTM-T8JD7GH9", height="0", width="0", style="display:none;visibility:hidden"] {
+      }
+    }
+    header.site-header {
+      div.shell.nav-shell {
+        a.brand[href="/"] {
+          span.brand-mark {
+            "M"
+          }
+          span {
+            "Matra"
+          }
+        }
+        nav.site-nav[aria-label="メインナビゲーション"] {
+          a[href="/docs/"] {
+            "Docs"
+          }
+          a[href="/spec/"] {
+            "Specification"
+          }
+          a[href="/play/"] {
+            "Playground"
+          }
+          a[href="https://github.com/matralang/matra"] {
+            "GitHub"
+          }
+        }
+      }
+    }
     main {
-      section.hero { div.shell.hero-grid { div.hero-copy { p.eyebrow { "Matra Specification v0.2" } h1 { "意味より先に、構造を書く。" } p.lede { "Matraは、tag・props・childrenからなるツリーを記述するための、" "小さくドメイン非依存な言語です。" } div.actions { a.button.primary[href="/docs/"] { "ドキュメントを見る" } a.button.secondary[href="https://github.com/matralang/matra"] { "ソースを見る" } } } div.code-window[aria-label="Matraコード例"] { div.window-bar { span.window-label { "SOURCE" } small { "hello.matra" } } pre { code~group[role="list"] {
+      section.hero {
+        div.shell.hero-grid {
+          div.hero-copy {
+            p.eyebrow {
+              "Matra Specification v0.2"
+            }
+            h1 {
+              "意味より先に、構造を書く。"
+            }
+            p.lede {
+              "Matraは、tag・props・childrenからなるツリーを記述するための、" "小さくドメイン非依存な言語です。"
+            }
+            div.actions {
+              a.button.primary[href="/docs/"] {
+                "ドキュメントを見る"
+              }
+              a.button.secondary[href="https://github.com/matralang/matra"] {
+                "ソースを見る"
+              }
+            }
+          }
+          div.code-window[aria-label="Matraコード例"] {
+            div.window-bar {
+              span.window-label {
+                "SOURCE"
+              }
+              small {
+                "hello.matra"
+              }
+            }
+            pre {
+              code~group[role="list"] {
   item { "one" }
   item { "two" }
-}~ } div.output { span { "AST" } code~{ tag, props, children }~ } } } }
-      section.principles { div.shell { p.eyebrow { "One language, many domains" } h2 { "構造は共通。意味は交換可能。" } div.card-grid { article.feature-card { span.card-number { "01" } h3 { "Domain neutral" } p { "HTML、数式、Graphics。tagの意味はrendererが決めます。" } } article.feature-card { span.card-number { "02" } h3 { "Two representations" } p { "交換用のMatraJSONと、操作しやすいobject形式ASTを往復できます。" } } article.feature-card { span.card-number { "03" } h3 { "Replaceable parser" } p { "parserは小さな契約。文法エンジンとdomain実装を切り離します。" } } } } }
-      section.spec-callout { div.shell.callout-inner { div { p.eyebrow { "The foundation" } h2 { "4つの仕様から始める" } } ol.spec-mini-list { li { a[href="/spec/data-model/"] { span { "01" } strong { "Data Model" } } } li { a[href="/spec/ast/"] { span { "02" } strong { "AST" } } } li { a[href="/spec/grammar/"] { span { "03" } strong { "Grammar" } } } li { a[href="/spec/parser/"] { span { "04" } strong { "Parser" } } } } } }
+}~
+            }
+            div.output {
+              span {
+                "AST"
+              }
+              code~{ tag, props, children }~
+            }
+          }
+        }
+      }
+      section.principles {
+        div.shell {
+          p.eyebrow {
+            "One language, many domains"
+          }
+          h2 {
+            "構造は共通。意味は交換可能。"
+          }
+          div.card-grid {
+            article.feature-card {
+              span.card-number {
+                "01"
+              }
+              h3 {
+                "Domain neutral"
+              }
+              p {
+                "HTML、数式、Graphics。tagの意味はrendererが決めます。"
+              }
+            }
+            article.feature-card {
+              span.card-number {
+                "02"
+              }
+              h3 {
+                "Two representations"
+              }
+              p {
+                "交換用のMatraJSONと、操作しやすいobject形式ASTを往復できます。"
+              }
+            }
+            article.feature-card {
+              span.card-number {
+                "03"
+              }
+              h3 {
+                "Replaceable parser"
+              }
+              p {
+                "parserは小さな契約。文法エンジンとdomain実装を切り離します。"
+              }
+            }
+          }
+        }
+      }
+      section.spec-callout {
+        div.shell.callout-inner {
+          div {
+            p.eyebrow {
+              "The foundation"
+            }
+            h2 {
+              "4つの仕様から始める"
+            }
+          }
+          ol.spec-mini-list {
+            li {
+              a[href="/spec/data-model/"] {
+                span {
+                  "01"
+                }
+                strong {
+                  "Data Model"
+                }
+              }
+            }
+            li {
+              a[href="/spec/ast/"] {
+                span {
+                  "02"
+                }
+                strong {
+                  "AST"
+                }
+              }
+            }
+            li {
+              a[href="/spec/grammar/"] {
+                span {
+                  "03"
+                }
+                strong {
+                  "Grammar"
+                }
+              }
+            }
+            li {
+              a[href="/spec/parser/"] {
+                span {
+                  "04"
+                }
+                strong {
+                  "Parser"
+                }
+              }
+            }
+          }
+        }
+      }
     }
-    footer.site-footer { div.shell.footer-grid { div { strong { "Matra" } p { "Structure first. Domain later." } } p { "Matra Specification v0.2" } } }
+    footer.site-footer {
+      div.shell.footer-grid {
+        div {
+          strong {
+            "Matra"
+          }
+          p {
+            "Structure first. Domain later."
+          }
+        }
+        p {
+          "Matra Specification v0.2"
+        }
+      }
+    }
   }
 }
