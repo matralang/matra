@@ -10,9 +10,10 @@ Matraの公式サイトです。現在はGitHub Pagesでpreviewし、最終的�
 ```sh
 cd ../..
 pnpm install
-pnpm --filter @matra/website run build
-pnpm --filter @matra/website run serve
+pnpm --filter @matra/website run dev
 ```
+
+`dev` builds the site, serves `dist` at `http://localhost:3000`, and rebuilds when a file under `src/` changes.
 
 The website and `@matra/*` packages share this pnpm workspace. Changes to a
 package are available to the website locally without `file:` dependencies or

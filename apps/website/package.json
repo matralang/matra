@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node test/run.js",
-    "dev": "pnpm run css:dev",
-    "css:dev": "tailwindcss -i ./src/styles/app.css -o ./dist/app.css --watch",
+    "dev": "tsx src/dev.ts",
     "css:build": "tailwindcss -i ./src/styles/app.css -o ./dist/app.css",
     "build": "node --import tsx src/build.ts && pnpm run css:build",
     "serve": "serve dist"
