@@ -137,4 +137,11 @@ describe("JSONMatra family", () => {
       b: 9007199254740991n,
     })
   })
+
+  it("builds TypeScript-friendly Matra templates", () => {
+    const items = matra.raw('item { "one" }\nitem { "two" }')
+    assert.equal(matra`group { ${items} }`, 'group { item { "one" }\nitem { "two" } }')
+    assert.equal(matra`p { ${"quoted"} }`, 'p { "quoted" }')
+    assert.equal(matra`group { ${matra.raw('item { "one" }')} }`, 'group { item { "one" } }')
+  })
 })

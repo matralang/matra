@@ -160,6 +160,17 @@ import { extractMatraMarkdown } from "@matra/core"
 const document = extractMatraMarkdown(markdown, { entry: "page.matra" })
 ```
 
+## TypeScriptテンプレート
+
+通常のTypeScript module内でMatra sourceを合成するには、`matra`と`matra.raw()`を使います。
+
+```ts
+import { matra } from "@matra/core"
+
+const items = matra.raw('item { "one" }')
+export default matra`group { ${items} }`
+```
+
 ## 標準コレクション関数
 
 `Range`は終端を含む数列を生成し、`Map`は登録済み関数を各値に適用します。

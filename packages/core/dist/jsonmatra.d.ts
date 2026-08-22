@@ -1,3 +1,4 @@
+import { type MatraRawSource } from "./template.js";
 import type { SourcePosition } from "./ast/types.js";
 export type JSONMatraPrimitive = string | number | boolean | null | bigint | undefined;
 export type MatraDocumentSource = {
@@ -8,6 +9,7 @@ export type MatraExpressionSource = {
     kind: "MatraExpressionSource";
     source: string;
 };
+export type { MatraRawSource } from "./template.js";
 export interface JSONMatraNode {
     tag: string;
     props: Record<string, JSONMatraValue>;
@@ -22,10 +24,11 @@ export declare function loadMatra(path: string): Promise<JSONMatraValue>;
 export declare function normalizeMatra(input: unknown): JSONMatraValue;
 export interface MatraFactory {
     (input: unknown): JSONMatraValue;
+    (strings: TemplateStringsArray, ...values: unknown[]): string;
     doc(strings: TemplateInput, ...values: unknown[]): MatraDocumentSource;
     expr(strings: TemplateInput, ...values: unknown[]): MatraExpressionSource;
     ast(input: unknown): JSONMatraValue;
     tuple(tag: string, props?: unknown, children?: unknown[]): JSONMatraNode;
+    raw(source: string): MatraRawSource;
 }
 export declare const matra: MatraFactory;
-export {};

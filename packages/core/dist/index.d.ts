@@ -13,7 +13,7 @@ export type { MatraRenderer } from "./render.js";
 export { evaluateStandard, evaluateStandardProps, Map, Range } from "./standard.js";
 export type { StandardEvaluationOptions, StandardFunction } from "./standard.js";
 export { loadMatra, matra, normalizeMatra } from "./jsonmatra.js";
-export type { JSONMatraPrimitive, JSONMatraNode, JSONMatraValue, MatraDocumentSource, MatraExpressionSource, MatraFactory, } from "./jsonmatra.js";
+export type { JSONMatraPrimitive, JSONMatraNode, JSONMatraValue, MatraDocumentSource, MatraExpressionSource, MatraFactory, MatraRawSource, } from "./jsonmatra.js";
 export { CORE_VERSION, SPEC_VERSION } from "./ast/types.js";
 export type * from "./ast/types.js";
 import { parse, parseWith } from "./parser/index.js";

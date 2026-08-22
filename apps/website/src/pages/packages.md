@@ -1,6 +1,8 @@
 # packages
 
 ```page.matra.ts
+import { matra } from "@matra/core"
+
 const packages = [
   ["core", "@matra/core", "AST、parser、visitor、transformer。"],
   ["command", "@matra/command", "外部commandの計画、認可、構造化実行。"],
@@ -8,7 +10,7 @@ const packages = [
   ["graphics", "@matra/graphics", "Graphics domainの表現と描画。"],
 ]
 const quote = value => JSON.stringify(value)
-const cards = raw(packages.map(([name, label, detail], index) => `
+const cards = matra.raw(packages.map(([name, label, detail], index) => `
   a.docs-card[href=${quote(`https://github.com/matralang/matra/tree/main/packages/${name}`)}] {
     span { ${quote(String(index + 1).padStart(2, "0"))} }
     div { h2 { ${quote(label)} } p { ${quote(detail)} } }

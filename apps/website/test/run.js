@@ -25,7 +25,8 @@ const pageMarkdown = await Promise.all(pageSources.map(page => readFile(page, "u
 const matraTypeScriptPages = pageMarkdown.filter(source => source.includes(".matra.ts"))
 assert.equal(matraTypeScriptPages.length, 3)
 for (const source of matraTypeScriptPages) {
-  assert.match(source, /export default matra`/)
+  assert.match(source, /export default/)
+  assert.match(source, /from "@matra\/core"/)
   assert.doesNotMatch(source, /matra\s*\{/);
 }
 

@@ -1,44 +1,16 @@
-type RawMatraSource = { readonly kind: "RawMatraSource", readonly source: string }
+import { matra } from "@matra/core"
 
 /** Execute a .matra.ts module and return its generated Matra source. */
 export function executeMatraProgram(program: string): string {
   const javaScript = compileMatraModule(program)
   // .matra.ts is explicitly executable code, both in the build and Playground.
   // eslint-disable-next-line no-new-func
-  const execute = new Function("matra", "raw", `"use strict";\n${javaScript}`) as (
-    matra: (strings: TemplateStringsArray, ...values: unknown[]) => string,
-    raw: (source: string) => RawMatraSource,
-  ) => unknown
-  const result = execute(matraTemplate, rawMatra)
+  const execute = new Function("matra", `"use strict";\n${javaScript}`) as (matra: typeof matra) => unknown
+  const result = execute(matra)
   if (typeof result !== "string") {
     throw new TypeError("A .matra.ts page must produce Matra source.")
   }
   return result
-}
-
-function matraTemplate(strings: TemplateStringsArray, ...values: unknown[]): string {
-  return strings.reduce((result, chunk, index) =>
-    result + chunk + (index < values.length ? matraSourceValue(values[index]) : ""),
-  "")
-}
-
-function matraSourceValue(value: unknown): string {
-  if (value === null || value === undefined) return ""
-  if (isRawMatraSource(value)) return value.source
-  if (typeof value === "string") return JSON.stringify(value)
-  if (Array.isArray(value)) return value.map(matraSourceValue).join("\n")
-  if (typeof value === "function") throw new TypeError("Functions cannot be interpolated into Matra source.")
-  return String(value)
-}
-
-function rawMatra(source: string): RawMatraSource {
-  return { kind: "RawMatraSource", source }
-}
-
-function isRawMatraSource(value: unknown): value is RawMatraSource {
-  return typeof value === "object" && value !== null &&
-    "kind" in value && value.kind === "RawMatraSource" &&
-    "source" in value && typeof value.source === "string"
 }
 
 function compileMatraModule(program: string): string {

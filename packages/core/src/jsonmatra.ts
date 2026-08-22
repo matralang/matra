@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises"
 import { extname, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
+import { isMatraTemplateStrings, matra as matraTemplate, type MatraRawSource } from "./template.js"
 
 import { isMatraAST, isMatraJSON, matraJSONToAST } from "./ast/convert.js"
 import type { SourcePosition } from "./ast/types.js"
@@ -22,6 +23,8 @@ export type MatraExpressionSource = {
   kind: "MatraExpressionSource"
   source: string
 }
+
+export type { MatraRawSource } from "./template.js"
 
 export interface JSONMatraNode {
   tag: string
@@ -114,14 +117,18 @@ export function normalizeMatra(input: unknown): JSONMatraValue {
 
 export interface MatraFactory {
   (input: unknown): JSONMatraValue
+  (strings: TemplateStringsArray, ...values: unknown[]): string
   doc(strings: TemplateInput, ...values: unknown[]): MatraDocumentSource
   expr(strings: TemplateInput, ...values: unknown[]): MatraExpressionSource
   ast(input: unknown): JSONMatraValue
   tuple(tag: string, props?: unknown, children?: unknown[]): JSONMatraNode
+  raw(source: string): MatraRawSource
 }
 
-export const matra: MatraFactory = Object.assign(
-  (input: unknown) => normalizeMatra(input),
+export const matra = Object.assign(
+  (input: unknown, ...values: unknown[]) => isMatraTemplateStrings(input)
+    ? matraTemplate(input, ...values)
+    : normalizeMatra(input),
   {
     doc(strings: TemplateInput, ...values: unknown[]): MatraDocumentSource {
       return { kind: "MatraDocumentSource", source: templateSource(strings, values) }
@@ -138,8 +145,10 @@ export const matra: MatraFactory = Object.assign(
     tuple(tag: string, props: unknown = {}, children: unknown[] = []): JSONMatraNode {
       return normalizeMatra([tag, props, children]) as JSONMatraNode
     },
+
+    raw: matraTemplate.raw,
   },
-)
+) as MatraFactory
 
 function parseJSONMSource(source: string, path: string): JSONMatraValue {
   const doc = parseTaggedSource(source, "doc")

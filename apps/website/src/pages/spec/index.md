@@ -1,6 +1,8 @@
 # index
 
 ```page.matra.ts
+import { matra } from "@matra/core"
+
 const sections = [
   ["data-model", "Data Model", "Matraが表現できる値と等価性。"],
   ["ast", "AST", "visitorとrendererが扱うメモリ内表現。"],
@@ -9,10 +11,10 @@ const sections = [
 ]
 const quote = value => JSON.stringify(value)
 const number = index => String(index + 1).padStart(2, "0")
-const navigation = raw(sections.map(([slug, label], index) => `
+const navigation = matra.raw(sections.map(([slug, label], index) => `
   a[href=${quote(`/spec/${slug}/`)}] { span { ${quote(number(index))} } ${quote(label)} }
 `).join(""))
-const cards = raw(sections.map(([slug, label, detail], index) => `
+const cards = matra.raw(sections.map(([slug, label, detail], index) => `
   a.docs-card[href=${quote(`/spec/${slug}/`)}] {
     span { ${quote(number(index))} }
     div { h2 { ${quote(label)} } p { ${quote(detail)} } }

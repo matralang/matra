@@ -26,6 +26,7 @@ export type {
   MatraDocumentSource,
   MatraExpressionSource,
   MatraFactory,
+  MatraRawSource,
 } from "./jsonmatra.js"
 export { CORE_VERSION, SPEC_VERSION } from "./ast/types.js"
 export type * from "./ast/types.js"

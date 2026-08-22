@@ -171,6 +171,17 @@ import { extractMatraMarkdown } from "@matra/core"
 const document = extractMatraMarkdown(markdown, { entry: "page.matra" })
 ```
 
+## TypeScript templates
+
+Use `matra` and `matra.raw()` to compose Matra source in an ordinary TypeScript module.
+
+```ts
+import { matra } from "@matra/core"
+
+const items = matra.raw('item { "one" }')
+export default matra`group { ${items} }`
+```
+
 ## Standard collection functions
 
 `Range` creates an inclusive sequence, and `Map` applies a registered function

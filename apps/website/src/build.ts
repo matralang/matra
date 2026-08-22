@@ -9,7 +9,6 @@ declare const process: any;
 
 import { extractMatraMarkdown, parse } from "@matra/core"
 import { toHTML } from "@matra/html"
-import { executeMatraProgram } from "./matra-program"
 
 const siteHeader = parse(`
   header.site-header {
@@ -196,6 +195,30 @@ function applySpecificationLayout(ast: ReturnType<typeof parse>, pagePath: strin
   return ast
 }
 
+async function executeMatraModule(source: string, filePath: string): Promise<string> {
+  const compiled = await build({
+    stdin: {
+      contents: source,
+      sourcefile: `${filePath}.ts`,
+      resolveDir: path.dirname(filePath),
+      loader: "ts",
+    },
+    bundle: true,
+    format: "cjs",
+    platform: "node",
+    target: ["node20"],
+    write: false,
+  })
+  const module = { exports: {} as { default?: unknown } }
+  // Source is repository-managed and bundled before it is evaluated.
+  // eslint-disable-next-line no-new-func
+  new Function("module", "exports", compiled.outputFiles[0].text)(module, module.exports)
+  if (typeof module.exports.default !== "string") {
+    throw new TypeError(`A .matra.ts page must default-export Matra source: ${filePath}`)
+  }
+  return module.exports.default
+}
+
 async function handler() {
   const pagesDir = path.join(process.cwd(), "src", "pages")
   const outputDir = path.join(process.cwd(), "dist")
@@ -216,7 +239,7 @@ async function handler() {
   await Promise.all(pageFiles.map(async (filePath: string) => {
     const document = extractMatraMarkdown(fs.readFileSync(filePath, "utf8"))
     const source = document.kind === "matra.ts"
-      ? executeMatraProgram(document.source)
+      ? await executeMatraModule(document.source, filePath)
       : document.source
     const outRel = toOutputPath(pagesDir, filePath)
     const outputPath = path.join(outputDir, outRel)
