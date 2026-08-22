@@ -8,7 +8,7 @@ export default defaultLayout(matra`
         p.eyebrow { "LIVE WORKBENCH" }
         h1 { "Playground" }
       }
-      p { "Markdown内のMatra code blockを編集すると、HTMLまたはSVGのpreview・AST・出力をその場で更新します。" }
+      p { "Markdown内のMatra code blockを編集すると、rendererに応じたpreview・AST・出力をその場で更新します。" }
     }
     div.playground-workspace {
       section.editor-panel[aria-label="Markdown editor"] {
@@ -100,9 +100,7 @@ article.matra-frame {
           button.result-tab.active#tab-preview[type="button" role="tab" aria-selected="true" data-panel="preview"] { "Preview" }
           button.result-tab#tab-ast[type="button" role="tab" aria-selected="false" data-panel="ast"] { "AST" }
           button.result-tab#tab-matra-json[type="button" role="tab" aria-selected="false" data-panel="matra-json"] { "MatraJSON" }
-          button.result-tab#tab-math[type="button" role="tab" aria-selected="false" data-panel="math"] { "Math" }
-          button.result-tab#tab-html[type="button" role="tab" aria-selected="false" data-panel="html"] { "HTML" }
-          button.result-tab#tab-svg[type="button" role="tab" aria-selected="false" data-panel="svg"] { "SVG" }
+          button.result-tab#tab-output[type="button" role="tab" aria-selected="false" data-panel="output"] { "Output" }
           button.copy-button#download-output[type="button"] { "Download" }
           button.copy-button#copy-output[type="button"] { "Copy" }
         }
@@ -112,9 +110,7 @@ article.matra-frame {
           }
           pre.result-view#panel-ast[role="tabpanel" aria-labelledby="tab-ast"] { code#ast-output {} }
           pre.result-view#panel-matra-json[role="tabpanel" aria-labelledby="tab-matra-json"] { code#matra-json-output {} }
-          pre.result-view#panel-math[role="tabpanel" aria-labelledby="tab-math"] { code#math-output {} }
-          pre.result-view#panel-html[role="tabpanel" aria-labelledby="tab-html"] { code#html-output {} }
-          pre.result-view#panel-svg[role="tabpanel" aria-labelledby="tab-svg"] { code#svg-output {} }
+          pre.result-view#panel-output[role="tabpanel" aria-labelledby="tab-output"] { code#renderer-output {} }
           div.error-card#playground-error[hidden="true"] {
             strong { "Parse error" }
             pre#playground-error-message {}
@@ -126,5 +122,5 @@ article.matra-frame {
   script[type="module" src="/assets/playground.js"] {}
 `, {
   title: "Playground — Matra",
-  description: "Markdown内のMatraとMatra TypeScript code blockをAST、HTML、SVGへ変換できるブラウザPlaygroundです。",
+  description: "Markdown内のMatraとMatra TypeScript code blockをASTとrendererに応じた出力へ変換できるブラウザPlaygroundです。",
 })

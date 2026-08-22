@@ -9,9 +9,7 @@ const status = required<HTMLElement>("playground-status")
 const stats = required<HTMLElement>("source-stats")
 const astOutput = required<HTMLElement>("ast-output")
 const matraJSONOutput = required<HTMLElement>("matra-json-output")
-const mathOutput = required<HTMLElement>("math-output")
-const htmlOutput = required<HTMLElement>("html-output")
-const svgOutput = required<HTMLElement>("svg-output")
+const rendererOutput = required<HTMLElement>("renderer-output")
 const preview = required<HTMLIFrameElement>("preview-frame")
 const errorCard = required<HTMLElement>("playground-error")
 const errorMessage = required<HTMLElement>("playground-error-message")
@@ -155,7 +153,7 @@ matra {
 }
 
 let activePanel = "preview"
-let latestOutputs = { ast: "", matraJSON: "", math: "", html: "", svg: "" }
+let latestOutputs = { ast: "", matraJSON: "", renderer: "" }
 let latestMode: ResultMode = "html"
 let timer = 0
 
@@ -186,12 +184,10 @@ function render(): void {
     const html = mode === "html" ? toHTML(ast) : ""
     const svg = mode === "svg" ? toSVG(ast, { pretty: true }) : ""
     latestMode = mode
-    latestOutputs = { ast: JSON.stringify(ast, null, 2), matraJSON, math: "", html, svg }
+    latestOutputs = { ast: JSON.stringify(ast, null, 2), matraJSON, renderer: mode === "svg" ? svg : html }
     astOutput.textContent = latestOutputs.ast
     matraJSONOutput.textContent = matraJSON
-    mathOutput.textContent = "front matterでrenderer: mathを指定すると、ここにCompute Engineの結果が表示されます。"
-    htmlOutput.textContent = html
-    svgOutput.textContent = svg || "SVG modeを選択すると、ここにSVG sourceが表示されます。"
+    rendererOutput.textContent = latestOutputs.renderer
     preview.srcdoc = previewDocument(mode === "svg" ? svg : html, mode, document.title, selectedStylesheet)
     errorCard.hidden = true
     status.textContent = `Valid ${document.filename} · ${mode.toUpperCase()} · ${stylesheetLabel(selectedStylesheet)}`
@@ -223,12 +219,10 @@ function renderMath(program: string, filename: string, selectedStylesheet: strin
   ].join("\n")
 
   latestMode = "math"
-  latestOutputs = { ast: "", matraJSON: "", math: result, html: "", svg: "" }
+  latestOutputs = { ast: "", matraJSON: "", renderer: result }
   astOutput.textContent = "Math input is parsed as Matra application syntax, not document AST."
   matraJSONOutput.textContent = formatValue(simplified)
-  mathOutput.textContent = result
-  htmlOutput.textContent = ""
-  svgOutput.textContent = ""
+  rendererOutput.textContent = result
   preview.srcdoc = previewDocument(result, "math", filename, selectedStylesheet)
   errorCard.hidden = true
   status.textContent = `Valid ${filename} · Compute Engine · ${stylesheetLabel(selectedStylesheet)}`
@@ -282,7 +276,7 @@ copyButton.addEventListener("click", async () => {
 })
 
 downloadButton.addEventListener("click", () => {
-  const content = latestMode === "svg" ? latestOutputs.svg : latestMode === "math" ? latestOutputs.math : latestOutputs.html
+  const content = latestOutputs.renderer
   const extension = latestMode === "svg" ? "svg" : latestMode === "math" ? "txt" : "html"
   const blob = new Blob([content], { type: latestMode === "svg" ? "image/svg+xml" : latestMode === "math" ? "text/plain" : "text/html" })
   const link = document.createElement("a")
@@ -295,11 +289,8 @@ downloadButton.addEventListener("click", () => {
 function outputForPanel(panel: string): string {
   if (panel === "ast") return latestOutputs.ast
   if (panel === "matra-json") return latestOutputs.matraJSON
-  if (panel === "math") return latestOutputs.math
-  if (panel === "svg") return latestOutputs.svg
-  if (latestMode === "math") return latestOutputs.math
-  if (panel === "preview") return latestMode === "svg" ? latestOutputs.svg : latestOutputs.html
-  return latestOutputs.html
+  if (panel === "output" || panel === "preview") return latestOutputs.renderer
+  return latestOutputs.renderer
 }
 
 function previewDocument(output: string, mode: ResultMode, title = "Matra Playground", selectedStylesheet = "matra"): string {
