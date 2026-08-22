@@ -14,9 +14,10 @@ moduleへcompileします。
 
 ## 現在のseed subset
 
-seed compilerは現在、`i32` function、local variable、function call、arithmetic、
-comparison、`if` / `else`、`while`、`break`を実装します。WebAssembly linear memoryを
-1 page exportし、`bytes` parameterを`(pointer, length)`へlowerします。
+seed compilerは現在、`i32` / `bytes` function、local variable、function call、
+arithmetic、comparison、`if` / `else`、`while`、`break`を実装します。WebAssembly
+linear memoryを1 page exportし、`bytes` parameterとreturn valueを`(pointer, length)`へ
+lowerします。
 `byte_length(source)`と`byte_at(source, index)`を利用できます。
 
 array、struct、`bool`、安定したcompiler ABIは、下記の予定syntaxとして定義しますが、

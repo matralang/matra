@@ -14,11 +14,11 @@ imports to one WebAssembly module.
 
 ## Current seed subset
 
-The seed compiler currently supports `i32` functions, local variables,
-function calls, arithmetic, comparisons, `if` / `else`, `while`, and `break`.
-It exports one page of WebAssembly linear memory. A `bytes` parameter lowers
-to `(pointer, length)` and supports `byte_length(source)` and
-`byte_at(source, index)`.
+The seed compiler currently supports `i32` and `bytes` functions, local
+variables, function calls, arithmetic, comparisons, `if` / `else`, `while`,
+and `break`. It exports one page of WebAssembly linear memory. A `bytes`
+parameter and return value lower to `(pointer, length)`, and parameters support
+`byte_length(source)` and `byte_at(source, index)`.
 
 Arrays, structs, `bool`, and the stable compiler ABI are specified as planned
 syntax below, but are not yet implemented.

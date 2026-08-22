@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
 import { test } from "node:test"
 
@@ -33,6 +34,23 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
     "",
     "export fn source_length(source: bytes) -> i32 {",
     "  return byte_length(source)",
+    "}",
+    "",
+    "fn first_byte_of(source: bytes) -> i32 {",
+    "  return byte_at(source, 0)",
+    "}",
+    "",
+    "export fn forwarded_first_byte(source: bytes) -> i32 {",
+    "  return first_byte_of(source)",
+    "}",
+    "",
+    "fn pass_through(source: bytes) -> bytes {",
+    "  return source",
+    "}",
+    "",
+    "export fn retain(source: bytes) -> bytes {",
+    "  let tree = pass_through(source)",
+    "  return tree",
     "}",
     "",
     "export fn answer(input: i32) -> i32 {",
@@ -68,6 +86,31 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
     new Uint8Array(module.instance.exports.memory.buffer)[16] = 65
     assert.equal(module.instance.exports.first_byte(16, 3), 65)
     assert.equal(module.instance.exports.source_length(16, 3), 3)
+    assert.equal(module.instance.exports.forwarded_first_byte(16, 3), 65)
+    assert.deepEqual(module.instance.exports.retain(16, 3), [16, 3])
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test("bootstrap compiler maps an empty source to an empty Wasm module", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "matra-seed-compiler-"))
+  const output = join(directory, "compiler.wasm")
+
+  try {
+    const result = spawnSync(
+      "cargo",
+      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", fileURLToPath(new URL("crates/matra-seed/examples/compiler.md", root)), output, "--entry", "compiler.matra.program"],
+      { cwd: root, encoding: "utf8" },
+    )
+    assert.equal(result.status, 0, result.stderr)
+
+    const module = await WebAssembly.instantiate(await readFile(output))
+    const [pointer, length] = module.instance.exports.compile(0, 0)
+    assert.equal(length, 8)
+    const bytes = new Uint8Array(module.instance.exports.memory.buffer, pointer, length)
+    assert.deepEqual([...bytes], [0, 97, 115, 109, 1, 0, 0, 0])
+    await WebAssembly.compile(bytes)
   } finally {
     await rm(directory, { recursive: true, force: true })
   }
