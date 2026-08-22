@@ -5,6 +5,12 @@
   "scripts": {
     "build": "pnpm --filter @matra/core run build && pnpm --filter @matra/command run build && pnpm --filter @matra/math run build && pnpm --filter @matra/math-compute-engine run build && pnpm --filter @matra/graphics run build && pnpm --filter @matra/html run build && pnpm --filter @matra/kernel run build && pnpm --filter @matra/website run build",
     "check": "pnpm run build && pnpm -r --if-present run check",
-    "test": "pnpm -r --if-present run test"
+    "lint": "pnpm run check && pnpm run lint:markdown",
+    "lint:markdown": "markdownlint-cli2 '**/*.md'",
+    "test": "pnpm -r --if-present run test",
+    "typecheck": "pnpm -r --if-present run check"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "^0.23.2"
   }
 }
