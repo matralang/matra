@@ -14,12 +14,18 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
   await writeFile(input, [
     "# Example",
     "",
-    "```answer.matra.program",
-    "module example",
+    "```math.matra.program",
+    "module math",
     "",
     "fn double(value: i32) -> i32 {",
     "  return value * 2",
     "}",
+    "```",
+    "",
+    "```answer.matra.program",
+    "module example",
+    "",
+    "import math",
     "",
     "export fn answer(input: i32) -> i32 {",
     "  let doubled = double(input)",
@@ -43,7 +49,7 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
   try {
     const result = spawnSync(
       "cargo",
-      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output],
+      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "answer.matra.program"],
       { cwd: root, encoding: "utf8" },
     )
     assert.equal(result.status, 0, result.stderr)

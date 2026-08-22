@@ -29,12 +29,46 @@ impl std::error::Error for CompileError {}
 
 /// Compile the selected `*.matra.program` Markdown fence into a Wasm binary.
 pub fn compile_markdown(markdown: &str, entry: Option<&str>) -> Result<Vec<u8>, CompileError> {
-    let source = extract_program(markdown, entry)?;
-    let program = parse_program(&source)?;
-    emit_module(&program)
+    let fences = extract_programs(markdown)?;
+    let entry_index = select_entry(&fences, entry)?;
+    let modules: Vec<_> = fences
+        .iter()
+        .map(|fence| parse_program(&fence.source).map(|program| (fence.filename.clone(), program)))
+        .collect::<Result<_, _>>()?;
+    let mut modules_by_name = HashMap::new();
+    for (index, (_, program)) in modules.iter().enumerate() {
+        if modules_by_name
+            .insert(program.name.clone(), index)
+            .is_some()
+        {
+            return Err(CompileError::new(format!(
+                "Duplicate module: {}",
+                program.name
+            )));
+        }
+    }
+    let mut states = vec![0u8; modules.len()];
+    let mut functions = Vec::new();
+    collect_module(
+        entry_index,
+        &modules,
+        &modules_by_name,
+        &mut states,
+        &mut functions,
+    )?;
+    emit_module(&Program {
+        name: "entry".to_owned(),
+        imports: Vec::new(),
+        functions,
+    })
 }
 
-fn extract_program(markdown: &str, entry: Option<&str>) -> Result<String, CompileError> {
+struct ProgramFence {
+    filename: String,
+    source: String,
+}
+
+fn extract_programs(markdown: &str) -> Result<Vec<ProgramFence>, CompileError> {
     let mut fences = Vec::new();
     let mut lines = markdown.split_inclusive('\n').peekable();
 
@@ -74,33 +108,40 @@ fn extract_program(markdown: &str, entry: Option<&str>) -> Result<String, Compil
                 "Unclosed Matra Program fence: {name}"
             )));
         }
-        fences.push((name.to_owned(), source));
+        fences.push(ProgramFence {
+            filename: name.to_owned(),
+            source,
+        });
     }
+    Ok(fences)
+}
 
-    let selected = match entry {
-        Some(entry) => fences.into_iter().find(|(name, _)| name == entry),
-        None if fences.len() == 1 => fences.into_iter().next(),
-        None if fences.is_empty() => None,
-        None => {
-            return Err(CompileError::new(
-                "Set an entry when Markdown contains multiple Matra Program blocks.",
-            ));
-        }
-    };
-    selected.map(|(_, source)| source).ok_or_else(|| {
-        CompileError::new(match entry {
-            Some(entry) => format!("The Matra Program entry '{entry}' was not found."),
-            None => "Markdown must contain one `*.matra.program` fenced code block.".to_owned(),
-        })
-    })
+fn select_entry(fences: &[ProgramFence], entry: Option<&str>) -> Result<usize, CompileError> {
+    match entry {
+        Some(entry) => fences
+            .iter()
+            .position(|fence| fence.filename == entry)
+            .ok_or_else(|| {
+                CompileError::new(format!("The Matra Program entry '{entry}' was not found."))
+            }),
+        None if fences.len() == 1 => Ok(0),
+        None if fences.is_empty() => Err(CompileError::new(
+            "Markdown must contain one `*.matra.program` fenced code block.",
+        )),
+        None => Err(CompileError::new(
+            "Set an entry when Markdown contains multiple Matra Program blocks.",
+        )),
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
 struct Program {
+    name: String,
+    imports: Vec<String>,
     functions: Vec<Function>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Function {
     exported: bool,
     name: String,
@@ -108,7 +149,7 @@ struct Function {
     statements: Vec<Statement>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Statement {
     Let(String, Expression),
     Assign(String, Expression),
@@ -118,7 +159,7 @@ enum Statement {
     Return(Expression),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Expression {
     Integer(i32),
     Variable(String),
@@ -144,7 +185,11 @@ enum BinaryOperator {
 fn parse_program(source: &str) -> Result<Program, CompileError> {
     let mut parser = Parser::new(source);
     parser.expect_keyword("module")?;
-    parser.identifier()?;
+    let name = parser.identifier()?;
+    let mut imports = Vec::new();
+    while parser.consume_keyword("import") {
+        imports.push(parser.identifier()?);
+    }
     let mut functions = Vec::new();
     while !parser.at_end() {
         functions.push(parser.function()?);
@@ -153,7 +198,41 @@ fn parse_program(source: &str) -> Result<Program, CompileError> {
         return Err(parser.error("A program must declare at least one function."));
     }
     parser.expect_end()?;
-    Ok(Program { functions })
+    Ok(Program {
+        name,
+        imports,
+        functions,
+    })
+}
+
+fn collect_module(
+    index: usize,
+    modules: &[(String, Program)],
+    modules_by_name: &HashMap<String, usize>,
+    states: &mut [u8],
+    functions: &mut Vec<Function>,
+) -> Result<(), CompileError> {
+    match states[index] {
+        1 => {
+            return Err(CompileError::new(format!(
+                "Cyclic import involving module: {}",
+                modules[index].1.name
+            )));
+        }
+        2 => return Ok(()),
+        _ => {}
+    }
+    states[index] = 1;
+    for import in &modules[index].1.imports {
+        let dependency = modules_by_name
+            .get(import)
+            .copied()
+            .ok_or_else(|| CompileError::new(format!("Unknown module: {import}")))?;
+        collect_module(dependency, modules, modules_by_name, states, functions)?;
+    }
+    functions.extend(modules[index].1.functions.iter().cloned());
+    states[index] = 2;
+    Ok(())
 }
 
 fn always_returns(statements: &[Statement]) -> bool {
@@ -863,6 +942,34 @@ export fn answer(input: i32) -> i32 {
                 .unwrap_err()
                 .to_string()
                 .contains("Unknown variable")
+        );
+    }
+
+    #[test]
+    fn resolves_imported_modules_from_markdown_fences() {
+        let source = r#"
+```math.matra.program
+module math
+fn double(value: i32) -> i32 { return value * 2 }
+```
+
+```entry.matra.program
+module entry
+import math
+export fn answer() -> i32 { return double(21) }
+```
+"#;
+        assert!(compile_markdown(source, Some("entry.matra.program")).is_ok());
+    }
+
+    #[test]
+    fn rejects_unknown_imports() {
+        let source = "```entry.matra.program\nmodule entry\nimport missing\nexport fn answer() -> i32 { return 1 }\n```";
+        assert!(
+            compile_markdown(source, None)
+                .unwrap_err()
+                .to_string()
+                .contains("Unknown module")
         );
     }
 }
