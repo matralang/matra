@@ -1,0 +1,13 @@
+[package]
+name = "matra-seed"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Seed compiler for Matra Program"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "matra-seed"
+path = "src/main.rs"

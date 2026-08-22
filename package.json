@@ -3,11 +3,12 @@
   "private": true,
   "packageManager": "pnpm@11.9.0",
   "scripts": {
-    "build": "pnpm --filter @matra/core run build && pnpm --filter @matra/command run build && pnpm --filter @matra/math run build && pnpm --filter @matra/math-compute-engine run build && pnpm --filter @matra/graphics run build && pnpm --filter @matra/html run build && pnpm --filter @matra/styles run build && pnpm --filter @matra/kernel run build && pnpm --filter @matra/website run build",
+    "build": "pnpm --filter @matra/core run build && pnpm --filter @matra/command run build && pnpm --filter @matra/math run build && pnpm --filter @matra/math-compute-engine run build && pnpm --filter @matra/graphics run build && pnpm --filter @matra/html run build && pnpm --filter @matra/styles run build && pnpm --filter @matra/kernel run build && pnpm --filter @matra/website run build && cargo build --manifest-path crates/matra-seed/Cargo.toml",
     "check": "pnpm run build && pnpm -r --if-present run check",
     "lint": "pnpm run check && pnpm run lint:markdown",
     "lint:markdown": "markdownlint-cli2 '**/*.md'",
-    "test": "pnpm -r --if-present run test",
+    "test": "pnpm -r --if-present run test && pnpm run test:seed",
+    "test:seed": "cargo test --manifest-path crates/matra-seed/Cargo.toml && node --test crates/matra-seed/tests/*.test.mjs",
     "typecheck": "pnpm -r --if-present run check"
   },
   "devDependencies": {
