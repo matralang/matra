@@ -42,9 +42,18 @@ article.card#main[lang="en"] {
 }
 ```
 
-`.name`はclassを追加し、`#name`はIDを設定し、`[name="value"]`はstring propertyを
-追加します。複数のclassは1つの空白で連結します。波括弧bodyはchild nodeまたは
-引用符stringを含みます。
+`.name`はclassを追加し、`#name`はIDを設定します。`[name=value]`はpropertyを
+追加し、`value`にはstring、number、boolean、`null`、array、objectを使用できます。
+属性はコンマで区切らなければならず、空白だけの区切りは許可されません。これは属性
+リストの閉じ括弧とarray valueを曖昧なく判別するためです。
+
+```matra
+chart[options=[{theme: "dark"}], series=[[1, 2, 3]]]
+```
+
+複数のclassは1つの空白で連結します。複数のID selectorまたは同じpropertyの指定が
+ある場合、ソース上で最後の指定が採用されます。波括弧bodyはchild nodeまたは引用符
+stringを含みます。
 
 backtick textとtilde textは、それぞれ1つのstring childを生成します。
 
@@ -77,7 +86,8 @@ value          = array | object | string | number | boolean | null | identifier 
 array          = "[", [ value, { ",", value } ], "]" ;
 object         = "{", [ pair, { ",", pair } ], "}" ;
 document-node  = tag, { class | id }, [ attributes ], [ body | short-text ] ;
-attributes     = "[", { tag, "=", string }, "]" ;
+attributes     = "[", [ attribute, { ",", attribute } ], "]" ;
+attribute      = identifier, "=", value ;
 body           = "{", { expression }, "}" | "{", string, "}" ;
 short-text     = "`", text, "`" | "~", text, "~" ;
 root-node      = "$root", [ body ] ;

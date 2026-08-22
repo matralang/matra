@@ -9,7 +9,7 @@ import {
 
 describe("Matra browser nodejs adapter", () => {
   it("prepares a nodejs code block without Node runtime capabilities", () => {
-    const ast = parse(`nodejs[stdout="json" bind="answer"] \`
+    const ast = parse(`nodejs[stdout="json", bind="answer"] \`
 return { answer: 42 }
 \``)
     assert.deepEqual(prepareNodejsBlock(ast), {

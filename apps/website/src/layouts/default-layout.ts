@@ -47,14 +47,14 @@ export default function defaultLayout(
     html[lang="${lang}"] {
       head {
         meta[charset="UTF-8"];
-        meta[name="viewport" content="width=device-width, initial-scale=1"];
-        meta[name="description" content=${text(description)}];
-        meta[name="theme-color" content="#101814"];
+        meta[name="viewport", content="width=device-width, initial-scale=1"];
+        meta[name="description", content=${text(description)}];
+        meta[name="theme-color", content="#101814"];
         title { ${text(title)} }
-        link[rel="preconnect" href="https://fonts.googleapis.com"];
-        link[rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"];
-        link[href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"];
-        link[rel="stylesheet" href="/app.css"];
+        link[rel="preconnect", href="https://fonts.googleapis.com"];
+        link[rel="preconnect", href="https://fonts.gstatic.com", crossorigin="anonymous"];
+        link[href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap", rel="stylesheet"];
+        link[rel="stylesheet", href="/app.css"];
       }
       body {
         ${nav}

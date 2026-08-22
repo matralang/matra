@@ -57,6 +57,27 @@ describe("Matra parser", () => {
     })
   })
 
+  it("parses comma-separated JSON attribute values", () => {
+    assert.deepEqual(parse('chart[options=[{theme: "dark"}], series=[[1, 2, 3]], enabled=true];'), {
+      tag: "chart",
+      props: {
+        options: [{ theme: "dark" }],
+        series: [[1, 2, 3]],
+        enabled: true,
+      },
+      children: [],
+    })
+    assert.throws(() => parse('chart[first="a" second="b"];'))
+  })
+
+  it("uses the last ID selector and later attributes", () => {
+    assert.deepEqual(parse('div#first#second[id="third"];'), {
+      tag: "div",
+      props: { id: "third" },
+      children: [],
+    })
+  })
+
   it("parses explicit expressions, including inside document bodies", () => {
     assert.deepEqual(parse("= expr"), {
       tag: "$var",

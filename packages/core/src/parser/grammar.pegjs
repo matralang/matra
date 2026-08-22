@@ -192,58 +192,58 @@ TagBody
   = "$root" _ body:Body? {
     return node("$root", {}, body ?? [], location())
   }
-  / _ tagName:Identifier selectors:(ClassOrId)* setRuleArr:("[" @SetRule+ "]")? _ text:TildeText {
+  / _ tagName:Identifier selectors:(ClassOrId)* attributes:Attributes? _ text:TildeText {
     const syntaxMode = options.syntaxMode || 'mixed';
     if (syntaxMode === 'application') {
       error('Block syntax is not allowed in application mode');
     }
     const classList = selectors.filter(s => s.type === 'class').map(s => s.value);
-    const id = selectors.find(s => s.type === 'id')?.value;
+    const id = selectors.filter(s => s.type === 'id').at(-1)?.value;
     return node(
       tagName,
       Object.assign(
         {},
-        setRuleArr ? Object.fromEntries(setRuleArr) : {},
         id ? { id } : {},
-        classList.length > 0 ? { class: classList.join(" ") } : {}
+        classList.length > 0 ? { class: classList.join(" ") } : {},
+        attributes ? Object.fromEntries(attributes) : {},
       ),
       [text],
       location(),
     )
   }
-  / _ tagName:Identifier selectors:(ClassOrId)* setRuleArr:("[" @SetRule+ "]")? _ text:BacktickText {
+  / _ tagName:Identifier selectors:(ClassOrId)* attributes:Attributes? _ text:BacktickText {
     const syntaxMode = options.syntaxMode || 'mixed';
     if (syntaxMode === 'application') {
       error('Block syntax is not allowed in application mode');
     }
     const classList = selectors.filter(s => s.type === 'class').map(s => s.value);
-    const id = selectors.find(s => s.type === 'id')?.value;
+    const id = selectors.filter(s => s.type === 'id').at(-1)?.value;
     return node(
       tagName,
       Object.assign(
         {},
-        setRuleArr ? Object.fromEntries(setRuleArr) : {},
         id ? { id } : {},
-        classList.length > 0 ? { class: classList.join(" ") } : {}
+        classList.length > 0 ? { class: classList.join(" ") } : {},
+        attributes ? Object.fromEntries(attributes) : {},
       ),
       [text],
       location(),
     )
   }
-  / _ tagName:Identifier selectors:(ClassOrId)* setRuleArr:("[" @SetRule+ "]")? _ terminator:(Body / ";") {
+  / _ tagName:Identifier selectors:(ClassOrId)* attributes:Attributes? _ terminator:(Body / ";") {
     const syntaxMode = options.syntaxMode || 'mixed';
     if (syntaxMode === 'application') {
       error('Block syntax is not allowed in application mode');
     }
     const classList = selectors.filter(s => s.type === 'class').map(s => s.value);
-    const id = selectors.find(s => s.type === 'id')?.value;
+    const id = selectors.filter(s => s.type === 'id').at(-1)?.value;
     return node(
       tagName,
       Object.assign(
         {},
-        setRuleArr ? Object.fromEntries(setRuleArr) : {},
         id ? { id } : {},
-        classList.length > 0 ? { class: classList.join(" ") } : {}
+        classList.length > 0 ? { class: classList.join(" ") } : {},
+        attributes ? Object.fromEntries(attributes) : {},
       ),
       terminator === ";" ? [] : terminator,
       location(),
@@ -267,9 +267,15 @@ Array
     return arr.map(item => item[0])
   }
 
+Attributes
+  = "[" _ pairs:(SetRule (_ "," _ SetRule)*)? _ "]" {
+    if (!pairs) return []
+    return [pairs[0], ...pairs[1].map(item => item[3])]
+  }
+
 SetRule
-  = _ key:Slug _ "=" _ val:String _ {
-    return [key, val]
+  = key:Identifier _ "=" _ value:LiteralValue {
+    return [key, value]
   }
 
 StringNode

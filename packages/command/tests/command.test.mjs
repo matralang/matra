@@ -102,7 +102,7 @@ describe("Matra command authorization", () => {
 
 describe("Matra local process execution", () => {
   it("executes the same nodejs block syntax through the Node adapter", async () => {
-    const source = `nodejs[stdout="json" bind="answer"] \`
+    const source = `nodejs[stdout="json", bind="answer"] \`
 return { answer: 6 * 7 }
 \``
     const plan = planCommands(parse(source))

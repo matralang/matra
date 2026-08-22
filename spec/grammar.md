@@ -43,9 +43,18 @@ article.card#main[lang="en"] {
 }
 ```
 
-`.name` adds a class, `#name` sets the ID, and `[name="value"]` adds a string
-property. Multiple classes are joined with one space. A brace body contains
-child nodes or a quoted string.
+`.name` adds a class and `#name` sets the ID. `[name=value]` adds a property;
+`value` may be a string, number, boolean, `null`, array, or object. Attributes
+MUST be comma-separated: whitespace alone is not a separator. This keeps the
+end of an attribute list unambiguous with array values.
+
+```matra
+chart[options=[{theme: "dark"}], series=[[1, 2, 3]]]
+```
+
+Multiple classes are joined with one space. When several ID selectors or
+properties with the same name are specified, the last source-order value wins.
+A brace body contains child nodes or a quoted string.
 
 Backtick and tilde text each produce one string child:
 
@@ -78,7 +87,8 @@ value          = array | object | string | number | boolean | null | identifier 
 array          = "[", [ value, { ",", value } ], "]" ;
 object         = "{", [ pair, { ",", pair } ], "}" ;
 document-node  = tag, { class | id }, [ attributes ], [ body | short-text ] ;
-attributes     = "[", { tag, "=", string }, "]" ;
+attributes     = "[", [ attribute, { ",", attribute } ], "]" ;
+attribute      = identifier, "=", value ;
 body           = "{", { expression }, "}" | "{", string, "}" ;
 short-text     = "`", text, "`" | "~", text, "~" ;
 root-node      = "$root", [ body ] ;
