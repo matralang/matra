@@ -63,7 +63,8 @@ token列をarrayへ保存するのはarray of structが利用可能になって�
 5. sourceとoffsetで逐次読むtoken cursorを使い、`module identifier`と`import identifier`をparseする。
 6. 引数なし、`i32` return、integer literalのfunction declarationをparseする。
 7. 解析した1個のfunctionをWasm type / function / export / code sectionへemitする。
-8. nonnegative i32 literalのLEB128 encoding、parameter、複数functionをlowerする。
+8. 1個の`i32` parameterをWasm parameterと`local.get 0`へlowerする。
+9. 複数functionとfunction callをlowerする。
 
 ## 注意点
 

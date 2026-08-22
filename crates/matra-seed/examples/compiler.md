@@ -257,6 +257,20 @@ fn read_small_integer(source: bytes, value: token) -> i32 {
   return result
 }
 
+fn same_token(source: bytes, left: token, right: token) -> i32 {
+  if left.length != right.length {
+    return 0
+  }
+  let index = 0
+  while index < left.length {
+    if byte_at(source, left.start + index) != byte_at(source, right.start + index) {
+      return 0
+    }
+    index = index + 1
+  }
+  return 1
+}
+
 fn parse_function(source: bytes, offset: i32) -> function_definition {
   let keyword = next_token(source, offset)
   if is_fn_keyword(source, keyword) == 0 {
@@ -270,9 +284,24 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
   if is_symbol(source, open, 40) == 0 {
     return function_definition(0, 0, 0, 0, offset)
   }
-  let close = next_token(source, open.start + open.length)
-  if is_symbol(source, close, 41) == 0 {
-    return function_definition(0, 0, 0, 0, offset)
+  let parameter = next_token(source, open.start + open.length)
+  let close = parameter
+  if is_symbol(source, parameter, 41) == 0 {
+    if parameter.kind != 1 {
+      return function_definition(0, 0, 0, 0, offset)
+    }
+    let colon = next_token(source, parameter.start + parameter.length)
+    if is_symbol(source, colon, 58) == 0 {
+      return function_definition(0, 0, 0, 0, offset)
+    }
+    let parameter_type = next_token(source, colon.start + colon.length)
+    if is_i32_type(source, parameter_type) == 0 {
+      return function_definition(0, 0, 0, 0, offset)
+    }
+    close = next_token(source, parameter_type.start + parameter_type.length)
+    if is_symbol(source, close, 41) == 0 {
+      return function_definition(0, 0, 0, 0, offset)
+    }
   }
   let minus = next_token(source, close.start + close.length)
   if is_symbol(source, minus, 45) == 0 {
@@ -294,15 +323,23 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
   if is_return_keyword(source, returned) == 0 {
     return function_definition(0, 0, 0, 0, offset)
   }
-  let integer = next_token(source, returned.start + returned.length)
-  if integer.kind != 2 {
-    return function_definition(0, 0, 0, 0, offset)
+  let returned_value = next_token(source, returned.start + returned.length)
+  let return_value = 0
+  if returned_value.kind == 2 {
+    return_value = read_small_integer(source, returned_value)
+  } else {
+    if is_symbol(source, parameter, 41) == 1 {
+      return function_definition(0, 0, 0, 0, offset)
+    }
+    if same_token(source, parameter, returned_value) == 0 {
+      return function_definition(0, 0, 0, 0, offset)
+    }
+    return_value = -1
   }
-  let close_body = next_token(source, integer.start + integer.length)
+  let close_body = next_token(source, returned_value.start + returned_value.length)
   if is_symbol(source, close_body, 125) == 0 {
     return function_definition(0, 0, 0, 0, offset)
   }
-  let return_value = read_small_integer(source, integer)
   let name_start = name.start
   let name_length = name.length
   let next_position = close_body.start + close_body.length
@@ -437,8 +474,14 @@ fn write_i32_leb(buffer: bytes, index: i32, value: i32) -> bytes {
 }
 
 fn single_function_module(source: bytes, function: function_definition) -> bytes {
-  let value_length = i32_leb_length(function.return_value)
-  let output = allocate_bytes(32 + function.name_length + value_length)
+  let parameter_count = 0
+  let value_length = 1
+  if function.return_value == -1 {
+    parameter_count = 1
+  } else {
+    value_length = i32_leb_length(function.return_value)
+  }
+  let output = allocate_bytes(32 + parameter_count + function.name_length + value_length)
   byte_set(output, 0, 0)
   byte_set(output, 1, 97)
   byte_set(output, 2, 115)
@@ -448,35 +491,47 @@ fn single_function_module(source: bytes, function: function_definition) -> bytes
   byte_set(output, 6, 0)
   byte_set(output, 7, 0)
   byte_set(output, 8, 1)
-  byte_set(output, 9, 5)
+  byte_set(output, 9, 5 + parameter_count)
   byte_set(output, 10, 1)
   byte_set(output, 11, 96)
-  byte_set(output, 12, 0)
-  byte_set(output, 13, 1)
-  byte_set(output, 14, 127)
-  byte_set(output, 15, 3)
-  byte_set(output, 16, 2)
-  byte_set(output, 17, 1)
-  byte_set(output, 18, 0)
-  byte_set(output, 19, 7)
-  byte_set(output, 20, 4 + function.name_length)
-  byte_set(output, 21, 1)
-  byte_set(output, 22, function.name_length)
+  byte_set(output, 12, parameter_count)
+  if parameter_count == 1 {
+    byte_set(output, 13, 127)
+  }
+  byte_set(output, 13 + parameter_count, 1)
+  byte_set(output, 14 + parameter_count, 127)
+  byte_set(output, 15 + parameter_count, 3)
+  byte_set(output, 16 + parameter_count, 2)
+  byte_set(output, 17 + parameter_count, 1)
+  byte_set(output, 18 + parameter_count, 0)
+  byte_set(output, 19 + parameter_count, 7)
+  byte_set(output, 20 + parameter_count, 4 + function.name_length)
+  byte_set(output, 21 + parameter_count, 1)
+  byte_set(output, 22 + parameter_count, function.name_length)
   let index = 0
   while index < function.name_length {
-    byte_set(output, 23 + index, byte_at(source, function.name_start + index))
+    byte_set(output, 23 + parameter_count + index, byte_at(source, function.name_start + index))
     index = index + 1
   }
-  byte_set(output, 23 + function.name_length, 0)
-  byte_set(output, 24 + function.name_length, 0)
-  byte_set(output, 25 + function.name_length, 10)
-  byte_set(output, 26 + function.name_length, 5 + value_length)
-  byte_set(output, 27 + function.name_length, 1)
-  byte_set(output, 28 + function.name_length, 3 + value_length)
-  byte_set(output, 29 + function.name_length, 0)
-  byte_set(output, 30 + function.name_length, 65)
-  let written = write_i32_leb(output, 31 + function.name_length, function.return_value)
-  byte_set(written, 31 + function.name_length + value_length, 11)
+  let code_offset = 25 + parameter_count + function.name_length
+  byte_set(output, 23 + parameter_count + function.name_length, 0)
+  byte_set(output, 24 + parameter_count + function.name_length, 0)
+  byte_set(output, code_offset, 10)
+  byte_set(output, code_offset + 1, 5 + value_length)
+  byte_set(output, code_offset + 2, 1)
+  byte_set(output, code_offset + 3, 3 + value_length)
+  byte_set(output, code_offset + 4, 0)
+  if function.return_value == -1 {
+    byte_set(output, code_offset + 5, 32)
+    byte_set(output, code_offset + 6, 0)
+  } else {
+    byte_set(output, code_offset + 5, 65)
+    let written = write_i32_leb(output, code_offset + 6, function.return_value)
+    byte_set(written, code_offset + 6 + value_length, 11)
+    return written
+  }
+  byte_set(output, code_offset + 7, 11)
+  return output
   return written
 }
 
@@ -530,6 +585,7 @@ non-empty Program header form `module identifier { import identifier }` and maps
 it to an empty Wasm module. It also recognizes an initial function form with no
 parameters and a nonnegative integer `return` expression. Such a
 function is emitted with one Wasm type, function, export, and code entry.
+One `i32` parameter returning itself is also supported.
 `allocate_bytes(size)` returns a `bytes` value backed by the generated module's
 linear memory, and `byte_set(bytes, index, value)` writes one byte. Diagnostics
 remain a placeholder until diagnostic text is implemented.
