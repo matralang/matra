@@ -37,8 +37,8 @@ pnpm run lint:markdown
 
 ## 次の作業: lexer
 
-bootstrap compilerにtoken列を読むlexerを追加する。ASCII whitespaceをskipし、EOF、identifier、
-integer、symbolを区別する単一tokenの読み取りを実装済みです。
+bootstrap compilerにtoken列を読むlexerを追加する。ASCII whitespaceと`//` commentをskipし、
+EOF、identifier、integer、symbolを区別する単一tokenの読み取りを実装済みです。
 
 ```matra
 struct token {
@@ -60,8 +60,8 @@ token列をarrayへ保存するのはarray of structが利用可能になって�
 2. EOF、identifier、integer、symbolを`kind`で返し、identifierとintegerの連続長を計算する。
 3. `compile`がEOF tokenを空Programとして成功させる。
 4. Node実行testでwhitespace-only inputとtoken rangeを確認する。
-5. `//` commentのskipを追加する。
-6. parserが必要とするtoken cursorを設計し、`module` declarationをparseする。
+5. parserが必要とするtoken cursorを設計し、`module` declarationをparseする。
+6. `import`とfunction declarationをparseする。
 
 ## 注意点
 

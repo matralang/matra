@@ -171,6 +171,12 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
       new TextEncoder().encode("\n1234"),
     )
     assert.equal(module.instance.exports.token_summary(integerPointer, 5), 2104)
+
+    const commentPointer = module.instance.exports.alloc(10)
+    new Uint8Array(module.instance.exports.memory.buffer, commentPointer, 10).set(
+      new TextEncoder().encode("// note\nid"),
+    )
+    assert.equal(module.instance.exports.token_summary(commentPointer, 10), 1802)
   } finally {
     await rm(directory, { recursive: true, force: true })
   }

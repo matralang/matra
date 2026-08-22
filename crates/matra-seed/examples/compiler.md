@@ -59,7 +59,25 @@ fn next_token(source: bytes, offset: i32) -> token {
     if is_space(value) == 1 {
       position = position + 1
     } else {
-      break
+      if value == 47 {
+        if position + 1 < source_length {
+          if byte_at(source, position + 1) == 47 {
+            position = position + 2
+            while position < source_length {
+              if byte_at(source, position) == 10 {
+                break
+              }
+              position = position + 1
+            }
+          } else {
+            break
+          }
+        } else {
+          break
+        }
+      } else {
+        break
+      }
     }
   }
   if position == source_length {
@@ -163,7 +181,7 @@ export fn compile(source: bytes) -> i32 {
 
 The initial bootstrap contract maps an empty or whitespace-only source to the
 valid, empty Wasm module `00 61 73 6d 01 00 00 00`. `next_token()` skips ASCII
-whitespace and distinguishes EOF, ASCII identifiers, integers, and symbols;
+whitespace and `//` comments, and distinguishes EOF, ASCII identifiers, integers, and symbols;
 identifier and integer tokens have their complete source range. The temporary
 `token_summary()` export is an integration-test probe. The `compile()` export
 returns a pointer to the 20-byte result record described in the Matra Program
