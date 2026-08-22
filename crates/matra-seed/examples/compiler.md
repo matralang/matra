@@ -444,6 +444,20 @@ fn second_function(source: bytes) -> function_definition {
   return parse_function(source, second.start)
 }
 
+fn calls_helper(source: bytes, caller: function_definition, helper: function_definition) -> i32 {
+  let name = token(1, caller.name_start, caller.name_length)
+  let open = next_token(source, name.start + name.length)
+  let close = next_token(source, open.start + open.length)
+  let minus = next_token(source, close.start + close.length)
+  let arrow = next_token(source, minus.start + minus.length)
+  let result_type = next_token(source, arrow.start + arrow.length)
+  let open_body = next_token(source, result_type.start + result_type.length)
+  let returned = next_token(source, open_body.start + open_body.length)
+  let called = next_token(source, returned.start + returned.length)
+  let helper_name = token(1, helper.name_start, helper.name_length)
+  return same_token(source, called, helper_name)
+}
+
 fn write_i32(buffer: bytes, index: i32, value: i32) -> bytes {
   byte_set(buffer, index, value)
   byte_set(buffer, index + 1, value / 256)
@@ -652,7 +666,11 @@ export fn compile(source: bytes) -> i32 {
       if second.status == 1 {
         if function.return_value >= 0 {
           if second.return_value == -2 {
-            output = two_function_module(source, function, second)
+            if calls_helper(source, second, function) == 1 {
+              output = two_function_module(source, function, second)
+            } else {
+              return diagnostic_record()
+            }
           } else {
             return diagnostic_record()
           }

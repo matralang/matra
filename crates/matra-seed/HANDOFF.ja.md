@@ -68,8 +68,8 @@ token列をarrayへ保存するのはarray of structが利用可能になって�
 10. function一覧を一般化し、parameter付きcallと任意数のfunctionをlowerする。
 
 現時点で2個のfunctionがあるProgramは、helperがnonnegative integer literalをreturnし、entryが
-引数なしでhelperをcallする形だけをsuccessとしてemitする。それ以外は、functionを落としたWasmを
-生成せずdiagnostic statusを返す。
+引数なしでhelperをcallする形だけをsuccessとしてemitする。call targetがhelperと一致しない場合を
+含め、それ以外はfunctionを落としたWasmを生成せずdiagnostic statusを返す。
 
 ## 注意点
 
