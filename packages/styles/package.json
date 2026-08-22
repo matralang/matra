@@ -1,0 +1,25 @@
+{
+  "name": "@matra/styles",
+  "version": "0.1.0",
+  "description": "Classless base stylesheet for semantic HTML rendered by Matra",
+  "type": "module",
+  "exports": {
+    "./matra.css": "./matra.css"
+  },
+  "files": ["matra.css", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "node --check scripts/check-css.mjs",
+    "check": "pnpm run build",
+    "test": "pnpm run build && node --test tests/*.test.mjs"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matralang/matra.git",
+    "directory": "packages/styles"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  }
+}

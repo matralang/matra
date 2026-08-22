@@ -22,6 +22,14 @@ export default defaultLayout(matra`
               option[value="html"] { "HTML" }
               option[value="svg"] { "SVG" }
             }
+            label[for="stylesheet"] { "CSS" }
+            input#stylesheet[list="stylesheet-presets" value="matra" spellcheck="false" aria-label="Preview stylesheet" placeholder="matra, water.css, or HTTPS URL"] {}
+            datalist#stylesheet-presets {
+              option[value="matra"] { "Matra Base" }
+              option[value="water.css"] { "Water.css" }
+              option[value="simple.css"] { "Simple.css" }
+              option[value="pico.css"] { "Pico CSS" }
+            }
           }
         }
         div.example-browser[aria-label="Examples"] {
@@ -73,11 +81,11 @@ export default defaultLayout(matra`
 # Card
 
 \`\`\`card.matra
-article.card {
+article.matra-frame {
   p.eyebrow { "MATRA" }
   h2 { "Structure first." }
   p { "Edit this source and watch it render." }
-  a.button.primary[href="/spec/"] { "Read the spec" }
+  a.matra-button[href="/spec/"] { "Read the spec" }
   hr;
 }
 \`\`\`

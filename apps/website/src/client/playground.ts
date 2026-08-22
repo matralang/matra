@@ -2,6 +2,7 @@ import { astToMatraJSON, parse, printJSON } from "@matra/core"
 import { toSVG } from "@matra/graphics"
 import { toHTML } from "@matra/html"
 import { evaluateMatra, numericEvaluateMatra, numericEvaluateProps, simplifyMatra } from "@matra/math-compute-engine"
+import matraStyles from "../../../../packages/styles/matra.css"
 
 const source = required<HTMLTextAreaElement>("matra-source")
 const status = required<HTMLElement>("playground-status")
@@ -17,6 +18,7 @@ const errorMessage = required<HTMLElement>("playground-error-message")
 const copyButton = required<HTMLButtonElement>("copy-output")
 const downloadButton = required<HTMLButtonElement>("download-output")
 const renderMode = required<HTMLSelectElement>("render-mode")
+const stylesheet = required<HTMLInputElement>("stylesheet")
 
 type OutputMode = "html" | "svg"
 type ResultMode = OutputMode | "math"
@@ -25,7 +27,7 @@ type MatraTemplate = (strings: TemplateStringsArray, ...values: unknown[]) => st
 type RawMatraSource = { readonly kind: "RawMatraSource"; readonly source: string }
 type MatraFence = { filename: string; kind: "matra" | "matra.ts"; source: string }
 type MatraRenderer = ResultMode | "auto"
-type MatraDocument = MatraFence & { renderer: MatraRenderer; title?: string }
+type MatraDocument = MatraFence & { renderer: MatraRenderer; title?: string; stylesheet?: string }
 
 function markdown(
   filename: string,
@@ -41,11 +43,11 @@ function markdown(
 }
 
 const examples: Record<string, string> = {
-  card: markdown("card.matra", `article.card {
+  card: markdown("card.matra", `article.matra-frame {
   p.eyebrow { "MATRA" }
   h2 { "Structure first." }
   p { "Edit this source and watch it render." }
-  a.button.primary[href="/spec/"] { "Read the spec" }
+  a.matra-button[href="/spec/"] { "Read the spec" }
   hr;
 }`, "html", false),
   list: markdown("list.matra", `$root {
@@ -168,8 +170,9 @@ function render(): void {
       ? runMatraTypeScriptProgram(document.source)
       : { source: document.source }
     value = programResult.source
+    const selectedStylesheet = document.stylesheet ?? stylesheet.value
     if (document.renderer === "math") {
-      renderMath(value, document.filename)
+      renderMath(value, document.filename, selectedStylesheet)
       return
     }
     const parsedAst = parse(value, { locations: true, sourceId: "playground.matra" })
@@ -189,9 +192,9 @@ function render(): void {
     mathOutput.textContent = "front matterでrenderer: mathを指定すると、ここにCompute Engineの結果が表示されます。"
     htmlOutput.textContent = html
     svgOutput.textContent = svg || "SVG modeを選択すると、ここにSVG sourceが表示されます。"
-    preview.srcdoc = previewDocument(mode === "svg" ? svg : html, mode, document.title)
+    preview.srcdoc = previewDocument(mode === "svg" ? svg : html, mode, document.title, selectedStylesheet)
     errorCard.hidden = true
-    status.textContent = `Valid ${document.filename} · ${mode.toUpperCase()}`
+    status.textContent = `Valid ${document.filename} · ${mode.toUpperCase()} · ${stylesheetLabel(selectedStylesheet)}`
     status.classList.remove("is-error")
   } catch (error) {
     errorMessage.textContent = error instanceof Error ? error.message : String(error)
@@ -201,7 +204,7 @@ function render(): void {
   }
 }
 
-function renderMath(program: string, filename: string): void {
+function renderMath(program: string, filename: string, selectedStylesheet: string): void {
   const evaluated = evaluateMatra(program)
   const simplified = simplifyMatra(program)
   const numeric = numericEvaluateMatra(program)
@@ -226,9 +229,9 @@ function renderMath(program: string, filename: string): void {
   mathOutput.textContent = result
   htmlOutput.textContent = ""
   svgOutput.textContent = ""
-  preview.srcdoc = previewDocument(result, "math", filename)
+  preview.srcdoc = previewDocument(result, "math", filename, selectedStylesheet)
   errorCard.hidden = true
-  status.textContent = `Valid ${filename} · Compute Engine`
+  status.textContent = `Valid ${filename} · Compute Engine · ${stylesheetLabel(selectedStylesheet)}`
   status.classList.remove("is-error")
 }
 
@@ -251,6 +254,7 @@ function selectPanel(name: string): void {
 
 source.addEventListener("input", scheduleRender)
 renderMode.addEventListener("change", render)
+stylesheet.addEventListener("change", render)
 document.querySelectorAll<HTMLButtonElement>(".example-button").forEach(button => {
   button.addEventListener("click", () => {
     const example = button.dataset.example ?? "card"
@@ -298,12 +302,38 @@ function outputForPanel(panel: string): string {
   return latestOutputs.html
 }
 
-function previewDocument(output: string, mode: ResultMode, title = "Matra Playground"): string {
-  return `<!doctype html><html><head><title>${escapeHTML(title)}</title><style>
-    :root{font-family:system-ui,sans-serif;color:#101814;background:#fbfaf5}
-    body{margin:0;padding:32px}.graphics-preview{min-height:calc(100vh - 64px);display:grid;place-items:center}.graphics-preview svg{display:block;max-width:100%;height:auto;max-height:calc(100vh - 64px);filter:drop-shadow(0 18px 36px #10181422)}.math-preview{max-width:680px;margin:0;padding:28px;border:1px solid #d9d9cf;border-radius:14px;background:white;white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace}.card,.demo{max-width:520px;padding:28px;border:1px solid #d9d9cf;border-radius:14px;background:white}
-    .eyebrow{color:#657800;font:12px monospace;letter-spacing:.12em}.button{display:inline-block;margin-top:10px;padding:10px 16px;border-radius:999px;background:#101814;color:white;text-decoration:none}
-  </style></head><body>${mode === "svg" ? `<main class="graphics-preview">${output}</main>` : mode === "math" ? `<pre class="math-preview">${escapeHTML(output)}</pre>` : output}</body></html>`
+function previewDocument(output: string, mode: ResultMode, title = "Matra Playground", selectedStylesheet = "matra"): string {
+  const stylesheetTag = previewStylesheet(selectedStylesheet)
+  const utilityStyles = `.graphics-preview{min-height:calc(100vh - 64px);display:grid;place-items:center}.graphics-preview svg{display:block;max-width:100%;height:auto;max-height:calc(100vh - 64px);filter:drop-shadow(0 18px 36px #10181422)}.math-preview{max-width:680px;margin:0;padding:28px;white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace}`
+  return `<!doctype html><html><head><title>${escapeHTML(title)}</title>${stylesheetTag}<style>${utilityStyles}</style></head><body>${mode === "svg" ? `<main class="graphics-preview">${output}</main>` : mode === "math" ? `<pre class="math-preview">${escapeHTML(output)}</pre>` : output}</body></html>`
+}
+
+const stylesheetPresets: Record<string, string | undefined> = {
+  matra: undefined,
+  "water.css": "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css",
+  "simple.css": "https://cdn.jsdelivr.net/npm/simpledotcss@2/simple.min.css",
+  "pico.css": "https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css",
+}
+
+function previewStylesheet(value: string): string {
+  const normalized = value.trim().toLowerCase() || "matra"
+  if (normalized === "matra") return `<style>${matraStyles}</style>`
+  const href = stylesheetPresets[normalized] ?? validatedStylesheetURL(value)
+  if (!href) throw new SyntaxError("Stylesheet must be matra, water.css, simple.css, pico.css, or an HTTPS CSS URL.")
+  return `<link rel="stylesheet" href="${escapeHTML(href)}">`
+}
+
+function stylesheetLabel(value: string): string {
+  return value.trim() || "matra"
+}
+
+function validatedStylesheetURL(value: string): string | undefined {
+  try {
+    const url = new URL(value.trim())
+    return url.protocol === "https:" ? url.href : undefined
+  } catch {
+    return undefined
+  }
 }
 
 function formatValue(value: unknown): string {
@@ -392,7 +422,7 @@ function compileMatraBlock(program: string): string {
 }
 
 function extractMatraDocument(markdown: string): MatraDocument {
-  const { entry, renderer, title } = parseMatraFrontMatter(markdown)
+  const { entry, renderer, title, stylesheet } = parseMatraFrontMatter(markdown)
   const fences: MatraFence[] = []
   const pattern = /^[ \t]*```([^\s`]+)[^\n]*\n([\s\S]*?)^[ \t]*```[ \t]*$/gm
   for (const match of markdown.matchAll(pattern)) {
@@ -414,10 +444,10 @@ function extractMatraDocument(markdown: string): MatraDocument {
   if (!entry && fences.length > 1) {
     throw new SyntaxError("Set matra.entry in front matter when Markdown contains multiple Matra code blocks.")
   }
-  return { ...fence, renderer, title: title === false ? undefined : title ?? extractMarkdownTitle(markdown) }
+  return { ...fence, renderer, title: title === false ? undefined : title ?? extractMarkdownTitle(markdown), stylesheet }
 }
 
-function parseMatraFrontMatter(markdown: string): { entry?: string; renderer: MatraRenderer; title?: string | false } {
+function parseMatraFrontMatter(markdown: string): { entry?: string; renderer: MatraRenderer; title?: string | false; stylesheet?: string } {
   const frontMatter = markdown.match(/^---[ \t]*\n([\s\S]*?)\n---[ \t]*(?:\n|$)/)
   if (!frontMatter) return { renderer: "html" }
   const matra = frontMatter[1].match(/^matra:\s*\n((?:^[ \t]+.*(?:\n|$))*)/m)
@@ -425,11 +455,13 @@ function parseMatraFrontMatter(markdown: string): { entry?: string; renderer: Ma
   const entry = matra[1].match(/^[ \t]+entry:\s*([^\s#]+)\s*$/m)?.[1]
   const rawRenderer = matra[1].match(/^[ \t]+renderer:\s*(\S+)\s*$/m)?.[1] ?? "html"
   const rawTitle = matra[1].match(/^[ \t]+title:\s*(.+?)\s*$/m)?.[1]
+  const rawStylesheet = matra[1].match(/^[ \t]+stylesheet:\s*(.+?)\s*$/m)?.[1]
   if (rawRenderer !== "auto" && rawRenderer !== "html" && rawRenderer !== "svg" && rawRenderer !== "math") {
     throw new SyntaxError("matra.renderer must be one of auto, html, svg, or math.")
   }
   const title = rawTitle === "false" ? false : rawTitle?.replace(/^['"]|['"]$/g, "")
-  return { entry, renderer: rawRenderer, title }
+  const stylesheet = rawStylesheet?.replace(/^['"]|['"]$/g, "")
+  return { entry, renderer: rawRenderer, title, stylesheet }
 }
 
 function extractMarkdownTitle(markdown: string): string | undefined {

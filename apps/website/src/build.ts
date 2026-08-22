@@ -149,6 +149,7 @@ async function handler() {
     minify: true,
     sourcemap: true,
     target: ["es2022"],
+    loader: { ".css": "text" },
     alias: {
       "@matra/core": path.resolve(process.cwd(), "src", "client", "core-browser.ts"),
       "@matra/graphics": path.resolve(process.cwd(), "../../packages/graphics/dist/index.js"),

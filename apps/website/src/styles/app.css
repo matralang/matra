@@ -151,6 +151,11 @@ code { font-family: "DM Mono", monospace; }
   border: 1px solid #435149; border-radius: 6px; padding: 5px 8px;
   color: #d7ded9; background: #1a251f; font: inherit;
 }
+.editor-tools input {
+  width: 178px; border: 1px solid #435149; border-radius: 6px; padding: 5px 8px;
+  color: #d7ded9; background: #1a251f; font: inherit;
+}
+.editor-tools input::placeholder { color: #6f7c74; }
 .example-browser { padding: 13px 18px 15px; border-bottom: 1px solid #2d3a33; background: #131d18; }
 .example-browser-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 10px; color: #d7ded9; font: 10px "DM Mono", monospace; letter-spacing: .1em; }
 .example-browser-heading small { color: #718078; font: 9px "DM Mono", monospace; letter-spacing: 0; }
@@ -210,6 +215,8 @@ pre.result-view { min-height: 592px; padding: 28px; white-space: pre-wrap; overf
   .playground-workspace { grid-template-columns: 1fr; }
   .editor-panel { border-right: 0; border-bottom: 1px solid #34423a; }
   #matra-source { min-height: 390px; }
+  .editor-tools { flex-wrap: wrap; justify-content: flex-end; }
+  .editor-tools input { width: min(178px, 40vw); }
   #preview-frame, pre.result-view { min-height: 460px; }
 }
 
