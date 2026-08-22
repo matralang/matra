@@ -1,8 +1,11 @@
-/** A Matra source block embedded in a Markdown document. */
-export interface MatraMarkdownFence {
+/** A named fenced source block embedded in a Markdown document. */
+export interface MarkdownFence {
     filename: string;
-    kind: "matra" | "matra.ts";
     source: string;
+}
+/** A Matra source block embedded in a Markdown document. */
+export interface MatraMarkdownFence extends MarkdownFence {
+    kind: "matra" | "matra.ts";
 }
 export interface ExtractMatraMarkdownOptions {
     /** Select a fenced source by filename when the document has multiple entries. */
@@ -15,3 +18,5 @@ export interface ExtractMatraMarkdownOptions {
  * contain ordinary Markdown code fences.
  */
 export declare function extractMatraMarkdown(markdown: string, options?: ExtractMatraMarkdownOptions): MatraMarkdownFence;
+/** Extract every named fence so documents can refer to code snippets by filename. */
+export declare function extractMarkdownFences(markdown: string): MarkdownFence[];

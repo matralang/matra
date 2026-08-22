@@ -171,6 +171,9 @@ import { extractMatraMarkdown } from "@matra/core"
 const document = extractMatraMarkdown(markdown, { entry: "page.matra" })
 ```
 
+`extractMarkdownFences()` returns every named fence. Site builders can use it
+to keep page snippets beside their page source.
+
 ## TypeScript templates
 
 Use `matra` and `matra.raw()` to compose Matra source in an ordinary TypeScript module.

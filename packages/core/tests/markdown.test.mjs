@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 
-import { extractMatraMarkdown } from "../dist/index.js"
+import { extractMarkdownFences, extractMatraMarkdown } from "../dist/index.js"
 
 describe("Markdown Matra fences", () => {
   it("extracts a native Matra fence", () => {
@@ -27,6 +27,16 @@ describe("Markdown Matra fences", () => {
       kind: "matra.ts",
       source: "matra { p { \"Generated\" } }\n",
     })
+  })
+
+  it("extracts named non-Matra fences for page snippets", () => {
+    assert.deepEqual(
+      extractMarkdownFences("```page.matra\np {}\n```\n\n```example.ts\nconst value = 1\n```\n"),
+      [
+        { filename: "page.matra", source: "p {}\n" },
+        { filename: "example.ts", source: "const value = 1\n" },
+      ],
+    )
   })
 
   it("rejects missing, ambiguous, and unknown entries", () => {

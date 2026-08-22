@@ -5,16 +5,14 @@
  * contain ordinary Markdown code fences.
  */
 export function extractMatraMarkdown(markdown, options = {}) {
-    const pattern = /^[ \t]*(`{3,})([^\s`]+)[^\n]*\n([\s\S]*?)^[ \t]*\1[ \t]*$/gm;
-    const fences = [...markdown.matchAll(pattern)]
-        .map(match => {
-        const filename = match[2];
-        const kind = filename.endsWith(".matra.ts")
+    const fences = extractMarkdownFences(markdown)
+        .map(fence => {
+        const kind = fence.filename.endsWith(".matra.ts")
             ? "matra.ts"
-            : filename.endsWith(".matra")
+            : fence.filename.endsWith(".matra")
                 ? "matra"
                 : undefined;
-        return kind ? { filename, kind, source: match[3] } : undefined;
+        return kind ? { ...fence, kind } : undefined;
     })
         .filter((fence) => fence !== undefined);
     if (fences.length === 0) {
@@ -32,5 +30,13 @@ export function extractMatraMarkdown(markdown, options = {}) {
         throw new SyntaxError("Set an entry when Markdown contains multiple Matra code blocks.");
     }
     return fence;
+}
+/** Extract every named fence so documents can refer to code snippets by filename. */
+export function extractMarkdownFences(markdown) {
+    const pattern = /^[ \t]*(`{3,})([^\s`]+)[^\n]*\n([\s\S]*?)^[ \t]*\1[ \t]*$/gm;
+    return [...markdown.matchAll(pattern)].map(match => ({
+        filename: match[2],
+        source: match[3],
+    }));
 }
 //# sourceMappingURL=markdown.js.map

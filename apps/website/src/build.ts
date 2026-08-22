@@ -7,7 +7,7 @@ import { build } from "esbuild"
 // Declare the Node `process` global when @types/node is not installed.
 declare const process: any;
 
-import { extractMatraMarkdown, parse } from "@matra/core"
+import { extractMarkdownFences, extractMatraMarkdown, parse } from "@matra/core"
 import { toHTML } from "@matra/html"
 
 const siteHeader = parse(`
@@ -195,6 +195,32 @@ function applySpecificationLayout(ast: ReturnType<typeof parse>, pagePath: strin
   return ast
 }
 
+function injectMarkdownCode(ast: ReturnType<typeof parse>, markdown: string, filePath: string) {
+  const fences = new Map(extractMarkdownFences(markdown).map(fence => [fence.filename, fence.source]))
+
+  const inject = (nodes: unknown[]) => {
+    for (const node of nodes) {
+      if (!isNode(node)) continue
+      const reference = node.tag === "code" && typeof node.props.src === "string"
+        ? node.props.src
+        : undefined
+      if (reference?.startsWith("matra:")) {
+        const filename = reference.slice("matra:".length)
+        const source = fences.get(filename)
+        if (source === undefined) {
+          throw new SyntaxError(`Unknown Markdown code fence '${filename}' in ${filePath}`)
+        }
+        node.children = [source]
+        delete node.props.src
+      }
+      inject(node.children)
+    }
+  }
+
+  inject(ast.children)
+  return ast
+}
+
 async function executeMatraModule(source: string, filePath: string): Promise<string> {
   const compiled = await build({
     stdin: {
@@ -237,7 +263,11 @@ async function handler() {
   fs.rmSync(outputDir, { recursive: true, force: true })
 
   await Promise.all(pageFiles.map(async (filePath: string) => {
-    const document = extractMatraMarkdown(fs.readFileSync(filePath, "utf8"))
+    const markdown = fs.readFileSync(filePath, "utf8")
+    const pageEntry = extractMarkdownFences(markdown).some(fence => fence.filename === "page.matra.ts")
+      ? "page.matra.ts"
+      : "page.matra"
+    const document = extractMatraMarkdown(markdown, { entry: pageEntry })
     const source = document.kind === "matra.ts"
       ? await executeMatraModule(document.source, filePath)
       : document.source
@@ -249,7 +279,11 @@ async function handler() {
     }
 
     const ast = applySpecificationLayout(
-      applySiteChrome(parse(source, { sourceId: path.relative(process.cwd(), filePath) })),
+      applySiteChrome(injectMarkdownCode(
+        parse(source, { sourceId: path.relative(process.cwd(), filePath) }),
+        markdown,
+        filePath,
+      )),
       path.relative(pagesDir, filePath),
     )
     const htmlContent = DOCTYPE + toHTML(ast, { basePath })

@@ -160,6 +160,8 @@ import { extractMatraMarkdown } from "@matra/core"
 const document = extractMatraMarkdown(markdown, { entry: "page.matra" })
 ```
 
+`extractMarkdownFences()`はすべての名前付きfenceを返します。site builderでは、page sourceとsnippetを同じ文書内に置けます。
+
 ## TypeScriptテンプレート
 
 通常のTypeScript module内でMatra sourceを合成するには、`matra`と`matra.raw()`を使います。

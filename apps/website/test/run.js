@@ -84,6 +84,7 @@ assert.match(examples, /render-html\.ts/)
 assert.match(examples, /render-svg\.ts/)
 assert.match(examples, /transform\.ts/)
 assert.match(examples, /@matra\/graphics/)
+assert.doesNotMatch(examples, /matra:render-/)
 assert.match(spec, /<title>Index — Matra Specification v0.2/)
 assert.match(spec, /Data Model/)
 for (const page of specPages) {

@@ -62,18 +62,7 @@ html[lang="ja"] {
                     }
                   }
                   pre {
-                    code~import { parse } from "@matra/core"
-import { toHTML } from "@matra/html"
-
-const source = [
-  'article(',
-  '  h1("Hello Matra"),',
-  '  p(class="lead", "Structure first.")',
-  ')',
-].join("\\n")
-
-const html = toHTML(parse(source))
-console.log(html)~
+                    code[src="matra:render-html.ts"] {}
                   }
                 }
                 div.code-window.example-code[aria-label="Matra HTML source"] {
@@ -86,10 +75,7 @@ console.log(html)~
                     }
                   }
                   pre {
-                    code~article(
-  h1("Hello Matra"),
-  p(class="lead", "Structure first.")
-)~
+                    code[src="matra:article.matra"] {}
                   }
                 }
               }
@@ -117,18 +103,7 @@ console.log(html)~
                     }
                   }
                   pre {
-                    code~import { compile } from "@matra/graphics"
-
-const source = [
-  "svg(",
-  "  width=256,",
-  "  height=256,",
-  '  rect(width=256, height=256, fill="#fbfaf5"),',
-  '  circle(cx=128, cy=128, r=72, fill="#ff4d6d")',
-  ")",
-].join("\\n")
-
-const svg = compile(source, { pretty: true })~
+                    code[src="matra:render-svg.ts"] {}
                   }
                 }
                 div.code-window.example-code[aria-label="Matra SVG source"] {
@@ -141,12 +116,7 @@ const svg = compile(source, { pretty: true })~
                     }
                   }
                   pre {
-                    code~svg(
-  width=256,
-  height=256,
-  rect(width=256, height=256, fill="#fbfaf5"),
-  circle(cx=128, cy=128, r=72, fill="#ff4d6d")
-)~
+                    code[src="matra:badge.matra"] {}
                   }
                 }
               }
@@ -174,20 +144,7 @@ const svg = compile(source, { pretty: true })~
                     }
                   }
                   pre {
-                    code~import { parse, transform } from "@matra/core"
-
-const ast = parse([
-  "menu(",
-  '  item(href="/docs/", "Docs"),',
-  '  item(href="/play/", "Playground")',
-  ")",
-].join("\\n"))
-
-const normalized = transform(ast, node =>
-  node.tag === "item"
-    ? { ...node, tag: "a", props: { ...node.props, role: "menuitem" } }
-    : node,
-)~
+                    code[src="matra:transform.ts"] {}
                   }
                 }
                 div.code-window.example-code[aria-label="Matra menu source"] {
@@ -200,10 +157,7 @@ const normalized = transform(ast, node =>
                     }
                   }
                   pre {
-                    code~menu(
-  item(href="/docs/", "Docs"),
-  item(href="/play/", "Playground")
-)~
+                    code[src="matra:menu.matra"] {}
                   }
                 }
               }
@@ -214,4 +168,74 @@ const normalized = transform(ast, node =>
     }
   }
 }
+```
+
+```render-html.ts
+import { parse } from "@matra/core"
+import { toHTML } from "@matra/html"
+
+const source = [
+  'article(',
+  '  h1("Hello Matra"),',
+  '  p(class="lead", "Structure first.")',
+  ')',
+].join("\n")
+
+const html = toHTML(parse(source))
+console.log(html)
+```
+
+```article.matra
+article(
+  h1("Hello Matra"),
+  p(class="lead", "Structure first.")
+)
+```
+
+```render-svg.ts
+import { compile } from "@matra/graphics"
+
+const source = [
+  "svg(",
+  "  width=256,",
+  "  height=256,",
+  '  rect(width=256, height=256, fill="#fbfaf5"),',
+  '  circle(cx=128, cy=128, r=72, fill="#ff4d6d")',
+  ")",
+].join("\n")
+
+const svg = compile(source, { pretty: true })
+```
+
+```badge.matra
+svg(
+  width=256,
+  height=256,
+  rect(width=256, height=256, fill="#fbfaf5"),
+  circle(cx=128, cy=128, r=72, fill="#ff4d6d")
+)
+```
+
+```transform.ts
+import { parse, transform } from "@matra/core"
+
+const ast = parse([
+  "menu(",
+  '  item(href="/docs/", "Docs"),',
+  '  item(href="/play/", "Playground")',
+  ")",
+].join("\n"))
+
+const normalized = transform(ast, node =>
+  node.tag === "item"
+    ? { ...node, tag: "a", props: { ...node.props, role: "menuitem" } }
+    : node,
+)
+```
+
+```menu.matra
+menu(
+  item(href="/docs/", "Docs"),
+  item(href="/play/", "Playground")
+)
 ```
