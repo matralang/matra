@@ -32,6 +32,36 @@ describe("@matra/html", () => {
     )
   })
 
+  it("pretty-prints element structure without changing code content", () => {
+    const ast = {
+      tag: "html",
+      props: {},
+      children: [{
+        tag: "body",
+        props: {},
+        children: [{
+          tag: "main",
+          props: {},
+          children: [{
+            tag: "pre",
+            props: {},
+            children: [{ tag: "code", props: {}, children: ["one\ntwo"] }],
+          }],
+        }],
+      }],
+    }
+    assert.equal(
+      toHTML(ast, { pretty: true }),
+      "<html>\n" +
+        "  <body>\n" +
+        "    <main>\n" +
+        "      <pre><code>one\ntwo</code></pre>\n" +
+        "    </main>\n" +
+        "  </body>\n" +
+        "</html>",
+    )
+  })
+
   it("prefixes site-root links for static deployments", () => {
     const ast = parse(`$root {
       a[href="/docs/"] { "Docs" }

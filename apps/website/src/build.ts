@@ -324,7 +324,7 @@ async function handler() {
         ? "specification"
         : "site"),
     )
-    const htmlContent = DOCTYPE + toHTML(ast, { basePath })
+    const htmlContent = `${DOCTYPE}\n${toHTML(ast, { basePath, pretty: true })}\n`
 
     fs.writeFileSync(outputPath, htmlContent)
     console.log(`Generated HTML file at: ${outputPath}`)

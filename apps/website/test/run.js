@@ -67,7 +67,7 @@ for (const page of [
   "spec/parser/index.html",
 ]) {
   const document = await readFile(new URL(`../dist/${page}`, import.meta.url), "utf8")
-  assert.match(document, /^<!DOCTYPE html>/, page)
+  assert.match(document, /^<!DOCTYPE html>\n<html/, page)
   assert.match(document, /<header class="site-header">/, page)
   assert.match(document, /<footer class="site-footer">/, page)
   assert.match(document, /fonts\.googleapis\.com/, page)
@@ -78,7 +78,7 @@ assert.match(index, /^<!DOCTYPE html>/)
 assert.match(index, /<title>Matra — Structure first/)
 assert.match(index, /https:\/\/www\.googletagmanager\.com\/gtm\.js\?id=/)
 assert.match(index, /GTM-T8JD7GH9/)
-assert.match(index, /<noscript><iframe src="https:\/\/www\.googletagmanager\.com\/ns\.html\?id=GTM-T8JD7GH9"/)
+assert.match(index, /<noscript>\s*<iframe src="https:\/\/www\.googletagmanager\.com\/ns\.html\?id=GTM-T8JD7GH9"/)
 assert.match(index, /意味より先に、構造を書く/)
 assert.match(index, /hello\.matra/)
 assert.doesNotMatch(index, /hello\.matra\.ts/)
@@ -98,7 +98,7 @@ for (const page of specPages) {
   assert.match(page, /<aside class="docs-nav">/)
   assert.match(page, /<div class="shell docs-shell">/)
 }
-assert.match(specPages[1], /\n {10}↕\n/)
+assert.match(specPages[1], /\n {11}↕\n/)
 assert.match(specPages[2], /p`Body`/)
 assert.doesNotMatch(specPages[2], /p\\`Body\\`/)
 assert.match(playground, /<title>Playground — Matra/)

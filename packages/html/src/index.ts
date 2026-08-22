@@ -14,35 +14,47 @@ export interface HTMLOptions {
   rootTag?: string
   /** Prefix site-root href and src attributes for static site deployments. */
   basePath?: string
+  /** Add indentation and line breaks without changing text-node content. */
+  pretty?: boolean
 }
 
 /** Render a Matra AST using HTML semantics. */
 export function toHTML(ast: MatraAST | MatraASTChild[], options: HTMLOptions = {}): string {
   if (isMatraAST(ast)) return renderNode(ast, options)
-  return ast.map(child => renderChild(child, options)).join("")
+  return ast.map(child => renderChild(child, options)).join(options.pretty ? "\n" : "")
 }
 
-function renderNode(node: MatraAST, options: HTMLOptions): string {
+function renderNode(node: MatraAST, options: HTMLOptions, depth = 0): string {
   const { tag, props, children } = node
+  const indentation = options.pretty ? "  ".repeat(depth) : ""
   if (tag === (options.rootTag ?? "$root")) {
-    return children.map(child => renderChild(child, options)).join("")
+    return children.map(child => renderChild(child, options, depth)).join(options.pretty ? "\n" : "")
   }
   if (tag === "#comment") {
-    return `<!--${String(children[0] ?? "")}-->`
+    return `${indentation}<!--${String(children[0] ?? "")}-->`
   }
 
   const attrs = renderProps(props, options)
-  if (VOID_ELEMENTS.has(tag.toLowerCase())) return `<${tag}${attrs}>`
-  const content = children
-    .map(child => tag.toLowerCase() === "script" && typeof child === "string"
-      ? child
-      : renderChild(child, options))
-    .join("")
-  return `<${tag}${attrs}>${content}</${tag}>`
+  if (VOID_ELEMENTS.has(tag.toLowerCase())) return `${indentation}<${tag}${attrs}>`
+
+  const preservesContent = tag === "script" || tag === "style" || tag === "pre" || tag === "textarea" || tag === "code"
+  const hasOnlyElementChildren = children.every(child => isMatraAST(child))
+  if (!options.pretty || preservesContent || !hasOnlyElementChildren) {
+    const content = children
+      .map(child => tag === "script" && typeof child === "string"
+        ? child
+        : renderChild(child, options))
+      .join("")
+    return `${indentation}<${tag}${attrs}>${content}</${tag}>`
+  }
+
+  if (children.length === 0) return `${indentation}<${tag}${attrs}></${tag}>`
+  const content = children.map(child => renderChild(child, options, depth + 1)).join("\n")
+  return `${indentation}<${tag}${attrs}>\n${content}\n${indentation}</${tag}>`
 }
 
-function renderChild(child: MatraASTChild, options: HTMLOptions): string {
-  if (isMatraAST(child)) return renderNode(child, options)
+function renderChild(child: MatraASTChild, options: HTMLOptions, depth = 0): string {
+  if (isMatraAST(child)) return renderNode(child, options, depth)
   if (child === null) return ""
   if (typeof child === "object") return escapeHTML(JSON.stringify(child))
   return escapeHTML(String(child))
