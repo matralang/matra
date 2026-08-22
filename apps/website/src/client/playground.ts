@@ -4,7 +4,6 @@ import { toHTML } from "@matra/html"
 import { parseMath } from "@matra/math"
 import { evaluateMatra, numericEvaluateMatra, numericEvaluateProps, simplifyMatra } from "@matra/math-compute-engine"
 import matraStyles from "../../../../packages/styles/matra.css"
-import { executeMatraProgram } from "../matra-program"
 
 const source = required<HTMLTextAreaElement>("matra-source")
 const status = required<HTMLElement>("playground-status")
@@ -156,8 +155,11 @@ let activePanel = "preview"
 let latestOutputs = { ast: "", matraJSON: "", renderer: "" }
 let latestMode: ResultMode = "html"
 let timer = 0
+let renderVersion = 0
+let workerSequence = 0
 
-function render(): void {
+async function render(): Promise<void> {
+  const version = ++renderVersion
   const program = source.value
   let value = program
   stats.textContent = `${value.length} chars · ${value.split("\n").length} lines`
@@ -165,8 +167,9 @@ function render(): void {
   try {
     const document = extractMatraDocument(program)
     const programResult = document.kind === "matra.ts"
-      ? runMatraTypeScriptProgram(document.source)
+      ? await runMatraTypeScriptProgram(document.source)
       : { source: document.source }
+    if (version !== renderVersion) return
     value = programResult.source
     const selectedStylesheet = document.stylesheet ?? stylesheet.value
     if (document.renderer === "math") {
@@ -194,6 +197,7 @@ function render(): void {
     status.textContent = `Valid ${document.filename} · ${mode.toUpperCase()} · ${stylesheetLabel(selectedStylesheet)}`
     status.classList.remove("is-error")
   } catch (error) {
+    if (version !== renderVersion) return
     errorMessage.textContent = error instanceof Error ? error.message : String(error)
     errorCard.hidden = false
     status.textContent = "Invalid source"
@@ -244,7 +248,7 @@ function setExpressionTabLabel(label: "MatraJSON" | "MathJSON"): void {
 
 function scheduleRender(): void {
   window.clearTimeout(timer)
-  timer = window.setTimeout(render, 120)
+  timer = window.setTimeout(() => void render(), 120)
 }
 
 function selectPanel(name: string): void {
@@ -260,8 +264,8 @@ function selectPanel(name: string): void {
 }
 
 source.addEventListener("input", scheduleRender)
-renderMode.addEventListener("change", render)
-stylesheet.addEventListener("change", render)
+renderMode.addEventListener("change", () => void render())
+stylesheet.addEventListener("change", () => void render())
 document.querySelectorAll<HTMLButtonElement>(".example-button").forEach(button => {
   button.addEventListener("click", () => {
     const example = button.dataset.example ?? "card"
@@ -272,7 +276,7 @@ document.querySelectorAll<HTMLButtonElement>(".example-button").forEach(button =
       item.classList.toggle("active", active)
       item.setAttribute("aria-pressed", String(active))
     })
-    render()
+    void render()
     source.focus({ preventScroll: true })
   })
 })
@@ -359,8 +363,31 @@ function isNode(value: unknown): value is { tag: string } {
   return typeof value === "object" && value !== null && "tag" in value
 }
 
-function runMatraTypeScriptProgram(program: string): { source: string; mode?: OutputMode } {
-  return { source: executeMatraProgram(program) }
+async function runMatraTypeScriptProgram(program: string): Promise<{ source: string, mode?: OutputMode }> {
+  const id = ++workerSequence
+  const worker = new Worker(new URL("./matra-worker.js", import.meta.url), { type: "module" })
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      worker.terminate()
+      reject(new Error("Matra TypeScript execution timed out after 500ms."))
+    }, 500)
+    const finish = () => {
+      window.clearTimeout(timeout)
+      worker.terminate()
+    }
+    worker.addEventListener("message", event => {
+      const result = event.data as { id: number, source?: string, error?: string }
+      if (result.id !== id) return
+      finish()
+      if (result.error) reject(new Error(result.error))
+      else resolve({ source: result.source ?? "" })
+    })
+    worker.addEventListener("error", () => {
+      finish()
+      reject(new Error("Matra TypeScript worker failed."))
+    })
+    worker.postMessage({ id, program })
+  })
 }
 
 function extractMatraDocument(markdown: string): MatraDocument {
@@ -403,4 +430,4 @@ function required<T extends HTMLElement>(id: string): T {
   return element as T
 }
 
-render()
+void render()

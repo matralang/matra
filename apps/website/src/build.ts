@@ -333,8 +333,11 @@ async function handler() {
   const assetsDir = path.join(outputDir, "assets")
   fs.mkdirSync(assetsDir, { recursive: true })
   await build({
-    entryPoints: [path.join(process.cwd(), "src", "client", "playground.ts")],
-    outfile: path.join(assetsDir, "playground.js"),
+    entryPoints: {
+      playground: path.join(process.cwd(), "src", "client", "playground.ts"),
+      "matra-worker": path.join(process.cwd(), "src", "client", "matra-worker.ts"),
+    },
+    outdir: assetsDir,
     bundle: true,
     format: "esm",
     minify: true,
