@@ -13,11 +13,12 @@ delimiters. A document MUST contain exactly one root expression.
 Function syntax is the canonical notation:
 
 ```matra
-section(heading("Title"), paragraph("Body"), id="intro")
+section(id="intro", heading("Title"), paragraph("Body"))
 ```
 
 The identifier before `(` is the tag. Positional arguments become children in
-source order. `name=value` arguments become properties.
+source order. `name=value` arguments become properties. Properties MUST appear
+before positional arguments, so all children follow all properties.
 
 An identifier begins with an ASCII letter or `_`, followed by ASCII letters,
 digits, `_`, or `-`. `true`, `false`, and `null` are reserved.
@@ -65,8 +66,11 @@ conforming parser MUST produce the behavior specified above.
 ```ebnf
 document       = expression ;
 expression     = function-node | document-node | root-node | comment ;
-function-node  = identifier, "(", [ argument, { ",", argument } ], ")" ;
-argument       = property | object-props | function-node | array | literal | identifier ;
+function-node  = identifier, "(", [ property-list, [ ",", child-list ] | child-list ], ")" ;
+property-list  = property-or-object, { ",", property-or-object } ;
+property-or-object = property | object-props ;
+child-list     = child, { ",", child } ;
+child          = function-node | array | literal | identifier ;
 property       = identifier, "=", (value | function-node) ;
 object-props   = "{", [ pair, { ",", pair } ], "}" ;
 pair           = (identifier | string), ":", value ;
@@ -89,6 +93,6 @@ literal        = string | number | boolean | null ;
 These forms MUST produce data-model-equivalent nodes:
 
 ```matra
-p("hello", class="lead")
+p(class="lead", "hello")
 p.lead { "hello" }
 ```

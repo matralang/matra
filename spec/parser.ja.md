@@ -61,7 +61,7 @@ syntax、property重複、modeのerror後に、parserが部分的なtreeを成�
 ## 適合例
 
 ```matra
-sum(value("a"), 2, axis="x")
+sum(axis="x", value("a"), 2)
 ```
 
 上記は次と等価なtreeを生成しなければなりません（MUST）。

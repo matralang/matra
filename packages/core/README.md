@@ -124,7 +124,7 @@ HTML rendering is provided by the separate workspace package:
 import { parse } from "@matra/core"
 import { toHTML } from "@matra/html"
 
-toHTML(parse('p("Hello", class="lead")'))
+toHTML(parse('p(class="lead", "Hello")'))
 ```
 
 Function-style syntax uses Python-like keyword arguments for props:

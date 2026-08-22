@@ -62,7 +62,7 @@ parser-internal node identities or grammar-engine details.
 ## Conformance examples
 
 ```matra
-sum(value("a"), 2, axis="x")
+sum(axis="x", value("a"), 2)
 ```
 
 MUST produce a tree equivalent to:

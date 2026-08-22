@@ -116,7 +116,7 @@ HTMLレンダリングは、独立したworkspaceパッケージから提供し�
 import { parse } from "@matra/core"
 import { toHTML } from "@matra/html"
 
-toHTML(parse('p("Hello", class="lead")'))
+toHTML(parse('p(class="lead", "Hello")'))
 ```
 
 関数形式の構文では、propsをPython風のキーワード引数で記述します。

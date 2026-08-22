@@ -4,7 +4,7 @@ import { MatraSyntaxError, parse, parseWith } from "../dist/index.js"
 
 describe("Matra parser", () => {
   it("parses function syntax and preserves literal types", () => {
-    assert.deepEqual(parse('sum(value("a"), -2, ratio=.5, missing=null)'), {
+    assert.deepEqual(parse('sum(ratio=.5, missing=null, value("a"), -2)'), {
       tag: "sum",
       props: { ratio: 0.5, missing: null },
       children: [{ tag: "value", props: {}, children: ["a"] }, -2],
@@ -112,6 +112,25 @@ describe("Matra parser", () => {
 
   it("rejects duplicate properties", () => {
     assert.throws(() => parse('circle(x=1, x=2)'), /Duplicate prop: x/)
+  })
+
+  it("requires properties to precede child arguments", () => {
+    assert.deepEqual(parse('group(role="list", item("one"), item("two"))'), {
+      tag: "group",
+      props: { role: "list" },
+      children: [
+        { tag: "item", props: {}, children: ["one"] },
+        { tag: "item", props: {}, children: ["two"] },
+      ],
+    })
+    assert.throws(
+      () => parse('group(item("one"), item("two"), role="list")'),
+      /Properties must precede child arguments/,
+    )
+    assert.throws(
+      () => parse('group(item("one"), {role: "list"})'),
+      /Properties must precede child arguments/,
+    )
   })
 
   it("parses recursive array and object prop values", () => {

@@ -14,7 +14,7 @@ test('renders a Matra graphics AST as SVG', () => {
 });
 
 test('compiles Matra source to SVG', () => {
-  const result = compile('svg(circle(cx=32, cy=32, r=20, fill="red"), width=64, height=64)');
+  const result = compile('svg(width=64, height=64, circle(cx=32, cy=32, r=20, fill="red"))');
   assert.match(result, /^<svg[^>]+viewBox="0 0 64 64"/);
   assert.match(result, /<circle cx="32" cy="32" r="20" fill="red"><\/circle>/);
 });
@@ -43,10 +43,10 @@ test('wraps a Matra document fragment in an SVG root', () => {
 
 test('supports richer SVG elements, camel-case attributes, and style objects', () => {
   const result = compile(`svg(
-    defs(linearGradient(stop(offset="0%", stopColor="#fff"), id="shine")),
-    text(tspan("Matra", fontWeight=700), x=10, y=20),
-    filter(feGaussianBlur(stdDeviation=3), id="blur"),
-    width=120, height=40
+    width=120, height=40,
+    defs(linearGradient(id="shine", stop(offset="0%", stopColor="#fff"))),
+    text(x=10, y=20, tspan(fontWeight=700, "Matra")),
+    filter(id="blur", feGaussianBlur(stdDeviation=3))
   )`);
   assert.match(result, /stop-color="#fff"/);
   assert.match(result, /font-weight="700"/);
@@ -57,7 +57,7 @@ test('supports richer SVG elements, camel-case attributes, and style objects', (
 });
 
 test('can format SVG for source views', () => {
-  const result = compile('svg(circle(cx=5, cy=5, r=4), width=10, height=10)', { pretty: true });
+  const result = compile('svg(width=10, height=10, circle(cx=5, cy=5, r=4))', { pretty: true });
   assert.match(result, /<svg[^>]*>\n  <circle/);
   assert.match(result, /\n<\/svg>$/);
 });

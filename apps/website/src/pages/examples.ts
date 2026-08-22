@@ -39,7 +39,7 @@ import { toHTML } from "@matra/html"
 const source = [
   'article(',
   '  h1("Hello Matra"),',
-  '  p("Structure first.", class="lead")',
+  '  p(class="lead", "Structure first.")',
   ')',
 ].join("\\n")
 
@@ -53,7 +53,7 @@ console.log(html)~ }
               }
               pre { code~article(
   h1("Hello Matra"),
-  p("Structure first.", class="lead")
+  p(class="lead", "Structure first.")
 )~ }
             }
           }
@@ -74,10 +74,10 @@ console.log(html)~ }
 
 const source = [
   "svg(",
-  '  rect(width=256, height=256, fill="#fbfaf5"),',
-  '  circle(cx=128, cy=128, r=72, fill="#ff4d6d"),',
   "  width=256,",
-  "  height=256",
+  "  height=256,",
+  '  rect(width=256, height=256, fill="#fbfaf5"),',
+  '  circle(cx=128, cy=128, r=72, fill="#ff4d6d")',
   ")",
 ].join("\\n")
 
@@ -89,10 +89,10 @@ const svg = compile(source, { pretty: true })~ }
                 small { "badge.matra" }
               }
               pre { code~svg(
-  rect(width=256, height=256, fill="#fbfaf5"),
-  circle(cx=128, cy=128, r=72, fill="#ff4d6d"),
   width=256,
-  height=256
+  height=256,
+  rect(width=256, height=256, fill="#fbfaf5"),
+  circle(cx=128, cy=128, r=72, fill="#ff4d6d")
 )~ }
             }
           }
@@ -113,8 +113,8 @@ const svg = compile(source, { pretty: true })~ }
 
 const ast = parse([
   "menu(",
-  '  item("Docs", href="/docs/"),',
-  '  item("Playground", href="/play/")',
+  '  item(href="/docs/", "Docs"),',
+  '  item(href="/play/", "Playground")',
   ")",
 ].join("\\n"))
 
@@ -130,8 +130,8 @@ const normalized = transform(ast, node =>
                 small { "menu.matra" }
               }
               pre { code~menu(
-  item("Docs", href="/docs/"),
-  item("Playground", href="/play/")
+  item(href="/docs/", "Docs"),
+  item(href="/play/", "Playground")
 )~ }
             }
           }

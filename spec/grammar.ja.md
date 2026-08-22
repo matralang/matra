@@ -13,11 +13,12 @@ expressionをちょうど1つ含まなければなりません（MUST）。
 関数構文は標準記法です。
 
 ```matra
-section(heading("Title"), paragraph("Body"), id="intro")
+section(id="intro", heading("Title"), paragraph("Body"))
 ```
 
 `(`の前のidentifierがtagです。位置引数はソース順にchildとなり、
-`name=value`引数はpropertyになります。
+`name=value`引数はpropertyになります。propertyは位置引数より前に置かなければならず
+（MUST）、すべてのchildはすべてのpropertyの後に続きます。
 
 identifierはASCII letterまたは`_`で始まり、以降はASCII letter、digit、`_`、
 `-`を使用できます。`true`、`false`、`null`は予約語です。
@@ -64,8 +65,11 @@ childに持つ`#comment` nodeを生成します。
 ```ebnf
 document       = expression ;
 expression     = function-node | document-node | root-node | comment ;
-function-node  = identifier, "(", [ argument, { ",", argument } ], ")" ;
-argument       = property | object-props | function-node | array | literal | identifier ;
+function-node  = identifier, "(", [ property-list, [ ",", child-list ] | child-list ], ")" ;
+property-list  = property-or-object, { ",", property-or-object } ;
+property-or-object = property | object-props ;
+child-list     = child, { ",", child } ;
+child          = function-node | array | literal | identifier ;
 property       = identifier, "=", (value | function-node) ;
 object-props   = "{", [ pair, { ",", pair } ], "}" ;
 pair           = (identifier | string), ":", value ;
@@ -88,6 +92,6 @@ literal        = string | number | boolean | null ;
 次の形式はdata model上で等価なnodeを生成しなければなりません（MUST）。
 
 ```matra
-p("hello", class="lead")
+p(class="lead", "hello")
 p.lead { "hello" }
 ```

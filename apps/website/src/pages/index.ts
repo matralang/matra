@@ -22,9 +22,9 @@ const page = defaultLayout(matra`
           small { "hello.matra" }
         }
         pre { code~group(
+  role="list",
   item("one"),
-  item("two"),
-  role="list"
+  item("two")
 )~ }
         div.output {
           span { "AST" }

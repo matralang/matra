@@ -8,5 +8,5 @@
 import { parse } from "@matra/core"
 import { toHTML } from "@matra/html"
 
-toHTML(parse('p("Hello", class="lead")'))
+toHTML(parse('p(class="lead", "Hello")'))
 ```

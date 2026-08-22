@@ -3,7 +3,7 @@ import test from "node:test"
 import { parse, renderWith } from "../dist/index.js"
 
 test("renderWith delegates a normalized AST to a domain renderer", () => {
-  const ast = parse('message("hello", tone="warm")')
+  const ast = parse('message(tone="warm", "hello")')
   const renderer = {
     render(node, options) {
       return `${options.prefix}${node.tag}:${node.props.tone}:${node.children[0]}`

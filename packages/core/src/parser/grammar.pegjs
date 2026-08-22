@@ -43,11 +43,17 @@ TagApply
       const props = {}, body = []
       for (const arg of args ?? []) {
         if (arg?.__kind === "keyword-prop") {
+          if (body.length > 0) {
+            error("Properties must precede child arguments")
+          }
           if (Object.prototype.hasOwnProperty.call(props, arg.key)) {
             error(`Duplicate prop: ${arg.key}`)
           }
           props[arg.key] = arg.value
         } else if (arg?.__kind === "bare-object") {
+          if (body.length > 0) {
+            error("Properties must precede child arguments")
+          }
           // Legacy compatibility: tag({ key: value }, child)
           for (const [key, value] of Object.entries(arg.value)) {
             if (Object.prototype.hasOwnProperty.call(props, key)) {
