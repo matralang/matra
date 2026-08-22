@@ -28,6 +28,21 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
     "",
     "import math",
     "",
+    "struct token {",
+    "  kind: i32",
+    "  start: i32",
+    "  length: i32",
+    "}",
+    "",
+    "fn retain_token(value: token) -> token {",
+    "  return value",
+    "}",
+    "",
+    "export fn token_length() -> i32 {",
+    "  let value = retain_token(token(20, 21, 22))",
+    "  return value.length",
+    "}",
+    "",
     "export fn first_byte(source: bytes) -> i32 {",
     "  return byte_at(source, 0)",
     "}",
@@ -96,6 +111,7 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
     assert.equal(module.instance.exports.forwarded_first_byte(16, 3), 65)
     assert.deepEqual(module.instance.exports.retain(16, 3), [16, 3])
     assert.equal(module.instance.exports.array_value(), 42)
+    assert.equal(module.instance.exports.token_length(), 22)
   } finally {
     await rm(directory, { recursive: true, force: true })
   }

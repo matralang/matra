@@ -24,8 +24,11 @@ index, value)` writes one byte. `byte_pointer(bytes)` returns its pointer.
 `allocate_i32_array(size)`, `array_get(array, index)`, and `array_set(array,
 index, value)` provide allocation and access for `[i32]`.
 
-Arrays, structs, `bool`, and a stable compiler ABI are specified as planned
-syntax below, but are not yet implemented. The bootstrap compiler implements a
+`bool` and a stable compiler ABI are specified as planned syntax below, but are
+not yet implemented. The seed subset supports structs whose fields are all
+`i32`: a struct value is a pointer to its fields in linear memory, constructors
+use `name(value, ...)`, and fields are read with `value.field`. Field assignment,
+nested structs, arrays of structs, and `bytes` fields are not implemented. The bootstrap compiler implements a
 temporary subset of the ABI below.
 
 ## Source form
@@ -73,11 +76,12 @@ Whitespace separates tokens; `//` starts a line comment. Newlines are
 recommended between statements.
 
 ```ebnf
-program    = module, { import }, { function } ;
+program    = module, { import }, { struct }, { function } ;
 module     = "module", identifier ;
 import     = "import", identifier ;
 function   = [ "export" ], "fn", identifier, "(", [ parameters ], ")",
              "->", type, block ;
+struct     = "struct", identifier, "{", { identifier, ":", "i32" }, "}" ;
 parameters = parameter, { ",", parameter } ;
 parameter  = identifier, ":", type ;
 type       = "i32" | "bool" | "bytes" | "[", type, "]" | identifier ;

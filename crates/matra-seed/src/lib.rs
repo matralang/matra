@@ -59,6 +59,7 @@ pub fn compile_markdown(markdown: &str, entry: Option<&str>) -> Result<Vec<u8>, 
     emit_module(&Program {
         name: "entry".to_owned(),
         imports: Vec::new(),
+        structs: collect_structs(&modules, &states)?,
         functions,
     })
 }
@@ -138,7 +139,19 @@ fn select_entry(fences: &[ProgramFence], entry: Option<&str>) -> Result<usize, C
 struct Program {
     name: String,
     imports: Vec<String>,
+    structs: Vec<StructDefinition>,
     functions: Vec<Function>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct StructDefinition {
+    name: String,
+    fields: Vec<StructField>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct StructField {
+    name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -156,11 +169,12 @@ struct Parameter {
     value_type: ValueType,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum ValueType {
     I32,
     Bytes,
     ArrayI32,
+    Struct(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -180,6 +194,7 @@ enum Expression {
     Integer(i32),
     Variable(String),
     Call(String, Vec<Expression>),
+    FieldAccess(Box<Expression>, String),
     Negate(Box<Expression>),
     Binary(BinaryOperator, Box<Expression>, Box<Expression>),
 }
@@ -206,6 +221,10 @@ fn parse_program(source: &str) -> Result<Program, CompileError> {
     while parser.consume_keyword("import") {
         imports.push(parser.identifier()?);
     }
+    let mut structs = Vec::new();
+    while parser.consume_keyword("struct") {
+        structs.push(parser.struct_definition()?);
+    }
     let mut functions = Vec::new();
     while !parser.at_end() {
         functions.push(parser.function()?);
@@ -217,8 +236,32 @@ fn parse_program(source: &str) -> Result<Program, CompileError> {
     Ok(Program {
         name,
         imports,
+        structs,
         functions,
     })
+}
+
+fn collect_structs(
+    modules: &[(String, Program)],
+    states: &[u8],
+) -> Result<Vec<StructDefinition>, CompileError> {
+    let mut names = HashSet::new();
+    let mut structs = Vec::new();
+    for (index, (_, program)) in modules.iter().enumerate() {
+        if states[index] != 2 {
+            continue;
+        }
+        for definition in &program.structs {
+            if !names.insert(definition.name.as_str()) {
+                return Err(CompileError::new(format!(
+                    "Duplicate struct: {}",
+                    definition.name
+                )));
+            }
+            structs.push(definition.clone());
+        }
+    }
+    Ok(structs)
 }
 
 fn collect_module(
@@ -334,6 +377,22 @@ impl<'a> Parser<'a> {
             return_type,
             statements,
         })
+    }
+
+    fn struct_definition(&mut self) -> Result<StructDefinition, CompileError> {
+        let name = self.identifier()?;
+        self.expect('{')?;
+        let mut fields = Vec::new();
+        while !self.consume('}') {
+            if self.at_end() {
+                return Err(self.error("Expected '}' to close struct declaration."));
+            }
+            let field_name = self.identifier()?;
+            self.expect(':')?;
+            self.expect_keyword("i32")?;
+            fields.push(StructField { name: field_name });
+        }
+        Ok(StructDefinition { name, fields })
     }
 
     fn statement(&mut self) -> Result<Statement, CompileError> {
@@ -481,30 +540,37 @@ impl<'a> Parser<'a> {
     }
 
     fn primary(&mut self) -> Result<Expression, CompileError> {
-        if self.consume('(') {
+        let mut expression = if self.consume('(') {
             let expression = self.expression()?;
             self.expect(')')?;
-            return Ok(expression);
-        }
-        self.skip_trivia();
-        if matches!(self.peek(), Some('0'..='9')) {
-            return Ok(Expression::Integer(self.integer()?));
-        }
-        let name = self.identifier()?;
-        if !self.consume('(') {
-            return Ok(Expression::Variable(name));
-        }
-        let mut arguments = Vec::new();
-        if !self.consume(')') {
-            loop {
-                arguments.push(self.expression()?);
-                if self.consume(')') {
-                    break;
+            expression
+        } else {
+            self.skip_trivia();
+            if matches!(self.peek(), Some('0'..='9')) {
+                Expression::Integer(self.integer()?)
+            } else {
+                let name = self.identifier()?;
+                if !self.consume('(') {
+                    Expression::Variable(name)
+                } else {
+                    let mut arguments = Vec::new();
+                    if !self.consume(')') {
+                        loop {
+                            arguments.push(self.expression()?);
+                            if self.consume(')') {
+                                break;
+                            }
+                            self.expect(',')?;
+                        }
+                    }
+                    Expression::Call(name, arguments)
                 }
-                self.expect(',')?;
             }
+        };
+        while self.consume('.') {
+            expression = Expression::FieldAccess(Box::new(expression), self.identifier()?);
         }
-        Ok(Expression::Call(name, arguments))
+        Ok(expression)
     }
 
     fn parse_type(&mut self) -> Result<ValueType, CompileError> {
@@ -516,7 +582,7 @@ impl<'a> Parser<'a> {
         match self.identifier()?.as_str() {
             "i32" => Ok(ValueType::I32),
             "bytes" => Ok(ValueType::Bytes),
-            value => Err(self.error(format!("Unknown type: {value}"))),
+            value => Ok(ValueType::Struct(value.to_owned())),
         }
     }
 
@@ -655,11 +721,13 @@ fn is_reserved_word(identifier: &str) -> bool {
             | "module"
             | "import"
             | "export"
+            | "struct"
     )
 }
 
 fn emit_module(program: &Program) -> Result<Vec<u8>, CompileError> {
     let functions = collect_functions(program)?;
+    let structs = collect_struct_signatures(program)?;
     let mut output = vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00];
 
     let mut types = Vec::new();
@@ -669,7 +737,7 @@ fn emit_module(program: &Program) -> Result<Vec<u8>, CompileError> {
         let parameter_count: usize = function.parameters.iter().map(parameter_slots).sum();
         encode_u32(&mut types, parameter_count as u32);
         types.extend(std::iter::repeat_n(0x7f, parameter_count));
-        let result_count = value_slots(function.return_type);
+        let result_count = value_slots(&function.return_type);
         encode_u32(&mut types, result_count as u32);
         types.extend(std::iter::repeat_n(0x7f, result_count));
     }
@@ -711,7 +779,7 @@ fn emit_module(program: &Program) -> Result<Vec<u8>, CompileError> {
     let mut code = Vec::new();
     encode_u32(&mut code, program.functions.len() as u32);
     for function in &program.functions {
-        let body = emit_function(function, &functions)?;
+        let body = emit_function(function, &functions, &structs)?;
         encode_u32(&mut code, body.len() as u32);
         code.extend(body);
     }
@@ -735,6 +803,36 @@ struct FunctionSignature {
     return_type: ValueType,
 }
 
+struct StructSignature<'a> {
+    fields: HashMap<&'a str, u32>,
+    field_count: u32,
+}
+
+fn collect_struct_signatures(
+    program: &Program,
+) -> Result<HashMap<&str, StructSignature<'_>>, CompileError> {
+    let mut structs = HashMap::new();
+    for definition in &program.structs {
+        let mut fields = HashMap::new();
+        for (index, field) in definition.fields.iter().enumerate() {
+            if fields.insert(field.name.as_str(), index as u32).is_some() {
+                return Err(CompileError::new(format!(
+                    "Duplicate field in struct {}: {}",
+                    definition.name, field.name
+                )));
+            }
+        }
+        structs.insert(
+            definition.name.as_str(),
+            StructSignature {
+                fields,
+                field_count: definition.fields.len() as u32,
+            },
+        );
+    }
+    Ok(structs)
+}
+
 fn collect_functions(program: &Program) -> Result<HashMap<&str, FunctionSignature>, CompileError> {
     let mut functions = HashMap::new();
     for (index, function) in program.functions.iter().enumerate() {
@@ -746,9 +844,9 @@ fn collect_functions(program: &Program) -> Result<HashMap<&str, FunctionSignatur
                     parameters: function
                         .parameters
                         .iter()
-                        .map(|parameter| parameter.value_type)
+                        .map(|parameter| parameter.value_type.clone())
                         .collect(),
-                    return_type: function.return_type,
+                    return_type: function.return_type.clone(),
                 },
             )
             .is_some()
@@ -763,22 +861,25 @@ fn collect_functions(program: &Program) -> Result<HashMap<&str, FunctionSignatur
 }
 
 fn parameter_slots(parameter: &Parameter) -> usize {
-    value_slots(parameter.value_type)
+    value_slots(&parameter.value_type)
 }
 
-fn value_slots(value_type: ValueType) -> usize {
+fn value_slots(value_type: &ValueType) -> usize {
     match value_type {
         ValueType::I32 => 1,
         ValueType::Bytes | ValueType::ArrayI32 => 2,
+        ValueType::Struct(_) => 1,
     }
 }
 
 fn emit_function(
     function: &Function,
     functions: &HashMap<&str, FunctionSignature>,
+    structs: &HashMap<&str, StructSignature<'_>>,
 ) -> Result<Vec<u8>, CompileError> {
     let mut locals = HashMap::new();
     let mut bytes = HashMap::new();
+    let mut struct_values = HashMap::new();
     let mut parameter_names = HashSet::new();
     let mut parameter_index = 0u32;
     for parameter in &function.parameters {
@@ -788,7 +889,7 @@ fn emit_function(
                 function.name, parameter.name
             )));
         }
-        let inserted = match parameter.value_type {
+        let inserted = match &parameter.value_type {
             ValueType::I32 => locals
                 .insert(parameter.name.as_str(), parameter_index)
                 .is_none(),
@@ -798,6 +899,14 @@ fn emit_function(
                     (parameter_index, parameter_index + 1),
                 )
                 .is_none(),
+            ValueType::Struct(name) => {
+                if !structs.contains_key(name.as_str()) {
+                    return Err(CompileError::new(format!("Unknown struct: {name}")));
+                }
+                struct_values
+                    .insert(parameter.name.as_str(), (name.clone(), parameter_index))
+                    .is_none()
+            }
         };
         debug_assert!(inserted);
         parameter_index += parameter_slots(parameter) as u32;
@@ -808,9 +917,11 @@ fn emit_function(
         function,
         &mut locals,
         &mut bytes,
+        &mut struct_values,
         parameter_index,
         &mut local_count,
         functions,
+        structs,
     )?;
 
     let mut body = Vec::new();
@@ -826,12 +937,14 @@ fn emit_function(
         &function.statements,
         &locals,
         &bytes,
+        &struct_values,
         functions,
-        function.return_type,
+        structs,
+        function.return_type.clone(),
         &mut Vec::new(),
     )?;
     // 両方の分岐がreturnするifでも、WebAssemblyは構文上のfallthrough pathに値を要求する。
-    for _ in 0..value_slots(function.return_type) {
+    for _ in 0..value_slots(&function.return_type) {
         body.extend([0x41, 0x00]);
     }
     body.push(0x0f);
@@ -844,21 +957,32 @@ fn collect_locals<'a>(
     function: &Function,
     locals: &mut HashMap<&'a str, u32>,
     bytes: &mut HashMap<&'a str, (u32, u32)>,
+    struct_values: &mut HashMap<&'a str, (String, u32)>,
     parameter_count: u32,
     local_count: &mut u32,
     functions: &HashMap<&str, FunctionSignature>,
+    structs: &HashMap<&str, StructSignature<'_>>,
 ) -> Result<(), CompileError> {
     for statement in statements {
         match statement {
             Statement::Let(name, annotation, expression) => {
-                if locals.contains_key(name.as_str()) || bytes.contains_key(name.as_str()) {
+                if locals.contains_key(name.as_str())
+                    || bytes.contains_key(name.as_str())
+                    || struct_values.contains_key(name.as_str())
+                {
                     return Err(CompileError::new(format!(
                         "Duplicate local in {}: {name}",
                         function.name
                     )));
                 }
-                let value_type =
-                    annotation.unwrap_or(expression_type(expression, locals, bytes, functions)?);
+                let value_type = annotation.clone().unwrap_or(expression_type(
+                    expression,
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                )?);
                 let index = parameter_count + *local_count;
                 match value_type {
                     ValueType::I32 => {
@@ -869,6 +993,15 @@ fn collect_locals<'a>(
                         bytes.insert(name, (index, index + 1));
                         *local_count += 2;
                     }
+                    ValueType::Struct(struct_name) => {
+                        if !structs.contains_key(struct_name.as_str()) {
+                            return Err(CompileError::new(format!(
+                                "Unknown struct: {struct_name}"
+                            )));
+                        }
+                        struct_values.insert(name.as_str(), (struct_name, index));
+                        *local_count += 1;
+                    }
                 }
             }
             Statement::If(_, then_body, else_body) => {
@@ -877,18 +1010,22 @@ fn collect_locals<'a>(
                     function,
                     locals,
                     bytes,
+                    struct_values,
                     parameter_count,
                     local_count,
                     functions,
+                    structs,
                 )?;
                 collect_locals(
                     else_body,
                     function,
                     locals,
                     bytes,
+                    struct_values,
                     parameter_count,
                     local_count,
                     functions,
+                    structs,
                 )?;
             }
             Statement::While(_, body) => collect_locals(
@@ -896,9 +1033,11 @@ fn collect_locals<'a>(
                 function,
                 locals,
                 bytes,
+                struct_values,
                 parameter_count,
                 local_count,
                 functions,
+                structs,
             )?,
             Statement::Assign(_, _)
             | Statement::ByteSet(_, _, _)
@@ -921,7 +1060,9 @@ fn emit_statements(
     statements: &[Statement],
     locals: &HashMap<&str, u32>,
     bytes: &HashMap<&str, (u32, u32)>,
+    struct_values: &HashMap<&str, (String, u32)>,
     functions: &HashMap<&str, FunctionSignature>,
+    structs: &HashMap<&str, StructSignature<'_>>,
     return_type: ValueType,
     controls: &mut Vec<ControlFrame>,
 ) -> Result<(), CompileError> {
@@ -929,15 +1070,43 @@ fn emit_statements(
         match statement {
             Statement::Let(name, _, expression) | Statement::Assign(name, expression) => {
                 if let Some(index) = locals.get(name.as_str()) {
-                    emit_expression(output, expression, locals, bytes, functions)?;
+                    emit_expression(
+                        output,
+                        expression,
+                        locals,
+                        bytes,
+                        struct_values,
+                        functions,
+                        structs,
+                    )?;
                     output.push(0x21);
                     encode_u32(output, *index);
                 } else if let Some((pointer, length)) = bytes.get(name.as_str()) {
-                    emit_bytes_expression(output, expression, locals, bytes, functions)?;
+                    emit_bytes_expression(
+                        output,
+                        expression,
+                        locals,
+                        bytes,
+                        struct_values,
+                        functions,
+                        structs,
+                    )?;
                     output.push(0x21);
                     encode_u32(output, *length);
                     output.push(0x21);
                     encode_u32(output, *pointer);
+                } else if let Some((_, index)) = struct_values.get(name.as_str()) {
+                    emit_struct_expression(
+                        output,
+                        expression,
+                        locals,
+                        bytes,
+                        struct_values,
+                        functions,
+                        structs,
+                    )?;
+                    output.push(0x21);
+                    encode_u32(output, *index);
                 } else {
                     return Err(CompileError::new(format!("Unknown variable: {name}")));
                 }
@@ -951,9 +1120,25 @@ fn emit_statements(
                     .ok_or_else(|| CompileError::new(format!("Unknown bytes variable: {name}")))?;
                 output.push(0x20);
                 encode_u32(output, *pointer);
-                emit_expression(output, index, locals, bytes, functions)?;
+                emit_expression(
+                    output,
+                    index,
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                )?;
                 output.push(0x6a);
-                emit_expression(output, value, locals, bytes, functions)?;
+                emit_expression(
+                    output,
+                    value,
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                )?;
                 output.extend([0x3a, 0x00, 0x00]);
             }
             Statement::ArraySet(array_value, index, value) => {
@@ -965,19 +1150,56 @@ fn emit_statements(
                     .ok_or_else(|| CompileError::new(format!("Unknown array variable: {name}")))?;
                 output.push(0x20);
                 encode_u32(output, *pointer);
-                emit_expression(output, index, locals, bytes, functions)?;
+                emit_expression(
+                    output,
+                    index,
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                )?;
                 output.extend([0x41, 0x04, 0x6c, 0x6a]);
-                emit_expression(output, value, locals, bytes, functions)?;
+                emit_expression(
+                    output,
+                    value,
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                )?;
                 output.extend([0x36, 0x02, 0x00]);
             }
             Statement::Return(expression) => {
                 match return_type {
-                    ValueType::I32 => {
-                        emit_expression(output, expression, locals, bytes, functions)?
-                    }
-                    ValueType::Bytes | ValueType::ArrayI32 => {
-                        emit_bytes_expression(output, expression, locals, bytes, functions)?
-                    }
+                    ValueType::I32 => emit_expression(
+                        output,
+                        expression,
+                        locals,
+                        bytes,
+                        struct_values,
+                        functions,
+                        structs,
+                    )?,
+                    ValueType::Bytes | ValueType::ArrayI32 => emit_bytes_expression(
+                        output,
+                        expression,
+                        locals,
+                        bytes,
+                        struct_values,
+                        functions,
+                        structs,
+                    )?,
+                    ValueType::Struct(_) => emit_struct_expression(
+                        output,
+                        expression,
+                        locals,
+                        bytes,
+                        struct_values,
+                        functions,
+                        structs,
+                    )?,
                 }
                 output.push(0x0f);
             }
@@ -990,7 +1212,15 @@ fn emit_statements(
                 encode_u32(output, (controls.len() - index - 1) as u32);
             }
             Statement::If(condition, then_body, else_body) => {
-                emit_expression(output, condition, locals, bytes, functions)?;
+                emit_expression(
+                    output,
+                    condition,
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                )?;
                 output.extend([0x04, 0x40]);
                 controls.push(ControlFrame::Block);
                 emit_statements(
@@ -998,8 +1228,10 @@ fn emit_statements(
                     then_body,
                     locals,
                     bytes,
+                    struct_values,
                     functions,
-                    return_type,
+                    structs,
+                    return_type.clone(),
                     controls,
                 )?;
                 if !else_body.is_empty() {
@@ -1009,8 +1241,10 @@ fn emit_statements(
                         else_body,
                         locals,
                         bytes,
+                        struct_values,
                         functions,
-                        return_type,
+                        structs,
+                        return_type.clone(),
                         controls,
                     )?;
                 }
@@ -1021,15 +1255,25 @@ fn emit_statements(
                 output.extend([0x02, 0x40, 0x03, 0x40]);
                 controls.push(ControlFrame::LoopBreak);
                 controls.push(ControlFrame::Block);
-                emit_expression(output, condition, locals, bytes, functions)?;
+                emit_expression(
+                    output,
+                    condition,
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                )?;
                 output.extend([0x45, 0x0d, 0x01]);
                 emit_statements(
                     output,
                     body,
                     locals,
                     bytes,
+                    struct_values,
                     functions,
-                    return_type,
+                    structs,
+                    return_type.clone(),
                     controls,
                 )?;
                 output.extend([0x0c, 0x00, 0x0b, 0x0b]);
@@ -1046,7 +1290,9 @@ fn emit_expression(
     expression: &Expression,
     locals: &HashMap<&str, u32>,
     bytes: &HashMap<&str, (u32, u32)>,
+    struct_values: &HashMap<&str, (String, u32)>,
     functions: &HashMap<&str, FunctionSignature>,
+    structs: &HashMap<&str, StructSignature<'_>>,
 ) -> Result<(), CompileError> {
     match expression {
         Expression::Integer(value) => {
@@ -1059,6 +1305,31 @@ fn emit_expression(
                 .ok_or_else(|| CompileError::new(format!("Unknown variable: {name}")))?;
             output.push(0x20);
             encode_u32(output, *index);
+        }
+        Expression::FieldAccess(value, field) => {
+            let ValueType::Struct(struct_name) =
+                expression_type(value, locals, bytes, struct_values, functions, structs)?
+            else {
+                return Err(CompileError::new("Field access expects a struct value."));
+            };
+            let definition = structs
+                .get(struct_name.as_str())
+                .ok_or_else(|| CompileError::new(format!("Unknown struct: {struct_name}")))?;
+            let index = definition.fields.get(field.as_str()).ok_or_else(|| {
+                CompileError::new(format!("Unknown field in struct {struct_name}: {field}"))
+            })?;
+            emit_struct_expression(
+                output,
+                value,
+                locals,
+                bytes,
+                struct_values,
+                functions,
+                structs,
+            )?;
+            output.extend([0x41]);
+            encode_i32(output, (*index * 4) as i32);
+            output.extend([0x6a, 0x28, 0x02, 0x00]);
         }
         Expression::Call(name, arguments) => {
             if name == "byte_pointer" {
@@ -1096,7 +1367,15 @@ fn emit_expression(
                     .ok_or_else(|| CompileError::new(format!("Unknown array variable: {array}")))?;
                 output.push(0x20);
                 encode_u32(output, *pointer);
-                emit_expression(output, index, locals, bytes, functions)?;
+                emit_expression(
+                    output,
+                    index,
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                )?;
                 output.extend([0x41, 0x04, 0x6c, 0x6a, 0x28, 0x02, 0x00]);
                 return Ok(());
             }
@@ -1117,7 +1396,15 @@ fn emit_expression(
                 })?;
                 output.push(0x20);
                 encode_u32(output, *pointer);
-                emit_expression(output, &arguments[1], locals, bytes, functions)?;
+                emit_expression(
+                    output,
+                    &arguments[1],
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                )?;
                 output.extend([0x6a, 0x2d, 0x00, 0x00]);
                 return Ok(());
             }
@@ -1137,7 +1424,16 @@ fn emit_expression(
                 )));
             }
             for (argument, parameter_type) in arguments.iter().zip(&signature.parameters) {
-                emit_argument(output, argument, *parameter_type, locals, bytes, functions)?;
+                emit_argument(
+                    output,
+                    argument,
+                    parameter_type.clone(),
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                )?;
             }
             output.push(0x10);
             encode_u32(output, signature.index);
@@ -1145,12 +1441,36 @@ fn emit_expression(
         Expression::Negate(value) => {
             output.push(0x41);
             encode_i32(output, 0);
-            emit_expression(output, value, locals, bytes, functions)?;
+            emit_expression(
+                output,
+                value,
+                locals,
+                bytes,
+                struct_values,
+                functions,
+                structs,
+            )?;
             output.push(0x6b);
         }
         Expression::Binary(operator, left, right) => {
-            emit_expression(output, left, locals, bytes, functions)?;
-            emit_expression(output, right, locals, bytes, functions)?;
+            emit_expression(
+                output,
+                left,
+                locals,
+                bytes,
+                struct_values,
+                functions,
+                structs,
+            )?;
+            emit_expression(
+                output,
+                right,
+                locals,
+                bytes,
+                struct_values,
+                functions,
+                structs,
+            )?;
             output.push(match operator {
                 BinaryOperator::Add => 0x6a,
                 BinaryOperator::Subtract => 0x6b,
@@ -1173,7 +1493,9 @@ fn emit_bytes_expression(
     expression: &Expression,
     locals: &HashMap<&str, u32>,
     bytes: &HashMap<&str, (u32, u32)>,
+    struct_values: &HashMap<&str, (String, u32)>,
     functions: &HashMap<&str, FunctionSignature>,
+    structs: &HashMap<&str, StructSignature<'_>>,
 ) -> Result<(), CompileError> {
     match expression {
         Expression::Call(name, arguments)
@@ -1186,9 +1508,25 @@ fn emit_bytes_expression(
                 )));
             }
             output.extend([0x23, 0x00, 0x23, 0x00]);
-            emit_expression(output, &arguments[0], locals, bytes, functions)?;
+            emit_expression(
+                output,
+                &arguments[0],
+                locals,
+                bytes,
+                struct_values,
+                functions,
+                structs,
+            )?;
             output.extend([0x41, 0x04, 0x6c, 0x6a, 0x24, 0x00]);
-            emit_expression(output, &arguments[0], locals, bytes, functions)?;
+            emit_expression(
+                output,
+                &arguments[0],
+                locals,
+                bytes,
+                struct_values,
+                functions,
+                structs,
+            )?;
             Ok(())
         }
         Expression::Call(name, arguments)
@@ -1201,9 +1539,25 @@ fn emit_bytes_expression(
                 )));
             }
             output.extend([0x23, 0x00, 0x23, 0x00]);
-            emit_expression(output, &arguments[0], locals, bytes, functions)?;
+            emit_expression(
+                output,
+                &arguments[0],
+                locals,
+                bytes,
+                struct_values,
+                functions,
+                structs,
+            )?;
             output.extend([0x6a, 0x24, 0x00]);
-            emit_expression(output, &arguments[0], locals, bytes, functions)?;
+            emit_expression(
+                output,
+                &arguments[0],
+                locals,
+                bytes,
+                struct_values,
+                functions,
+                structs,
+            )?;
             Ok(())
         }
         Expression::Call(name, arguments)
@@ -1245,7 +1599,16 @@ fn emit_bytes_expression(
                 )));
             }
             for (argument, parameter_type) in arguments.iter().zip(&signature.parameters) {
-                emit_argument(output, argument, *parameter_type, locals, bytes, functions)?;
+                emit_argument(
+                    output,
+                    argument,
+                    parameter_type.clone(),
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                )?;
             }
             output.push(0x10);
             encode_u32(output, signature.index);
@@ -1259,11 +1622,16 @@ fn expression_type(
     expression: &Expression,
     locals: &HashMap<&str, u32>,
     bytes: &HashMap<&str, (u32, u32)>,
+    struct_values: &HashMap<&str, (String, u32)>,
     functions: &HashMap<&str, FunctionSignature>,
+    structs: &HashMap<&str, StructSignature<'_>>,
 ) -> Result<ValueType, CompileError> {
     match expression {
         Expression::Variable(name) if locals.contains_key(name.as_str()) => Ok(ValueType::I32),
         Expression::Variable(name) if bytes.contains_key(name.as_str()) => Ok(ValueType::Bytes),
+        Expression::Variable(name) if struct_values.contains_key(name.as_str()) => {
+            Ok(ValueType::Struct(struct_values[name.as_str()].0.clone()))
+        }
         Expression::Variable(name) => Err(CompileError::new(format!("Unknown variable: {name}"))),
         Expression::Call(name, _)
             if name == "allocate_bytes" && !functions.contains_key(name.as_str()) =>
@@ -1276,13 +1644,98 @@ fn expression_type(
             Ok(ValueType::ArrayI32)
         }
         Expression::Call(name, _) if name == "byte_pointer" => Ok(ValueType::I32),
+        Expression::Call(name, _) if structs.contains_key(name.as_str()) => {
+            Ok(ValueType::Struct(name.clone()))
+        }
         Expression::Call(name, _) => functions
             .get(name.as_str())
-            .map(|signature| signature.return_type)
+            .map(|signature| signature.return_type.clone())
             .ok_or_else(|| CompileError::new(format!("Unknown function: {name}"))),
         Expression::Integer(_) | Expression::Negate(_) | Expression::Binary(_, _, _) => {
             Ok(ValueType::I32)
         }
+        Expression::FieldAccess(_, _) => Ok(ValueType::I32),
+    }
+}
+
+fn emit_struct_expression(
+    output: &mut Vec<u8>,
+    expression: &Expression,
+    locals: &HashMap<&str, u32>,
+    bytes: &HashMap<&str, (u32, u32)>,
+    struct_values: &HashMap<&str, (String, u32)>,
+    functions: &HashMap<&str, FunctionSignature>,
+    structs: &HashMap<&str, StructSignature<'_>>,
+) -> Result<(), CompileError> {
+    match expression {
+        Expression::Variable(name) => {
+            let index = struct_values
+                .get(name.as_str())
+                .ok_or_else(|| CompileError::new(format!("Unknown struct variable: {name}")))?;
+            output.push(0x20);
+            encode_u32(output, index.1);
+            Ok(())
+        }
+        Expression::Call(name, arguments) if structs.contains_key(name.as_str()) => {
+            let definition = &structs[name.as_str()];
+            if arguments.len() != definition.field_count as usize {
+                return Err(CompileError::new(format!(
+                    "Struct {name} expects {} arguments, found {}",
+                    definition.field_count,
+                    arguments.len()
+                )));
+            }
+            output.extend([0x23, 0x00, 0x41]);
+            encode_i32(output, (definition.field_count * 4) as i32);
+            output.extend([0x6a, 0x24, 0x00]);
+            for (index, argument) in arguments.iter().enumerate() {
+                output.extend([0x23, 0x00, 0x41]);
+                encode_i32(output, (definition.field_count * 4) as i32);
+                output.extend([0x6b, 0x41]);
+                encode_i32(output, (index * 4) as i32);
+                output.push(0x6a);
+                emit_expression(
+                    output,
+                    argument,
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                )?;
+                output.extend([0x36, 0x02, 0x00]);
+            }
+            output.extend([0x23, 0x00, 0x41]);
+            encode_i32(output, (definition.field_count * 4) as i32);
+            output.push(0x6b);
+            Ok(())
+        }
+        Expression::Call(name, arguments) => {
+            let signature = functions
+                .get(name.as_str())
+                .ok_or_else(|| CompileError::new(format!("Unknown function: {name}")))?;
+            if !matches!(signature.return_type, ValueType::Struct(_)) {
+                return Err(CompileError::new(format!(
+                    "Function {name} does not return a struct."
+                )));
+            }
+            for (argument, parameter_type) in arguments.iter().zip(&signature.parameters) {
+                emit_argument(
+                    output,
+                    argument,
+                    parameter_type.clone(),
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                )?;
+            }
+            output.push(0x10);
+            encode_u32(output, signature.index);
+            Ok(())
+        }
+        _ => Err(CompileError::new("Expected a struct expression.")),
     }
 }
 
@@ -1292,10 +1745,20 @@ fn emit_argument(
     parameter_type: ValueType,
     locals: &HashMap<&str, u32>,
     bytes: &HashMap<&str, (u32, u32)>,
+    struct_values: &HashMap<&str, (String, u32)>,
     functions: &HashMap<&str, FunctionSignature>,
+    structs: &HashMap<&str, StructSignature<'_>>,
 ) -> Result<(), CompileError> {
     match parameter_type {
-        ValueType::I32 => emit_expression(output, argument, locals, bytes, functions),
+        ValueType::I32 => emit_expression(
+            output,
+            argument,
+            locals,
+            bytes,
+            struct_values,
+            functions,
+            structs,
+        ),
         ValueType::Bytes | ValueType::ArrayI32 => {
             let Expression::Variable(name) = argument else {
                 return Err(CompileError::new(
@@ -1311,6 +1774,15 @@ fn emit_argument(
             encode_u32(output, *length);
             Ok(())
         }
+        ValueType::Struct(_) => emit_struct_expression(
+            output,
+            argument,
+            locals,
+            bytes,
+            struct_values,
+            functions,
+            structs,
+        ),
     }
 }
 

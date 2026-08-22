@@ -24,8 +24,10 @@ lowerします。
 `allocate_i32_array(size)`、`array_get(array, index)`、`array_set(array, index, value)`は
 `[i32]`のallocationとaccessを提供します。
 
-array、struct、`bool`とstableなcompiler ABIは、下記の予定syntaxとして定義しますが、
-まだ未実装です。bootstrap compilerは下記ABIの暫定subsetを実装します。
+`bool`とstableなcompiler ABIは下記の予定syntaxとして定義しますが、まだ未実装です。
+seed subsetはfieldがすべて`i32`のstructを実装します。struct valueはlinear memory上のfieldを
+指すpointerで、constructorは`name(value, ...)`、field readは`value.field`です。field assignment、
+nested struct、struct array、`bytes` fieldは未実装です。bootstrap compilerは下記ABIの暫定subsetを実装します。
 
 ## Source form
 
@@ -71,11 +73,12 @@ whitespaceはtokenを区切ります。`//`から行末までをline commentと�
 newlineを推奨します。
 
 ```ebnf
-program    = module, { import }, { function } ;
+program    = module, { import }, { struct }, { function } ;
 module     = "module", identifier ;
 import     = "import", identifier ;
 function   = [ "export" ], "fn", identifier, "(", [ parameters ], ")",
              "->", type, block ;
+struct     = "struct", identifier, "{", { identifier, ":", "i32" }, "}" ;
 parameters = parameter, { ",", parameter } ;
 parameter  = identifier, ":", type ;
 type       = "i32" | "bool" | "bytes" | "[", type, "]" | identifier ;
