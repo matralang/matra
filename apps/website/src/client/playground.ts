@@ -275,7 +275,7 @@ document.querySelectorAll<HTMLButtonElement>(".example-button").forEach(button =
       item.setAttribute("aria-pressed", String(active))
     })
     render()
-    source.focus()
+    source.focus({ preventScroll: true })
   })
 })
 

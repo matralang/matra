@@ -38,6 +38,7 @@ assert.match(playgroundBundle, /Analytical engines/)
 assert.match(playgroundBundle, /matra-json/)
 assert.match(playgroundBundle, /GENERATED \/ TS/)
 assert.match(playgroundBundle, /@matra\/styles/)
+assert.match(playgroundBundle, /preventScroll/)
 
 execFileSync("pnpm", ["run", "build"], {
   stdio: "inherit",
