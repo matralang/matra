@@ -13,6 +13,7 @@ Matraはルート付きツリーを記述する、ドメイン非依存の記法
 2. [AST](./ast.ja.md) — object形式のメモリ内表現
 3. [Grammar](./grammar.ja.md) — ソーステキストと構文
 4. [Parser](./parser.ja.md) — parse interface、出力、mode、error
+5. [Matra Program](./program.ja.md) — WebAssembly向け実行profileのdraft
 
 英語文書は`name.md`、対応する日本語文書は`name.ja.md`とします。両言語版の
 規範的な意味は同一です。

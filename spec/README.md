@@ -14,6 +14,7 @@ requirements.
 2. [AST](./ast.md) — object-shaped in-memory representation
 3. [Grammar](./grammar.md) — source text and syntax
 4. [Parser](./parser.md) — parsing interface, output, modes, and errors
+5. [Matra Program](./program.md) — draft executable profile for WebAssembly
 
 Each English document is named `name.md`; its Japanese counterpart is named
 `name.ja.md`. Both versions have the same normative meaning.
