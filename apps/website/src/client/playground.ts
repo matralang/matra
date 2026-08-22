@@ -411,11 +411,11 @@ function extractMatraDocument(markdown: string): MatraDocument {
 
 function parseMatraFrontMatter(markdown: string): { entry?: string; renderer: MatraRenderer; title?: string | false } {
   const frontMatter = markdown.match(/(?:^|\n)---[ \t]*\n([\s\S]*?)\n---[ \t]*(?:\n|$)/)
-  if (!frontMatter) return { renderer: "auto" }
+  if (!frontMatter) return { renderer: "html" }
   const matra = frontMatter[1].match(/^matra:\s*\n((?:^[ \t]+.*(?:\n|$))*)/m)
-  if (!matra) return { renderer: "auto" }
+  if (!matra) return { renderer: "html" }
   const entry = matra[1].match(/^[ \t]+entry:\s*([^\s#]+)\s*$/m)?.[1]
-  const rawRenderer = matra[1].match(/^[ \t]+renderer:\s*(\S+)\s*$/m)?.[1] ?? "auto"
+  const rawRenderer = matra[1].match(/^[ \t]+renderer:\s*(\S+)\s*$/m)?.[1] ?? "html"
   const rawTitle = matra[1].match(/^[ \t]+title:\s*(.+?)\s*$/m)?.[1]
   if (rawRenderer !== "auto" && rawRenderer !== "html" && rawRenderer !== "svg" && rawRenderer !== "math") {
     throw new SyntaxError("matra.renderer must be one of auto, html, svg, or math.")
