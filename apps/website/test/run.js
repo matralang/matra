@@ -1,6 +1,22 @@
 import assert from "node:assert/strict"
-import { readFile } from "node:fs/promises"
+import { readdir, readFile } from "node:fs/promises"
+import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { execFileSync } from "node:child_process"
+
+async function collectMatraPages(directory) {
+  const entries = await readdir(directory, { withFileTypes: true })
+  const files = await Promise.all(entries.map(async entry => {
+    const fullPath = join(directory, entry.name)
+    if (entry.isDirectory()) return collectMatraPages(fullPath)
+    return entry.isFile() && entry.name.endsWith(".matra") ? [fullPath] : []
+  }))
+  return files.flat()
+}
+
+const pageSources = await collectMatraPages(fileURLToPath(new URL("../src/pages", import.meta.url)))
+assert.equal(pageSources.length, 11)
+assert.ok(pageSources.every(page => page.endsWith(".matra")))
 
 execFileSync("pnpm", ["run", "build"], { stdio: "inherit" })
 
@@ -10,12 +26,36 @@ const spec = await readFile(new URL("../dist/spec/index.html", import.meta.url),
 const playground = await readFile(new URL("../dist/play/index.html", import.meta.url), "utf8")
 const playgroundBundle = await readFile(new URL("../dist/assets/playground.js", import.meta.url), "utf8")
 
+for (const page of [
+  "blog/index.html",
+  "docs/index.html",
+  "examples/index.html",
+  "index.html",
+  "packages/index.html",
+  "play/index.html",
+  "spec/index.html",
+  "spec/data-model/index.html",
+  "spec/ast/index.html",
+  "spec/grammar/index.html",
+  "spec/parser/index.html",
+]) {
+  const document = await readFile(new URL(`../dist/${page}`, import.meta.url), "utf8")
+  assert.match(document, /^<!DOCTYPE html>/, page)
+  assert.match(document, /<header class="site-header">/, page)
+  assert.match(document, /<footer class="site-footer">/, page)
+  assert.match(document, /fonts\.googleapis\.com/, page)
+  assert.match(document, /fonts\.gstatic\.com/, page)
+}
+
 assert.match(index, /^<!DOCTYPE html>/)
 assert.match(index, /<title>Matra — Structure first/)
 assert.match(index, /https:\/\/www\.googletagmanager\.com\/gtm\.js\?id=/)
 assert.match(index, /GTM-T8JD7GH9/)
 assert.match(index, /<noscript><iframe src="https:\/\/www\.googletagmanager\.com\/ns\.html\?id=GTM-T8JD7GH9"/)
 assert.match(index, /意味より先に、構造を書く/)
+assert.match(index, /hello\.matra/)
+assert.doesNotMatch(index, /hello\.matra\.ts/)
+assert.match(index, /<code>group\[role=&quot;list&quot;\]/)
 assert.match(docs, /<title>Matraを使う — Matra/)
 assert.match(spec, /<title>Index — Matra Specification v0.2/)
 assert.match(spec, /Data Model/)

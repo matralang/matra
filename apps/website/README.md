@@ -30,5 +30,6 @@ package are available to the website locally without `file:` dependencies or
 | `/packages/` | パッケージ一覧 | `api.matralang.org` |
 | `/blog/` | 開発記録 | `blog.matralang.org` |
 
-ページは`src/pages`、共通レイアウトは`src/layouts`、スタイルは`src/styles`に置きます。
+Pages are `.matra` files under `src/pages`, and styles live in `src/styles`.
+The build parses each Matra source directly and renders it to HTML.
 GitHub Pagesのproject pathはworkflowから`SITE_BASE_PATH`として自動設定されます。

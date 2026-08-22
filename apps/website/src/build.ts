@@ -2,8 +2,6 @@
 import * as fs from "fs"
 // @ts-ignore: allow importing path without @types/node installed
 import * as path from "path"
-// @ts-ignore: allow importing url without @types/node installed
-import { pathToFileURL } from "url"
 import { build } from "esbuild"
 
 // Declare the Node `process` global when @types/node is not installed.
@@ -11,6 +9,47 @@ declare const process: any;
 
 import { parse } from "@matra/core"
 import { toHTML } from "@matra/html"
+
+const siteHeader = parse(`
+  header.site-header {
+    div.shell.nav-shell {
+      a.brand[href="/"] { span.brand-mark { "M" } span { "Matra" } }
+      nav.site-nav[aria-label="メインナビゲーション"] {
+        a[href="/docs/"] { "Docs" }
+        a[href="/spec/"] { "Specification" }
+        a[href="/play/"] { "Playground" }
+        a[href="https://github.com/matralang/matra"] { "GitHub" }
+      }
+    }
+  }
+`)
+
+const siteFooter = parse(`
+  footer.site-footer {
+    div.shell.footer-grid {
+      div { strong { "Matra" } p { "Structure first. Domain later." } }
+      p { "Matra Specification v0.2" }
+    }
+  }
+`)
+
+const googleTagManagerBody = parse(`
+  noscript {
+    iframe[src="https://www.googletagmanager.com/ns.html?id=GTM-T8JD7GH9", height="0", width="0", style="display:none;visibility:hidden"] {}
+  }
+`)
+
+const googleTagManagerHead = parse(`
+  script~(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-T8JD7GH9');~
+`)
+
+const sharedHeadNodes = parse(`
+  $root {
+    link[rel="preconnect", href="https://fonts.googleapis.com"];
+    link[rel="preconnect", href="https://fonts.gstatic.com", crossorigin="anonymous"];
+    link[href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap", rel="stylesheet"];
+  }
+`).children
 
 function getBasePath(): string {
   const raw = process.env.SITE_BASE_PATH?.trim() ?? ""
@@ -39,25 +78,25 @@ function isIgnoredPath(relFromPages: string): boolean {
   return false
 }
 
-// collect .ts files recursively
-function collectTsFiles(dir: string): string[] {
+// Collect native Matra page files recursively.
+function collectMatraFiles(dir: string): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true })
   const results: string[] = []
   for (const ent of entries) {
     const full = path.join(dir, ent.name)
     if (ent.isDirectory()) {
-      results.push(...collectTsFiles(full))
-    } else if (ent.isFile() && full.endsWith(".ts") && !full.endsWith(".d.ts")) {
+      results.push(...collectMatraFiles(full))
+    } else if (ent.isFile() && full.endsWith(".matra")) {
       results.push(full)
     }
   }
   return results
 }
 
-function toNuxtLikeOutputPath(pagesDirAbs: string, filePathAbs: string): string {
+function toOutputPath(pagesDirAbs: string, filePathAbs: string): string {
   // rel uses platform separators; normalize to posix for checks, but finally join with path
-  const rel = path.relative(pagesDirAbs, filePathAbs) // e.g. "about.ts" or "about/index.ts"
-  const noExt = rel.replace(/\.ts$/, "")
+  const rel = path.relative(pagesDirAbs, filePathAbs) // e.g. "about.matra" or "about/index.matra"
+  const noExt = rel.replace(/\.matra$/, "")
 
   // "index" (root) -> "index.html"
   if (noExt === "index") {
@@ -79,7 +118,7 @@ function assertNoOutputCollisions(pagesDirAbs: string, filesAbs: string[]) {
   const collisions: Array<{ outRel: string; a: string; b: string }> = []
 
   for (const fp of filesAbs) {
-    const outRel = toNuxtLikeOutputPath(pagesDirAbs, fp)
+    const outRel = toOutputPath(pagesDirAbs, fp)
     const inRel = path.relative(pagesDirAbs, fp)
     const prev = seen.get(outRel)
     if (prev) {
@@ -100,10 +139,41 @@ function assertNoOutputCollisions(pagesDirAbs: string, filesAbs: string[]) {
   }
 }
 
+function isNode(value: unknown): value is { tag: string, props: Record<string, unknown>, children: unknown[] } {
+  return value !== null && typeof value === "object" && !Array.isArray(value) && "tag" in value
+}
+
+function hasNode(nodes: unknown[], tag: string, prop?: [string, string]): boolean {
+  return nodes.some(node =>
+    isNode(node) && node.tag === tag && (!prop || node.props[prop[0]] === prop[1]),
+  )
+}
+
+function applySiteChrome(ast: ReturnType<typeof parse>) {
+  const head = ast.children.find(node => isNode(node) && node.tag === "head")
+  const body = ast.children.find(node => isNode(node) && node.tag === "body")
+  if (!isNode(head) || !isNode(body)) return ast
+
+  for (const node of sharedHeadNodes) {
+    if (isNode(node) && !hasNode(head.children, node.tag, ["href", String(node.props.href)])) {
+      head.children.push(node)
+    }
+  }
+  if (!hasNode(head.children, "script")) head.children.push(googleTagManagerHead)
+
+  if (!hasNode(body.children, "noscript")) body.children.unshift(googleTagManagerBody)
+  if (!hasNode(body.children, "header")) {
+    const mainIndex = body.children.findIndex(node => isNode(node) && node.tag === "main")
+    body.children.splice(mainIndex < 0 ? body.children.length : mainIndex, 0, siteHeader)
+  }
+  if (!hasNode(body.children, "footer")) body.children.push(siteFooter)
+  return ast
+}
+
 async function handler() {
   const pagesDir = path.join(process.cwd(), "src", "pages")
   const outputDir = path.join(process.cwd(), "dist")
-  const pageFiles = collectTsFiles(pagesDir).filter(fp => {
+  const pageFiles = collectMatraFiles(pagesDir).filter(fp => {
     const rel = path.relative(pagesDir, fp)
     return !isIgnoredPath(rel)
   })
@@ -118,25 +188,19 @@ async function handler() {
   fs.rmSync(outputDir, { recursive: true, force: true })
 
   await Promise.all(pageFiles.map(async (filePath: string) => {
-    const pageModule = await import(pathToFileURL(filePath).toString())
-
-    if (pageModule.default) {
-      const outRel = toNuxtLikeOutputPath(pagesDir, filePath)
-      const outputPath = path.join(outputDir, outRel)
-      const outDir = path.dirname(outputPath)
-      if (!fs.existsSync(outDir)) {
-        fs.mkdirSync(outDir, { recursive: true })
-      }
-
-      // pageModule.default is Matra DSL string
-      const ast = parse(pageModule.default)
-      const htmlContent = DOCTYPE + applyBasePath(toHTML(ast), basePath)
-
-      fs.writeFileSync(outputPath, htmlContent)
-      console.log(`Generated HTML file at: ${outputPath}`)
-    } else {
-      console.warn(`No default export found in module: ${path.relative(pagesDir, filePath)}`)
+    const source = fs.readFileSync(filePath, "utf8")
+    const outRel = toOutputPath(pagesDir, filePath)
+    const outputPath = path.join(outputDir, outRel)
+    const outDir = path.dirname(outputPath)
+    if (!fs.existsSync(outDir)) {
+      fs.mkdirSync(outDir, { recursive: true })
     }
+
+    const ast = applySiteChrome(parse(source, { sourceId: path.relative(process.cwd(), filePath) }))
+    const htmlContent = DOCTYPE + applyBasePath(toHTML(ast), basePath)
+
+    fs.writeFileSync(outputPath, htmlContent)
+    console.log(`Generated HTML file at: ${outputPath}`)
   }))
 
   const assetsDir = path.join(outputDir, "assets")
