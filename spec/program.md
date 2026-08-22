@@ -19,6 +19,8 @@ variables, function calls, arithmetic, comparisons, `if` / `else`, `while`,
 and `break`. It exports one page of WebAssembly linear memory. A `bytes`
 parameter and return value lower to `(pointer, length)`, and parameters support
 `byte_length(source)` and `byte_at(source, index)`.
+`allocate_bytes(size)` allocates `bytes` in linear memory, and `byte_set(bytes,
+index, value)` writes one byte.
 
 Arrays, structs, `bool`, and the stable compiler ABI are specified as planned
 syntax below, but are not yet implemented.
@@ -77,9 +79,10 @@ parameters = parameter, { ",", parameter } ;
 parameter  = identifier, ":", type ;
 type       = "i32" | "bool" | "bytes" | "[", type, "]" | identifier ;
 block      = "{", { statement }, "}" ;
-statement  = let | assignment | if | while | break | return ;
+statement  = let | assignment | byte_set | if | while | break | return ;
 let        = "let", identifier, [ ":", type ], "=", expression ;
 assignment = identifier, "=", expression ;
+byte_set   = "byte_set", "(", expression, ",", expression, ",", expression, ")" ;
 if         = "if", expression, block, [ "else", block ] ;
 while      = "while", expression, block ;
 break      = "break" ;
@@ -97,6 +100,11 @@ inside Wasm and receives data through linear memory. The planned ABI lowers a
 `bytes` argument to `(pointer: i32, length: i32)`. It will provide
 `byte_length(source)` and `byte_at(source, index)` without granting filesystem
 or network access to compiled code.
+
+In the seed subset, `allocate_bytes(size)` returns `bytes` from a bump
+allocator. `byte_set(bytes, index, value)` writes the low 8 bits of `value` at
+the given offset. These are temporary intrinsics for the self-hosted compiler's
+binary emitter.
 
 ## Compiler ABI draft
 

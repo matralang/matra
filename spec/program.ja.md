@@ -19,6 +19,8 @@ arithmetic、comparison、`if` / `else`、`while`、`break`を実装します。
 linear memoryを1 page exportし、`bytes` parameterとreturn valueを`(pointer, length)`へ
 lowerします。
 `byte_length(source)`と`byte_at(source, index)`を利用できます。
+`allocate_bytes(size)`はlinear memory上の`bytes`を確保し、`byte_set(bytes, index, value)`は
+1 byteを書き込みます。
 
 array、struct、`bool`、安定したcompiler ABIは、下記の予定syntaxとして定義しますが、
 まだ未実装です。
@@ -76,9 +78,10 @@ parameters = parameter, { ",", parameter } ;
 parameter  = identifier, ":", type ;
 type       = "i32" | "bool" | "bytes" | "[", type, "]" | identifier ;
 block      = "{", { statement }, "}" ;
-statement  = let | assignment | if | while | break | return ;
+statement  = let | assignment | byte_set | if | while | break | return ;
 let        = "let", identifier, [ ":", type ], "=", expression ;
 assignment = identifier, "=", expression ;
+byte_set   = "byte_set", "(", expression, ",", expression, ",", expression, ")" ;
 if         = "if", expression, block, [ "else", block ] ;
 while      = "while", expression, block ;
 break      = "break" ;
@@ -95,6 +98,10 @@ hostがfile accessを担当して生成moduleを起動します。Program code�
 linear memoryでdataを受け取ります。予定しているABIでは`bytes` argumentを
 `(pointer: i32, length: i32)`へlowerします。`byte_length(source)`と
 `byte_at(source, index)`を提供し、compiled codeへfilesystemやnetworkの権限を渡しません。
+
+seed subsetでは`allocate_bytes(size)`がbump allocatorから`bytes` valueを返します。
+`byte_set(bytes, index, value)`は指定したoffsetへvalueの下位8 bitを書き込みます。
+これらは自己ホストcompilerのbinary emitter向けの暫定intrinsicです。
 
 ## Compiler ABI draft
 

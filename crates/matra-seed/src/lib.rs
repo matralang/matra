@@ -166,6 +166,7 @@ enum ValueType {
 enum Statement {
     Let(String, Option<ValueType>, Expression),
     Assign(String, Expression),
+    ByteSet(Expression, Expression, Expression),
     If(Expression, Vec<Statement>, Vec<Statement>),
     While(Expression, Vec<Statement>),
     Break,
@@ -365,6 +366,16 @@ impl<'a> Parser<'a> {
             return Ok(Statement::While(condition, self.block()?));
         }
         let name = self.identifier()?;
+        if name == "byte_set" {
+            self.expect('(')?;
+            let bytes = self.expression()?;
+            self.expect(',')?;
+            let index = self.expression()?;
+            self.expect(',')?;
+            let value = self.expression()?;
+            self.expect(')')?;
+            return Ok(Statement::ByteSet(bytes, index, value));
+        }
         self.expect('=')?;
         Ok(Statement::Assign(name, self.expression()?))
     }
@@ -657,6 +668,9 @@ fn emit_module(program: &Program) -> Result<Vec<u8>, CompileError> {
     // 1 page (64 KiB) of linear memory is the initial host/Program boundary.
     section(&mut output, 5, &[0x01, 0x00, 0x01]);
 
+    // The bump allocator starts after the bootstrap compiler's static bytes.
+    section(&mut output, 6, &[0x01, 0x7f, 0x01, 0x41, 0x08, 0x0b]);
+
     let exported: Vec<_> = program
         .functions
         .iter()
@@ -869,7 +883,10 @@ fn collect_locals<'a>(
                 local_count,
                 functions,
             )?,
-            Statement::Assign(_, _) | Statement::Break | Statement::Return(_) => {}
+            Statement::Assign(_, _)
+            | Statement::ByteSet(_, _, _)
+            | Statement::Break
+            | Statement::Return(_) => {}
         }
     }
     Ok(())
@@ -906,6 +923,20 @@ fn emit_statements(
                 } else {
                     return Err(CompileError::new(format!("Unknown variable: {name}")));
                 }
+            }
+            Statement::ByteSet(bytes_value, index, value) => {
+                let Expression::Variable(name) = bytes_value else {
+                    return Err(CompileError::new("byte_set expects a bytes variable."));
+                };
+                let (pointer, _) = bytes
+                    .get(name.as_str())
+                    .ok_or_else(|| CompileError::new(format!("Unknown bytes variable: {name}")))?;
+                output.push(0x20);
+                encode_u32(output, *pointer);
+                emit_expression(output, index, locals, bytes, functions)?;
+                output.push(0x6a);
+                emit_expression(output, value, locals, bytes, functions)?;
+                output.extend([0x3a, 0x00, 0x00]);
             }
             Statement::Return(expression) => {
                 match return_type {
@@ -1086,6 +1117,21 @@ fn emit_bytes_expression(
 ) -> Result<(), CompileError> {
     match expression {
         Expression::Call(name, arguments)
+            if name == "allocate_bytes" && !functions.contains_key(name.as_str()) =>
+        {
+            if arguments.len() != 1 {
+                return Err(CompileError::new(format!(
+                    "Function allocate_bytes expects 1 argument, found {}",
+                    arguments.len()
+                )));
+            }
+            output.extend([0x23, 0x00, 0x23, 0x00]);
+            emit_expression(output, &arguments[0], locals, bytes, functions)?;
+            output.extend([0x6a, 0x24, 0x00]);
+            emit_expression(output, &arguments[0], locals, bytes, functions)?;
+            Ok(())
+        }
+        Expression::Call(name, arguments)
             if name == "__seed_empty_module" && !functions.contains_key(name.as_str()) =>
         {
             if !arguments.is_empty() {
@@ -1144,6 +1190,11 @@ fn expression_type(
         Expression::Variable(name) if locals.contains_key(name.as_str()) => Ok(ValueType::I32),
         Expression::Variable(name) if bytes.contains_key(name.as_str()) => Ok(ValueType::Bytes),
         Expression::Variable(name) => Err(CompileError::new(format!("Unknown variable: {name}"))),
+        Expression::Call(name, _)
+            if name == "allocate_bytes" && !functions.contains_key(name.as_str()) =>
+        {
+            Ok(ValueType::Bytes)
+        }
         Expression::Call(name, _) => functions
             .get(name.as_str())
             .map(|signature| signature.return_type)

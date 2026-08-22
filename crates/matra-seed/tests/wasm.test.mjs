@@ -111,6 +111,12 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     const bytes = new Uint8Array(module.instance.exports.memory.buffer, pointer, length)
     assert.deepEqual([...bytes], [0, 97, 115, 109, 1, 0, 0, 0])
     await WebAssembly.compile(bytes)
+
+    const [nextPointer, nextLength] = module.instance.exports.compile(0, 0)
+    assert.equal(nextLength, 8)
+    assert.notEqual(nextPointer, pointer)
+    const nextBytes = new Uint8Array(module.instance.exports.memory.buffer, nextPointer, nextLength)
+    assert.deepEqual([...nextBytes], [0, 97, 115, 109, 1, 0, 0, 0])
   } finally {
     await rm(directory, { recursive: true, force: true })
   }
