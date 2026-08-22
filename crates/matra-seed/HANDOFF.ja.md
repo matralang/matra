@@ -2,7 +2,7 @@
 
 ## 現在の状態
 
-作業ツリーはcleanです。直近の完了commitは`8a22a39 seed compilerにstruct最小subsetを追加`です。
+作業ツリーはcleanです。直近の完了commitは`4750383 bootstrap emitterでsigned LEB128を一般化する`です。
 
 bootstrap compilerのsourceは`examples/compiler.md`にあります。seed compilerはMarkdownの
 `*.matra.program` fenceをWasm moduleへcompileします。
@@ -15,6 +15,10 @@ bootstrap compilerのsourceは`examples/compiler.md`にあります。seed compi
 - 空sourceの`compile`は20-byte result recordを返し、recordは有効な空Wasm moduleを参照
 - 非空sourceは暫定的にstatus `1`と空diagnostic fieldを返す
 - `struct`は固定長の`i32` field、constructor、field read、parameter/local/returnに対応
+- bootstrap lexerはASCII whitespaceと`//` commentをskipし、EOF、identifier、integer、symbolを読む
+- bootstrap parserは`module`、`import`、`fn` / `export fn`、1個の`i32` parameterを読む
+- bootstrap emitterはliteral return、parameter return、signed LEB128をemitする
+- bootstrap compilerは2個の引数なしfunctionで、entryからhelperをcallする最小形をemitする
 
 ## 検証
 
@@ -26,7 +30,8 @@ pnpm run lint:markdown
 ```
 
 `tests/wasm.test.mjs`は、空Wasm output、result record、同一instanceの複数call、
-`bytes`のfunction call、`[i32]`のread/writeを実行検証します。
+`bytes`のfunction call、`[i32]`のread/writeに加え、bootstrap compilerが生成したWasmの
+literal return、parameter return、negative return、helper callを実行検証します。
 
 ## 主要なファイル
 
@@ -35,10 +40,11 @@ pnpm run lint:markdown
 - `tests/wasm.test.mjs`: Node.jsによるWasm実行test
 - `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
 
-## 次の作業: lexer
+## 次の作業: function一覧の一般化
 
-bootstrap compilerにtoken列を読むlexerを追加する。ASCII whitespaceと`//` commentをskipし、
-EOF、identifier、integer、symbolを区別する単一tokenの読み取りを実装済みです。
+現在のbootstrap emitterは、single functionと「helper + entry」の2関数形を直接生成する。
+任意数のfunction、parameter付きcall、function indexを扱うため、function definitionをflattenedな
+`[i32]` tableへ格納する。
 
 ```matra
 struct token {
@@ -51,24 +57,21 @@ let value = token(1, 4, 2)
 return value.kind
 ```
 
-tokenは`kind`、`start`、`length`を持つ。source bytesは既存の`bytes` valueのまま保持し、
-token列をarrayへ保存するのはarray of structが利用可能になってからにする。
+recordは`name_start`、`name_length`、`parameter_count`、`return_kind`、`return_value`などの
+固定fieldを持つ。array of structが未実装のため、recordごとに固定strideで配置する。
 
 推奨する実装順は次のとおり。
 
-1. `next_token(source, offset) -> token`でwhitespaceをskipする。
-2. EOF、identifier、integer、symbolを`kind`で返し、identifierとintegerの連続長を計算する。
-3. `compile`がEOF tokenを空Programとして成功させる。
-4. Node実行testでwhitespace-only inputとtoken rangeを確認する。
-5. sourceとoffsetで逐次読むtoken cursorを使い、`module identifier`と`import identifier`をparseする。
-6. 引数なし、`i32` return、integer literalのfunction declarationをparseする。
-7. 解析した1個のfunctionをWasm type / function / export / code sectionへemitする。
-8. 1個の`i32` parameterをWasm parameterと`local.get 0`へlowerする。
-9. 2個の引数なしfunctionと、entryからhelperへのfunction callをlowerする。
-10. function一覧を一般化し、parameter付きcallと任意数のfunctionをlowerする。
+1. function tableのrecord layoutとstrideを定義する。
+2. parserがfunctionを反復してtableへ追加する。
+3. emitterがtable長からtype / function / code sectionを生成する。
+4. call target名をtableで解決し、function indexをemitする。
+5. parameter付きcallと複数signatureへ拡張する。
 
-引数なしfunctionのinteger literal returnはnonnegativeとnegativeのi32 literalを受理し、
-signed LEB128へlowerする。
+single functionはliteral return、または1個の`i32` parameterをreturnする形をemitする。
+2関数はhelperがinteger literalをreturnし、entryが引数なしでhelperをcallする形だけをsuccessとして
+emitする。未対応の複数function形・未解決callはfunctionを落としたWasmを生成せずdiagnostic statusを返す。
+integer literalは正数・負数ともsigned LEB128へlowerする。
 
 `fn`と`export fn`はどちらもparseできる。現時点でemitする単関数はexport keywordの有無にかかわらず
 exportされる。
