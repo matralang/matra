@@ -67,6 +67,9 @@ token列をarrayへ保存するのはarray of structが利用可能になって�
 9. 2個の引数なしfunctionと、entryからhelperへのfunction callをlowerする。
 10. function一覧を一般化し、parameter付きcallと任意数のfunctionをlowerする。
 
+`fn`と`export fn`はどちらもparseできる。現時点でemitする単関数はexport keywordの有無にかかわらず
+exportされる。
+
 現時点で2個のfunctionがあるProgramは、helperがnonnegative integer literalをreturnし、entryが
 引数なしでhelperをcallする形だけをsuccessとしてemitする。call targetがhelperと一致しない場合を
 含め、それ以外はfunctionを落としたWasmを生成せずdiagnostic statusを返す。

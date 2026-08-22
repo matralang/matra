@@ -193,6 +193,31 @@ fn is_fn_keyword(source: bytes, value: token) -> i32 {
   return 1
 }
 
+fn is_export_keyword(source: bytes, value: token) -> i32 {
+  if value.length != 6 {
+    return 0
+  }
+  if byte_at(source, value.start) != 101 {
+    return 0
+  }
+  if byte_at(source, value.start + 1) != 120 {
+    return 0
+  }
+  if byte_at(source, value.start + 2) != 112 {
+    return 0
+  }
+  if byte_at(source, value.start + 3) != 111 {
+    return 0
+  }
+  if byte_at(source, value.start + 4) != 114 {
+    return 0
+  }
+  if byte_at(source, value.start + 5) != 116 {
+    return 0
+  }
+  return 1
+}
+
 fn is_return_keyword(source: bytes, value: token) -> i32 {
   if value.length != 6 {
     return 0
@@ -273,6 +298,9 @@ fn same_token(source: bytes, left: token, right: token) -> i32 {
 
 fn parse_function(source: bytes, offset: i32) -> function_definition {
   let keyword = next_token(source, offset)
+  if is_export_keyword(source, keyword) == 1 {
+    keyword = next_token(source, keyword.start + keyword.length)
+  }
   if is_fn_keyword(source, keyword) == 0 {
     return function_definition(0, 0, 0, 0, offset)
   }
