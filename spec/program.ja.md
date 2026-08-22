@@ -21,6 +21,8 @@ lowerします。
 `byte_length(source)`と`byte_at(source, index)`を利用できます。
 `allocate_bytes(size)`はlinear memory上の`bytes`を確保し、`byte_set(bytes, index, value)`は
 1 byteを書き込みます。`byte_pointer(bytes)`はそのpointerを返します。
+`allocate_i32_array(size)`、`array_get(array, index)`、`array_set(array, index, value)`は
+`[i32]`のallocationとaccessを提供します。
 
 array、struct、`bool`とstableなcompiler ABIは、下記の予定syntaxとして定義しますが、
 まだ未実装です。bootstrap compilerは下記ABIの暫定subsetを実装します。

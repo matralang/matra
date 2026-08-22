@@ -53,6 +53,13 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
     "  return tree",
     "}",
     "",
+    "export fn array_value() -> i32 {",
+    "  let values: [i32] = allocate_i32_array(2)",
+    "  array_set(values, 0, 20)",
+    "  array_set(values, 1, 22)",
+    "  return array_get(values, 0) + array_get(values, 1)",
+    "}",
+    "",
     "export fn answer(input: i32) -> i32 {",
     "  let doubled = double(input)",
     "  let result: i32 = doubled + 2",
@@ -88,6 +95,7 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
     assert.equal(module.instance.exports.source_length(16, 3), 3)
     assert.equal(module.instance.exports.forwarded_first_byte(16, 3), 65)
     assert.deepEqual(module.instance.exports.retain(16, 3), [16, 3])
+    assert.equal(module.instance.exports.array_value(), 42)
   } finally {
     await rm(directory, { recursive: true, force: true })
   }

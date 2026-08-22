@@ -160,6 +160,7 @@ struct Parameter {
 enum ValueType {
     I32,
     Bytes,
+    ArrayI32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -167,6 +168,7 @@ enum Statement {
     Let(String, Option<ValueType>, Expression),
     Assign(String, Expression),
     ByteSet(Expression, Expression, Expression),
+    ArraySet(Expression, Expression, Expression),
     If(Expression, Vec<Statement>, Vec<Statement>),
     While(Expression, Vec<Statement>),
     Break,
@@ -376,6 +378,16 @@ impl<'a> Parser<'a> {
             self.expect(')')?;
             return Ok(Statement::ByteSet(bytes, index, value));
         }
+        if name == "array_set" {
+            self.expect('(')?;
+            let array = self.expression()?;
+            self.expect(',')?;
+            let index = self.expression()?;
+            self.expect(',')?;
+            let value = self.expression()?;
+            self.expect(')')?;
+            return Ok(Statement::ArraySet(array, index, value));
+        }
         self.expect('=')?;
         Ok(Statement::Assign(name, self.expression()?))
     }
@@ -496,6 +508,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_type(&mut self) -> Result<ValueType, CompileError> {
+        if self.consume('[') {
+            self.expect_keyword("i32")?;
+            self.expect(']')?;
+            return Ok(ValueType::ArrayI32);
+        }
         match self.identifier()?.as_str() {
             "i32" => Ok(ValueType::I32),
             "bytes" => Ok(ValueType::Bytes),
@@ -752,7 +769,7 @@ fn parameter_slots(parameter: &Parameter) -> usize {
 fn value_slots(value_type: ValueType) -> usize {
     match value_type {
         ValueType::I32 => 1,
-        ValueType::Bytes => 2,
+        ValueType::Bytes | ValueType::ArrayI32 => 2,
     }
 }
 
@@ -775,7 +792,7 @@ fn emit_function(
             ValueType::I32 => locals
                 .insert(parameter.name.as_str(), parameter_index)
                 .is_none(),
-            ValueType::Bytes => bytes
+            ValueType::Bytes | ValueType::ArrayI32 => bytes
                 .insert(
                     parameter.name.as_str(),
                     (parameter_index, parameter_index + 1),
@@ -848,7 +865,7 @@ fn collect_locals<'a>(
                         locals.insert(name, index);
                         *local_count += 1;
                     }
-                    ValueType::Bytes => {
+                    ValueType::Bytes | ValueType::ArrayI32 => {
                         bytes.insert(name, (index, index + 1));
                         *local_count += 2;
                     }
@@ -885,6 +902,7 @@ fn collect_locals<'a>(
             )?,
             Statement::Assign(_, _)
             | Statement::ByteSet(_, _, _)
+            | Statement::ArraySet(_, _, _)
             | Statement::Break
             | Statement::Return(_) => {}
         }
@@ -938,12 +956,26 @@ fn emit_statements(
                 emit_expression(output, value, locals, bytes, functions)?;
                 output.extend([0x3a, 0x00, 0x00]);
             }
+            Statement::ArraySet(array_value, index, value) => {
+                let Expression::Variable(name) = array_value else {
+                    return Err(CompileError::new("array_set expects an array variable."));
+                };
+                let (pointer, _) = bytes
+                    .get(name.as_str())
+                    .ok_or_else(|| CompileError::new(format!("Unknown array variable: {name}")))?;
+                output.push(0x20);
+                encode_u32(output, *pointer);
+                emit_expression(output, index, locals, bytes, functions)?;
+                output.extend([0x41, 0x04, 0x6c, 0x6a]);
+                emit_expression(output, value, locals, bytes, functions)?;
+                output.extend([0x36, 0x02, 0x00]);
+            }
             Statement::Return(expression) => {
                 match return_type {
                     ValueType::I32 => {
                         emit_expression(output, expression, locals, bytes, functions)?
                     }
-                    ValueType::Bytes => {
+                    ValueType::Bytes | ValueType::ArrayI32 => {
                         emit_bytes_expression(output, expression, locals, bytes, functions)?
                     }
                 }
@@ -1053,6 +1085,21 @@ fn emit_expression(
                 encode_u32(output, *length);
                 return Ok(());
             }
+            if name == "array_get" {
+                let [Expression::Variable(array), index] = arguments.as_slice() else {
+                    return Err(CompileError::new(
+                        "array_get expects an array variable and an index.",
+                    ));
+                };
+                let (pointer, _) = bytes
+                    .get(array.as_str())
+                    .ok_or_else(|| CompileError::new(format!("Unknown array variable: {array}")))?;
+                output.push(0x20);
+                encode_u32(output, *pointer);
+                emit_expression(output, index, locals, bytes, functions)?;
+                output.extend([0x41, 0x04, 0x6c, 0x6a, 0x28, 0x02, 0x00]);
+                return Ok(());
+            }
             if name == "byte_at" {
                 if arguments.len() != 2 {
                     return Err(CompileError::new(format!(
@@ -1129,6 +1176,21 @@ fn emit_bytes_expression(
     functions: &HashMap<&str, FunctionSignature>,
 ) -> Result<(), CompileError> {
     match expression {
+        Expression::Call(name, arguments)
+            if name == "allocate_i32_array" && !functions.contains_key(name.as_str()) =>
+        {
+            if arguments.len() != 1 {
+                return Err(CompileError::new(format!(
+                    "Function allocate_i32_array expects 1 argument, found {}",
+                    arguments.len()
+                )));
+            }
+            output.extend([0x23, 0x00, 0x23, 0x00]);
+            emit_expression(output, &arguments[0], locals, bytes, functions)?;
+            output.extend([0x41, 0x04, 0x6c, 0x6a, 0x24, 0x00]);
+            emit_expression(output, &arguments[0], locals, bytes, functions)?;
+            Ok(())
+        }
         Expression::Call(name, arguments)
             if name == "allocate_bytes" && !functions.contains_key(name.as_str()) =>
         {
@@ -1208,6 +1270,11 @@ fn expression_type(
         {
             Ok(ValueType::Bytes)
         }
+        Expression::Call(name, _)
+            if name == "allocate_i32_array" && !functions.contains_key(name.as_str()) =>
+        {
+            Ok(ValueType::ArrayI32)
+        }
         Expression::Call(name, _) if name == "byte_pointer" => Ok(ValueType::I32),
         Expression::Call(name, _) => functions
             .get(name.as_str())
@@ -1229,7 +1296,7 @@ fn emit_argument(
 ) -> Result<(), CompileError> {
     match parameter_type {
         ValueType::I32 => emit_expression(output, argument, locals, bytes, functions),
-        ValueType::Bytes => {
+        ValueType::Bytes | ValueType::ArrayI32 => {
             let Expression::Variable(name) = argument else {
                 return Err(CompileError::new(
                     "A bytes argument must be a bytes variable.",

@@ -21,6 +21,8 @@ parameter and return value lower to `(pointer, length)`, and parameters support
 `byte_length(source)` and `byte_at(source, index)`.
 `allocate_bytes(size)` allocates `bytes` in linear memory, and `byte_set(bytes,
 index, value)` writes one byte. `byte_pointer(bytes)` returns its pointer.
+`allocate_i32_array(size)`, `array_get(array, index)`, and `array_set(array,
+index, value)` provide allocation and access for `[i32]`.
 
 Arrays, structs, `bool`, and a stable compiler ABI are specified as planned
 syntax below, but are not yet implemented. The bootstrap compiler implements a
