@@ -25,14 +25,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
+          cache: pnpm
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - run: pnpm install --frozen-lockfile
       - id: pages
         uses: actions/configure-pages@v5
       - name: Build
         env:
           SITE_BASE_PATH: ${{ steps.pages.outputs.base_path }}
-        run: npm run build
+        run: pnpm run build
       - uses: actions/upload-pages-artifact@v4
         with:
           path: apps/website/dist

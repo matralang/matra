@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import { execFileSync } from "node:child_process"
 
-execFileSync("npm", ["run", "build"], { stdio: "inherit" })
+execFileSync("pnpm", ["run", "build"], { stdio: "inherit" })
 
 const index = await readFile(new URL("../dist/index.html", import.meta.url), "utf8")
 const docs = await readFile(new URL("../dist/docs/index.html", import.meta.url), "utf8")
@@ -35,7 +35,7 @@ assert.match(playgroundBundle, /matra-json/)
 assert.match(playgroundBundle, /JavaScript \/ TypeScript code must return/)
 assert.match(playgroundBundle, /GENERATED \/ JS \+ TS/)
 
-execFileSync("npm", ["run", "build"], {
+execFileSync("pnpm", ["run", "build"], {
   stdio: "inherit",
   env: { ...process.env, SITE_BASE_PATH: "/website" },
 })
