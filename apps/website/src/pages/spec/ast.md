@@ -48,6 +48,6 @@ article.docs-content {
 
 ```ast-conversion.txt
 { tag, props, children }
-↕
+          ↕
 [tag, props, children]
 ```

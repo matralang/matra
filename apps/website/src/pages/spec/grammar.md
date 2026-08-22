@@ -46,6 +46,6 @@ section(
 ```document-syntax.matra
 article.card#main {
   h1 { "Title" }
-  p\`Body\`
+  p`Body`
 }
 ```

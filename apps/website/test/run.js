@@ -98,6 +98,9 @@ for (const page of specPages) {
   assert.match(page, /<aside class="docs-nav">/)
   assert.match(page, /<div class="shell docs-shell">/)
 }
+assert.match(specPages[1], /\n {10}↕\n/)
+assert.match(specPages[2], /p`Body`/)
+assert.doesNotMatch(specPages[2], /p\\`Body\\`/)
 assert.match(playground, /<title>Playground — Matra/)
 assert.match(playground, /id="matra-source"/)
 assert.match(playground, /<textarea[^>]*># Card/)
