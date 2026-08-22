@@ -15,6 +15,7 @@
     "@matra/core": "workspace:^",
     "@matra/graphics": "workspace:^",
     "@matra/html": "workspace:^",
+    "@matra/math": "workspace:^",
     "@matra/math-compute-engine": "workspace:^"
   },
   "devDependencies": {

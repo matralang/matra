@@ -153,6 +153,7 @@ async function handler() {
     alias: {
       "@matra/core": path.resolve(process.cwd(), "src", "client", "core-browser.ts"),
       "@matra/graphics": path.resolve(process.cwd(), "../../packages/graphics/dist/index.js"),
+      "@matra/math": path.resolve(process.cwd(), "../../packages/math/dist/index.js"),
       "@matra/math-compute-engine": path.resolve(process.cwd(), "../../packages/math-compute-engine/dist/index.js"),
     },
   })

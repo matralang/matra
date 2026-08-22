@@ -1,6 +1,7 @@
 import { astToMatraJSON, parse, printJSON } from "@matra/core"
 import { toSVG } from "@matra/graphics"
 import { toHTML } from "@matra/html"
+import { parseMath } from "@matra/math"
 import { evaluateMatra, numericEvaluateMatra, numericEvaluateProps, simplifyMatra } from "@matra/math-compute-engine"
 import matraStyles from "../../../../packages/styles/matra.css"
 
@@ -9,6 +10,7 @@ const status = required<HTMLElement>("playground-status")
 const stats = required<HTMLElement>("source-stats")
 const astOutput = required<HTMLElement>("ast-output")
 const matraJSONOutput = required<HTMLElement>("matra-json-output")
+const expressionTab = required<HTMLButtonElement>("tab-matra-json")
 const rendererOutput = required<HTMLElement>("renderer-output")
 const preview = required<HTMLIFrameElement>("preview-frame")
 const errorCard = required<HTMLElement>("playground-error")
@@ -180,6 +182,7 @@ function render(): void {
     const ast = mode === "svg"
       ? numericEvaluateProps(parsedAst)
       : document.title ? injectDocumentTitle(parsedAst, document.title) : parsedAst
+    setExpressionTabLabel("MatraJSON")
     const matraJSON = printJSON(astToMatraJSON(ast), { pretty: true })
     const html = mode === "html" ? toHTML(ast) : ""
     const svg = mode === "svg" ? toSVG(ast, { pretty: true }) : ""
@@ -201,6 +204,8 @@ function render(): void {
 }
 
 function renderMath(program: string, filename: string, selectedStylesheet: string): void {
+  const ast = parse(program, { locations: true, sourceId: "playground.matra", syntaxMode: "application" })
+  const mathJSON = parseMath(program)
   const evaluated = evaluateMatra(program)
   const simplified = simplifyMatra(program)
   const numeric = numericEvaluateMatra(program)
@@ -219,14 +224,24 @@ function renderMath(program: string, filename: string, selectedStylesheet: strin
   ].join("\n")
 
   latestMode = "math"
-  latestOutputs = { ast: "", matraJSON: "", renderer: result }
-  astOutput.textContent = "Math input is parsed as Matra application syntax, not document AST."
-  matraJSONOutput.textContent = formatValue(simplified)
+  latestOutputs = {
+    ast: JSON.stringify(ast, null, 2),
+    matraJSON: printJSON(mathJSON, { pretty: true }),
+    renderer: result,
+  }
+  setExpressionTabLabel("MathJSON")
+  astOutput.textContent = latestOutputs.ast
+  matraJSONOutput.textContent = latestOutputs.matraJSON
   rendererOutput.textContent = result
   preview.srcdoc = previewDocument(result, "math", filename, selectedStylesheet)
   errorCard.hidden = true
   status.textContent = `Valid ${filename} · Compute Engine · ${stylesheetLabel(selectedStylesheet)}`
   status.classList.remove("is-error")
+}
+
+function setExpressionTabLabel(label: "MatraJSON" | "MathJSON"): void {
+  expressionTab.textContent = label
+  expressionTab.setAttribute("aria-label", label)
 }
 
 function scheduleRender(): void {

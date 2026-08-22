@@ -23,6 +23,9 @@ importers:
       '@matra/html':
         specifier: workspace:^
         version: link:../../packages/html
+      '@matra/math':
+        specifier: workspace:^
+        version: link:../../packages/math
       '@matra/math-compute-engine':
         specifier: workspace:^
         version: link:../../packages/math-compute-engine
