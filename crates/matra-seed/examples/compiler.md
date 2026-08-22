@@ -353,9 +353,24 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
   }
   let returned_value = next_token(source, returned.start + returned.length)
   let return_value = 0
-  if returned_value.kind == 2 {
-    return_value = read_small_integer(source, returned_value)
+  let value_token = returned_value
+  let negative = 0
+  if is_symbol(source, returned_value, 45) == 1 {
+    negative = 1
+    value_token = next_token(source, returned_value.start + returned_value.length)
+  }
+  if value_token.kind == 2 {
+    return_value = read_small_integer(source, value_token)
+    if negative == 1 {
+      if return_value > 64 {
+        return function_definition(0, 0, 0, 0, offset)
+      }
+      return_value = -return_value
+    }
   } else {
+    if negative == 1 {
+      return function_definition(0, 0, 0, 0, offset)
+    }
     let call_open = next_token(source, returned_value.start + returned_value.length)
     if is_symbol(source, call_open, 40) == 1 {
       let call_close = next_token(source, call_open.start + call_open.length)
@@ -376,7 +391,7 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
     }
     return_value = -1
   }
-  let close_body = next_token(source, returned_value.start + returned_value.length)
+  let close_body = next_token(source, value_token.start + value_token.length)
   if is_symbol(source, close_body, 125) == 0 {
     return function_definition(0, 0, 0, 0, offset)
   }
@@ -508,6 +523,9 @@ fn empty_module() -> bytes {
 }
 
 fn i32_leb_length(value: i32) -> i32 {
+  if value < 0 {
+    return 1
+  }
   let remaining = value
   let length = 0
   while 1 {
@@ -526,6 +544,10 @@ fn i32_leb_length(value: i32) -> i32 {
 }
 
 fn write_i32_leb(buffer: bytes, index: i32, value: i32) -> bytes {
+  if value < 0 {
+    byte_set(buffer, index, value + 128)
+    return buffer
+  }
   let remaining = value
   let position = index
   while 1 {
