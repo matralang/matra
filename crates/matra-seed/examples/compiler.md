@@ -484,6 +484,54 @@ fn second_function(source: bytes) -> function_definition {
   return parse_function(source, second.start)
 }
 
+fn function_name_table(source: bytes) -> [i32] {
+  let table: [i32] = allocate_i32_array(byte_length(source) * 2 + 1)
+  array_set(table, 0, 0)
+  let module_keyword = next_token(source, 0)
+  if is_module_keyword(source, module_keyword) == 0 {
+    array_set(table, 0, -1)
+    return table
+  }
+  let module_name = next_token(source, module_keyword.start + module_keyword.length)
+  if module_name.kind != 1 {
+    array_set(table, 0, -1)
+    return table
+  }
+  let position = module_name.start + module_name.length
+  while position < byte_length(source) {
+    let keyword = next_token(source, position)
+    if keyword.kind == 0 {
+      return table
+    }
+    if is_import_keyword(source, keyword) == 1 {
+      let imported = next_token(source, keyword.start + keyword.length)
+      if imported.kind != 1 {
+        array_set(table, 0, -1)
+        return table
+      }
+      position = imported.start + imported.length
+    } else {
+      let function = parse_function(source, keyword.start)
+      if function.status == 0 {
+        array_set(table, 0, -1)
+        return table
+      }
+      let count = array_get(table, 0)
+      array_set(table, count * 2 + 1, function.name_start)
+      array_set(table, count * 2 + 2, function.name_length)
+      array_set(table, 0, count + 1)
+      position = function.position
+    }
+  }
+  return table
+}
+
+// A temporary probe verifies the table layout before the emitter consumes it.
+export fn function_count(source: bytes) -> i32 {
+  let table = function_name_table(source)
+  return array_get(table, 0)
+}
+
 fn calls_helper(source: bytes, caller: function_definition, helper: function_definition) -> i32 {
   let name = token(1, caller.name_start, caller.name_length)
   let open = next_token(source, name.start + name.length)

@@ -68,6 +68,9 @@ recordは`name_start`、`name_length`、`parameter_count`、`return_kind`、`ret
 4. call target名をtableで解決し、function indexをemitする。
 5. parameter付きcallと複数signatureへ拡張する。
 
+function tableの最初のlayoutは`[count, name_start_0, name_length_0, ...]`である。parserは任意数の
+functionをtableへ追加でき、emitterはまだこのtableを消費していない。
+
 single functionはliteral return、または1個の`i32` parameterをreturnする形をemitする。
 2関数はhelperがinteger literalをreturnし、entryが引数なしでhelperをcallする形だけをsuccessとして
 emitする。未対応の複数function形・未解決callはfunctionを落としたWasmを生成せずdiagnostic statusを返す。

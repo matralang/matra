@@ -1586,7 +1586,9 @@ fn emit_bytes_expression(
             let signature = functions
                 .get(name.as_str())
                 .ok_or_else(|| CompileError::new(format!("Unknown function: {name}")))?;
-            if signature.return_type != ValueType::Bytes {
+            if signature.return_type != ValueType::Bytes
+                && signature.return_type != ValueType::ArrayI32
+            {
                 return Err(CompileError::new(format!(
                     "Function {name} returns i32 where bytes is required."
                 )));

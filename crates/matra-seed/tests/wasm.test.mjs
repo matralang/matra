@@ -280,6 +280,11 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     const unknownCallRecord = new DataView(module.instance.exports.memory.buffer, unknownCallRecordPointer, 20)
     assert.equal(unknownCallRecord.getInt32(0, true), 1)
 
+    const tableSource = new TextEncoder().encode("module demo\nfn one() -> i32 { return 1 }\nfn two() -> i32 { return 2 }\nfn three() -> i32 { return 3 }")
+    const tablePointer = module.instance.exports.alloc(tableSource.length)
+    new Uint8Array(module.instance.exports.memory.buffer, tablePointer, tableSource.length).set(tableSource)
+    assert.equal(module.instance.exports.function_count(tablePointer, tableSource.length), 3)
+
     const invalidFunctionSource = new TextEncoder().encode("module demo\nfn answer() -> i32 { return value }")
     const invalidFunctionPointer = module.instance.exports.alloc(invalidFunctionSource.length)
     new Uint8Array(module.instance.exports.memory.buffer, invalidFunctionPointer, invalidFunctionSource.length).set(invalidFunctionSource)
