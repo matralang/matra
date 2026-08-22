@@ -26,11 +26,20 @@ h2 { font-size: clamp(1.6rem, 4vw, 2.5rem); }
 h3 { font-size: 1.25rem; }
 p, ul, ol, dl, blockquote, pre, table, figure { margin: 0 0 1.25rem; }
 p, li, dd { max-width: 72ch; }
+ul, ol { padding-left: 1.45rem; }
+ul { list-style-type: square; }
+ol { list-style-type: decimal; }
+li + li { margin-top: 0.4rem; }
+li::marker { color: var(--matra-accent); font-weight: 700; }
+dl { display: grid; grid-template-columns: minmax(7rem, auto) minmax(0, 1fr); gap: 0.55rem 1.25rem; }
+dt { font-weight: 700; }
+dd { margin: 0; color: var(--matra-muted); }
 small, figcaption { color: var(--matra-muted); }
 a { color: var(--matra-link); text-decoration-thickness: 0.08em; text-underline-offset: 0.16em; }
 a:hover { color: var(--matra-accent); }
-nav ul { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin: 0; padding: 0; list-style: none; }
-nav a { font-weight: 650; }
+nav > ul { margin-top: 1rem; }
+.matra-nav > ul { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin: 0; padding: 0; list-style: none; }
+.matra-nav a { font-weight: 650; }
 blockquote { margin-left: 0; padding: 1rem 1.25rem; border-left: 0.25rem solid var(--matra-accent); color: var(--matra-muted); background: color-mix(in srgb, var(--matra-surface) 78%, var(--matra-paper)); }
 hr { height: 1px; margin: 2.5rem 0; border: 0; background: var(--matra-line); }
 code, kbd, samp { padding: 0.12em 0.32em; border-radius: 0.25rem; background: #e9ece5; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
