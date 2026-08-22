@@ -62,7 +62,8 @@ token列をarrayへ保存するのはarray of structが利用可能になって�
 4. Node実行testでwhitespace-only inputとtoken rangeを確認する。
 5. sourceとoffsetで逐次読むtoken cursorを使い、`module identifier`と`import identifier`をparseする。
 6. 引数なし、`i32` return、integer literalのfunction declarationをparseする。
-7. 解析したfunctionをWasm type / function / export / code sectionへemitする。
+7. 解析した1個のfunctionをWasm type / function / export / code sectionへemitする。
+8. 64以上のinteger、parameter、複数functionをlowerする。
 
 ## 注意点
 

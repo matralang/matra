@@ -9,8 +9,11 @@ struct token {
   length: i32
 }
 
-struct parse_result {
+struct function_definition {
   status: i32
+  name_start: i32
+  name_length: i32
+  return_value: i32
   position: i32
 }
 
@@ -244,52 +247,69 @@ fn is_symbol(source: bytes, value: token, expected: i32) -> i32 {
   return 1
 }
 
-fn parse_function(source: bytes, offset: i32) -> parse_result {
+fn read_small_integer(source: bytes, value: token) -> i32 {
+  let result = 0
+  let position = value.start
+  while position < value.start + value.length {
+    result = result * 10 + byte_at(source, position) - 48
+    position = position + 1
+  }
+  return result
+}
+
+fn parse_function(source: bytes, offset: i32) -> function_definition {
   let keyword = next_token(source, offset)
   if is_fn_keyword(source, keyword) == 0 {
-    return parse_result(0, offset)
+    return function_definition(0, 0, 0, 0, offset)
   }
   let name = next_token(source, keyword.start + keyword.length)
   if name.kind != 1 {
-    return parse_result(0, offset)
+    return function_definition(0, 0, 0, 0, offset)
   }
   let open = next_token(source, name.start + name.length)
   if is_symbol(source, open, 40) == 0 {
-    return parse_result(0, offset)
+    return function_definition(0, 0, 0, 0, offset)
   }
   let close = next_token(source, open.start + open.length)
   if is_symbol(source, close, 41) == 0 {
-    return parse_result(0, offset)
+    return function_definition(0, 0, 0, 0, offset)
   }
   let minus = next_token(source, close.start + close.length)
   if is_symbol(source, minus, 45) == 0 {
-    return parse_result(0, offset)
+    return function_definition(0, 0, 0, 0, offset)
   }
   let arrow = next_token(source, minus.start + minus.length)
   if is_symbol(source, arrow, 62) == 0 {
-    return parse_result(0, offset)
+    return function_definition(0, 0, 0, 0, offset)
   }
   let result_type = next_token(source, arrow.start + arrow.length)
   if is_i32_type(source, result_type) == 0 {
-    return parse_result(0, offset)
+    return function_definition(0, 0, 0, 0, offset)
   }
   let open_body = next_token(source, result_type.start + result_type.length)
   if is_symbol(source, open_body, 123) == 0 {
-    return parse_result(0, offset)
+    return function_definition(0, 0, 0, 0, offset)
   }
   let returned = next_token(source, open_body.start + open_body.length)
   if is_return_keyword(source, returned) == 0 {
-    return parse_result(0, offset)
+    return function_definition(0, 0, 0, 0, offset)
   }
   let integer = next_token(source, returned.start + returned.length)
   if integer.kind != 2 {
-    return parse_result(0, offset)
+    return function_definition(0, 0, 0, 0, offset)
   }
   let close_body = next_token(source, integer.start + integer.length)
   if is_symbol(source, close_body, 125) == 0 {
-    return parse_result(0, offset)
+    return function_definition(0, 0, 0, 0, offset)
   }
-  return parse_result(1, close_body.start + close_body.length)
+  let return_value = read_small_integer(source, integer)
+  if return_value >= 64 {
+    return function_definition(0, 0, 0, 0, offset)
+  }
+  let name_start = name.start
+  let name_length = name.length
+  let next_position = close_body.start + close_body.length
+  return function_definition(1, name_start, name_length, return_value, next_position)
 }
 
 fn parse_empty_program(source: bytes) -> i32 {
@@ -327,10 +347,35 @@ fn parse_empty_program(source: bytes) -> i32 {
       if function.status == 0 {
         return 0
       }
-      position = function.position
+      if next_token(source, function.position).kind != 0 {
+        return 0
+      }
+      return 1
     }
   }
   return 1
+}
+
+fn first_function(source: bytes) -> function_definition {
+  let module_keyword = next_token(source, 0)
+  if module_keyword.kind != 1 {
+    return function_definition(0, 0, 0, 0, 0)
+  }
+  let module_name = next_token(source, module_keyword.start + module_keyword.length)
+  let position = module_name.start + module_name.length
+  while position < byte_length(source) {
+    let keyword = next_token(source, position)
+    if keyword.kind == 0 {
+      return function_definition(0, 0, 0, 0, position)
+    }
+    if is_import_keyword(source, keyword) == 1 {
+      let imported = next_token(source, keyword.start + keyword.length)
+      position = imported.start + imported.length
+    } else {
+      return parse_function(source, keyword.start)
+    }
+  }
+  return function_definition(0, 0, 0, 0, position)
 }
 
 fn write_i32(buffer: bytes, index: i32, value: i32) -> bytes {
@@ -351,6 +396,49 @@ fn empty_module() -> bytes {
   byte_set(output, 5, 0)
   byte_set(output, 6, 0)
   byte_set(output, 7, 0)
+  return output
+}
+
+fn single_function_module(source: bytes, function: function_definition) -> bytes {
+  let output = allocate_bytes(33 + function.name_length)
+  byte_set(output, 0, 0)
+  byte_set(output, 1, 97)
+  byte_set(output, 2, 115)
+  byte_set(output, 3, 109)
+  byte_set(output, 4, 1)
+  byte_set(output, 5, 0)
+  byte_set(output, 6, 0)
+  byte_set(output, 7, 0)
+  byte_set(output, 8, 1)
+  byte_set(output, 9, 5)
+  byte_set(output, 10, 1)
+  byte_set(output, 11, 96)
+  byte_set(output, 12, 0)
+  byte_set(output, 13, 1)
+  byte_set(output, 14, 127)
+  byte_set(output, 15, 3)
+  byte_set(output, 16, 2)
+  byte_set(output, 17, 1)
+  byte_set(output, 18, 0)
+  byte_set(output, 19, 7)
+  byte_set(output, 20, 4 + function.name_length)
+  byte_set(output, 21, 1)
+  byte_set(output, 22, function.name_length)
+  let index = 0
+  while index < function.name_length {
+    byte_set(output, 23 + index, byte_at(source, function.name_start + index))
+    index = index + 1
+  }
+  byte_set(output, 23 + function.name_length, 0)
+  byte_set(output, 24 + function.name_length, 0)
+  byte_set(output, 25 + function.name_length, 10)
+  byte_set(output, 26 + function.name_length, 6)
+  byte_set(output, 27 + function.name_length, 1)
+  byte_set(output, 28 + function.name_length, 4)
+  byte_set(output, 29 + function.name_length, 0)
+  byte_set(output, 30 + function.name_length, 65)
+  byte_set(output, 31 + function.name_length, function.return_value)
+  byte_set(output, 32 + function.name_length, 11)
   return output
 }
 
@@ -381,7 +469,11 @@ fn diagnostic_record() -> i32 {
 
 export fn compile(source: bytes) -> i32 {
   if parse_empty_program(source) == 1 {
+    let function = first_function(source)
     let output = empty_module()
+    if function.status == 1 {
+      output = single_function_module(source, function)
+    }
     return success_record(output)
   }
 
@@ -398,7 +490,8 @@ returns a pointer to the 20-byte result record described in the Matra Program
 specification. `parse_empty_program()` accepts an empty source or the minimal
 non-empty Program header form `module identifier { import identifier }` and maps
 it to an empty Wasm module. It also recognizes an initial function form with no
-parameters and an integer `return` expression; emitting that function is next.
+parameters and a nonnegative integer `return` expression below `64`. Such a
+function is emitted with one Wasm type, function, export, and code entry.
 `allocate_bytes(size)` returns a `bytes` value backed by the generated module's
 linear memory, and `byte_set(bytes, index, value)` writes one byte. Diagnostics
 remain a placeholder until diagnostic text is implemented.
