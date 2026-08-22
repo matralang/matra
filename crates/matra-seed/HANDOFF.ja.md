@@ -64,7 +64,8 @@ token列をarrayへ保存するのはarray of structが利用可能になって�
 6. 引数なし、`i32` return、integer literalのfunction declarationをparseする。
 7. 解析した1個のfunctionをWasm type / function / export / code sectionへemitする。
 8. 1個の`i32` parameterをWasm parameterと`local.get 0`へlowerする。
-9. 複数functionとfunction callをlowerする。
+9. 2個の引数なしfunctionと、entryからhelperへのfunction callをlowerする。
+10. function一覧を一般化し、parameter付きcallと任意数のfunctionをlowerする。
 
 ## 注意点
 

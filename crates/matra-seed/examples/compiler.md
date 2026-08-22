@@ -328,6 +328,18 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
   if returned_value.kind == 2 {
     return_value = read_small_integer(source, returned_value)
   } else {
+    let call_open = next_token(source, returned_value.start + returned_value.length)
+    if is_symbol(source, call_open, 40) == 1 {
+      let call_close = next_token(source, call_open.start + call_open.length)
+      if is_symbol(source, call_close, 41) == 0 {
+        return function_definition(0, 0, 0, 0, offset)
+      }
+      let call_body_close = next_token(source, call_close.start + call_close.length)
+      if is_symbol(source, call_body_close, 125) == 0 {
+        return function_definition(0, 0, 0, 0, offset)
+      }
+      return function_definition(1, name.start, name.length, -2, call_body_close.start + call_body_close.length)
+    }
     if is_symbol(source, parameter, 41) == 1 {
       return function_definition(0, 0, 0, 0, offset)
     }
@@ -381,7 +393,15 @@ fn parse_empty_program(source: bytes) -> i32 {
       if function.status == 0 {
         return 0
       }
-      if next_token(source, function.position).kind != 0 {
+      let next = next_token(source, function.position)
+      if next.kind == 0 {
+        return 1
+      }
+      let second = parse_function(source, next.start)
+      if second.status == 0 {
+        return 0
+      }
+      if next_token(source, second.position).kind != 0 {
         return 0
       }
       return 1
@@ -410,6 +430,18 @@ fn first_function(source: bytes) -> function_definition {
     }
   }
   return function_definition(0, 0, 0, 0, position)
+}
+
+fn second_function(source: bytes) -> function_definition {
+  let first = first_function(source)
+  if first.status == 0 {
+    return function_definition(0, 0, 0, 0, 0)
+  }
+  let second = next_token(source, first.position)
+  if second.kind == 0 {
+    return function_definition(0, 0, 0, 0, first.position)
+  }
+  return parse_function(source, second.start)
 }
 
 fn write_i32(buffer: bytes, index: i32, value: i32) -> bytes {
@@ -532,6 +564,56 @@ fn single_function_module(source: bytes, function: function_definition) -> bytes
   }
   byte_set(output, code_offset + 7, 11)
   return output
+}
+
+fn two_function_module(source: bytes, helper: function_definition, entry: function_definition) -> bytes {
+  let value_length = i32_leb_length(helper.return_value)
+  let output = allocate_bytes(38 + entry.name_length + value_length)
+  byte_set(output, 0, 0)
+  byte_set(output, 1, 97)
+  byte_set(output, 2, 115)
+  byte_set(output, 3, 109)
+  byte_set(output, 4, 1)
+  byte_set(output, 5, 0)
+  byte_set(output, 6, 0)
+  byte_set(output, 7, 0)
+  byte_set(output, 8, 1)
+  byte_set(output, 9, 5)
+  byte_set(output, 10, 1)
+  byte_set(output, 11, 96)
+  byte_set(output, 12, 0)
+  byte_set(output, 13, 1)
+  byte_set(output, 14, 127)
+  byte_set(output, 15, 3)
+  byte_set(output, 16, 3)
+  byte_set(output, 17, 2)
+  byte_set(output, 18, 0)
+  byte_set(output, 19, 0)
+  byte_set(output, 20, 7)
+  byte_set(output, 21, 4 + entry.name_length)
+  byte_set(output, 22, 1)
+  byte_set(output, 23, entry.name_length)
+  let index = 0
+  while index < entry.name_length {
+    byte_set(output, 24 + index, byte_at(source, entry.name_start + index))
+    index = index + 1
+  }
+  byte_set(output, 24 + entry.name_length, 0)
+  byte_set(output, 25 + entry.name_length, 1)
+  let code_offset = 26 + entry.name_length
+  byte_set(output, code_offset, 10)
+  byte_set(output, code_offset + 1, 10 + value_length)
+  byte_set(output, code_offset + 2, 2)
+  byte_set(output, code_offset + 3, 3 + value_length)
+  byte_set(output, code_offset + 4, 0)
+  byte_set(output, code_offset + 5, 65)
+  let written = write_i32_leb(output, code_offset + 6, helper.return_value)
+  byte_set(written, code_offset + 6 + value_length, 11)
+  byte_set(written, code_offset + 7 + value_length, 4)
+  byte_set(written, code_offset + 8 + value_length, 0)
+  byte_set(written, code_offset + 9 + value_length, 16)
+  byte_set(written, code_offset + 10 + value_length, 0)
+  byte_set(written, code_offset + 11 + value_length, 11)
   return written
 }
 
@@ -566,6 +648,14 @@ export fn compile(source: bytes) -> i32 {
     let output = empty_module()
     if function.status == 1 {
       output = single_function_module(source, function)
+      let second = second_function(source)
+      if second.status == 1 {
+        if function.return_value >= 0 {
+          if second.return_value == -2 {
+            output = two_function_module(source, function, second)
+          }
+        }
+      }
     }
     return success_record(output)
   }
@@ -586,6 +676,8 @@ it to an empty Wasm module. It also recognizes an initial function form with no
 parameters and a nonnegative integer `return` expression. Such a
 function is emitted with one Wasm type, function, export, and code entry.
 One `i32` parameter returning itself is also supported.
+The initial two-function form emits a literal-returning helper and an entry
+function that calls it.
 `allocate_bytes(size)` returns a `bytes` value backed by the generated module's
 linear memory, and `byte_set(bytes, index, value)` writes one byte. Diagnostics
 remain a placeholder until diagnostic text is implemented.
