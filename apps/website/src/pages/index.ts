@@ -19,13 +19,14 @@ const page = defaultLayout(matra`
       div.code-window[aria-label="Matraコード例"] {
         div.window-bar {
           span.window-label { "SOURCE" }
-          small { "hello.matra" }
+          small { "hello.matra.ts" }
         }
-        pre { code~group(
-  role="list",
-  item("one"),
-  item("two")
-)~ }
+        pre { code~matra {
+  group[role="list"] {
+    item { "one" }
+    item { "two" }
+  }
+}~ }
         div.output {
           span { "AST" }
           code~{ tag, props, children }~

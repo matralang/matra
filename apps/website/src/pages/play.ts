@@ -8,19 +8,14 @@ export default defaultLayout(matra`
         p.eyebrow { "LIVE WORKBENCH" }
         h1 { "Playground" }
       }
-      p { "Matra sourceを編集すると、HTMLまたはSVGのpreview・AST・出力をその場で更新します。" }
+      p { "Markdown内のMatra code blockを編集すると、HTMLまたはSVGのpreview・AST・出力をその場で更新します。" }
     }
     div.playground-workspace {
-      section.editor-panel[aria-label="Matra editor"] {
+      section.editor-panel[aria-label="Markdown editor"] {
         header.panel-header {
           div.panel-title { span.status-dot {} strong { "SOURCE" } }
           div.editor-tools {
-            label[for="source-language"] { "Language" }
-            select#source-language {
-              option[value="matra"] { "Matra" }
-              option[value="javascript"] { "JavaScript / TypeScript" }
-              option[value="math"] { "Math" }
-            }
+            span { "Markdown / Matra" }
             label[for="render-mode"] { "Output" }
             select#render-mode {
               option[value="auto"] { "Auto" }
@@ -62,25 +57,37 @@ export default defaultLayout(matra`
             button.example-button[type="button" data-example="signal" aria-pressed="false"] {
               span.example-kind.svg { "SVG" } strong { "Signal" } small { "Lines and opacity" }
             }
-            button.example-button[type="button" data-example="compute-engine" data-language="math" aria-pressed="false"] {
+            button.example-button[type="button" data-example="compute-engine" aria-pressed="false"] {
               span.example-kind.math { "MATH" } strong { "Compute Engine" } small { "Matra math input" }
             }
-            button.example-button[type="button" data-example="js-card" data-language="javascript" aria-pressed="false"] {
-              span.example-kind.js { "JS / TS" } strong { "HTML API" } small { "Build from a template" }
+            button.example-button[type="button" data-example="js-card" aria-pressed="false"] {
+              span.example-kind.js { "TS" } strong { "Dynamic card" } small { "Values with \${...}" }
             }
-            button.example-button[type="button" data-example="js-graphics" data-language="javascript" aria-pressed="false"] {
-              span.example-kind.js { "JS / TS" } strong { "Graphics API" } small { "Generate SVG" }
+            button.example-button[type="button" data-example="js-graphics" aria-pressed="false"] {
+              span.example-kind.js { "TS" } strong { "Generated SVG" } small { "Generate a Matra block" }
             }
           }
         }
-        label.sr-only[for="matra-source"] { "Matra source" }
-        textarea#matra-source[spellcheck="false" aria-describedby="playground-status"]~article.card {
-  p.eyebrow\`MATRA / HTML\`
-  h2\`Structure first.\`
-  p\`Edit this source and watch it render.\`
-  a.button.primary[href="/spec/"] \`Read the spec\`
+        label.sr-only[for="matra-source"] { "Markdown source" }
+        textarea#matra-source[spellcheck="false" aria-describedby="playground-status"]~
+# Card
+
+---
+matra:
+  entry: card.matra
+  renderer: html
+---
+
+\`\`\`card.matra
+article.card {
+  p.eyebrow { "MATRA" }
+  h2 { "Structure first." }
+  p { "Edit this source and watch it render." }
+  a.button.primary[href="/spec/"] { "Read the spec" }
   hr;
-}~
+}
+\`\`\`
+~
         footer.editor-footer {
           span#playground-status[role="status" aria-live="polite"] { "Ready" }
           span#source-stats { "0 chars" }
@@ -117,5 +124,5 @@ export default defaultLayout(matra`
   script[type="module" src="/assets/playground.js"] {}
 `, {
   title: "Playground — Matra",
-  description: "Matra sourceやJavaScript・TypeScript互換コードをAST、HTML、SVGへ変換できるブラウザPlaygroundです。",
+  description: "Markdown内のMatraとMatra TypeScript code blockをAST、HTML、SVGへ変換できるブラウザPlaygroundです。",
 })
