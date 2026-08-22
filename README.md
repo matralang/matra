@@ -2,7 +2,7 @@
 
 [English](./README.md) | [日本語](./README.ja.md)
 
-Matra is maintained as an npm workspaces monorepo. Published packages keep the
+Matra is maintained as a pnpm workspace monorepo. Published packages keep the
 `@matra/*` scope.
 
 ## Specification
@@ -27,7 +27,7 @@ Matra is maintained as an npm workspaces monorepo. Published packages keep the
 ## Development
 
 ```sh
-npm install
-npm run build
-npm test
+pnpm install
+pnpm run build
+pnpm test
 ```

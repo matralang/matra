@@ -11,7 +11,7 @@ bmathは、Matra数式処理を行うためのCLIツールとWebUIを提供し�
 #### 基本的な使い方
 
 ```bash
-npm run cli -- 'Add(1, 2, 3)'
+pnpm run cli -- 'Add(1, 2, 3)'
 # Output: 6
 ```
 
@@ -23,7 +23,7 @@ npm run cli -- 'Add(1, 2, 3)'
 - `consistent`: 一貫した表記（cdot を使用）
 
 ```bash
-npm run cli -- 'Times(Integer(value="2"), Symbol(name="x"))' --mode consistent
+pnpm run cli -- 'Times(Integer(value="2"), Symbol(name="x"))' --mode consistent
 # Output: 2 \cdot x
 ```
 
@@ -37,16 +37,16 @@ npm run cli -- 'Times(Integer(value="2"), Symbol(name="x"))' --mode consistent
 - `morphion`: Morphion形式（JSON）
 
 ```bash
-npm run cli -- 'Add(1, 2, 3)' --output mathjson
+pnpm run cli -- 'Add(1, 2, 3)' --output mathjson
 # Output: ["Add",1,2,3]
 
-npm run cli -- 'Add(1, 2, 3)'
+pnpm run cli -- 'Add(1, 2, 3)'
 # Output: 6
 
-npm run cli -- 'Call(Symbol(name="sin"), Symbol(name="x"))' --output expr
+pnpm run cli -- 'Call(Symbol(name="sin"), Symbol(name="x"))' --output expr
 # Output: sin(x)
 
-npm run cli -- 'Power(Symbol(name="x"), Integer(value="2"))' --output formula
+pnpm run cli -- 'Power(Symbol(name="x"), Integer(value="2"))' --output formula
 # Output: 詳細なJSON形式の数式構造
 ```
 
@@ -56,7 +56,7 @@ npm run cli -- 'Power(Symbol(name="x"), Integer(value="2"))' --output formula
 - `tex`: TeX形式（従来形式）
 
 ```bash
-npm run cli -- "x^2 + 1" --input tex
+pnpm run cli -- "x^2 + 1" --input tex
 ```
 
 **`--operation`**: Compute Engineの処理
@@ -66,13 +66,13 @@ npm run cli -- "x^2 + 1" --input tex
 - `numeric`: 数値近似
 
 ```bash
-npm run cli -- 'Factorial(5)'
+pnpm run cli -- 'Factorial(5)'
 # Output: 120
 
-npm run cli -- 'Add(x, x)' --operation simplify
+pnpm run cli -- 'Add(x, x)' --operation simplify
 # Output: ["Multiply",2,"x"]
 
-npm run cli -- 'Divide(1, 3)' --operation numeric
+pnpm run cli -- 'Divide(1, 3)' --operation numeric
 # Output: "0.(3)"
 ```
 
@@ -87,19 +87,19 @@ npm run cli -- 'Divide(1, 3)' --operation numeric
 
 ```bash
 # TeX式の正規化
-npm run cli -- 'Plus(Symbol(name="x"), Integer(value="1"))'
+pnpm run cli -- 'Plus(Symbol(name="x"), Integer(value="1"))'
 
 # 累乗式
-npm run cli -- 'Plus(Power(Symbol(name="x"), Integer(value="2")), Power(Symbol(name="y"), Integer(value="2")))' --mode consistent
+pnpm run cli -- 'Plus(Power(Symbol(name="x"), Integer(value="2")), Power(Symbol(name="y"), Integer(value="2")))' --mode consistent
 
 # 分数
-npm run cli -- 'Times(Integer(value="1"), Power(Integer(value="2"), Integer(value="-1")))'
+pnpm run cli -- 'Times(Integer(value="1"), Power(Integer(value="2"), Integer(value="-1")))'
 
 # 三角関数
-npm run cli -- 'Call(Symbol(name="sin"), Symbol(name="x"))' --output expr
+pnpm run cli -- 'Call(Symbol(name="sin"), Symbol(name="x"))' --output expr
 
 # ヘルプ表示
-npm run cli -- --help
+pnpm run cli -- --help
 ```
 
 ### Webページ

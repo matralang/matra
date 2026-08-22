@@ -23,6 +23,6 @@ VS Codeで`packages/vscode`を開き、**Developer: Run Extension**を実行す�
 Repository rootからextension metadataの検証とtestを実行します。
 
 ```sh
-npm run check -w matra-vscode
-npm test -w matra-vscode
+pnpm --filter matra-vscode run check
+pnpm --filter matra-vscode test
 ```

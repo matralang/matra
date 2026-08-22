@@ -57,8 +57,8 @@ const output = svgLayout([circle(128, 128, 72)])
 ## Development
 
 ```sh
-npm test
-npm run build
+pnpm test
+pnpm run build
 ```
 
 build commandは`example/page/`配下の`.matra`とJavaScript fileを`example/dist/`へcompileします。

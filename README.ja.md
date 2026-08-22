@@ -2,7 +2,7 @@
 
 [English](./README.md) | [日本語](./README.ja.md)
 
-Matraはnpm workspacesのmonorepoとして管理されています。公開パッケージは
+Matraはpnpm workspaceのmonorepoとして管理されています。公開パッケージは
 `@matra/*` scopeで提供します。
 
 ## 仕様
@@ -30,9 +30,9 @@ HTML、Math、Graphics、実行環境統合などのdomain-specificな責務を�
 ## Development
 
 ```sh
-npm install
-npm run build
-npm test
+pnpm install
+pnpm run build
+pnpm test
 ```
 
 英語文書は`name.md`、対応する日本語文書は`name.ja.md`とします。

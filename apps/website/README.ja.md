@@ -9,13 +9,13 @@ Matraの公式サイトです。現在はGitHub Pagesでpreviewし、最終的�
 
 ```sh
 cd ../..
-npm install
-npm run build --workspace @matra/website
-npm run serve --workspace @matra/website
+pnpm install
+pnpm --filter @matra/website run build
+pnpm --filter @matra/website run serve
 ```
 
 Websiteと`@matra/*`は同じnpm workspaceで管理しています。`file:`指定や
-`npm link`を使わなくても、packageの変更はローカルのWebsiteに反映されます。
+`pnpm link`を使わなくても、packageの変更はローカルのWebsiteに反映されます。
 
 ## Information architecture
 

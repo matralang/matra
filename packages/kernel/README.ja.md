@@ -5,7 +5,7 @@
 Matra用のJupyter protocol kernelです。JupyterLab / Notebook、VS Code Jupyter extension、local Jupyter runtimeへ接続したGoogle Colabで動作します。
 
 ```sh
-npm install -g @matra/kernel
+pnpm add -g @matra/kernel
 matra-kernel install --user
 jupyter lab
 ```

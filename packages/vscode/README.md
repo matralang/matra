@@ -25,6 +25,6 @@ try the language support.
 Validate the extension metadata and run its tests from the repository root:
 
 ```sh
-npm run check -w matra-vscode
-npm test -w matra-vscode
+pnpm --filter matra-vscode run check
+pnpm --filter matra-vscode test
 ```

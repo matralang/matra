@@ -6,7 +6,7 @@ Jupyter protocol kernel for Matra. It works with JupyterLab/Notebook, the VS Cod
 Jupyter extension, and Google Colab connected to a local Jupyter runtime.
 
 ```sh
-npm install -g @matra/kernel
+pnpm add -g @matra/kernel
 matra-kernel install --user
 jupyter lab
 ```

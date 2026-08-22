@@ -65,8 +65,8 @@ JavaScript examples.
 ## Development
 
 ```sh
-npm test
-npm run build
+pnpm test
+pnpm run build
 ```
 
 The build command compiles both `.matra` and JavaScript files from
