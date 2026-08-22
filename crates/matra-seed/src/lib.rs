@@ -604,15 +604,21 @@ fn emit_module(program: &Program) -> Result<Vec<u8>, CompileError> {
     }
     section(&mut output, 3, &declarations);
 
+    // 1 page (64 KiB) of linear memory is the initial host/Program boundary.
+    section(&mut output, 5, &[0x01, 0x00, 0x01]);
+
     let exported: Vec<_> = program
         .functions
         .iter()
         .enumerate()
         .filter(|(_, function)| function.exported)
         .collect();
-    if !exported.is_empty() {
+    {
         let mut exports = Vec::new();
-        encode_u32(&mut exports, exported.len() as u32);
+        encode_u32(&mut exports, (exported.len() + 1) as u32);
+        encode_name(&mut exports, "memory");
+        exports.push(0x02);
+        exports.push(0x00);
         for (index, function) in exported {
             encode_name(&mut exports, &function.name);
             exports.push(0x00);
@@ -804,6 +810,18 @@ fn emit_expression(
             encode_u32(output, *index);
         }
         Expression::Call(name, arguments) => {
+            if name == "byte_at" {
+                if arguments.len() != 2 {
+                    return Err(CompileError::new(format!(
+                        "Function byte_at expects 2 arguments, found {}",
+                        arguments.len()
+                    )));
+                }
+                emit_expression(output, &arguments[0], locals, functions)?;
+                emit_expression(output, &arguments[1], locals, functions)?;
+                output.extend([0x6a, 0x2d, 0x00, 0x00]);
+                return Ok(());
+            }
             let (index, arity) = functions
                 .get(name.as_str())
                 .ok_or_else(|| CompileError::new(format!("Unknown function: {name}")))?;
