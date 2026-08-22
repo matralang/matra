@@ -34,6 +34,12 @@ const index = await readFile(new URL("../dist/index.html", import.meta.url), "ut
 const docs = await readFile(new URL("../dist/docs/index.html", import.meta.url), "utf8")
 const packages = await readFile(new URL("../dist/packages/index.html", import.meta.url), "utf8")
 const spec = await readFile(new URL("../dist/spec/index.html", import.meta.url), "utf8")
+const specPages = await Promise.all([
+  "data-model",
+  "ast",
+  "grammar",
+  "parser",
+].map(page => readFile(new URL(`../dist/spec/${page}/index.html`, import.meta.url), "utf8")))
 const playground = await readFile(new URL("../dist/play/index.html", import.meta.url), "utf8")
 const playgroundBundle = await readFile(new URL("../dist/assets/playground.js", import.meta.url), "utf8")
 
@@ -72,6 +78,10 @@ assert.match(docs, /Language Specification/)
 assert.match(packages, /公式パッケージ/)
 assert.match(spec, /<title>Index — Matra Specification v0.2/)
 assert.match(spec, /Data Model/)
+for (const page of specPages) {
+  assert.match(page, /<aside class="docs-nav">/)
+  assert.match(page, /<div class="shell docs-shell">/)
+}
 assert.match(playground, /<title>Playground — Matra/)
 assert.match(playground, /id="matra-source"/)
 assert.match(playground, /\/assets\/playground.js/)

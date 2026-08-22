@@ -34,6 +34,18 @@ const siteFooter = parse(`
   }
 `)
 
+const specificationNavigation = parse(`
+  aside.docs-nav {
+    p { "SPECIFICATION 0.2" }
+    nav[aria-label="仕様書"] {
+      a[href="/spec/data-model/"] { span { "01" } "Data Model" }
+      a[href="/spec/ast/"] { span { "02" } "AST" }
+      a[href="/spec/grammar/"] { span { "03" } "Grammar" }
+      a[href="/spec/parser/"] { span { "04" } "Parser" }
+    }
+  }
+`)
+
 const googleTagManagerBody = parse(`
   noscript {
     iframe[src="https://www.googletagmanager.com/ns.html?id=GTM-T8JD7GH9", height="0", width="0", style="display:none;visibility:hidden"] {}
@@ -164,6 +176,26 @@ function applySiteChrome(ast: ReturnType<typeof parse>) {
   return ast
 }
 
+function applySpecificationLayout(ast: ReturnType<typeof parse>, pagePath: string) {
+  if (!pagePath.startsWith(`spec${path.sep}`)) return ast
+
+  const body = ast.children.find(node => isNode(node) && node.tag === "body")
+  const main = body?.children.find(node => isNode(node) && node.tag === "main")
+  if (!isNode(main) || hasNode(main.children, "aside")) return ast
+
+  const content = main.children.find(node =>
+    isNode(node) && node.tag === "article" && node.props.class === "docs-content",
+  )
+  if (!content) return ast
+
+  main.children = [{
+    tag: "div",
+    props: { class: "shell docs-shell" },
+    children: [specificationNavigation, content],
+  }]
+  return ast
+}
+
 async function handler() {
   const pagesDir = path.join(process.cwd(), "src", "pages")
   const outputDir = path.join(process.cwd(), "dist")
@@ -193,7 +225,10 @@ async function handler() {
       fs.mkdirSync(outDir, { recursive: true })
     }
 
-    const ast = applySiteChrome(parse(source, { sourceId: path.relative(process.cwd(), filePath) }))
+    const ast = applySpecificationLayout(
+      applySiteChrome(parse(source, { sourceId: path.relative(process.cwd(), filePath) })),
+      path.relative(pagesDir, filePath),
+    )
     const htmlContent = DOCTYPE + toHTML(ast, { basePath })
 
     fs.writeFileSync(outputPath, htmlContent)
