@@ -194,6 +194,20 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     const invalidProgramRecordPointer = module.instance.exports.compile(invalidProgramPointer, 22)
     const invalidProgramRecord = new DataView(module.instance.exports.memory.buffer, invalidProgramRecordPointer, 20)
     assert.equal(invalidProgramRecord.getInt32(0, true), 1)
+
+    const functionSource = new TextEncoder().encode("module demo\nfn answer() -> i32 { return 42 }")
+    const functionPointer = module.instance.exports.alloc(functionSource.length)
+    new Uint8Array(module.instance.exports.memory.buffer, functionPointer, functionSource.length).set(functionSource)
+    const functionRecordPointer = module.instance.exports.compile(functionPointer, functionSource.length)
+    const functionRecord = new DataView(module.instance.exports.memory.buffer, functionRecordPointer, 20)
+    assert.equal(functionRecord.getInt32(0, true), 0)
+
+    const invalidFunctionSource = new TextEncoder().encode("module demo\nfn answer() -> i32 { return value }")
+    const invalidFunctionPointer = module.instance.exports.alloc(invalidFunctionSource.length)
+    new Uint8Array(module.instance.exports.memory.buffer, invalidFunctionPointer, invalidFunctionSource.length).set(invalidFunctionSource)
+    const invalidFunctionRecordPointer = module.instance.exports.compile(invalidFunctionPointer, invalidFunctionSource.length)
+    const invalidFunctionRecord = new DataView(module.instance.exports.memory.buffer, invalidFunctionRecordPointer, 20)
+    assert.equal(invalidFunctionRecord.getInt32(0, true), 1)
   } finally {
     await rm(directory, { recursive: true, force: true })
   }

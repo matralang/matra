@@ -61,7 +61,8 @@ token列をarrayへ保存するのはarray of structが利用可能になって�
 3. `compile`がEOF tokenを空Programとして成功させる。
 4. Node実行testでwhitespace-only inputとtoken rangeを確認する。
 5. sourceとoffsetで逐次読むtoken cursorを使い、`module identifier`と`import identifier`をparseする。
-6. function declarationをparseする。
+6. 引数なし、`i32` return、integer literalのfunction declarationをparseする。
+7. 解析したfunctionをWasm type / function / export / code sectionへemitする。
 
 ## 注意点
 

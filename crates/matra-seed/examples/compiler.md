@@ -9,6 +9,11 @@ struct token {
   length: i32
 }
 
+struct parse_result {
+  status: i32
+  position: i32
+}
+
 fn is_space(value: i32) -> i32 {
   if value == 9 {
     return 1
@@ -172,6 +177,121 @@ fn is_import_keyword(source: bytes, value: token) -> i32 {
   return 1
 }
 
+fn is_fn_keyword(source: bytes, value: token) -> i32 {
+  if value.length != 2 {
+    return 0
+  }
+  if byte_at(source, value.start) != 102 {
+    return 0
+  }
+  if byte_at(source, value.start + 1) != 110 {
+    return 0
+  }
+  return 1
+}
+
+fn is_return_keyword(source: bytes, value: token) -> i32 {
+  if value.length != 6 {
+    return 0
+  }
+  if byte_at(source, value.start) != 114 {
+    return 0
+  }
+  if byte_at(source, value.start + 1) != 101 {
+    return 0
+  }
+  if byte_at(source, value.start + 2) != 116 {
+    return 0
+  }
+  if byte_at(source, value.start + 3) != 117 {
+    return 0
+  }
+  if byte_at(source, value.start + 4) != 114 {
+    return 0
+  }
+  if byte_at(source, value.start + 5) != 110 {
+    return 0
+  }
+  return 1
+}
+
+fn is_i32_type(source: bytes, value: token) -> i32 {
+  if value.length != 3 {
+    return 0
+  }
+  if byte_at(source, value.start) != 105 {
+    return 0
+  }
+  if byte_at(source, value.start + 1) != 51 {
+    return 0
+  }
+  if byte_at(source, value.start + 2) != 50 {
+    return 0
+  }
+  return 1
+}
+
+fn is_symbol(source: bytes, value: token, expected: i32) -> i32 {
+  if value.kind != 3 {
+    return 0
+  }
+  if value.length != 1 {
+    return 0
+  }
+  if byte_at(source, value.start) != expected {
+    return 0
+  }
+  return 1
+}
+
+fn parse_function(source: bytes, offset: i32) -> parse_result {
+  let keyword = next_token(source, offset)
+  if is_fn_keyword(source, keyword) == 0 {
+    return parse_result(0, offset)
+  }
+  let name = next_token(source, keyword.start + keyword.length)
+  if name.kind != 1 {
+    return parse_result(0, offset)
+  }
+  let open = next_token(source, name.start + name.length)
+  if is_symbol(source, open, 40) == 0 {
+    return parse_result(0, offset)
+  }
+  let close = next_token(source, open.start + open.length)
+  if is_symbol(source, close, 41) == 0 {
+    return parse_result(0, offset)
+  }
+  let minus = next_token(source, close.start + close.length)
+  if is_symbol(source, minus, 45) == 0 {
+    return parse_result(0, offset)
+  }
+  let arrow = next_token(source, minus.start + minus.length)
+  if is_symbol(source, arrow, 62) == 0 {
+    return parse_result(0, offset)
+  }
+  let result_type = next_token(source, arrow.start + arrow.length)
+  if is_i32_type(source, result_type) == 0 {
+    return parse_result(0, offset)
+  }
+  let open_body = next_token(source, result_type.start + result_type.length)
+  if is_symbol(source, open_body, 123) == 0 {
+    return parse_result(0, offset)
+  }
+  let returned = next_token(source, open_body.start + open_body.length)
+  if is_return_keyword(source, returned) == 0 {
+    return parse_result(0, offset)
+  }
+  let integer = next_token(source, returned.start + returned.length)
+  if integer.kind != 2 {
+    return parse_result(0, offset)
+  }
+  let close_body = next_token(source, integer.start + integer.length)
+  if is_symbol(source, close_body, 125) == 0 {
+    return parse_result(0, offset)
+  }
+  return parse_result(1, close_body.start + close_body.length)
+}
+
 fn parse_empty_program(source: bytes) -> i32 {
   let first = next_token(source, 0)
   if first.kind == 0 {
@@ -196,14 +316,19 @@ fn parse_empty_program(source: bytes) -> i32 {
     if keyword.kind != 1 {
       return 0
     }
-    if is_import_keyword(source, keyword) == 0 {
-      return 0
+    if is_import_keyword(source, keyword) == 1 {
+      let imported = next_token(source, keyword.start + keyword.length)
+      if imported.kind != 1 {
+        return 0
+      }
+      position = imported.start + imported.length
+    } else {
+      let function = parse_function(source, keyword.start)
+      if function.status == 0 {
+        return 0
+      }
+      position = function.position
     }
-    let imported = next_token(source, keyword.start + keyword.length)
-    if imported.kind != 1 {
-      return 0
-    }
-    position = imported.start + imported.length
   }
   return 1
 }
@@ -272,7 +397,8 @@ identifier and integer tokens have their complete source range. The temporary
 returns a pointer to the 20-byte result record described in the Matra Program
 specification. `parse_empty_program()` accepts an empty source or the minimal
 non-empty Program header form `module identifier { import identifier }` and maps
-it to an empty Wasm module.
+it to an empty Wasm module. It also recognizes an initial function form with no
+parameters and an integer `return` expression; emitting that function is next.
 `allocate_bytes(size)` returns a `bytes` value backed by the generated module's
 linear memory, and `byte_set(bytes, index, value)` writes one byte. Diagnostics
 remain a placeholder until diagnostic text is implemented.
