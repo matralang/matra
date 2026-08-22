@@ -132,7 +132,7 @@ export default matra\`
   article.card {
     p.eyebrow { "JS / TS API" }
     h2 { \${title} }
-    p { "Values use \${...}; braces remain structural." }
+    p { "Values use \\\${...}; braces remain structural." }
   }
 \``),
   "js-graphics": markdown("graphics.matra.ts", `// Generate Matra graphics source with ordinary TypeScript values.
@@ -146,7 +146,7 @@ export default matra\`
   svg(
     width=560, height=360,
     rect(x=0, y=0, width=560, height=360, rx=24, fill="#101814"),
-    \${raw(dots.join(",\\n    "))},
+    \${matra.raw(dots.join(",\\n    "))},
     text(x=48, y=70, fill="#ffffff", font-size=20, "GENERATED / TS")
   )
 \``, "svg"),

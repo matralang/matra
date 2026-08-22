@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node test/run.js",
+    "test": "node --import tsx --test test/matra-program.test.ts && node test/run.js",
     "dev": "tsx src/dev.ts",
     "css:build": "tailwindcss -i ./src/styles/app.css -o ./dist/app.css",
     "build": "node --import tsx src/build.ts && pnpm run css:build",
