@@ -159,6 +159,18 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     const whitespaceRecord = new DataView(module.instance.exports.memory.buffer, whitespaceRecordPointer, 20)
     assert.equal(whitespaceRecord.getInt32(0, true), 0)
     assert.equal(whitespaceRecord.getInt32(8, true), 8)
+
+    const identifierPointer = module.instance.exports.alloc(8)
+    new Uint8Array(module.instance.exports.memory.buffer, identifierPointer, 8).set(
+      new TextEncoder().encode("  token7"),
+    )
+    assert.equal(module.instance.exports.token_summary(identifierPointer, 8), 1206)
+
+    const integerPointer = module.instance.exports.alloc(5)
+    new Uint8Array(module.instance.exports.memory.buffer, integerPointer, 5).set(
+      new TextEncoder().encode("\n1234"),
+    )
+    assert.equal(module.instance.exports.token_summary(integerPointer, 5), 2104)
   } finally {
     await rm(directory, { recursive: true, force: true })
   }

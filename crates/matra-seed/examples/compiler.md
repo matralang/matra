@@ -9,32 +9,99 @@ struct token {
   length: i32
 }
 
-fn next_token(source: bytes, offset: i32) -> token {
-  let position = offset
-  while position < byte_length(source) {
-    let value = byte_at(source, position)
-    if value == 32 {
-      position = position + 1
-    } else {
-      if value >= 48 {
-        if value <= 57 {
-          return token(2, position, 1)
-        }
-      }
-      if value >= 65 {
-        if value <= 90 {
-          return token(1, position, 1)
-        }
-      }
-      if value >= 97 {
-        if value <= 122 {
-          return token(1, position, 1)
-        }
-      }
-      return token(3, position, 1)
+fn is_space(value: i32) -> i32 {
+  if value == 9 {
+    return 1
+  }
+  if value == 10 {
+    return 1
+  }
+  if value == 13 {
+    return 1
+  }
+  if value == 32 {
+    return 1
+  }
+  return 0
+}
+
+fn is_identifier(value: i32) -> i32 {
+  if value >= 65 {
+    if value <= 90 {
+      return 1
     }
   }
-  return token(0, position, 0)
+  if value >= 97 {
+    if value <= 122 {
+      return 1
+    }
+  }
+  if value == 95 {
+    return 1
+  }
+  return 0
+}
+
+fn is_digit(value: i32) -> i32 {
+  if value >= 48 {
+    if value <= 57 {
+      return 1
+    }
+  }
+  return 0
+}
+
+fn next_token(source: bytes, offset: i32) -> token {
+  let position = offset
+  let source_length = byte_length(source)
+  while position < source_length {
+    let value = byte_at(source, position)
+    if is_space(value) == 1 {
+      position = position + 1
+    } else {
+      break
+    }
+  }
+  if position == source_length {
+    return token(0, position, 0)
+  }
+
+  let start = position
+  let first = byte_at(source, position)
+  if is_identifier(first) == 1 {
+    position = position + 1
+    while position < source_length {
+      if is_identifier(byte_at(source, position)) == 1 {
+        position = position + 1
+      } else {
+        if is_digit(byte_at(source, position)) == 1 {
+          position = position + 1
+        } else {
+          break
+        }
+      }
+    }
+    return token(1, start, position - start)
+  }
+  if is_digit(first) == 1 {
+    position = position + 1
+    while position < source_length {
+      if is_digit(byte_at(source, position)) == 1 {
+        position = position + 1
+      } else {
+        break
+      }
+    }
+    return token(2, start, position - start)
+  }
+  return token(3, start, 1)
+}
+
+// A temporary execution probe keeps the bootstrap lexer observable from the
+// seed compiler integration test. It is not part of the long-term compiler ABI.
+export fn token_summary(source: bytes) -> i32 {
+  let value = next_token(source, 0)
+  return value.kind * 1000 + value.start * 100 + value.length
 }
 
 fn write_i32(buffer: bytes, index: i32, value: i32) -> bytes {
@@ -96,9 +163,11 @@ export fn compile(source: bytes) -> i32 {
 
 The initial bootstrap contract maps an empty or whitespace-only source to the
 valid, empty Wasm module `00 61 73 6d 01 00 00 00`. `next_token()` skips ASCII
-spaces and distinguishes EOF, ASCII identifiers, integers, and symbols. The
-`compile()` export returns a pointer to the 20-byte result record described in
-the Matra Program specification.
+whitespace and distinguishes EOF, ASCII identifiers, integers, and symbols;
+identifier and integer tokens have their complete source range. The temporary
+`token_summary()` export is an integration-test probe. The `compile()` export
+returns a pointer to the 20-byte result record described in the Matra Program
+specification.
 `allocate_bytes(size)` returns a `bytes` value backed by the generated module's
 linear memory, and `byte_set(bytes, index, value)` writes one byte. Diagnostics
 remain a placeholder until diagnostic text is implemented.
