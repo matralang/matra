@@ -72,12 +72,6 @@ export default defaultLayout(matra`
         textarea#matra-source[spellcheck="false" aria-describedby="playground-status"]~
 # Card
 
----
-matra:
-  entry: card.matra
-  renderer: html
----
-
 \`\`\`card.matra
 article.card {
   p.eyebrow { "MATRA" }

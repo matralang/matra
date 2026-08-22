@@ -27,9 +27,17 @@ type MatraFence = { filename: string; kind: "matra" | "matra.ts"; source: string
 type MatraRenderer = ResultMode | "auto"
 type MatraDocument = MatraFence & { renderer: MatraRenderer; title?: string }
 
-function markdown(filename: string, source: string, renderer: MatraRenderer = "html"): string {
+function markdown(
+  filename: string,
+  source: string,
+  renderer: MatraRenderer = "html",
+  frontMatter = true,
+): string {
   const title = filename.replace(/\.matra(?:\.ts)?$/, "").replace(/[-_]/g, " ")
-  return `# ${title}\n\n---\nmatra:\n  entry: ${filename}\n  renderer: ${renderer}\n---\n\n\`\`\`${filename}\n${source}\n\`\`\``
+  const metadata = frontMatter
+    ? `---\nmatra:\n  entry: ${filename}\n  renderer: ${renderer}\n---\n\n`
+    : ""
+  return `${metadata}# ${title}\n\n\`\`\`${filename}\n${source}\n\`\`\``
 }
 
 const examples: Record<string, string> = {
@@ -39,7 +47,7 @@ const examples: Record<string, string> = {
   p { "Edit this source and watch it render." }
   a.button.primary[href="/spec/"] { "Read the spec" }
   hr;
-}`),
+}`, "html", false),
   list: markdown("list.matra", `$root {
   h2 { "Specification" }
   ol {
@@ -410,7 +418,7 @@ function extractMatraDocument(markdown: string): MatraDocument {
 }
 
 function parseMatraFrontMatter(markdown: string): { entry?: string; renderer: MatraRenderer; title?: string | false } {
-  const frontMatter = markdown.match(/(?:^|\n)---[ \t]*\n([\s\S]*?)\n---[ \t]*(?:\n|$)/)
+  const frontMatter = markdown.match(/^---[ \t]*\n([\s\S]*?)\n---[ \t]*(?:\n|$)/)
   if (!frontMatter) return { renderer: "html" }
   const matra = frontMatter[1].match(/^matra:\s*\n((?:^[ \t]+.*(?:\n|$))*)/m)
   if (!matra) return { renderer: "html" }
@@ -425,7 +433,7 @@ function parseMatraFrontMatter(markdown: string): { entry?: string; renderer: Ma
 }
 
 function extractMarkdownTitle(markdown: string): string | undefined {
-  const withoutFrontMatter = markdown.replace(/(?:^|\n)---[ \t]*\n[\s\S]*?\n---[ \t]*(?:\n|$)/, "")
+  const withoutFrontMatter = markdown.replace(/^---[ \t]*\n[\s\S]*?\n---[ \t]*(?:\n|$)/, "")
   return withoutFrontMatter.match(/^#\s+(.+?)\s*$/m)?.[1]
 }
 
