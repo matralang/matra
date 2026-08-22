@@ -303,9 +303,6 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
     return function_definition(0, 0, 0, 0, offset)
   }
   let return_value = read_small_integer(source, integer)
-  if return_value >= 64 {
-    return function_definition(0, 0, 0, 0, offset)
-  }
   let name_start = name.start
   let name_length = name.length
   let next_position = close_body.start + close_body.length
@@ -399,8 +396,49 @@ fn empty_module() -> bytes {
   return output
 }
 
+fn i32_leb_length(value: i32) -> i32 {
+  let remaining = value
+  let length = 0
+  while 1 {
+    let quotient = remaining / 128
+    let byte = remaining - quotient * 128
+    remaining = quotient
+    length = length + 1
+    if remaining == 0 {
+      if byte < 64 {
+        return length
+      }
+      return length + 1
+    }
+  }
+  return 0
+}
+
+fn write_i32_leb(buffer: bytes, index: i32, value: i32) -> bytes {
+  let remaining = value
+  let position = index
+  while 1 {
+    let quotient = remaining / 128
+    let byte = remaining - quotient * 128
+    remaining = quotient
+    if remaining == 0 {
+      if byte < 64 {
+        byte_set(buffer, position, byte)
+        return buffer
+      }
+      byte_set(buffer, position, byte + 128)
+      byte_set(buffer, position + 1, 0)
+      return buffer
+    }
+    byte_set(buffer, position, byte + 128)
+    position = position + 1
+  }
+  return buffer
+}
+
 fn single_function_module(source: bytes, function: function_definition) -> bytes {
-  let output = allocate_bytes(33 + function.name_length)
+  let value_length = i32_leb_length(function.return_value)
+  let output = allocate_bytes(32 + function.name_length + value_length)
   byte_set(output, 0, 0)
   byte_set(output, 1, 97)
   byte_set(output, 2, 115)
@@ -432,14 +470,14 @@ fn single_function_module(source: bytes, function: function_definition) -> bytes
   byte_set(output, 23 + function.name_length, 0)
   byte_set(output, 24 + function.name_length, 0)
   byte_set(output, 25 + function.name_length, 10)
-  byte_set(output, 26 + function.name_length, 6)
+  byte_set(output, 26 + function.name_length, 5 + value_length)
   byte_set(output, 27 + function.name_length, 1)
-  byte_set(output, 28 + function.name_length, 4)
+  byte_set(output, 28 + function.name_length, 3 + value_length)
   byte_set(output, 29 + function.name_length, 0)
   byte_set(output, 30 + function.name_length, 65)
-  byte_set(output, 31 + function.name_length, function.return_value)
-  byte_set(output, 32 + function.name_length, 11)
-  return output
+  let written = write_i32_leb(output, 31 + function.name_length, function.return_value)
+  byte_set(written, 31 + function.name_length + value_length, 11)
+  return written
 }
 
 export fn alloc(size: i32) -> i32 {
@@ -490,7 +528,7 @@ returns a pointer to the 20-byte result record described in the Matra Program
 specification. `parse_empty_program()` accepts an empty source or the minimal
 non-empty Program header form `module identifier { import identifier }` and maps
 it to an empty Wasm module. It also recognizes an initial function form with no
-parameters and a nonnegative integer `return` expression below `64`. Such a
+parameters and a nonnegative integer `return` expression. Such a
 function is emitted with one Wasm type, function, export, and code entry.
 `allocate_bytes(size)` returns a `bytes` value backed by the generated module's
 linear memory, and `byte_set(bytes, index, value)` writes one byte. Diagnostics
