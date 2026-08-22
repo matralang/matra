@@ -62,7 +62,7 @@ html[lang="ja"] {
                     }
                   }
                   pre {
-                    code[src="matra:render-html.ts"] {}
+                    code[src="matra:render-html.ts"];
                   }
                 }
                 div.code-window.example-code[aria-label="Matra HTML source"] {
@@ -75,7 +75,7 @@ html[lang="ja"] {
                     }
                   }
                   pre {
-                    code[src="matra:article.matra"] {}
+                    code[src="matra:article.matra"];
                   }
                 }
               }
@@ -103,7 +103,7 @@ html[lang="ja"] {
                     }
                   }
                   pre {
-                    code[src="matra:render-svg.ts"] {}
+                    code[src="matra:render-svg.ts"];
                   }
                 }
                 div.code-window.example-code[aria-label="Matra SVG source"] {
@@ -116,7 +116,7 @@ html[lang="ja"] {
                     }
                   }
                   pre {
-                    code[src="matra:badge.matra"] {}
+                    code[src="matra:badge.matra"];
                   }
                 }
               }
@@ -144,7 +144,7 @@ html[lang="ja"] {
                     }
                   }
                   pre {
-                    code[src="matra:transform.ts"] {}
+                    code[src="matra:transform.ts"];
                   }
                 }
                 div.code-window.example-code[aria-label="Matra menu source"] {
@@ -157,7 +157,7 @@ html[lang="ja"] {
                     }
                   }
                   pre {
-                    code[src="matra:menu.matra"] {}
+                    code[src="matra:menu.matra"];
                   }
                 }
               }
