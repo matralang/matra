@@ -653,7 +653,11 @@ export fn compile(source: bytes) -> i32 {
         if function.return_value >= 0 {
           if second.return_value == -2 {
             output = two_function_module(source, function, second)
+          } else {
+            return diagnostic_record()
           }
+        } else {
+          return diagnostic_record()
         }
       }
     }

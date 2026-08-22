@@ -242,6 +242,13 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     const compiledCallFunction = await WebAssembly.instantiate(callFunctionOutput)
     assert.equal(compiledCallFunction.instance.exports.answer(), 42)
 
+    const unsupportedFunctionSource = new TextEncoder().encode("module demo\nfn first() -> i32 { return 1 }\nfn second() -> i32 { return 2 }")
+    const unsupportedFunctionPointer = module.instance.exports.alloc(unsupportedFunctionSource.length)
+    new Uint8Array(module.instance.exports.memory.buffer, unsupportedFunctionPointer, unsupportedFunctionSource.length).set(unsupportedFunctionSource)
+    const unsupportedFunctionRecordPointer = module.instance.exports.compile(unsupportedFunctionPointer, unsupportedFunctionSource.length)
+    const unsupportedFunctionRecord = new DataView(module.instance.exports.memory.buffer, unsupportedFunctionRecordPointer, 20)
+    assert.equal(unsupportedFunctionRecord.getInt32(0, true), 1)
+
     const invalidFunctionSource = new TextEncoder().encode("module demo\nfn answer() -> i32 { return value }")
     const invalidFunctionPointer = module.instance.exports.alloc(invalidFunctionSource.length)
     new Uint8Array(module.instance.exports.memory.buffer, invalidFunctionPointer, invalidFunctionSource.length).set(invalidFunctionSource)

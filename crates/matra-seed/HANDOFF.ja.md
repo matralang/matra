@@ -67,6 +67,10 @@ token列をarrayへ保存するのはarray of structが利用可能になって�
 9. 2個の引数なしfunctionと、entryからhelperへのfunction callをlowerする。
 10. function一覧を一般化し、parameter付きcallと任意数のfunctionをlowerする。
 
+現時点で2個のfunctionがあるProgramは、helperがnonnegative integer literalをreturnし、entryが
+引数なしでhelperをcallする形だけをsuccessとしてemitする。それ以外は、functionを落としたWasmを
+生成せずdiagnostic statusを返す。
+
 ## 注意点
 
 - 現在の`bytes`と`[i32]`は内部で同じpointer/length mapを共有する。structはpointer-onlyの
