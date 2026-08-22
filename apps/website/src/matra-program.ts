@@ -1,9 +1,9 @@
 type RawMatraSource = { readonly kind: "RawMatraSource", readonly source: string }
 
-/** Execute a trusted .matra.ts program and return its generated Matra source. */
+/** Execute a .matra.ts module and return its generated Matra source. */
 export function executeMatraProgram(program: string): string {
   const javaScript = compileMatraModule(program)
-  // Website page sources are repository-owned build inputs, not user input.
+  // .matra.ts is explicitly executable code, both in the build and Playground.
   // eslint-disable-next-line no-new-func
   const execute = new Function("matra", "raw", `"use strict";\n${javaScript}`) as (
     matra: (strings: TemplateStringsArray, ...values: unknown[]) => string,

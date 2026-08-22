@@ -43,6 +43,7 @@ const specPages = await Promise.all([
 ].map(page => readFile(new URL(`../dist/spec/${page}/index.html`, import.meta.url), "utf8")))
 const playground = await readFile(new URL("../dist/play/index.html", import.meta.url), "utf8")
 const playgroundBundle = await readFile(new URL("../dist/assets/playground.js", import.meta.url), "utf8")
+const playgroundSource = await readFile(new URL("../src/client/playground.ts", import.meta.url), "utf8")
 
 for (const page of [
   "blog/index.html",
@@ -103,6 +104,8 @@ assert.match(playgroundBundle, /matra-json/)
 assert.match(playgroundBundle, /GENERATED \/ TS/)
 assert.match(playgroundBundle, /@matra\/styles/)
 assert.match(playgroundBundle, /preventScroll/)
+assert.match(playgroundSource, /export default matra\\`/)
+assert.doesNotMatch(playgroundSource, /matra\s*\{/)
 
 execFileSync("pnpm", ["run", "build"], {
   stdio: "inherit",

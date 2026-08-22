@@ -4,6 +4,7 @@ import { toHTML } from "@matra/html"
 import { parseMath } from "@matra/math"
 import { evaluateMatra, numericEvaluateMatra, numericEvaluateProps, simplifyMatra } from "@matra/math-compute-engine"
 import matraStyles from "../../../../packages/styles/matra.css"
+import { executeMatraProgram } from "../matra-program"
 
 const source = required<HTMLTextAreaElement>("matra-source")
 const status = required<HTMLElement>("playground-status")
@@ -22,9 +23,6 @@ const stylesheet = required<HTMLInputElement>("stylesheet")
 
 type OutputMode = "html" | "svg"
 type ResultMode = OutputMode | "math"
-type ProgramResult = string | { source: string; mode?: OutputMode }
-type MatraTemplate = (strings: TemplateStringsArray, ...values: unknown[]) => string
-type RawMatraSource = { readonly kind: "RawMatraSource"; readonly source: string }
 type MatraFence = { filename: string; kind: "matra" | "matra.ts"; source: string }
 type MatraRenderer = ResultMode | "auto"
 type MatraDocument = MatraFence & { renderer: MatraRenderer; title?: string; stylesheet?: string }
@@ -130,13 +128,13 @@ const examples: Record<string, string> = {
   "js-card": markdown("card.matra.ts", `// TypeScript-compatible values are embedded with \${...}.
 const title = "Matra from JavaScript"
 
-matra {
+export default matra\`
   article.card {
     p.eyebrow { "JS / TS API" }
     h2 { \${title} }
     p { "Values use \${...}; braces remain structural." }
   }
-}`),
+\``),
   "js-graphics": markdown("graphics.matra.ts", `// Generate Matra graphics source with ordinary TypeScript values.
 const dots = Array.from({ length: 7 }, (_, index) => {
   const x = 70 + index * 70
@@ -144,14 +142,14 @@ const dots = Array.from({ length: 7 }, (_, index) => {
   return 'circle(cx=' + x + ', cy=180, r=' + radius + ', fill="#c8f135")'
 })
 
-matra {
+export default matra\`
   svg(
     width=560, height=360,
     rect(x=0, y=0, width=560, height=360, rx=24, fill="#101814"),
     \${raw(dots.join(",\\n    "))},
     text(x=48, y=70, fill="#ffffff", font-size=20, "GENERATED / TS")
   )
-}`, "svg"),
+\``, "svg"),
 }
 
 let activePanel = "preview"
@@ -362,69 +360,7 @@ function isNode(value: unknown): value is { tag: string } {
 }
 
 function runMatraTypeScriptProgram(program: string): { source: string; mode?: OutputMode } {
-  const javaScript = compileMatraBlock(program)
-  // The editor currently executes the JavaScript subset shared by JS and TS.
-  // eslint-disable-next-line no-new-func
-  const execute = new Function("m", "raw", `"use strict";\n${javaScript}`) as (
-    m: MatraTemplate,
-    raw: (source: string) => RawMatraSource,
-  ) => ProgramResult
-  const result = execute(matraTemplate, rawMatra)
-  if (typeof result === "string") return { source: result }
-  if (!result || typeof result.source !== "string") {
-    throw new TypeError("A .matra.ts fence must produce Matra source.")
-  }
-  if (result.mode !== undefined && result.mode !== "html" && result.mode !== "svg") {
-    throw new TypeError('mode must be either "html" or "svg".')
-  }
-  return result
-}
-
-function matraTemplate(strings: TemplateStringsArray, ...values: unknown[]): string {
-  return strings.reduce((result, chunk, index) => {
-    const value = index < values.length ? matraSourceValue(values[index]) : ""
-    return result + chunk + value
-  }, "")
-}
-
-function matraSourceValue(value: unknown): string {
-  if (value === null || value === undefined) return ""
-  if (isRawMatraSource(value)) return value.source
-  if (typeof value === "string") return JSON.stringify(value)
-  if (typeof value === "function") {
-    throw new TypeError("Function values require the forthcoming Matra event runtime.")
-  }
-  if (Array.isArray(value)) return value.map(matraSourceValue).join("\n")
-  return String(value)
-}
-
-function rawMatra(source: string): RawMatraSource {
-  return { kind: "RawMatraSource", source }
-}
-
-function isRawMatraSource(value: unknown): value is RawMatraSource {
-  return typeof value === "object" && value !== null &&
-    "kind" in value && value.kind === "RawMatraSource" &&
-    "source" in value && typeof value.source === "string"
-}
-
-function compileMatraBlock(program: string): string {
-  const match = /\b(?:return\s+)?matra\s*\{/.exec(program)
-  if (!match || match.index === undefined) {
-    throw new SyntaxError("A .matra.ts fence must end with a `matra { ... }` block.")
-  }
-
-  const open = match.index + match[0].lastIndexOf("{")
-  const close = matchingBrace(program, open)
-  if (!/^[;\s]*$/.test(program.slice(close + 1))) {
-    throw new SyntaxError("The `matra { ... }` block must be the final expression in a .matra.ts fence.")
-  }
-  const source = program.slice(open + 1, close)
-  if (source.includes("`")) {
-    throw new SyntaxError("Use quoted text in a Matra TypeScript block; backtick text is not supported.")
-  }
-  const templateSource = escapeTemplateSyntaxInStrings(source)
-  return `${program.slice(0, match.index)}return m\`${templateSource}\`${program.slice(close + 1)}`
+  return { source: executeMatraProgram(program) }
 }
 
 function extractMatraDocument(markdown: string): MatraDocument {
@@ -459,50 +395,6 @@ function injectDocumentTitle(ast: ReturnType<typeof parse>, title: string): Retu
   const heading = { tag: "h1", props: {}, children: [title] }
   if (ast.tag === "$root") return { ...ast, children: [heading, ...ast.children] }
   return { tag: "$root", props: {}, children: [heading, ast] }
-}
-
-function escapeTemplateSyntaxInStrings(source: string): string {
-  let result = ""
-  let quote = false
-  let escaped = false
-  for (let index = 0; index < source.length; index += 1) {
-    const character = source[index]
-    if (quote && character === "$" && source[index + 1] === "{") result += "\\"
-    result += character
-    if (!quote) {
-      quote = character === '"'
-      continue
-    }
-    if (escaped) escaped = false
-    else if (character === "\\") escaped = true
-    else if (character === '"') quote = false
-  }
-  return result
-}
-
-function matchingBrace(source: string, open: number): number {
-  let depth = 0
-  let quote = ""
-  let escaped = false
-  for (let index = open; index < source.length; index += 1) {
-    const character = source[index]
-    if (quote) {
-      if (escaped) escaped = false
-      else if (character === "\\") escaped = true
-      else if (character === quote) quote = ""
-      continue
-    }
-    if (character === '"' || character === "'") {
-      quote = character
-      continue
-    }
-    if (character === "{") depth += 1
-    if (character === "}") {
-      depth -= 1
-      if (depth === 0) return index
-    }
-  }
-  throw new SyntaxError("Unclosed Matra block.")
 }
 
 function required<T extends HTMLElement>(id: string): T {

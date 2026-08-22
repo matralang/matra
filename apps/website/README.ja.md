@@ -32,6 +32,7 @@ Websiteと`@matra/*`は同じnpm workspaceで管理しています。`file:`指�
 ページは`src/pages`配下のMarkdownファイルで管理します。各ファイルはPlaygroundと同様に、`*.matra` fenced code blockへページのMatra sourceを記述します。スタイルは`src/styles`に置きます。
 ビルドは各Markdown文書からMatra code blockを抽出してparseし、HTMLへrenderします。
 繰り返し要素を生成するページは、信頼済みの`*.matra.ts` fenced code blockを使えます。これはbuild時にJavaScriptとして実行されるため、repository内で管理するsourceだけに使用してください。
+`.matra.ts`は有効なTypeScript moduleとして、`export default matra\`...\``の形で記述します。
 GitHub Pagesのproject pathはworkflowから`SITE_BASE_PATH`として自動設定されます。
 
 ## 運用メモ
