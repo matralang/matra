@@ -10,3 +10,10 @@ import { toHTML } from "@matra/html"
 
 toHTML(parse('p(class="lead", "Hello")'))
 ```
+
+For a static-site base path, pass `basePath`. Site-root `href` and `src` values are prefixed, while absolute and protocol-relative URLs remain unchanged.
+
+```ts
+toHTML(parse('a(href="/docs/", "Docs")'), { basePath: "/website" })
+// <a href="/website/docs/">Docs</a>
+```

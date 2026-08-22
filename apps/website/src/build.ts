@@ -7,7 +7,7 @@ import { build } from "esbuild"
 // Declare the Node `process` global when @types/node is not installed.
 declare const process: any;
 
-import { parse } from "@matra/core"
+import { extractMatraMarkdown, parse } from "@matra/core"
 import { toHTML } from "@matra/html"
 
 const siteHeader = parse(`
@@ -58,13 +58,6 @@ function getBasePath(): string {
   return `/${raw.replace(/^\/+|\/+$/g, "")}`
 }
 
-function applyBasePath(html: string, basePath: string): string {
-  if (!basePath) return html
-
-  // Prefix site-root URLs while leaving protocol-relative URLs (//example.com) alone.
-  return html.replace(/\b(href|src)="\/(?!\/)/g, `$1="${basePath}/`)
-}
-
 function isIgnoredPath(relFromPages: string): boolean {
   // Normalize to POSIX-style for stable checks across OSes
   const rel = relFromPages.split(path.sep).join("/")
@@ -111,19 +104,6 @@ function toOutputPath(pagesDirAbs: string, filePathAbs: string): string {
   // "about" -> "about/index.html"
   // "blog/post" -> "blog/post/index.html"
   return path.join(noExt, "index.html")
-}
-
-function extractMatraSource(markdown: string, sourcePath: string): string {
-  const pattern = /^(`{3,})([^\s`]+)[^\n]*\n([\s\S]*?)^\1[ \t]*$/gm
-  const fences = [...markdown.matchAll(pattern)]
-    .filter(match => match[2].endsWith(".matra"))
-
-  if (fences.length !== 1) {
-    throw new Error(
-      `${sourcePath} must contain exactly one *.matra fenced code block; found ${fences.length}.`,
-    )
-  }
-  return fences[0][3]
 }
 
 function assertNoOutputCollisions(pagesDirAbs: string, filesAbs: string[]) {
@@ -201,7 +181,10 @@ async function handler() {
   fs.rmSync(outputDir, { recursive: true, force: true })
 
   await Promise.all(pageFiles.map(async (filePath: string) => {
-    const source = extractMatraSource(fs.readFileSync(filePath, "utf8"), filePath)
+    const document = extractMatraMarkdown(fs.readFileSync(filePath, "utf8"))
+    if (document.kind !== "matra") {
+      throw new TypeError(`Website page must use a *.matra fence: ${filePath}`)
+    }
     const outRel = toOutputPath(pagesDir, filePath)
     const outputPath = path.join(outputDir, outRel)
     const outDir = path.dirname(outputPath)
@@ -209,8 +192,8 @@ async function handler() {
       fs.mkdirSync(outDir, { recursive: true })
     }
 
-    const ast = applySiteChrome(parse(source, { sourceId: path.relative(process.cwd(), filePath) }))
-    const htmlContent = DOCTYPE + applyBasePath(toHTML(ast), basePath)
+    const ast = applySiteChrome(parse(document.source, { sourceId: path.relative(process.cwd(), filePath) }))
+    const htmlContent = DOCTYPE + toHTML(ast, { basePath })
 
     fs.writeFileSync(outputPath, htmlContent)
     console.log(`Generated HTML file at: ${outputPath}`)

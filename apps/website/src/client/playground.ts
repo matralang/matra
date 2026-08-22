@@ -1,4 +1,4 @@
-import { astToMatraJSON, parse, printJSON } from "@matra/core"
+import { astToMatraJSON, extractMatraMarkdown, parse, printJSON } from "@matra/core"
 import { toSVG } from "@matra/graphics"
 import { toHTML } from "@matra/html"
 import { parseMath } from "@matra/math"
@@ -429,27 +429,7 @@ function compileMatraBlock(program: string): string {
 
 function extractMatraDocument(markdown: string): MatraDocument {
   const { entry, renderer, title, stylesheet } = parseMatraFrontMatter(markdown)
-  const fences: MatraFence[] = []
-  const pattern = /^[ \t]*(`{3,})([^\s`]+)[^\n]*\n([\s\S]*?)^[ \t]*\1[ \t]*$/gm
-  for (const match of markdown.matchAll(pattern)) {
-    const filename = match[2]
-    const kind = filename.endsWith(".matra.ts")
-      ? "matra.ts"
-      : filename.endsWith(".matra")
-        ? "matra"
-        : undefined
-    if (kind) fences.push({ filename, kind, source: match[3] })
-  }
-  if (fences.length === 0) {
-    throw new SyntaxError("Markdown must contain one `*.matra` or `*.matra.ts` fenced code block.")
-  }
-  const fence = entry ? fences.find(candidate => candidate.filename === entry) : fences[0]
-  if (!fence) {
-    throw new SyntaxError(`The Matra entry '${entry}' was not found in this Markdown document.`)
-  }
-  if (!entry && fences.length > 1) {
-    throw new SyntaxError("Set matra.entry in front matter when Markdown contains multiple Matra code blocks.")
-  }
+  const fence = extractMatraMarkdown(markdown, { entry })
   return { ...fence, renderer, title: title === false ? undefined : title ?? extractMarkdownTitle(markdown), stylesheet }
 }
 

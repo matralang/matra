@@ -161,6 +161,16 @@ command(
 A positional object such as `circle({x: 10})` retains its legacy meaning of
 merging entries into props.
 
+## Markdown documents
+
+`extractMatraMarkdown()` reads one `*.matra` or `*.matra.ts` fenced code block from a Markdown document. Use `entry` when a document includes multiple Matra blocks. Fences may use three or more backticks, allowing a Matra source to contain Markdown examples.
+
+```ts
+import { extractMatraMarkdown } from "@matra/core"
+
+const document = extractMatraMarkdown(markdown, { entry: "page.matra" })
+```
+
 ## Standard collection functions
 
 `Range` creates an inclusive sequence, and `Map` applies a registered function

@@ -31,4 +31,17 @@ describe("@matra/html", () => {
       "<script>window.dataLayer = window.dataLayer || [];</script>",
     )
   })
+
+  it("prefixes site-root links for static deployments", () => {
+    const ast = parse(`$root {
+      a[href="/docs/"] { "Docs" }
+      img[src="/image.svg"];
+      a[href="https://example.com/"] { "External" }
+      img[src="//cdn.example.com/image.svg"];
+    }`)
+    assert.equal(
+      toHTML(ast, { basePath: "/website/" }),
+      '<a href="/website/docs/">Docs</a><img src="/website/image.svg"><a href="https://example.com/">External</a><img src="//cdn.example.com/image.svg">',
+    )
+  })
 })

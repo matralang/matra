@@ -3,6 +3,7 @@ export { parse, parseWith } from "./parser/index.js";
 export { formatCodeFrame, MatraSyntaxError } from "./parser/error.js";
 export { astToMatraJSON, isMatraAST, isMatraJSON, matraJSONToAST, } from "./ast/convert.js";
 export { printJSON } from "./printer.js";
+export { extractMatraMarkdown } from "./markdown.js";
 export { transform, visit } from "./ast/transform.js";
 export { evaluatePropExpressions } from "./ast/evaluate.js";
 export { renderWith } from "./render.js";
@@ -12,6 +13,7 @@ export { CORE_VERSION, SPEC_VERSION } from "./ast/types.js";
 import { parse, parseWith } from "./parser/index.js";
 import { astToMatraJSON, matraJSONToAST } from "./ast/convert.js";
 import { printJSON } from "./printer.js";
+import { extractMatraMarkdown } from "./markdown.js";
 import { transform, visit } from "./ast/transform.js";
 import { evaluatePropExpressions } from "./ast/evaluate.js";
 import { renderWith } from "./render.js";
@@ -25,6 +27,7 @@ export default {
     astToMatraJSON,
     matraJSONToAST,
     printJSON,
+    extractMatraMarkdown,
     transform,
     visit,
     evaluatePropExpressions,

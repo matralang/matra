@@ -9,6 +9,8 @@ export {
   matraJSONToAST,
 } from "./ast/convert.js"
 export { printJSON } from "./printer.js"
+export { extractMatraMarkdown } from "./markdown.js"
+export type { ExtractMatraMarkdownOptions, MatraMarkdownFence } from "./markdown.js"
 export { transform, visit } from "./ast/transform.js"
 export { evaluatePropExpressions } from "./ast/evaluate.js"
 export type { PropExpressionEvaluator } from "./ast/evaluate.js"
@@ -31,6 +33,7 @@ export type * from "./ast/types.js"
 import { parse, parseWith } from "./parser/index.js"
 import { astToMatraJSON, matraJSONToAST } from "./ast/convert.js"
 import { printJSON } from "./printer.js"
+import { extractMatraMarkdown } from "./markdown.js"
 import { transform, visit } from "./ast/transform.js"
 import { evaluatePropExpressions } from "./ast/evaluate.js"
 import { renderWith } from "./render.js"
@@ -46,6 +49,7 @@ export default {
   astToMatraJSON,
   matraJSONToAST,
   printJSON,
+  extractMatraMarkdown,
   transform,
   visit,
   evaluatePropExpressions,

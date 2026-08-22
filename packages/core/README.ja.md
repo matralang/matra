@@ -150,6 +150,16 @@ command(
 `circle({x: 10})`のような位置引数objectは、要素をpropsへmergeする
 従来の意味を維持します。
 
+## Markdown文書
+
+`extractMatraMarkdown()`は、Markdown文書から`*.matra`または`*.matra.ts`のfenced code blockを1つ抽出します。複数のMatra blockがある場合は`entry`を指定します。3本以上のbacktick fenceに対応するため、Matra source内にMarkdownの作例を含められます。
+
+```ts
+import { extractMatraMarkdown } from "@matra/core"
+
+const document = extractMatraMarkdown(markdown, { entry: "page.matra" })
+```
+
 ## 標準コレクション関数
 
 `Range`は終端を含む数列を生成し、`Map`は登録済み関数を各値に適用します。
