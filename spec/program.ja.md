@@ -20,10 +20,10 @@ linear memoryを1 page exportし、`bytes` parameterとreturn valueを`(pointer,
 lowerします。
 `byte_length(source)`と`byte_at(source, index)`を利用できます。
 `allocate_bytes(size)`はlinear memory上の`bytes`を確保し、`byte_set(bytes, index, value)`は
-1 byteを書き込みます。
+1 byteを書き込みます。`byte_pointer(bytes)`はそのpointerを返します。
 
-array、struct、`bool`、安定したcompiler ABIは、下記の予定syntaxとして定義しますが、
-まだ未実装です。
+array、struct、`bool`とstableなcompiler ABIは、下記の予定syntaxとして定義しますが、
+まだ未実装です。bootstrap compilerは下記ABIの暫定subsetを実装します。
 
 ## Source form
 
@@ -101,13 +101,17 @@ linear memoryでdataを受け取ります。予定しているABIでは`bytes` a
 
 seed subsetでは`allocate_bytes(size)`がbump allocatorから`bytes` valueを返します。
 `byte_set(bytes, index, value)`は指定したoffsetへvalueの下位8 bitを書き込みます。
-これらは自己ホストcompilerのbinary emitter向けの暫定intrinsicです。
+`byte_pointer(bytes)`は`bytes` valueの先頭pointerを返します。これらは自己ホストcompilerの
+binary emitterとABI record向けの暫定intrinsicです。
 
 ## Compiler ABI draft
 
 compiler moduleは`memory`、`alloc(size: i32) -> i32`、
 `compile(source_pointer: i32, source_length: i32) -> i32`をexportします。sourceはUTF-8です。
 `compile`はlinear memory上の20-byte result recordへのpointerを返します。
+
+bootstrap compilerはこのABIを実装済みです。空のsourceはstatus `0`と有効な空Wasm moduleを
+返し、空でないsourceはdiagnostic text未実装のためstatus `1`と空のdiagnostic fieldを返します。
 
 | Offset | Field | 意味 |
 | --- | --- | --- |

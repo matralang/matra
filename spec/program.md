@@ -20,10 +20,11 @@ and `break`. It exports one page of WebAssembly linear memory. A `bytes`
 parameter and return value lower to `(pointer, length)`, and parameters support
 `byte_length(source)` and `byte_at(source, index)`.
 `allocate_bytes(size)` allocates `bytes` in linear memory, and `byte_set(bytes,
-index, value)` writes one byte.
+index, value)` writes one byte. `byte_pointer(bytes)` returns its pointer.
 
-Arrays, structs, `bool`, and the stable compiler ABI are specified as planned
-syntax below, but are not yet implemented.
+Arrays, structs, `bool`, and a stable compiler ABI are specified as planned
+syntax below, but are not yet implemented. The bootstrap compiler implements a
+temporary subset of the ABI below.
 
 ## Source form
 
@@ -103,14 +104,19 @@ or network access to compiled code.
 
 In the seed subset, `allocate_bytes(size)` returns `bytes` from a bump
 allocator. `byte_set(bytes, index, value)` writes the low 8 bits of `value` at
-the given offset. These are temporary intrinsics for the self-hosted compiler's
-binary emitter.
+the given offset, and `byte_pointer(bytes)` returns the value's first pointer.
+These are temporary intrinsics for the self-hosted compiler's binary emitter
+and ABI records.
 
 ## Compiler ABI draft
 
 A compiler module exports `memory`, `alloc(size: i32) -> i32`, and
 `compile(source_pointer: i32, source_length: i32) -> i32`. Source is UTF-8.
 `compile` returns the pointer to a 20-byte result record in linear memory.
+
+The bootstrap compiler implements this ABI. An empty source returns status `0`
+and a valid empty Wasm module. A non-empty source returns status `1` with empty
+diagnostic fields until diagnostic text is implemented.
 
 | Offset | Field | Meaning |
 | --- | --- | --- |

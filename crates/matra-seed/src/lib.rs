@@ -1029,6 +1029,19 @@ fn emit_expression(
             encode_u32(output, *index);
         }
         Expression::Call(name, arguments) => {
+            if name == "byte_pointer" {
+                let [Expression::Variable(source)] = arguments.as_slice() else {
+                    return Err(CompileError::new(
+                        "byte_pointer expects one bytes variable.",
+                    ));
+                };
+                let (pointer, _) = bytes.get(source.as_str()).ok_or_else(|| {
+                    CompileError::new(format!("Unknown bytes variable: {source}"))
+                })?;
+                output.push(0x20);
+                encode_u32(output, *pointer);
+                return Ok(());
+            }
             if name == "byte_length" {
                 let [Expression::Variable(source)] = arguments.as_slice() else {
                     return Err(CompileError::new("byte_length expects one bytes variable."));
@@ -1195,6 +1208,7 @@ fn expression_type(
         {
             Ok(ValueType::Bytes)
         }
+        Expression::Call(name, _) if name == "byte_pointer" => Ok(ValueType::I32),
         Expression::Call(name, _) => functions
             .get(name.as_str())
             .map(|signature| signature.return_type)
