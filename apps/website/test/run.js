@@ -19,13 +19,20 @@ assert.equal(pageSources.length, 11)
 assert.ok(pageSources.every(page => page.endsWith(".md")))
 for (const page of pageSources) {
   const source = await readFile(page, "utf8")
-  assert.match(source, /^```+[^\n]*\.matra\n/m, page)
+  assert.match(source, /^```+[^\n]*\.matra(?:\.ts)?\n/m, page)
 }
+assert.equal(
+  (await Promise.all(pageSources.map(page => readFile(page, "utf8"))))
+    .filter(source => source.includes(".matra.ts"))
+    .length,
+  3,
+)
 
 execFileSync("pnpm", ["run", "build"], { stdio: "inherit" })
 
 const index = await readFile(new URL("../dist/index.html", import.meta.url), "utf8")
 const docs = await readFile(new URL("../dist/docs/index.html", import.meta.url), "utf8")
+const packages = await readFile(new URL("../dist/packages/index.html", import.meta.url), "utf8")
 const spec = await readFile(new URL("../dist/spec/index.html", import.meta.url), "utf8")
 const playground = await readFile(new URL("../dist/play/index.html", import.meta.url), "utf8")
 const playgroundBundle = await readFile(new URL("../dist/assets/playground.js", import.meta.url), "utf8")
@@ -61,6 +68,8 @@ assert.match(index, /hello\.matra/)
 assert.doesNotMatch(index, /hello\.matra\.ts/)
 assert.match(index, /<code>group\[role=&quot;list&quot;\]/)
 assert.match(docs, /<title>Matraを使う — Matra/)
+assert.match(docs, /Language Specification/)
+assert.match(packages, /公式パッケージ/)
 assert.match(spec, /<title>Index — Matra Specification v0.2/)
 assert.match(spec, /Data Model/)
 assert.match(playground, /<title>Playground — Matra/)

@@ -32,4 +32,5 @@ package are available to the website locally without `file:` dependencies or
 
 Pages are Markdown files under `src/pages`. Like the Playground, each document contains its page source in a `*.matra` fenced code block; styles live in `src/styles`.
 The build extracts that Matra code block, parses it, and renders it to HTML.
+Pages with generated repeated content may use a trusted `*.matra.ts` fenced code block. It executes as JavaScript during the build, so use it only for repository-managed source.
 GitHub Pagesのproject pathはworkflowから`SITE_BASE_PATH`として自動設定されます。

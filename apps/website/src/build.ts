@@ -9,6 +9,7 @@ declare const process: any;
 
 import { extractMatraMarkdown, parse } from "@matra/core"
 import { toHTML } from "@matra/html"
+import { executeMatraProgram } from "./matra-program"
 
 const siteHeader = parse(`
   header.site-header {
@@ -182,9 +183,9 @@ async function handler() {
 
   await Promise.all(pageFiles.map(async (filePath: string) => {
     const document = extractMatraMarkdown(fs.readFileSync(filePath, "utf8"))
-    if (document.kind !== "matra") {
-      throw new TypeError(`Website page must use a *.matra fence: ${filePath}`)
-    }
+    const source = document.kind === "matra.ts"
+      ? executeMatraProgram(document.source)
+      : document.source
     const outRel = toOutputPath(pagesDir, filePath)
     const outputPath = path.join(outputDir, outRel)
     const outDir = path.dirname(outputPath)
@@ -192,7 +193,7 @@ async function handler() {
       fs.mkdirSync(outDir, { recursive: true })
     }
 
-    const ast = applySiteChrome(parse(document.source, { sourceId: path.relative(process.cwd(), filePath) }))
+    const ast = applySiteChrome(parse(source, { sourceId: path.relative(process.cwd(), filePath) }))
     const htmlContent = DOCTYPE + toHTML(ast, { basePath })
 
     fs.writeFileSync(outputPath, htmlContent)
