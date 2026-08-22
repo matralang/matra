@@ -1086,8 +1086,7 @@ fn emit_bytes_expression(
 ) -> Result<(), CompileError> {
     match expression {
         Expression::Call(name, arguments)
-            if (name == "empty_module" || name == "diagnostic_module")
-                && !functions.contains_key(name.as_str()) =>
+            if name == "__seed_empty_module" && !functions.contains_key(name.as_str()) =>
         {
             if !arguments.is_empty() {
                 return Err(CompileError::new(format!(
