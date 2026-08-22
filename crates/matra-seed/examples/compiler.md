@@ -3,6 +3,40 @@
 ```compiler.matra.program
 module compiler
 
+struct token {
+  kind: i32
+  start: i32
+  length: i32
+}
+
+fn next_token(source: bytes, offset: i32) -> token {
+  let position = offset
+  while position < byte_length(source) {
+    let value = byte_at(source, position)
+    if value == 32 {
+      position = position + 1
+    } else {
+      if value >= 48 {
+        if value <= 57 {
+          return token(2, position, 1)
+        }
+      }
+      if value >= 65 {
+        if value <= 90 {
+          return token(1, position, 1)
+        }
+      }
+      if value >= 97 {
+        if value <= 122 {
+          return token(1, position, 1)
+        }
+      }
+      return token(3, position, 1)
+    }
+  }
+  return token(0, position, 0)
+}
+
 fn write_i32(buffer: bytes, index: i32, value: i32) -> bytes {
   byte_set(buffer, index, value)
   byte_set(buffer, index + 1, value / 256)
@@ -50,7 +84,8 @@ fn diagnostic_record() -> i32 {
 }
 
 export fn compile(source: bytes) -> i32 {
-  if byte_length(source) == 0 {
+  let first = next_token(source, 0)
+  if first.kind == 0 {
     let output = empty_module()
     return success_record(output)
   }
@@ -59,9 +94,11 @@ export fn compile(source: bytes) -> i32 {
 }
 ```
 
-The initial bootstrap contract maps an empty source to the valid, empty Wasm
-module `00 61 73 6d 01 00 00 00`. The `compile()` export returns a pointer to
-the 20-byte result record described in the Matra Program specification.
+The initial bootstrap contract maps an empty or whitespace-only source to the
+valid, empty Wasm module `00 61 73 6d 01 00 00 00`. `next_token()` skips ASCII
+spaces and distinguishes EOF, ASCII identifiers, integers, and symbols. The
+`compile()` export returns a pointer to the 20-byte result record described in
+the Matra Program specification.
 `allocate_bytes(size)` returns a `bytes` value backed by the generated module's
 linear memory, and `byte_set(bytes, index, value)` writes one byte. Diagnostics
 remain a placeholder until diagnostic text is implemented.

@@ -1643,7 +1643,14 @@ fn expression_type(
         {
             Ok(ValueType::ArrayI32)
         }
-        Expression::Call(name, _) if name == "byte_pointer" => Ok(ValueType::I32),
+        Expression::Call(name, _)
+            if matches!(
+                name.as_str(),
+                "array_get" | "byte_at" | "byte_length" | "byte_pointer"
+            ) =>
+        {
+            Ok(ValueType::I32)
+        }
         Expression::Call(name, _) if structs.contains_key(name.as_str()) => {
             Ok(ValueType::Struct(name.clone()))
         }
