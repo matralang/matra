@@ -15,7 +15,7 @@ const cards = raw(links.map(([href, label, detail], index) => `
   }
 `).join(""))
 
-matra {
+export default matra`
   html[lang="ja"] {
     head {
       meta[charset="UTF-8"];
@@ -40,5 +40,5 @@ matra {
       }
     }
   }
-}
+`
 ```

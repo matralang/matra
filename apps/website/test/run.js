@@ -21,12 +21,13 @@ for (const page of pageSources) {
   const source = await readFile(page, "utf8")
   assert.match(source, /^```+[^\n]*\.matra(?:\.ts)?\n/m, page)
 }
-assert.equal(
-  (await Promise.all(pageSources.map(page => readFile(page, "utf8"))))
-    .filter(source => source.includes(".matra.ts"))
-    .length,
-  3,
-)
+const pageMarkdown = await Promise.all(pageSources.map(page => readFile(page, "utf8")))
+const matraTypeScriptPages = pageMarkdown.filter(source => source.includes(".matra.ts"))
+assert.equal(matraTypeScriptPages.length, 3)
+for (const source of matraTypeScriptPages) {
+  assert.match(source, /export default matra`/)
+  assert.doesNotMatch(source, /matra\s*\{/);
+}
 
 execFileSync("pnpm", ["run", "build"], { stdio: "inherit" })
 

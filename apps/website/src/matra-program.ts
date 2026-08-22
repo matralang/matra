@@ -2,11 +2,11 @@ type RawMatraSource = { readonly kind: "RawMatraSource", readonly source: string
 
 /** Execute a trusted .matra.ts program and return its generated Matra source. */
 export function executeMatraProgram(program: string): string {
-  const javaScript = compileMatraBlock(program)
+  const javaScript = compileMatraModule(program)
   // Website page sources are repository-owned build inputs, not user input.
   // eslint-disable-next-line no-new-func
-  const execute = new Function("m", "raw", `"use strict";\n${javaScript}`) as (
-    m: (strings: TemplateStringsArray, ...values: unknown[]) => string,
+  const execute = new Function("matra", "raw", `"use strict";\n${javaScript}`) as (
+    matra: (strings: TemplateStringsArray, ...values: unknown[]) => string,
     raw: (source: string) => RawMatraSource,
   ) => unknown
   const result = execute(matraTemplate, rawMatra)
@@ -41,58 +41,39 @@ function isRawMatraSource(value: unknown): value is RawMatraSource {
     "source" in value && typeof value.source === "string"
 }
 
-function compileMatraBlock(program: string): string {
-  const match = /\b(?:return\s+)?matra\s*\{/.exec(program)
+function compileMatraModule(program: string): string {
+  const match = /\bexport\s+default\s+matra\s*`/.exec(program)
   if (!match || match.index === undefined) {
-    throw new SyntaxError("A .matra.ts page must end with a `matra { ... }` block.")
+    throw new SyntaxError("A .matra.ts page must end with `export default matra` followed by a template literal.")
   }
-  const open = match.index + match[0].lastIndexOf("{")
-  const close = matchingBrace(program, open)
+  const template = match.index + match[0].lastIndexOf("`")
+  const close = matchingTemplateLiteral(program, template)
   if (!/^[;\s]*$/.test(program.slice(close + 1))) {
-    throw new SyntaxError("The `matra { ... }` block must be the final expression in a .matra.ts page.")
+    throw new SyntaxError("The default Matra template must be the final expression in a .matra.ts page.")
   }
-  const source = program.slice(open + 1, close)
-  if (source.includes("`")) throw new SyntaxError("Backtick text is not supported in a .matra.ts page.")
-  return `${program.slice(0, match.index)}return m\`${escapeTemplateSyntaxInStrings(source)}\`${program.slice(close + 1)}`
+  return `${program.slice(0, match.index)}return matra${program.slice(template, close + 1)}${program.slice(close + 1)}`
 }
 
-function escapeTemplateSyntaxInStrings(source: string): string {
-  let result = ""
-  let quote = false
+function matchingTemplateLiteral(source: string, open: number): number {
+  let interpolationDepth = 0
   let escaped = false
-  for (let index = 0; index < source.length; index += 1) {
+  for (let index = open + 1; index < source.length; index += 1) {
     const character = source[index]
-    if (quote && character === "$" && source[index + 1] === "{") result += "\\"
-    result += character
-    if (!quote) {
-      quote = character === '"'
+    if (escaped) {
+      escaped = false
       continue
     }
-    if (escaped) escaped = false
-    else if (character === "\\") escaped = true
-    else if (character === '"') quote = false
-  }
-  return result
-}
-
-function matchingBrace(source: string, open: number): number {
-  let depth = 0
-  let quote = ""
-  let escaped = false
-  for (let index = open; index < source.length; index += 1) {
-    const character = source[index]
-    if (quote) {
-      if (escaped) escaped = false
-      else if (character === "\\") escaped = true
-      else if (character === quote) quote = ""
+    if (character === "\\") {
+      escaped = true
       continue
     }
-    if (character === '"' || character === "'") { quote = character; continue }
-    if (character === "{") depth += 1
-    if (character === "}") {
-      depth -= 1
-      if (depth === 0) return index
+    if (character === "`" && interpolationDepth === 0) return index
+    if (character === "$" && source[index + 1] === "{") {
+      interpolationDepth += 1
+      index += 1
+      continue
     }
+    if (character === "}" && interpolationDepth > 0) interpolationDepth -= 1
   }
-  throw new SyntaxError("Unclosed Matra block.")
+  throw new SyntaxError("Unclosed Matra template literal.")
 }
