@@ -139,7 +139,7 @@ export default matra\`
 const dots = Array.from({ length: 7 }, (_, index) => {
   const x = 70 + index * 70
   const radius = 10 + index * 4
-  return 'circle(cx=' + x + ', cy=180, r=' + radius + ', fill="#c8f135")'
+  return \`circle(cx=\${x}, cy=180, r=\${radius}, fill="#c8f135")\`
 })
 
 export default matra\`

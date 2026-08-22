@@ -5,7 +5,7 @@ import { executeMatraProgram } from "../src/matra-program.js"
 
 test("executes matra.raw() in a .matra.ts template", () => {
   const program = [
-    'const dots = ["circle(cx=10)", "circle(cx=20)"]',
+    'const dots = [10, 20].map(x => `circle(cx=${x})`)',
     'export default matra`svg { ${matra.raw(dots.join("\\n"))} }`',
   ].join("\n")
 
