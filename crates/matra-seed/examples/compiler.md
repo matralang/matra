@@ -362,9 +362,6 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
   if value_token.kind == 2 {
     return_value = read_small_integer(source, value_token)
     if negative == 1 {
-      if return_value > 64 {
-        return function_definition(0, 0, 0, 0, offset)
-      }
       return_value = -return_value
     }
   } else {
@@ -523,13 +520,15 @@ fn empty_module() -> bytes {
 }
 
 fn i32_leb_length(value: i32) -> i32 {
-  if value < 0 {
-    return 1
-  }
   let remaining = value
   let length = 0
   while 1 {
     let quotient = remaining / 128
+    if remaining < 0 {
+      if remaining != quotient * 128 {
+        quotient = quotient - 1
+      }
+    }
     let byte = remaining - quotient * 128
     remaining = quotient
     length = length + 1
@@ -537,21 +536,26 @@ fn i32_leb_length(value: i32) -> i32 {
       if byte < 64 {
         return length
       }
-      return length + 1
+    }
+    if remaining == -1 {
+      if byte >= 64 {
+        return length
+      }
     }
   }
   return 0
 }
 
 fn write_i32_leb(buffer: bytes, index: i32, value: i32) -> bytes {
-  if value < 0 {
-    byte_set(buffer, index, value + 128)
-    return buffer
-  }
   let remaining = value
   let position = index
   while 1 {
     let quotient = remaining / 128
+    if remaining < 0 {
+      if remaining != quotient * 128 {
+        quotient = quotient - 1
+      }
+    }
     let byte = remaining - quotient * 128
     remaining = quotient
     if remaining == 0 {
@@ -559,9 +563,12 @@ fn write_i32_leb(buffer: bytes, index: i32, value: i32) -> bytes {
         byte_set(buffer, position, byte)
         return buffer
       }
-      byte_set(buffer, position, byte + 128)
-      byte_set(buffer, position + 1, 0)
-      return buffer
+    }
+    if remaining == -1 {
+      if byte >= 64 {
+        byte_set(buffer, position, byte)
+        return buffer
+      }
     }
     byte_set(buffer, position, byte + 128)
     position = position + 1

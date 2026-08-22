@@ -67,8 +67,8 @@ token列をarrayへ保存するのはarray of structが利用可能になって�
 9. 2個の引数なしfunctionと、entryからhelperへのfunction callをlowerする。
 10. function一覧を一般化し、parameter付きcallと任意数のfunctionをlowerする。
 
-引数なしfunctionのinteger literal returnはnonnegative i32に加えて`-1`から`-64`を受理し、
-1 byteのsigned LEB128へlowerする。
+引数なしfunctionのinteger literal returnはnonnegativeとnegativeのi32 literalを受理し、
+signed LEB128へlowerする。
 
 `fn`と`export fn`はどちらもparseできる。現時点でemitする単関数はexport keywordの有無にかかわらず
 exportされる。
