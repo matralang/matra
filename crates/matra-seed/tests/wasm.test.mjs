@@ -27,8 +27,12 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
     "",
     "import math",
     "",
-    "export fn first_byte(pointer: i32) -> i32 {",
-    "  return byte_at(pointer, 0)",
+    "export fn first_byte(source: bytes) -> i32 {",
+    "  return byte_at(source, 0)",
+    "}",
+    "",
+    "export fn source_length(source: bytes) -> i32 {",
+    "  return byte_length(source)",
     "}",
     "",
     "export fn answer(input: i32) -> i32 {",
@@ -62,7 +66,8 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
     assert.equal(module.instance.exports.answer(20), 42)
     assert.ok(module.instance.exports.memory instanceof WebAssembly.Memory)
     new Uint8Array(module.instance.exports.memory.buffer)[16] = 65
-    assert.equal(module.instance.exports.first_byte(16), 65)
+    assert.equal(module.instance.exports.first_byte(16, 3), 65)
+    assert.equal(module.instance.exports.source_length(16, 3), 3)
   } finally {
     await rm(directory, { recursive: true, force: true })
   }

@@ -145,8 +145,20 @@ struct Program {
 struct Function {
     exported: bool,
     name: String,
-    parameters: Vec<String>,
+    parameters: Vec<Parameter>,
     statements: Vec<Statement>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Parameter {
+    name: String,
+    value_type: ValueType,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ValueType {
+    I32,
+    Bytes,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -288,8 +300,10 @@ impl<'a> Parser<'a> {
             loop {
                 let parameter = self.identifier()?;
                 self.expect(':')?;
-                self.expect_type()?;
-                parameters.push(parameter);
+                parameters.push(Parameter {
+                    name: parameter,
+                    value_type: self.parse_type()?,
+                });
                 if self.consume(')') {
                     break;
                 }
@@ -467,7 +481,19 @@ impl<'a> Parser<'a> {
     }
 
     fn expect_type(&mut self) -> Result<(), CompileError> {
-        self.expect_keyword("i32")
+        if self.parse_type()? == ValueType::I32 {
+            Ok(())
+        } else {
+            Err(self.error("Function results and local annotations must be i32."))
+        }
+    }
+
+    fn parse_type(&mut self) -> Result<ValueType, CompileError> {
+        match self.identifier()?.as_str() {
+            "i32" => Ok(ValueType::I32),
+            "bytes" => Ok(ValueType::Bytes),
+            value => Err(self.error(format!("Unknown type: {value}"))),
+        }
     }
 
     fn identifier(&mut self) -> Result<String, CompileError> {
@@ -591,8 +617,9 @@ fn emit_module(program: &Program) -> Result<Vec<u8>, CompileError> {
     encode_u32(&mut types, program.functions.len() as u32);
     for function in &program.functions {
         types.push(0x60);
-        encode_u32(&mut types, function.parameters.len() as u32);
-        types.extend(std::iter::repeat_n(0x7f, function.parameters.len()));
+        let parameter_count: usize = function.parameters.iter().map(parameter_slots).sum();
+        encode_u32(&mut types, parameter_count as u32);
+        types.extend(std::iter::repeat_n(0x7f, parameter_count));
         types.extend([0x01, 0x7f]);
     }
     section(&mut output, 1, &types);
@@ -657,24 +684,46 @@ fn collect_functions(program: &Program) -> Result<HashMap<&str, (u32, usize)>, C
     Ok(functions)
 }
 
+fn parameter_slots(parameter: &Parameter) -> usize {
+    match parameter.value_type {
+        ValueType::I32 => 1,
+        ValueType::Bytes => 2,
+    }
+}
+
 fn emit_function(
     function: &Function,
     functions: &HashMap<&str, (u32, usize)>,
 ) -> Result<Vec<u8>, CompileError> {
     let mut locals = HashMap::new();
-    for (index, parameter) in function.parameters.iter().enumerate() {
-        if locals.insert(parameter.as_str(), index as u32).is_some() {
+    let mut bytes = HashMap::new();
+    let mut parameter_index = 0u32;
+    for parameter in &function.parameters {
+        let inserted = match parameter.value_type {
+            ValueType::I32 => locals
+                .insert(parameter.name.as_str(), parameter_index)
+                .is_none(),
+            ValueType::Bytes => bytes
+                .insert(
+                    parameter.name.as_str(),
+                    (parameter_index, parameter_index + 1),
+                )
+                .is_none(),
+        };
+        if !inserted {
             return Err(CompileError::new(format!(
-                "Duplicate parameter in {}: {parameter}",
-                function.name
+                "Duplicate parameter in {}: {}",
+                function.name, parameter.name
             )));
         }
+        parameter_index += parameter_slots(parameter) as u32;
     }
     let mut local_count = 0u32;
     collect_locals(
         &function.statements,
         function,
         &mut locals,
+        parameter_index,
         &mut local_count,
     )?;
 
@@ -690,6 +739,7 @@ fn emit_function(
         &mut body,
         &function.statements,
         &locals,
+        &bytes,
         functions,
         &mut Vec::new(),
     )?;
@@ -703,6 +753,7 @@ fn collect_locals<'a>(
     statements: &'a [Statement],
     function: &Function,
     locals: &mut HashMap<&'a str, u32>,
+    parameter_count: u32,
     local_count: &mut u32,
 ) -> Result<(), CompileError> {
     for statement in statements {
@@ -714,14 +765,16 @@ fn collect_locals<'a>(
                         function.name
                     )));
                 }
-                locals.insert(name, function.parameters.len() as u32 + *local_count);
+                locals.insert(name, parameter_count + *local_count);
                 *local_count += 1;
             }
             Statement::If(_, then_body, else_body) => {
-                collect_locals(then_body, function, locals, local_count)?;
-                collect_locals(else_body, function, locals, local_count)?;
+                collect_locals(then_body, function, locals, parameter_count, local_count)?;
+                collect_locals(else_body, function, locals, parameter_count, local_count)?;
             }
-            Statement::While(_, body) => collect_locals(body, function, locals, local_count)?,
+            Statement::While(_, body) => {
+                collect_locals(body, function, locals, parameter_count, local_count)?
+            }
             Statement::Assign(_, _) | Statement::Break | Statement::Return(_) => {}
         }
     }
@@ -738,13 +791,14 @@ fn emit_statements(
     output: &mut Vec<u8>,
     statements: &[Statement],
     locals: &HashMap<&str, u32>,
+    bytes: &HashMap<&str, (u32, u32)>,
     functions: &HashMap<&str, (u32, usize)>,
     controls: &mut Vec<ControlFrame>,
 ) -> Result<(), CompileError> {
     for statement in statements {
         match statement {
             Statement::Let(name, expression) | Statement::Assign(name, expression) => {
-                emit_expression(output, expression, locals, functions)?;
+                emit_expression(output, expression, locals, bytes, functions)?;
                 let index = locals
                     .get(name.as_str())
                     .ok_or_else(|| CompileError::new(format!("Unknown variable: {name}")))?;
@@ -752,7 +806,7 @@ fn emit_statements(
                 encode_u32(output, *index);
             }
             Statement::Return(expression) => {
-                emit_expression(output, expression, locals, functions)?;
+                emit_expression(output, expression, locals, bytes, functions)?;
                 output.push(0x0f);
             }
             Statement::Break => {
@@ -764,13 +818,13 @@ fn emit_statements(
                 encode_u32(output, (controls.len() - index - 1) as u32);
             }
             Statement::If(condition, then_body, else_body) => {
-                emit_expression(output, condition, locals, functions)?;
+                emit_expression(output, condition, locals, bytes, functions)?;
                 output.extend([0x04, 0x40]);
                 controls.push(ControlFrame::Block);
-                emit_statements(output, then_body, locals, functions, controls)?;
+                emit_statements(output, then_body, locals, bytes, functions, controls)?;
                 if !else_body.is_empty() {
                     output.push(0x05);
-                    emit_statements(output, else_body, locals, functions, controls)?;
+                    emit_statements(output, else_body, locals, bytes, functions, controls)?;
                 }
                 controls.pop();
                 output.push(0x0b);
@@ -779,9 +833,9 @@ fn emit_statements(
                 output.extend([0x02, 0x40, 0x03, 0x40]);
                 controls.push(ControlFrame::LoopBreak);
                 controls.push(ControlFrame::Block);
-                emit_expression(output, condition, locals, functions)?;
+                emit_expression(output, condition, locals, bytes, functions)?;
                 output.extend([0x45, 0x0d, 0x01]);
-                emit_statements(output, body, locals, functions, controls)?;
+                emit_statements(output, body, locals, bytes, functions, controls)?;
                 output.extend([0x0c, 0x00, 0x0b, 0x0b]);
                 controls.pop();
                 controls.pop();
@@ -795,6 +849,7 @@ fn emit_expression(
     output: &mut Vec<u8>,
     expression: &Expression,
     locals: &HashMap<&str, u32>,
+    bytes: &HashMap<&str, (u32, u32)>,
     functions: &HashMap<&str, (u32, usize)>,
 ) -> Result<(), CompileError> {
     match expression {
@@ -810,6 +865,17 @@ fn emit_expression(
             encode_u32(output, *index);
         }
         Expression::Call(name, arguments) => {
+            if name == "byte_length" {
+                let [Expression::Variable(source)] = arguments.as_slice() else {
+                    return Err(CompileError::new("byte_length expects one bytes variable."));
+                };
+                let (_, length) = bytes.get(source.as_str()).ok_or_else(|| {
+                    CompileError::new(format!("Unknown bytes variable: {source}"))
+                })?;
+                output.push(0x20);
+                encode_u32(output, *length);
+                return Ok(());
+            }
             if name == "byte_at" {
                 if arguments.len() != 2 {
                     return Err(CompileError::new(format!(
@@ -817,8 +883,17 @@ fn emit_expression(
                         arguments.len()
                     )));
                 }
-                emit_expression(output, &arguments[0], locals, functions)?;
-                emit_expression(output, &arguments[1], locals, functions)?;
+                let Expression::Variable(source) = &arguments[0] else {
+                    return Err(CompileError::new(
+                        "byte_at expects a bytes variable as its first argument.",
+                    ));
+                };
+                let (pointer, _) = bytes.get(source.as_str()).ok_or_else(|| {
+                    CompileError::new(format!("Unknown bytes variable: {source}"))
+                })?;
+                output.push(0x20);
+                encode_u32(output, *pointer);
+                emit_expression(output, &arguments[1], locals, bytes, functions)?;
                 output.extend([0x6a, 0x2d, 0x00, 0x00]);
                 return Ok(());
             }
@@ -832,7 +907,7 @@ fn emit_expression(
                 )));
             }
             for argument in arguments {
-                emit_expression(output, argument, locals, functions)?;
+                emit_expression(output, argument, locals, bytes, functions)?;
             }
             output.push(0x10);
             encode_u32(output, *index);
@@ -840,12 +915,12 @@ fn emit_expression(
         Expression::Negate(value) => {
             output.push(0x41);
             encode_i32(output, 0);
-            emit_expression(output, value, locals, functions)?;
+            emit_expression(output, value, locals, bytes, functions)?;
             output.push(0x6b);
         }
         Expression::Binary(operator, left, right) => {
-            emit_expression(output, left, locals, functions)?;
-            emit_expression(output, right, locals, functions)?;
+            emit_expression(output, left, locals, bytes, functions)?;
+            emit_expression(output, right, locals, bytes, functions)?;
             output.push(match operator {
                 BinaryOperator::Add => 0x6a,
                 BinaryOperator::Subtract => 0x6b,
