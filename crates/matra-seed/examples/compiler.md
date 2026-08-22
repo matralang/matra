@@ -122,6 +122,53 @@ export fn token_summary(source: bytes) -> i32 {
   return value.kind * 1000 + value.start * 100 + value.length
 }
 
+fn is_module_keyword(source: bytes, value: token) -> i32 {
+  if value.length != 6 {
+    return 0
+  }
+  if byte_at(source, value.start) != 109 {
+    return 0
+  }
+  if byte_at(source, value.start + 1) != 111 {
+    return 0
+  }
+  if byte_at(source, value.start + 2) != 100 {
+    return 0
+  }
+  if byte_at(source, value.start + 3) != 117 {
+    return 0
+  }
+  if byte_at(source, value.start + 4) != 108 {
+    return 0
+  }
+  if byte_at(source, value.start + 5) != 101 {
+    return 0
+  }
+  return 1
+}
+
+fn parse_empty_program(source: bytes) -> i32 {
+  let first = next_token(source, 0)
+  if first.kind == 0 {
+    return 1
+  }
+  if first.kind != 1 {
+    return 0
+  }
+  if is_module_keyword(source, first) == 0 {
+    return 0
+  }
+  let name = next_token(source, first.start + first.length)
+  if name.kind != 1 {
+    return 0
+  }
+  let end = next_token(source, name.start + name.length)
+  if end.kind != 0 {
+    return 0
+  }
+  return 1
+}
+
 fn write_i32(buffer: bytes, index: i32, value: i32) -> bytes {
   byte_set(buffer, index, value)
   byte_set(buffer, index + 1, value / 256)
@@ -169,8 +216,7 @@ fn diagnostic_record() -> i32 {
 }
 
 export fn compile(source: bytes) -> i32 {
-  let first = next_token(source, 0)
-  if first.kind == 0 {
+  if parse_empty_program(source) == 1 {
     let output = empty_module()
     return success_record(output)
   }
@@ -185,7 +231,8 @@ whitespace and `//` comments, and distinguishes EOF, ASCII identifiers, integers
 identifier and integer tokens have their complete source range. The temporary
 `token_summary()` export is an integration-test probe. The `compile()` export
 returns a pointer to the 20-byte result record described in the Matra Program
-specification.
+specification. `parse_empty_program()` accepts an empty source or the minimal
+non-empty Program form `module identifier` and maps it to an empty Wasm module.
 `allocate_bytes(size)` returns a `bytes` value backed by the generated module's
 linear memory, and `byte_set(bytes, index, value)` writes one byte. Diagnostics
 remain a placeholder until diagnostic text is implemented.
