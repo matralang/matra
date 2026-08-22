@@ -12,6 +12,9 @@ const playgroundBundle = await readFile(new URL("../dist/assets/playground.js", 
 
 assert.match(index, /^<!DOCTYPE html>/)
 assert.match(index, /<title>Matra — Structure first/)
+assert.match(index, /https:\/\/www\.googletagmanager\.com\/gtm\.js\?id=/)
+assert.match(index, /GTM-T8JD7GH9/)
+assert.match(index, /<noscript><iframe src="https:\/\/www\.googletagmanager\.com\/ns\.html\?id=GTM-T8JD7GH9"/)
 assert.match(index, /意味より先に、構造を書く/)
 assert.match(docs, /<title>Matraを使う — Matra/)
 assert.match(spec, /<title>Index — Matra Specification v0.2/)

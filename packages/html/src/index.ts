@@ -31,7 +31,11 @@ function renderNode(node: MatraAST, options: HTMLOptions): string {
 
   const attrs = renderProps(props)
   if (VOID_ELEMENTS.has(tag.toLowerCase())) return `<${tag}${attrs}>`
-  const content = children.map(child => renderChild(child, options)).join("")
+  const content = children
+    .map(child => tag.toLowerCase() === "script" && typeof child === "string"
+      ? child
+      : renderChild(child, options))
+    .join("")
   return `<${tag}${attrs}>${content}</${tag}>`
 }
 

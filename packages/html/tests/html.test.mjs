@@ -24,4 +24,11 @@ describe("@matra/html", () => {
   it("renders output from the Core parser", () => {
     assert.equal(toHTML(parse('p("Hello")')), "<p>Hello</p>")
   })
+
+  it("preserves inline script content", () => {
+    assert.equal(
+      toHTML(parse('script { "window.dataLayer = window.dataLayer || [];" }')),
+      "<script>window.dataLayer = window.dataLayer || [];</script>",
+    )
+  })
 })
