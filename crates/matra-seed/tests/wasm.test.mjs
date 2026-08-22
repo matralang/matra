@@ -178,20 +178,20 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     )
     assert.equal(module.instance.exports.token_summary(commentPointer, 10), 1802)
 
-    const programPointer = module.instance.exports.alloc(11)
-    new Uint8Array(module.instance.exports.memory.buffer, programPointer, 11).set(
-      new TextEncoder().encode("module demo"),
+    const programPointer = module.instance.exports.alloc(23)
+    new Uint8Array(module.instance.exports.memory.buffer, programPointer, 23).set(
+      new TextEncoder().encode("module demo\nimport math"),
     )
-    const programRecordPointer = module.instance.exports.compile(programPointer, 11)
+    const programRecordPointer = module.instance.exports.compile(programPointer, 23)
     const programRecord = new DataView(module.instance.exports.memory.buffer, programRecordPointer, 20)
     assert.equal(programRecord.getInt32(0, true), 0)
     assert.equal(programRecord.getInt32(8, true), 8)
 
-    const invalidProgramPointer = module.instance.exports.alloc(10)
-    new Uint8Array(module.instance.exports.memory.buffer, invalidProgramPointer, 10).set(
-      new TextEncoder().encode("module 123"),
+    const invalidProgramPointer = module.instance.exports.alloc(22)
+    new Uint8Array(module.instance.exports.memory.buffer, invalidProgramPointer, 22).set(
+      new TextEncoder().encode("module demo import 123"),
     )
-    const invalidProgramRecordPointer = module.instance.exports.compile(invalidProgramPointer, 10)
+    const invalidProgramRecordPointer = module.instance.exports.compile(invalidProgramPointer, 22)
     const invalidProgramRecord = new DataView(module.instance.exports.memory.buffer, invalidProgramRecordPointer, 20)
     assert.equal(invalidProgramRecord.getInt32(0, true), 1)
   } finally {

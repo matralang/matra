@@ -147,6 +147,31 @@ fn is_module_keyword(source: bytes, value: token) -> i32 {
   return 1
 }
 
+fn is_import_keyword(source: bytes, value: token) -> i32 {
+  if value.length != 6 {
+    return 0
+  }
+  if byte_at(source, value.start) != 105 {
+    return 0
+  }
+  if byte_at(source, value.start + 1) != 109 {
+    return 0
+  }
+  if byte_at(source, value.start + 2) != 112 {
+    return 0
+  }
+  if byte_at(source, value.start + 3) != 111 {
+    return 0
+  }
+  if byte_at(source, value.start + 4) != 114 {
+    return 0
+  }
+  if byte_at(source, value.start + 5) != 116 {
+    return 0
+  }
+  return 1
+}
+
 fn parse_empty_program(source: bytes) -> i32 {
   let first = next_token(source, 0)
   if first.kind == 0 {
@@ -162,9 +187,23 @@ fn parse_empty_program(source: bytes) -> i32 {
   if name.kind != 1 {
     return 0
   }
-  let end = next_token(source, name.start + name.length)
-  if end.kind != 0 {
-    return 0
+  let position = name.start + name.length
+  while position < byte_length(source) {
+    let keyword = next_token(source, position)
+    if keyword.kind == 0 {
+      return 1
+    }
+    if keyword.kind != 1 {
+      return 0
+    }
+    if is_import_keyword(source, keyword) == 0 {
+      return 0
+    }
+    let imported = next_token(source, keyword.start + keyword.length)
+    if imported.kind != 1 {
+      return 0
+    }
+    position = imported.start + imported.length
   }
   return 1
 }
@@ -232,7 +271,8 @@ identifier and integer tokens have their complete source range. The temporary
 `token_summary()` export is an integration-test probe. The `compile()` export
 returns a pointer to the 20-byte result record described in the Matra Program
 specification. `parse_empty_program()` accepts an empty source or the minimal
-non-empty Program form `module identifier` and maps it to an empty Wasm module.
+non-empty Program header form `module identifier { import identifier }` and maps
+it to an empty Wasm module.
 `allocate_bytes(size)` returns a `bytes` value backed by the generated module's
 linear memory, and `byte_set(bytes, index, value)` writes one byte. Diagnostics
 remain a placeholder until diagnostic text is implemented.

@@ -60,8 +60,8 @@ token列をarrayへ保存するのはarray of structが利用可能になって�
 2. EOF、identifier、integer、symbolを`kind`で返し、identifierとintegerの連続長を計算する。
 3. `compile`がEOF tokenを空Programとして成功させる。
 4. Node実行testでwhitespace-only inputとtoken rangeを確認する。
-5. sourceとoffsetで逐次読むtoken cursorを使い、`module identifier`をparseする。
-6. `import`とfunction declarationをparseする。
+5. sourceとoffsetで逐次読むtoken cursorを使い、`module identifier`と`import identifier`をparseする。
+6. function declarationをparseする。
 
 ## 注意点
 
