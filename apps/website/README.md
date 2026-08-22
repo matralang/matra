@@ -30,7 +30,8 @@ package are available to the website locally without `file:` dependencies or
 | `/packages/` | パッケージ一覧 | `api.matralang.org` |
 | `/blog/` | 開発記録 | `blog.matralang.org` |
 
-Pages are Markdown files under `src/pages`. Like the Playground, each document contains its page source in a `*.matra` fenced code block; styles live in `src/styles`.
+Pages are Markdown files under `src/pages`. Native `*.matra` pages start with front matter (`title`, `description`, and `layout`) and contain only the content inside `main`; the shared layout provides the HTML document. Styles live in `src/styles`.
+Place reusable source in a named Markdown fence and reference it from a Matra element with `src="matra:filename"`; the build injects that fence's text content.
 The build extracts that Matra code block, parses it, and renders it to HTML.
 Pages with generated repeated content may use a trusted `*.matra.ts` fenced code block. It executes as JavaScript during the build, so use it only for repository-managed source.
 Write a `.matra.ts` block as a valid TypeScript module: `export default matra\`...\``.

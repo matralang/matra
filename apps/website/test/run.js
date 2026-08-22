@@ -23,11 +23,18 @@ for (const page of pageSources) {
 }
 const pageMarkdown = await Promise.all(pageSources.map(page => readFile(page, "utf8")))
 const matraTypeScriptPages = pageMarkdown.filter(source => source.includes(".matra.ts"))
+const nativeMatraPages = pageMarkdown.filter(source => source.includes("```page.matra\n"))
 assert.equal(matraTypeScriptPages.length, 3)
+assert.equal(nativeMatraPages.length, 8)
+for (const source of nativeMatraPages) {
+  assert.match(source, /^---\ntitle: .+\ndescription: .+\nlayout: (?:site|specification)\n---/)
+  assert.doesNotMatch(source, /```page\.matra\nhtml\b/)
+  assert.doesNotMatch(source, /~/)
+}
 for (const source of matraTypeScriptPages) {
   assert.match(source, /export default/)
   assert.match(source, /from "@matra\/core"/)
-  assert.doesNotMatch(source, /matra\s*\{/);
+  assert.doesNotMatch(source, /matra\s*\{/)
 }
 
 execFileSync("pnpm", ["run", "build"], { stdio: "inherit" })
@@ -93,6 +100,8 @@ for (const page of specPages) {
 }
 assert.match(playground, /<title>Playground — Matra/)
 assert.match(playground, /id="matra-source"/)
+assert.match(playground, /<textarea[^>]*># Card/)
+assert.doesNotMatch(playground, /matra:playground\.md/)
 assert.match(playground, /\/assets\/playground.js/)
 assert.match(playgroundBundle, /srcdoc/)
 assert.match(playground, /data-example="poster"/)

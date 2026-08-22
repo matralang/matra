@@ -1,241 +1,222 @@
-# play
+---
+title: Playground — Matra
+description: Markdown内のMatraとMatra TypeScript code blockをASTとrendererに応じた出力へ変換できるブラウザPlaygroundです。
+layout: site
+---
 
 ````page.matra
-html[lang="ja"] {
-  head {
-    meta[charset="UTF-8"];
-    meta[name="viewport", content="width=device-width, initial-scale=1"];
-    meta[name="description", content="Markdown内のMatraとMatra TypeScript code blockをASTとrendererに応じた出力へ変換できるブラウザPlaygroundです。"];
-    meta[name="theme-color", content="#101814"];
-    title {
-      "Playground — Matra"
+section.playground-page {
+  div.shell.playground-heading {
+    div {
+      p.eyebrow {
+        "LIVE WORKBENCH"
+      }
+      h1 {
+        "Playground"
+      }
     }
-    link[rel="stylesheet", href="/app.css"];
+    p {
+      "Markdown内のMatra code blockを編集すると、rendererに応じたpreview・AST・出力をその場で更新します。"
+    }
   }
-  body {
-    main {
-      section.playground-page {
-        div.shell.playground-heading {
-          div {
-            p.eyebrow {
-              "LIVE WORKBENCH"
-            }
-            h1 {
-              "Playground"
-            }
+  div.playground-workspace {
+    section.editor-panel[aria-label="Markdown editor"] {
+      header.panel-header {
+        div.panel-title {
+          span.status-dot {
           }
-          p {
-            "Markdown内のMatra code blockを編集すると、rendererに応じたpreview・AST・出力をその場で更新します。"
+          strong {
+            "SOURCE"
           }
         }
-        div.playground-workspace {
-          section.editor-panel[aria-label="Markdown editor"] {
-            header.panel-header {
-              div.panel-title {
-                span.status-dot {
-                }
-                strong {
-                  "SOURCE"
-                }
-              }
-              div.editor-tools {
-                span {
-                  "Markdown / Matra"
-                }
-                label[for="render-mode"] {
-                  "Output"
-                }
-                select#render-mode {
-                  option[value="auto"] {
-                    "Auto"
-                  }
-                  option[value="html"] {
-                    "HTML"
-                  }
-                  option[value="svg"] {
-                    "SVG"
-                  }
-                }
-                label[for="stylesheet"] {
-                  "CSS"
-                }
-                input#stylesheet[list="stylesheet-presets", value="matra", spellcheck="false", aria-label="Preview stylesheet", placeholder="matra, water.css, or HTTPS URL"] {
-                }
-                datalist#stylesheet-presets {
-                  option[value="matra"] {
-                    "Matra Base"
-                  }
-                  option[value="water.css"] {
-                    "Water.css"
-                  }
-                  option[value="simple.css"] {
-                    "Simple.css"
-                  }
-                  option[value="pico.css"] {
-                    "Pico CSS"
-                  }
-                }
-              }
+        div.editor-tools {
+          span {
+            "Markdown / Matra"
+          }
+          label[for="render-mode"] {
+            "Output"
+          }
+          select#render-mode {
+            option[value="auto"] {
+              "Auto"
             }
-            div.example-browser[aria-label="Examples"] {
-              div.example-browser-heading {
-                span {
-                  "EXAMPLES"
-                }
-                small {
-                  "Select a recipe to load it"
-                }
-              }
-              div.example-list {
-                button.example-button.active[type="button", data-example="card", aria-pressed="true"] {
-                  span.example-kind {
-                    "HTML"
-                  }
-                  strong {
-                    "Card"
-                  }
-                  small {
-                    "Content and link"
-                  }
-                }
-                button.example-button[type="button", data-example="list", aria-pressed="false"] {
-                  span.example-kind {
-                    "HTML"
-                  }
-                  strong {
-                    "Ordered list"
-                  }
-                  small {
-                    "Nested structure"
-                  }
-                }
-                button.example-button[type="button", data-example="profile", aria-pressed="false"] {
-                  span.example-kind {
-                    "HTML"
-                  }
-                  strong {
-                    "Profile"
-                  }
-                  small {
-                    "Semantic content"
-                  }
-                }
-                button.example-button[type="button", data-example="navigation", aria-pressed="false"] {
-                  span.example-kind {
-                    "HTML"
-                  }
-                  strong {
-                    "Navigation"
-                  }
-                  small {
-                    "Links and attributes"
-                  }
-                }
-                button.example-button[type="button", data-example="article", aria-pressed="false"] {
-                  span.example-kind {
-                    "HTML"
-                  }
-                  strong {
-                    "Article"
-                  }
-                  small {
-                    "A complete document"
-                  }
-                }
-                button.example-button[type="button", data-example="poster", aria-pressed="false"] {
-                  span.example-kind.svg {
-                    "SVG"
-                  }
-                  strong {
-                    "Poster"
-                  }
-                  small {
-                    "Gradient and type"
-                  }
-                }
-                button.example-button[type="button", data-example="orbit", aria-pressed="false"] {
-                  span.example-kind.svg {
-                    "SVG"
-                  }
-                  strong {
-                    "Orbit"
-                  }
-                  small {
-                    "Shapes and strokes"
-                  }
-                }
-                button.example-button[type="button", data-example="landscape", aria-pressed="false"] {
-                  span.example-kind.svg {
-                    "SVG"
-                  }
-                  strong {
-                    "Landscape"
-                  }
-                  small {
-                    "Layered geometry"
-                  }
-                }
-                button.example-button[type="button", data-example="signal", aria-pressed="false"] {
-                  span.example-kind.svg {
-                    "SVG"
-                  }
-                  strong {
-                    "Signal"
-                  }
-                  small {
-                    "Lines and opacity"
-                  }
-                }
-                button.example-button[type="button", data-example="compute-engine", aria-pressed="false"] {
-                  span.example-kind.math {
-                    "MATH"
-                  }
-                  strong {
-                    "Compute Engine"
-                  }
-                  small {
-                    "Matra math input"
-                  }
-                }
-                button.example-button[type="button", data-example="js-card", aria-pressed="false"] {
-                  span.example-kind.js {
-                    "TS"
-                  }
-                  strong {
-                    "Dynamic card"
-                  }
-                  small {
-                    "Values with interpolation"
-                  }
-                }
-                button.example-button[type="button", data-example="js-graphics", aria-pressed="false"] {
-                  span.example-kind.js {
-                    "TS"
-                  }
-                  strong {
-                    "Generated SVG"
-                  }
-                  small {
-                    "Generate a Matra block"
-                  }
-                }
-              }
+            option[value="html"] {
+              "HTML"
             }
-            label.sr-only[for="matra-source"] {
-              "Markdown source"
+            option[value="svg"] {
+              "SVG"
             }
-            textarea#matra-source[spellcheck="false", aria-describedby="playground-status"]~# Card
-
-```card.matra
-article.matra-frame {
-  p.eyebrow { "MATRA" }
-  h2 { "Structure first." }
-  p { "Edit this source and watch it render." }
-  a.matra-button[href="/spec/"] { "Read the spec" }
-  hr;
-}
-```
-~ footer.editor-footer {
+          }
+          label[for="stylesheet"] {
+            "CSS"
+          }
+          input#stylesheet[list="stylesheet-presets", value="matra", spellcheck="false", aria-label="Preview stylesheet", placeholder="matra, water.css, or HTTPS URL"] {
+          }
+          datalist#stylesheet-presets {
+            option[value="matra"] {
+              "Matra Base"
+            }
+            option[value="water.css"] {
+              "Water.css"
+            }
+            option[value="simple.css"] {
+              "Simple.css"
+            }
+            option[value="pico.css"] {
+              "Pico CSS"
+            }
+          }
+        }
+      }
+      div.example-browser[aria-label="Examples"] {
+        div.example-browser-heading {
+          span {
+            "EXAMPLES"
+          }
+          small {
+            "Select a recipe to load it"
+          }
+        }
+        div.example-list {
+          button.example-button.active[type="button", data-example="card", aria-pressed="true"] {
+            span.example-kind {
+              "HTML"
+            }
+            strong {
+              "Card"
+            }
+            small {
+              "Content and link"
+            }
+          }
+          button.example-button[type="button", data-example="list", aria-pressed="false"] {
+            span.example-kind {
+              "HTML"
+            }
+            strong {
+              "Ordered list"
+            }
+            small {
+              "Nested structure"
+            }
+          }
+          button.example-button[type="button", data-example="profile", aria-pressed="false"] {
+            span.example-kind {
+              "HTML"
+            }
+            strong {
+              "Profile"
+            }
+            small {
+              "Semantic content"
+            }
+          }
+          button.example-button[type="button", data-example="navigation", aria-pressed="false"] {
+            span.example-kind {
+              "HTML"
+            }
+            strong {
+              "Navigation"
+            }
+            small {
+              "Links and attributes"
+            }
+          }
+          button.example-button[type="button", data-example="article", aria-pressed="false"] {
+            span.example-kind {
+              "HTML"
+            }
+            strong {
+              "Article"
+            }
+            small {
+              "A complete document"
+            }
+          }
+          button.example-button[type="button", data-example="poster", aria-pressed="false"] {
+            span.example-kind.svg {
+              "SVG"
+            }
+            strong {
+              "Poster"
+            }
+            small {
+              "Gradient and type"
+            }
+          }
+          button.example-button[type="button", data-example="orbit", aria-pressed="false"] {
+            span.example-kind.svg {
+              "SVG"
+            }
+            strong {
+              "Orbit"
+            }
+            small {
+              "Shapes and strokes"
+            }
+          }
+          button.example-button[type="button", data-example="landscape", aria-pressed="false"] {
+            span.example-kind.svg {
+              "SVG"
+            }
+            strong {
+              "Landscape"
+            }
+            small {
+              "Layered geometry"
+            }
+          }
+          button.example-button[type="button", data-example="signal", aria-pressed="false"] {
+            span.example-kind.svg {
+              "SVG"
+            }
+            strong {
+              "Signal"
+            }
+            small {
+              "Lines and opacity"
+            }
+          }
+          button.example-button[type="button", data-example="compute-engine", aria-pressed="false"] {
+            span.example-kind.math {
+              "MATH"
+            }
+            strong {
+              "Compute Engine"
+            }
+            small {
+              "Matra math input"
+            }
+          }
+          button.example-button[type="button", data-example="js-card", aria-pressed="false"] {
+            span.example-kind.js {
+              "TS"
+            }
+            strong {
+              "Dynamic card"
+            }
+            small {
+              "Values with interpolation"
+            }
+          }
+          button.example-button[type="button", data-example="js-graphics", aria-pressed="false"] {
+            span.example-kind.js {
+              "TS"
+            }
+            strong {
+              "Generated SVG"
+            }
+            small {
+              "Generate a Matra block"
+            }
+          }
+        }
+      }
+      label.sr-only[for="matra-source"] {
+        "Markdown source"
+      }
+      textarea#matra-source[spellcheck="false", aria-describedby="playground-status", src="matra:playground.md"];
+      footer.editor-footer {
               span#playground-status[role="status", aria-live="polite"] {
                 "Ready"
               }
@@ -294,7 +275,18 @@ article.matra-frame {
       }
       script[type="module", src="/assets/playground.js"] {
       }
-    }
-  }
+````
+
+````playground.md
+# Card
+
+```card.matra
+article.matra-frame {
+  p.eyebrow { "MATRA" }
+  h2 { "Structure first." }
+  p { "Edit this source and watch it render." }
+  a.matra-button[href="/spec/"] { "Read the spec" }
+  hr;
 }
+```
 ````

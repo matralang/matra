@@ -29,7 +29,8 @@ Websiteと`@matra/*`は同じnpm workspaceで管理しています。`file:`指�
 | `/packages/` | パッケージ一覧 | `api.matralang.org` |
 | `/blog/` | 開発記録 | `blog.matralang.org` |
 
-ページは`src/pages`配下のMarkdownファイルで管理します。各ファイルはPlaygroundと同様に、`*.matra` fenced code blockへページのMatra sourceを記述します。スタイルは`src/styles`に置きます。
+ページは`src/pages`配下のMarkdownファイルで管理します。nativeな`*.matra` pageはfront matterに`title`、`description`、`layout`を指定し、fenced code blockには`main`の中身だけを記述します。HTML documentは共通layoutが生成します。スタイルは`src/styles`に置きます。
+再利用するsourceは名前付きMarkdown fenceへ置き、Matra elementの`src="matra:filename"`から参照します。build時に対応するfenceのtext contentが注入されます。
 ビルドは各Markdown文書からMatra code blockを抽出してparseし、HTMLへrenderします。
 繰り返し要素を生成するページは、信頼済みの`*.matra.ts` fenced code blockを使えます。これはbuild時にJavaScriptとして実行されるため、repository内で管理するsourceだけに使用してください。
 `.matra.ts`は有効なTypeScript moduleとして、`export default matra\`...\``の形で記述します。

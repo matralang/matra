@@ -1,166 +1,155 @@
-# examples
+---
+title: Examples — Matra
+description: MatraをJavaScript / TypeScriptから扱う作例集です。
+layout: site
+---
 
 ```page.matra
-html[lang="ja"] {
-  head {
-    meta[charset="UTF-8"];
-    meta[name="viewport", content="width=device-width, initial-scale=1"];
-    meta[name="description", content="MatraをJavaScript / TypeScriptから扱う作例集です。"];
-    title {
-      "Examples — Matra"
+section.examples-hero {
+  div.shell.examples-hero-inner {
+    div {
+      p.eyebrow {
+        "EXAMPLES"
+      }
+      h1 {
+        "JavaScriptからMatraを使う。"
+      }
+      p.lede {
+        "websiteの作例は、Matra sourceを単体で眺めるだけでなく、" "TypeScriptやJavaScriptからparse、変換、renderする入口として掲載します。"
+      }
     }
-    link[rel="stylesheet", href="/app.css"];
+    div.example-note {
+      span {
+        "TypeScript-first"
+      }
+      p {
+        "プログラマブルな作例を増やせるように、コードはTypeScriptで書ける形を基本にします。"
+      }
+    }
   }
-  body {
-    main {
-      section.examples-hero {
-        div.shell.examples-hero-inner {
-          div {
-            p.eyebrow {
-              "EXAMPLES"
+}
+section.examples-section {
+  div.shell {
+    div.example-listing {
+      article.example-row {
+        div.example-meta {
+          span.example-index {
+            "01"
+          }
+          h2 {
+            "HTMLを生成する"
+          }
+          p {
+            "Matraのtag、props、childrenをHTML rendererへ渡す最小例です。"
+          }
+        }
+        div.example-code-pair {
+          div.code-window.example-code[aria-label="TypeScript HTML example"] {
+            div.window-bar {
+              span.window-label {
+                "TS"
+              }
+              small {
+                "render-html.ts"
+              }
             }
-            h1 {
-              "JavaScriptからMatraを使う。"
-            }
-            p.lede {
-              "websiteの作例は、Matra sourceを単体で眺めるだけでなく、" "TypeScriptやJavaScriptからparse、変換、renderする入口として掲載します。"
+            pre {
+              code[src="matra:render-html.ts"];
             }
           }
-          div.example-note {
-            span {
-              "TypeScript-first"
+          div.code-window.example-code[aria-label="Matra HTML source"] {
+            div.window-bar {
+              span.window-label {
+                "MATRA"
+              }
+              small {
+                "article.matra"
+              }
             }
-            p {
-              "プログラマブルな作例を増やせるように、コードはTypeScriptで書ける形を基本にします。"
+            pre {
+              code[src="matra:article.matra"];
             }
           }
         }
       }
-      section.examples-section {
-        div.shell {
-          div.example-listing {
-            article.example-row {
-              div.example-meta {
-                span.example-index {
-                  "01"
-                }
-                h2 {
-                  "HTMLを生成する"
-                }
-                p {
-                  "Matraのtag、props、childrenをHTML rendererへ渡す最小例です。"
-                }
+      article.example-row {
+        div.example-meta {
+          span.example-index {
+            "02"
+          }
+          h2 {
+            "SVGを描画する"
+          }
+          p {
+            "Graphics packageはMatra sourceを直接SVGへcompileできます。"
+          }
+        }
+        div.example-code-pair {
+          div.code-window.example-code[aria-label="TypeScript SVG example"] {
+            div.window-bar {
+              span.window-label {
+                "TS"
               }
-              div.example-code-pair {
-                div.code-window.example-code[aria-label="TypeScript HTML example"] {
-                  div.window-bar {
-                    span.window-label {
-                      "TS"
-                    }
-                    small {
-                      "render-html.ts"
-                    }
-                  }
-                  pre {
-                    code[src="matra:render-html.ts"];
-                  }
-                }
-                div.code-window.example-code[aria-label="Matra HTML source"] {
-                  div.window-bar {
-                    span.window-label {
-                      "MATRA"
-                    }
-                    small {
-                      "article.matra"
-                    }
-                  }
-                  pre {
-                    code[src="matra:article.matra"];
-                  }
-                }
+              small {
+                "render-svg.ts"
               }
             }
-            article.example-row {
-              div.example-meta {
-                span.example-index {
-                  "02"
-                }
-                h2 {
-                  "SVGを描画する"
-                }
-                p {
-                  "Graphics packageはMatra sourceを直接SVGへcompileできます。"
-                }
+            pre {
+              code[src="matra:render-svg.ts"];
+            }
+          }
+          div.code-window.example-code[aria-label="Matra SVG source"] {
+            div.window-bar {
+              span.window-label {
+                "MATRA"
               }
-              div.example-code-pair {
-                div.code-window.example-code[aria-label="TypeScript SVG example"] {
-                  div.window-bar {
-                    span.window-label {
-                      "TS"
-                    }
-                    small {
-                      "render-svg.ts"
-                    }
-                  }
-                  pre {
-                    code[src="matra:render-svg.ts"];
-                  }
-                }
-                div.code-window.example-code[aria-label="Matra SVG source"] {
-                  div.window-bar {
-                    span.window-label {
-                      "MATRA"
-                    }
-                    small {
-                      "badge.matra"
-                    }
-                  }
-                  pre {
-                    code[src="matra:badge.matra"];
-                  }
-                }
+              small {
+                "badge.matra"
               }
             }
-            article.example-row {
-              div.example-meta {
-                span.example-index {
-                  "03"
-                }
-                h2 {
-                  "ASTをプログラムで組み替える"
-                }
-                p {
-                  "CoreのASTは普通のTypeScript値として扱えます。domain固有の意味づけはrenderer側に残します。"
-                }
+            pre {
+              code[src="matra:badge.matra"];
+            }
+          }
+        }
+      }
+      article.example-row {
+        div.example-meta {
+          span.example-index {
+            "03"
+          }
+          h2 {
+            "ASTをプログラムで組み替える"
+          }
+          p {
+            "CoreのASTは普通のTypeScript値として扱えます。domain固有の意味づけはrenderer側に残します。"
+          }
+        }
+        div.example-code-pair {
+          div.code-window.example-code[aria-label="TypeScript AST example"] {
+            div.window-bar {
+              span.window-label {
+                "TS"
               }
-              div.example-code-pair {
-                div.code-window.example-code[aria-label="TypeScript AST example"] {
-                  div.window-bar {
-                    span.window-label {
-                      "TS"
-                    }
-                    small {
-                      "transform.ts"
-                    }
-                  }
-                  pre {
-                    code[src="matra:transform.ts"];
-                  }
-                }
-                div.code-window.example-code[aria-label="Matra menu source"] {
-                  div.window-bar {
-                    span.window-label {
-                      "MATRA"
-                    }
-                    small {
-                      "menu.matra"
-                    }
-                  }
-                  pre {
-                    code[src="matra:menu.matra"];
-                  }
-                }
+              small {
+                "transform.ts"
               }
+            }
+            pre {
+              code[src="matra:transform.ts"];
+            }
+          }
+          div.code-window.example-code[aria-label="Matra menu source"] {
+            div.window-bar {
+              span.window-label {
+                "MATRA"
+              }
+              small {
+                "menu.matra"
+              }
+            }
+            pre {
+              code[src="matra:menu.matra"];
             }
           }
         }

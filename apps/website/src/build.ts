@@ -9,6 +9,13 @@ declare const process: any;
 
 import { extractMarkdownFences, extractMatraMarkdown, parse } from "@matra/core"
 import { toHTML } from "@matra/html"
+import { pageLayout } from "./layouts/page.js"
+
+type PageMetadata = {
+  title: string
+  description: string
+  layout: "site" | "specification"
+}
 
 const siteHeader = parse(`
   header.site-header {
@@ -81,6 +88,32 @@ function isIgnoredPath(relFromPages: string): boolean {
   if (rel.includes("/__tests__/") || rel.includes("/__mocks__/")) return true
 
   return false
+}
+
+function extractPageMetadata(markdown: string, filePath: string): PageMetadata {
+  const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/)
+  if (!match) throw new SyntaxError(`Page metadata is required in ${filePath}`)
+
+  const fields = Object.fromEntries(match[1]
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map(line => {
+      const separator = line.indexOf(":")
+      if (separator < 1) throw new SyntaxError(`Invalid page metadata in ${filePath}: ${line}`)
+      return [line.slice(0, separator).trim(), line.slice(separator + 1).trim()]
+    }))
+  if (!fields.title || !fields.description) {
+    throw new SyntaxError(`Page metadata must define title and description in ${filePath}`)
+  }
+  if (fields.layout && fields.layout !== "site" && fields.layout !== "specification") {
+    throw new SyntaxError(`Unknown page layout '${fields.layout}' in ${filePath}`)
+  }
+
+  return {
+    title: fields.title,
+    description: fields.description,
+    layout: fields.layout === "specification" ? "specification" : "site",
+  }
 }
 
 // Collect Markdown documents that contain a native Matra page fence.
@@ -175,8 +208,8 @@ function applySiteChrome(ast: ReturnType<typeof parse>) {
   return ast
 }
 
-function applySpecificationLayout(ast: ReturnType<typeof parse>, pagePath: string) {
-  if (!pagePath.startsWith(`spec${path.sep}`)) return ast
+function applySpecificationLayout(ast: ReturnType<typeof parse>, layout: PageMetadata["layout"]) {
+  if (layout !== "specification") return ast
 
   const body = ast.children.find(node => isNode(node) && node.tag === "body")
   const main = body?.children.find(node => isNode(node) && node.tag === "main")
@@ -201,7 +234,7 @@ function injectMarkdownCode(ast: ReturnType<typeof parse>, markdown: string, fil
   const inject = (nodes: unknown[]) => {
     for (const node of nodes) {
       if (!isNode(node)) continue
-      const reference = node.tag === "code" && typeof node.props.src === "string"
+      const reference = typeof node.props.src === "string"
         ? node.props.src
         : undefined
       if (reference?.startsWith("matra:")) {
@@ -268,9 +301,12 @@ async function handler() {
       ? "page.matra.ts"
       : "page.matra"
     const document = extractMatraMarkdown(markdown, { entry: pageEntry })
+    const metadata = document.kind === "matra"
+      ? extractPageMetadata(markdown, filePath)
+      : undefined
     const source = document.kind === "matra.ts"
       ? await executeMatraModule(document.source, filePath)
-      : document.source
+      : pageLayout({ ...metadata!, content: document.source })
     const outRel = toOutputPath(pagesDir, filePath)
     const outputPath = path.join(outputDir, outRel)
     const outDir = path.dirname(outputPath)
@@ -284,7 +320,9 @@ async function handler() {
         markdown,
         filePath,
       )),
-      path.relative(pagesDir, filePath),
+      metadata?.layout ?? (path.relative(pagesDir, filePath).startsWith(`spec${path.sep}`)
+        ? "specification"
+        : "site"),
     )
     const htmlContent = DOCTYPE + toHTML(ast, { basePath })
 
