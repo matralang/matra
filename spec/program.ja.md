@@ -95,6 +95,24 @@ linear memoryでdataを受け取ります。予定しているABIでは`bytes` a
 `(pointer: i32, length: i32)`へlowerします。`byte_length(source)`と
 `byte_at(source, index)`を提供し、compiled codeへfilesystemやnetworkの権限を渡しません。
 
+## Compiler ABI draft
+
+compiler moduleは`memory`、`alloc(size: i32) -> i32`、
+`compile(source_pointer: i32, source_length: i32) -> i32`をexportします。sourceはUTF-8です。
+`compile`はlinear memory上の20-byte result recordへのpointerを返します。
+
+| Offset | Field | 意味 |
+| --- | --- | --- |
+| 0 | `status: i32` | successは`0`、diagnosticはnonzero |
+| 4 | `output_pointer: i32` | success時の生成Wasm bytes |
+| 8 | `output_length: i32` | 生成Wasmのbyte length |
+| 12 | `diagnostic_pointer: i32` | failure時のUTF-8 diagnostic bytes |
+| 16 | `diagnostic_length: i32` | diagnosticのbyte length |
+
+hostはsource bytesをallocateして書き込み、`compile`をcallした後、recordと参照先bytesを
+読みます。memoryは次の`compile` callまで有効です。このABIはcompiled codeへfilesystemや
+networkの暗黙のcapabilityを与えません。
+
 ## 進化
 
 これはdraftであり、言語を固定するものではありません。破壊的なsyntax変更では、まず

@@ -98,6 +98,24 @@ inside Wasm and receives data through linear memory. The planned ABI lowers a
 `byte_length(source)` and `byte_at(source, index)` without granting filesystem
 or network access to compiled code.
 
+## Compiler ABI draft
+
+A compiler module exports `memory`, `alloc(size: i32) -> i32`, and
+`compile(source_pointer: i32, source_length: i32) -> i32`. Source is UTF-8.
+`compile` returns the pointer to a 20-byte result record in linear memory.
+
+| Offset | Field | Meaning |
+| --- | --- | --- |
+| 0 | `status: i32` | `0` for success; nonzero for a diagnostic |
+| 4 | `output_pointer: i32` | Generated Wasm bytes on success |
+| 8 | `output_length: i32` | Byte length of generated Wasm |
+| 12 | `diagnostic_pointer: i32` | UTF-8 diagnostic bytes on failure |
+| 16 | `diagnostic_length: i32` | Byte length of the diagnostic |
+
+The host allocates and writes source bytes, calls `compile`, then reads the
+record and its referenced bytes. Memory remains valid until the next `compile`
+call. The ABI gives compiled code no implicit filesystem or network capability.
+
 ## Evolution
 
 This is a draft, not a frozen language. For a breaking syntax change, first
