@@ -32,6 +32,19 @@ describe("Matra AST", () => {
     assert.deepEqual(matraJSONToAST(json), ast)
   })
 
+  it("preserves node-shaped arrays nested inside value arrays", () => {
+    const json = ["div", {
+      attr: [["chart", {}, [["series", { label: "x" }, [1, 2, 3]]]]],
+    }, []]
+    assert.deepEqual(matraJSONToAST(json), {
+      tag: "div",
+      props: {
+        attr: [["chart", {}, [["series", { label: "x" }, [1, 2, 3]]]]],
+      },
+      children: [],
+    })
+  })
+
   it("visits and immutably transforms only AST children", () => {
     const ast = {
       tag: "doc",

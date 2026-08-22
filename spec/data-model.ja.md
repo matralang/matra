@@ -65,8 +65,17 @@ MatraJSONはdata modelの標準交換表現です。nodeを3要素のJSON配列�
 第1要素はstring、第2要素はmap、第3要素はlistでなければなりません（MUST）。
 childの順序とscalarの型を保持しなければなりません（MUST）。
 
-`children`内でこの形に一致する3要素配列はnodeとして解釈します。producerは
-MatraJSON nodeと区別できないvalue配列を避けるべきです（SHOULD）。
+`children`の直下でこの形に一致する3要素配列はnodeとして解釈します。array value
+の内部は再帰的にnodeとして解釈してはなりません。したがって、node形式と同じvalue
+配列は、少なくとも1段のarrayまたはmapで包むことで保持できます。
+
+```json
+["div", {"attr": [["chart", {}, []]]}, []]
+```
+
+上の`attr`の値はarrayであり、その内部の3要素配列はnodeではありません。producerは
+このような包みを使わずにMatraJSON nodeと区別できないvalue配列を直接置くことを避ける
+べきです（SHOULD）。
 
 `props`内の式nodeも同じ3要素のMatraJSON形式を使います。object形式の
 ASTでは、object形式のnodeとして保持します。

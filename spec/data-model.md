@@ -67,9 +67,18 @@ Example:
 The first item MUST be a string, the second MUST be a map, and the third MUST
 be a list. Child order and scalar types MUST be preserved.
 
-Within `children`, a three-element array matching this shape is interpreted as
-a node. Producers SHOULD avoid value arrays that are indistinguishable from a
-MatraJSON node.
+Directly within `children`, a three-element array matching this shape is
+interpreted as a node. The contents of an array value MUST NOT be recursively
+interpreted as nodes. Therefore, a value array that has node shape can be
+preserved by wrapping it in at least one array or map.
+
+```json
+["div", {"attr": [["chart", {}, []]]}, []]
+```
+
+The `attr` value above is an array; its inner three-element array is not a
+node. Producers SHOULD avoid placing a value array indistinguishable from a
+MatraJSON node directly without such a wrapper.
 
 Within `props`, an expression node uses the same three-element MatraJSON
 encoding. Object-shaped ASTs preserve it as an object-shaped node.
