@@ -1,3 +1,6 @@
+# parser
+
+```page.matra
 html[lang="ja"] {
   head {
     meta[charset="UTF-8"];
@@ -80,3 +83,4 @@ html[lang="ja"] {
     }
   }
 }
+```

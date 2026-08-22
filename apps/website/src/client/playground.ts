@@ -430,15 +430,15 @@ function compileMatraBlock(program: string): string {
 function extractMatraDocument(markdown: string): MatraDocument {
   const { entry, renderer, title, stylesheet } = parseMatraFrontMatter(markdown)
   const fences: MatraFence[] = []
-  const pattern = /^[ \t]*```([^\s`]+)[^\n]*\n([\s\S]*?)^[ \t]*```[ \t]*$/gm
+  const pattern = /^[ \t]*(`{3,})([^\s`]+)[^\n]*\n([\s\S]*?)^[ \t]*\1[ \t]*$/gm
   for (const match of markdown.matchAll(pattern)) {
-    const filename = match[1]
+    const filename = match[2]
     const kind = filename.endsWith(".matra.ts")
       ? "matra.ts"
       : filename.endsWith(".matra")
         ? "matra"
         : undefined
-    if (kind) fences.push({ filename, kind, source: match[2] })
+    if (kind) fences.push({ filename, kind, source: match[3] })
   }
   if (fences.length === 0) {
     throw new SyntaxError("Markdown must contain one `*.matra` or `*.matra.ts` fenced code block.")

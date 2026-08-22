@@ -29,8 +29,8 @@ Websiteと`@matra/*`は同じnpm workspaceで管理しています。`file:`指�
 | `/packages/` | パッケージ一覧 | `api.matralang.org` |
 | `/blog/` | 開発記録 | `blog.matralang.org` |
 
-ページは`src/pages`配下の`.matra`ファイル、スタイルは`src/styles`に置きます。
-ビルドは各Matra sourceを直接parseしてHTMLへrenderします。
+ページは`src/pages`配下のMarkdownファイルで管理します。各ファイルはPlaygroundと同様に、`*.matra` fenced code blockへページのMatra sourceを記述します。スタイルは`src/styles`に置きます。
+ビルドは各Markdown文書からMatra code blockを抽出してparseし、HTMLへrenderします。
 GitHub Pagesのproject pathはworkflowから`SITE_BASE_PATH`として自動設定されます。
 
 ## 運用メモ

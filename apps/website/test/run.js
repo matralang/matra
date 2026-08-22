@@ -4,19 +4,23 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { execFileSync } from "node:child_process"
 
-async function collectMatraPages(directory) {
+async function collectMarkdownPages(directory) {
   const entries = await readdir(directory, { withFileTypes: true })
   const files = await Promise.all(entries.map(async entry => {
     const fullPath = join(directory, entry.name)
-    if (entry.isDirectory()) return collectMatraPages(fullPath)
-    return entry.isFile() && entry.name.endsWith(".matra") ? [fullPath] : []
+    if (entry.isDirectory()) return collectMarkdownPages(fullPath)
+    return entry.isFile() && entry.name.endsWith(".md") ? [fullPath] : []
   }))
   return files.flat()
 }
 
-const pageSources = await collectMatraPages(fileURLToPath(new URL("../src/pages", import.meta.url)))
+const pageSources = await collectMarkdownPages(fileURLToPath(new URL("../src/pages", import.meta.url)))
 assert.equal(pageSources.length, 11)
-assert.ok(pageSources.every(page => page.endsWith(".matra")))
+assert.ok(pageSources.every(page => page.endsWith(".md")))
+for (const page of pageSources) {
+  const source = await readFile(page, "utf8")
+  assert.match(source, /^```+[^\n]*\.matra\n/m, page)
+}
 
 execFileSync("pnpm", ["run", "build"], { stdio: "inherit" })
 

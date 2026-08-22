@@ -78,15 +78,15 @@ function isIgnoredPath(relFromPages: string): boolean {
   return false
 }
 
-// Collect native Matra page files recursively.
-function collectMatraFiles(dir: string): string[] {
+// Collect Markdown documents that contain a native Matra page fence.
+function collectPageFiles(dir: string): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true })
   const results: string[] = []
   for (const ent of entries) {
     const full = path.join(dir, ent.name)
     if (ent.isDirectory()) {
-      results.push(...collectMatraFiles(full))
-    } else if (ent.isFile() && full.endsWith(".matra")) {
+      results.push(...collectPageFiles(full))
+    } else if (ent.isFile() && full.endsWith(".md")) {
       results.push(full)
     }
   }
@@ -95,8 +95,8 @@ function collectMatraFiles(dir: string): string[] {
 
 function toOutputPath(pagesDirAbs: string, filePathAbs: string): string {
   // rel uses platform separators; normalize to posix for checks, but finally join with path
-  const rel = path.relative(pagesDirAbs, filePathAbs) // e.g. "about.matra" or "about/index.matra"
-  const noExt = rel.replace(/\.matra$/, "")
+  const rel = path.relative(pagesDirAbs, filePathAbs) // e.g. "about.md" or "about/index.md"
+  const noExt = rel.replace(/\.md$/, "")
 
   // "index" (root) -> "index.html"
   if (noExt === "index") {
@@ -111,6 +111,19 @@ function toOutputPath(pagesDirAbs: string, filePathAbs: string): string {
   // "about" -> "about/index.html"
   // "blog/post" -> "blog/post/index.html"
   return path.join(noExt, "index.html")
+}
+
+function extractMatraSource(markdown: string, sourcePath: string): string {
+  const pattern = /^(`{3,})([^\s`]+)[^\n]*\n([\s\S]*?)^\1[ \t]*$/gm
+  const fences = [...markdown.matchAll(pattern)]
+    .filter(match => match[2].endsWith(".matra"))
+
+  if (fences.length !== 1) {
+    throw new Error(
+      `${sourcePath} must contain exactly one *.matra fenced code block; found ${fences.length}.`,
+    )
+  }
+  return fences[0][3]
 }
 
 function assertNoOutputCollisions(pagesDirAbs: string, filesAbs: string[]) {
@@ -173,7 +186,7 @@ function applySiteChrome(ast: ReturnType<typeof parse>) {
 async function handler() {
   const pagesDir = path.join(process.cwd(), "src", "pages")
   const outputDir = path.join(process.cwd(), "dist")
-  const pageFiles = collectMatraFiles(pagesDir).filter(fp => {
+  const pageFiles = collectPageFiles(pagesDir).filter(fp => {
     const rel = path.relative(pagesDir, fp)
     return !isIgnoredPath(rel)
   })
@@ -188,7 +201,7 @@ async function handler() {
   fs.rmSync(outputDir, { recursive: true, force: true })
 
   await Promise.all(pageFiles.map(async (filePath: string) => {
-    const source = fs.readFileSync(filePath, "utf8")
+    const source = extractMatraSource(fs.readFileSync(filePath, "utf8"), filePath)
     const outRel = toOutputPath(pagesDir, filePath)
     const outputPath = path.join(outputDir, outRel)
     const outDir = path.dirname(outputPath)
