@@ -19,8 +19,8 @@
   "scripts": {
     "build": "tsc",
     "check": "tsc --noEmit",
-    "test": "npm run build && node --test tests/*.test.mjs",
-    "prepack": "npm run build"
+    "test": "pnpm run build && node --test tests/*.test.mjs",
+    "prepack": "pnpm run build"
   },
   "license": "MIT",
   "repository": {
@@ -33,7 +33,7 @@
     "registry": "https://registry.npmjs.org"
   },
   "dependencies": {
-    "@matra/core": "^0.2.0"
+    "@matra/core": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",

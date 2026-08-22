@@ -17,8 +17,8 @@
   "scripts": {
     "build": "tsc",
     "check": "tsc --noEmit",
-    "test": "npm run build && node --test",
-    "prepack": "npm run build"
+    "test": "pnpm run build && node --test",
+    "prepack": "pnpm run build"
   },
   "license": "MIT",
   "repository": {
@@ -35,7 +35,7 @@
     "registry": "https://registry.npmjs.org"
   },
   "peerDependencies": {
-    "@matra/core": "^0.2.0"
+    "@matra/core": "workspace:^"
   },
   "peerDependenciesMeta": {
     "@matra/core": {
@@ -43,7 +43,7 @@
     }
   },
   "devDependencies": {
-    "@matra/core": "^0.2.0",
+    "@matra/core": "workspace:^",
     "typescript": "^5.9.3"
   }
 }

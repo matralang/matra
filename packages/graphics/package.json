@@ -21,12 +21,12 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "npm run build:lib && npm run build:examples",
+    "build": "pnpm run build:lib && pnpm run build:examples",
     "build:lib": "tsc",
     "build:examples": "node --import tsx build.ts",
     "check": "tsc --noEmit",
-    "test": "npm run build:lib && node --import tsx --test tests/*.test.ts",
-    "prepack": "npm run build:lib"
+    "test": "pnpm run build:lib && node --import tsx --test tests/*.test.ts",
+    "prepack": "pnpm run build:lib"
   },
   "license": "MIT",
   "repository": {
@@ -39,12 +39,12 @@
     "registry": "https://registry.npmjs.org"
   },
   "peerDependencies": {
-    "@matra/core": "^0.2.0"
+    "@matra/core": "workspace:^"
   },
   "devDependencies": {
-    "@matra/core": "^0.2.0",
-    "@matra/math-compute-engine": "^0.1.0",
-    "esbuild": "^0.27.2",
+    "@matra/core": "workspace:^",
+    "@matra/math-compute-engine": "workspace:^",
+    "esbuild": "^0.28.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

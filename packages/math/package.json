@@ -10,8 +10,8 @@
   "scripts": {
     "build": "tsc",
     "check": "tsc --noEmit",
-    "test": "npm run build && node --test tests/*.test.mjs",
-    "prepack": "npm run build"
+    "test": "pnpm run build && node --test tests/*.test.mjs",
+    "prepack": "pnpm run build"
   },
   "license": "MIT",
   "repository": {
@@ -19,6 +19,6 @@
     "url": "git+https://github.com/matralang/matra.git",
     "directory": "packages/math"
   },
-  "dependencies": { "@matra/core": "^0.2.0" },
+  "dependencies": { "@matra/core": "workspace:^" },
   "devDependencies": { "@types/node": "^22.20.0", "typescript": "^5.9.3" }
 }
