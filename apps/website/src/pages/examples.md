@@ -63,7 +63,17 @@ html[lang="ja"] {
                   }
                   pre {
                     code~import { parse } from "@matra/core"
-import { toHTML } from "@matra/html"~
+import { toHTML } from "@matra/html"
+
+const source = [
+  'article(',
+  '  h1("Hello Matra"),',
+  '  p(class="lead", "Structure first.")',
+  ')',
+].join("\\n")
+
+const html = toHTML(parse(source))
+console.log(html)~
                   }
                 }
                 div.code-window.example-code[aria-label="Matra HTML source"] {
@@ -96,6 +106,50 @@ import { toHTML } from "@matra/html"~
                   "Graphics packageはMatra sourceを直接SVGへcompileできます。"
                 }
               }
+              div.example-code-pair {
+                div.code-window.example-code[aria-label="TypeScript SVG example"] {
+                  div.window-bar {
+                    span.window-label {
+                      "TS"
+                    }
+                    small {
+                      "render-svg.ts"
+                    }
+                  }
+                  pre {
+                    code~import { compile } from "@matra/graphics"
+
+const source = [
+  "svg(",
+  "  width=256,",
+  "  height=256,",
+  '  rect(width=256, height=256, fill="#fbfaf5"),',
+  '  circle(cx=128, cy=128, r=72, fill="#ff4d6d")',
+  ")",
+].join("\\n")
+
+const svg = compile(source, { pretty: true })~
+                  }
+                }
+                div.code-window.example-code[aria-label="Matra SVG source"] {
+                  div.window-bar {
+                    span.window-label {
+                      "MATRA"
+                    }
+                    small {
+                      "badge.matra"
+                    }
+                  }
+                  pre {
+                    code~svg(
+  width=256,
+  height=256,
+  rect(width=256, height=256, fill="#fbfaf5"),
+  circle(cx=128, cy=128, r=72, fill="#ff4d6d")
+)~
+                  }
+                }
+              }
             }
             article.example-row {
               div.example-meta {
@@ -106,7 +160,51 @@ import { toHTML } from "@matra/html"~
                   "ASTをプログラムで組み替える"
                 }
                 p {
-                  "CoreのASTは普通のTypeScript値として扱えます。"
+                  "CoreのASTは普通のTypeScript値として扱えます。domain固有の意味づけはrenderer側に残します。"
+                }
+              }
+              div.example-code-pair {
+                div.code-window.example-code[aria-label="TypeScript AST example"] {
+                  div.window-bar {
+                    span.window-label {
+                      "TS"
+                    }
+                    small {
+                      "transform.ts"
+                    }
+                  }
+                  pre {
+                    code~import { parse, transform } from "@matra/core"
+
+const ast = parse([
+  "menu(",
+  '  item(href="/docs/", "Docs"),',
+  '  item(href="/play/", "Playground")',
+  ")",
+].join("\\n"))
+
+const normalized = transform(ast, node =>
+  node.tag === "item"
+    ? { ...node, tag: "a", props: { ...node.props, role: "menuitem" } }
+    : node,
+)~
+                  }
+                }
+                div.code-window.example-code[aria-label="Matra menu source"] {
+                  div.window-bar {
+                    span.window-label {
+                      "MATRA"
+                    }
+                    small {
+                      "menu.matra"
+                    }
+                  }
+                  pre {
+                    code~menu(
+  item(href="/docs/", "Docs"),
+  item(href="/play/", "Playground")
+)~
+                  }
                 }
               }
             }
