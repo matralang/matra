@@ -118,7 +118,7 @@ and ABI records.
 
 A compiler module exports `memory`, `alloc(size: i32) -> i32`, and
 `compile(source_pointer: i32, source_length: i32) -> i32`. Source is UTF-8.
-`compile` returns the pointer to a 32-byte result record in linear memory.
+`compile` returns the pointer to a 36-byte result record in linear memory.
 
 The bootstrap compiler implements this ABI. A successful compilation returns
 status `0` and a valid Wasm module. A failure returns status `1` and UTF-8
@@ -136,6 +136,7 @@ validation, or to the end of the source when an expected token is missing.
 | 20 | `diagnostic_code: i32` | Error category; `0` on success |
 | 24 | `diagnostic_offset: i32` | Error byte offset in the UTF-8 source |
 | 28 | `diagnostic_source_length: i32` | Byte length of the error range |
+| 32 | `diagnostic_expected: i32` | Expected grammar kind for a parse error |
 
 The bootstrap compiler uses diagnostic code `1` for parse errors, `2` for
 unknown functions, and `3` for argument count mismatches. A host can classify
@@ -146,6 +147,28 @@ The error range is the half-open interval
 `[diagnostic_offset, diagnostic_offset + diagnostic_source_length)`. If an
 expected token is missing at EOF, the compiler returns a zero-length range at
 the end of the source.
+
+`diagnostic_expected` is `0` for diagnostics other than parse errors. The
+bootstrap compiler uses these kinds:
+
+| Code | Expected grammar |
+| --- | --- |
+| 0 | None |
+| 1 | `module` |
+| 2 | Identifier |
+| 3 | `fn` |
+| 4 | `(` |
+| 5 | Parameter or `)` |
+| 6 | `:` |
+| 7 | `i32` |
+| 8 | `-` |
+| 9 | `>` |
+| 10 | `{` |
+| 11 | `return` |
+| 12 | Value |
+| 13 | Integer |
+| 14 | `)` |
+| 15 | `}` |
 
 The host allocates and writes source bytes, calls `compile`, then reads the
 record and its referenced bytes. Memory remains valid until the next `compile`
