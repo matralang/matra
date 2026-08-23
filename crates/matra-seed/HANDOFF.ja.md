@@ -48,7 +48,7 @@ parse errorは失敗したtokenの先頭を指し、期待tokenが欠落した�
 - `tests/wasm.test.mjs`: Node.jsによるWasm実行test
 - `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
 
-## 次の作業: bootstrap compiler artifactの再利用
+## 次の作業: bootstrap compiler artifactの再現性
 
 function tableは先頭にcountを置き、各functionを7-field固定strideで格納する。
 
@@ -108,16 +108,21 @@ rootからはseed生成とbootstrap compileを1 commandで実行できる。
 pnpm bootstrap:compile -- input.matra output.wasm
 ```
 
-pipelineはtemporary directoryへcompiler Wasmを生成し、成功・失敗のどちらでもcleanupする。inner hostの
-diagnosticとexit codeはそのまま呼び出し元へ伝播する。testは事前生成artifactを使わずpipelineを実行し、
-生成Wasmのinstantiateとcompile失敗時のdiagnosticを検証する。
+pipelineはcompiler Wasmを`crates/matra-seed/target/bootstrap/<sha256>.wasm`へcacheする。keyは
+`examples/compiler.md`、`src/lib.rs`、`src/main.rs`、`Cargo.toml`、`Cargo.lock`の相対pathとcontent、
+`rustc -Vv`の出力から計算する。checkout pathはkeyへ含めない。入力sourceまたはRust toolchainが変わると
+別artifactを生成し、同じkeyでは既存artifactを再利用する。cache build用temporary directoryは成功・失敗の
+どちらでもcleanupする。`MATRA_BOOTSTRAP_CACHE_DIR`でcache locationをoverrideできる。
+
+inner hostのdiagnosticとexit codeはそのまま呼び出し元へ伝播する。testはisolated cacheでpipelineを2回実行し、
+初回build、2回目cache hit、単一hash artifact、生成Wasmのinstantiate、compile失敗時のdiagnosticを検証する。
 
 `function_definition`はparse error offsetを保持し、`parse_function`の各失敗で検証対象tokenの位置を
 記録する。function内のparse errorはfunction keywordではなく実際に失敗したtokenを指し、期待tokenが
 欠落した場合はEOF offsetを返す。
 
-1. 繰り返しcompileでcompiler Wasmを毎回生成せず再利用する方式を決める。
-2. sourceまたはseed compiler変更時にartifactを無効化する基準を定義する。
+1. 同じkeyからcacheを使わず2回生成したcompiler Wasmがbyte一致するか検証する。
+2. 不一致ならWasmの変動sectionを特定し、再現可能な生成方法を定義する。
 3. reproducibleなcompiler artifactをreleaseへ含める必要性を検討する。
 
 functionは0または1個の`i32` parameterを持ち、各bodyがinteger literal、parameter、またはfunction callを

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -168,8 +168,13 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     assert.equal(hostedModule.instance.exports.answer(), 42)
 
     const pipelineOutput = join(directory, "pipeline-output.wasm")
-    const pipelineResult = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", hostInput, pipelineOutput], { cwd: root, encoding: "utf8" })
+    const pipelineEnvironment = { ...process.env, MATRA_BOOTSTRAP_CACHE_DIR: join(directory, "bootstrap-cache") }
+    const pipelineResult = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", hostInput, pipelineOutput], { cwd: root, encoding: "utf8", env: pipelineEnvironment })
     assert.equal(pipelineResult.status, 0, pipelineResult.stderr)
+    assert.equal(pipelineResult.stdout, "Built bootstrap compiler cache.\n")
+    const cacheEntries = await readdir(pipelineEnvironment.MATRA_BOOTSTRAP_CACHE_DIR)
+    assert.equal(cacheEntries.length, 1)
+    assert.match(cacheEntries[0], /^[0-9a-f]{64}\.wasm$/)
     const pipelineModule = await WebAssembly.instantiate(await readFile(pipelineOutput))
     assert.equal(pipelineModule.instance.exports.answer(), 42)
 
@@ -183,8 +188,10 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
       "",
     ].join("\n")
     assert.equal(hostDiagnostic.stderr, expectedHostDiagnostic)
-    const pipelineDiagnostic = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", hostInput, pipelineOutput], { cwd: root, encoding: "utf8" })
+    const pipelineDiagnostic = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", hostInput, pipelineOutput], { cwd: root, encoding: "utf8", env: pipelineEnvironment })
     assert.equal(pipelineDiagnostic.status, 1)
+    assert.equal(pipelineDiagnostic.stdout, "Using cached bootstrap compiler.\n")
+    assert.equal((await readdir(pipelineEnvironment.MATRA_BOOTSTRAP_CACHE_DIR)).length, 1)
     assert.equal(pipelineDiagnostic.stderr, expectedHostDiagnostic)
 
     const recordPointer = module.instance.exports.compile(0, 0)
