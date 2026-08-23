@@ -172,10 +172,18 @@ bootstrap compiler uses these kinds:
 
 A host can map `diagnostic_code` and `diagnostic_expected` to labels and combine
 them with line and column values computed from the source. For example, a parse
-error with expected kind `12` can be displayed as
-`parse error: expected value at 2:29`. The diagnostic text returned by the
-compiler remains a fallback for hosts that do not interpret the structured
-fields.
+error with expected kind `12` can be displayed as:
+
+```text
+parse error: expected value at 2:29
+fn answer() -> i32 { return value }
+                            ^^^^^
+```
+
+Tabs expand to 4-column tab stops. Columns and underline widths count Unicode
+code points, and a zero-length range displays one caret. The diagnostic text
+returned by the compiler remains a fallback for hosts that do not interpret the
+structured fields.
 
 The host allocates and writes source bytes, calls `compile`, then reads the
 record and its referenced bytes. Memory remains valid until the next `compile`

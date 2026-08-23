@@ -5,7 +5,7 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
 import { test } from "node:test"
-import { formatCompilerDiagnostic, sourcePosition } from "./compiler-host.mjs"
+import { formatCompilerDiagnostic, sourceExcerpt, sourcePosition } from "./compiler-host.mjs"
 
 const root = new URL("../../..", import.meta.url)
 
@@ -13,6 +13,27 @@ test("host maps UTF-8 byte offsets to line and column", () => {
   const source = new TextEncoder().encode("alpha α\nvalue")
   const offset = new TextEncoder().encode("alpha α\n").length
   assert.deepEqual(sourcePosition(source, offset), { line: 2, column: 1 })
+})
+
+test("host highlights UTF-8 source ranges with tabs", () => {
+  const source = new TextEncoder().encode("module demo\n\treturn αvalue")
+  const offset = new TextEncoder().encode("module demo\n\treturn α").length
+  const length = new TextEncoder().encode("value").length
+  assert.deepEqual(sourceExcerpt(source, offset, length), {
+    line: 2,
+    column: 13,
+    excerpt: "    return αvalue",
+    underline: "            ^^^^^",
+  })
+
+  const trailingTabSource = new TextEncoder().encode("α\tvalue")
+  const trailingTabOffset = new TextEncoder().encode("α\t").length
+  assert.deepEqual(sourceExcerpt(trailingTabSource, trailingTabOffset, length), {
+    line: 1,
+    column: 5,
+    excerpt: "α   value",
+    underline: "    ^^^^^",
+  })
 })
 
 test("matra-seed compiles a Markdown code block to an executable Wasm module", async () => {
@@ -213,7 +234,11 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     const invalidProgramDiagnosticLength = invalidProgramRecord.getInt32(16, true)
     const invalidProgramDiagnostic = new Uint8Array(module.instance.exports.memory.buffer, invalidProgramDiagnosticPointer, invalidProgramDiagnosticLength)
     assert.equal(new TextDecoder().decode(invalidProgramDiagnostic), "parse error at 19")
-    assert.equal(formatCompilerDiagnostic(new TextEncoder().encode("module demo import 123"), module.instance.exports.memory, invalidProgramRecordPointer), "parse error: expected identifier at 1:20")
+    assert.equal(formatCompilerDiagnostic(new TextEncoder().encode("module demo import 123"), module.instance.exports.memory, invalidProgramRecordPointer), [
+      "parse error: expected identifier at 1:20",
+      "module demo import 123",
+      "                   ^^^",
+    ].join("\n"))
 
     const functionSource = new TextEncoder().encode("module demo\nfn answer() -> i32 { return 42 }")
     const functionPointer = module.instance.exports.alloc(functionSource.length)
@@ -424,7 +449,11 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     const unknownCallDiagnosticLength = unknownCallRecord.getInt32(16, true)
     const unknownCallDiagnostic = new Uint8Array(module.instance.exports.memory.buffer, unknownCallDiagnosticPointer, unknownCallDiagnosticLength)
     assert.equal(new TextDecoder().decode(unknownCallDiagnostic), `unknown function at ${unknownCallSourceText.indexOf("other")}`)
-    assert.equal(formatCompilerDiagnostic(unknownCallSource, module.instance.exports.memory, unknownCallRecordPointer), "unknown function at 3:29")
+    assert.equal(formatCompilerDiagnostic(unknownCallSource, module.instance.exports.memory, unknownCallRecordPointer), [
+      "unknown function at 3:29",
+      "fn answer() -> i32 { return other() }",
+      "                            ^^^^^",
+    ].join("\n"))
 
     const tableSourceText = "module demo\nfn one() -> i32 { return 1 }\nfn two() -> i32 { return 2 }\nfn three() -> i32 { return 3 }"
     const tableSource = new TextEncoder().encode(tableSourceText)
@@ -446,7 +475,11 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     assert.equal(invalidFunctionRecord.getInt32(28, true), "value".length)
     assert.equal(invalidFunctionRecord.getInt32(32, true), 12)
     assert.deepEqual(sourcePosition(invalidFunctionSource, invalidFunctionRecord.getInt32(24, true)), { line: 2, column: 29 })
-    assert.equal(formatCompilerDiagnostic(invalidFunctionSource, module.instance.exports.memory, invalidFunctionRecordPointer), "parse error: expected value at 2:29")
+    assert.equal(formatCompilerDiagnostic(invalidFunctionSource, module.instance.exports.memory, invalidFunctionRecordPointer), [
+      "parse error: expected value at 2:29",
+      "fn answer() -> i32 { return value }",
+      "                            ^^^^^",
+    ].join("\n"))
     const invalidFunctionDiagnosticPointer = invalidFunctionRecord.getInt32(12, true)
     const invalidFunctionDiagnosticLength = invalidFunctionRecord.getInt32(16, true)
     const invalidFunctionDiagnostic = new Uint8Array(module.instance.exports.memory.buffer, invalidFunctionDiagnosticPointer, invalidFunctionDiagnosticLength)
@@ -465,7 +498,11 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     const incompleteFunctionDiagnosticLength = incompleteFunctionRecord.getInt32(16, true)
     const incompleteFunctionDiagnostic = new Uint8Array(module.instance.exports.memory.buffer, incompleteFunctionDiagnosticPointer, incompleteFunctionDiagnosticLength)
     assert.equal(new TextDecoder().decode(incompleteFunctionDiagnostic), `parse error at ${incompleteFunctionSourceText.length}`)
-    assert.equal(formatCompilerDiagnostic(incompleteFunctionSource, module.instance.exports.memory, incompleteFunctionRecordPointer), "parse error: expected parameter or ) at 2:11")
+    assert.equal(formatCompilerDiagnostic(incompleteFunctionSource, module.instance.exports.memory, incompleteFunctionRecordPointer), [
+      "parse error: expected parameter or ) at 2:11",
+      "fn answer(",
+      "          ^",
+    ].join("\n"))
   } finally {
     await rm(directory, { recursive: true, force: true })
   }
