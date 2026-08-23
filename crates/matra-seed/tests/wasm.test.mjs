@@ -178,6 +178,18 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     const pipelineModule = await WebAssembly.instantiate(await readFile(pipelineOutput))
     assert.equal(pipelineModule.instance.exports.answer(), 42)
 
+    const reproducibleEnvironment = { ...process.env, MATRA_BOOTSTRAP_CACHE_DIR: join(directory, "reproducible-cache") }
+    const reproducibleOutput = join(directory, "reproducible-output.wasm")
+    const reproducibleResult = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", hostInput, reproducibleOutput], { cwd: root, encoding: "utf8", env: reproducibleEnvironment })
+    assert.equal(reproducibleResult.status, 0, reproducibleResult.stderr)
+    assert.equal(reproducibleResult.stdout, "Built bootstrap compiler cache.\n")
+    const reproducibleEntries = await readdir(reproducibleEnvironment.MATRA_BOOTSTRAP_CACHE_DIR)
+    assert.deepEqual(reproducibleEntries, cacheEntries)
+    assert.deepEqual(
+      await readFile(join(reproducibleEnvironment.MATRA_BOOTSTRAP_CACHE_DIR, reproducibleEntries[0])),
+      await readFile(join(pipelineEnvironment.MATRA_BOOTSTRAP_CACHE_DIR, cacheEntries[0])),
+    )
+
     await writeFile(hostInput, "module demo\nfn answer() -> i32 { return value }")
     const hostDiagnostic = spawnSync("node", ["crates/matra-seed/host/compile.mjs", output, hostInput, hostOutput], { cwd: root, encoding: "utf8" })
     assert.equal(hostDiagnostic.status, 1)
