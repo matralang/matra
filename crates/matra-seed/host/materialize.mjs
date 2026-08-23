@@ -3,7 +3,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { basename, dirname } from "node:path"
 import { cachedCompiler, CommandError } from "./bootstrap-compiler.mjs"
 
-const [outputPath, extra] = process.argv.slice(2)
+const arguments_ = process.argv.slice(2)
+if (arguments_[0] === "--") arguments_.shift()
+const [outputPath, extra] = arguments_
 if (!outputPath || extra) {
   console.error("Usage: node crates/matra-seed/host/materialize.mjs OUTPUT.wasm")
   process.exit(1)

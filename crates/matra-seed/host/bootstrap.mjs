@@ -2,7 +2,9 @@ import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
 import { cachedCompiler, CommandError } from "./bootstrap-compiler.mjs"
 
-const [inputPath, outputPath, extra] = process.argv.slice(2)
+const arguments_ = process.argv.slice(2)
+if (arguments_[0] === "--") arguments_.shift()
+const [inputPath, outputPath, extra] = arguments_
 if (!inputPath || !outputPath || extra) {
   console.error("Usage: node crates/matra-seed/host/bootstrap.mjs INPUT.matra OUTPUT.wasm")
   process.exit(1)

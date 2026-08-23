@@ -48,9 +48,11 @@ parse errorは失敗したtokenの先頭を指し、期待tokenが欠落した�
 - `host/bootstrap.mjs`: seed生成とbootstrap compileをまとめるpipeline
 - `host/materialize.mjs`: compiler artifactとchecksumを指定pathへ出力
 - `tests/wasm.test.mjs`: Node.jsによるWasm実行test
+- `../../.github/workflows/bootstrap-artifact.yml`: artifactを検証・uploadするActions workflow
+- `../../rust-toolchain.toml`: 再現build向けRust toolchain固定
 - `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
 
-## 次の作業: bootstrap compiler artifactのrelease運用
+## 次の作業: GitHub Releaseへのartifact添付
 
 function tableは先頭にcountを置き、各functionを7-field固定strideで格納する。
 
@@ -132,13 +134,19 @@ commandは指定pathへcompiler Wasmをcopyし、artifact bytesのSHA-256をstdo
 存在しなければ作成する。testはmaterializeしたbytesとcache artifactの一致、checksum、materializeした
 compilerによるProgram compile、生成Wasmの実行を検証する。
 
+Rust toolchainは`rust-toolchain.toml`で`1.97.1`へ固定する。`bootstrap-artifact.yml`は`v*` tag pushまたは
+manual dispatchで実行し、Ubuntu上でartifactをmaterializeした後、`sha256sum --check`でsidecarを検証する。
+検証済みの`matra-bootstrap.wasm`と`matra-bootstrap.wasm.sha256`は
+`matra-bootstrap-compiler`というActions artifactへuploadする。workflowの権限は`contents: read`のみで、
+GitHub Releaseの作成・更新は行わない。
+
 `function_definition`はparse error offsetを保持し、`parse_function`の各失敗で検証対象tokenの位置を
 記録する。function内のparse errorはfunction keywordではなく実際に失敗したtokenを指し、期待tokenが
 欠落した場合はEOF offsetを返す。
 
-1. compiler WasmとchecksumをCI / release artifactへ含める条件を決める。
-2. release環境でmaterialize commandを実行し、checksumを検証するjobを追加する。
-3. artifact名へversionまたはcache keyを含める必要性を検討する。
+1. tag push時に既存GitHub Releaseへartifactを添付するか決める。
+2. 自動添付する場合は`contents: write`をtag jobだけへ限定し、release作成責務を明確にする。
+3. release asset名へversionまたはcache keyを含める必要性を検討する。
 
 functionは0または1個の`i32` parameterを持ち、各bodyがinteger literal、parameter、またはfunction callを
 returnする形をemitする。call argumentはinteger literalまたはcaller parameterに対応し、callee signatureと

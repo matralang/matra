@@ -170,7 +170,7 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
 
     const pipelineOutput = join(directory, "pipeline-output.wasm")
     const pipelineEnvironment = { ...process.env, MATRA_BOOTSTRAP_CACHE_DIR: join(directory, "bootstrap-cache") }
-    const pipelineResult = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", hostInput, pipelineOutput], { cwd: root, encoding: "utf8", env: pipelineEnvironment })
+    const pipelineResult = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", "--", hostInput, pipelineOutput], { cwd: root, encoding: "utf8", env: pipelineEnvironment })
     assert.equal(pipelineResult.status, 0, pipelineResult.stderr)
     assert.equal(pipelineResult.stdout, "Built bootstrap compiler cache.\n")
     const cacheEntries = await readdir(pipelineEnvironment.MATRA_BOOTSTRAP_CACHE_DIR)
@@ -192,7 +192,7 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     )
 
     const materializedCompiler = join(directory, "matra-bootstrap.wasm")
-    const materializedResult = spawnSync("node", ["crates/matra-seed/host/materialize.mjs", materializedCompiler], { cwd: root, encoding: "utf8", env: pipelineEnvironment })
+    const materializedResult = spawnSync("node", ["crates/matra-seed/host/materialize.mjs", "--", materializedCompiler], { cwd: root, encoding: "utf8", env: pipelineEnvironment })
     assert.equal(materializedResult.status, 0, materializedResult.stderr)
     const materializedBytes = await readFile(materializedCompiler)
     const materializedChecksum = createHash("sha256").update(materializedBytes).digest("hex")

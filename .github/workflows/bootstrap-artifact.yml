@@ -1,0 +1,33 @@
+name: Build bootstrap compiler artifact
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Install Rust toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal
+      - name: Materialize bootstrap compiler
+        run: pnpm bootstrap:artifact -- release/matra-bootstrap.wasm
+      - name: Verify checksum
+        working-directory: release
+        run: sha256sum --check matra-bootstrap.wasm.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: matra-bootstrap-compiler
+          path: |
+            release/matra-bootstrap.wasm
+            release/matra-bootstrap.wasm.sha256
+          if-no-files-found: error
