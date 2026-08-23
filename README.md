@@ -19,6 +19,11 @@ Matra is maintained as a pnpm workspace monorepo. Published packages keep the
 - [`@matra/math`](packages/math)
 - [`@matra/math-compute-engine`](packages/math-compute-engine)
 
+## Compiler bootstrap
+
+See [`crates/matra-seed`](crates/matra-seed/README.md) for the Rust seed compiler and the
+Matra bootstrap compiler status.
+
 ## Website
 
 公式サイト・ドキュメント・Playgroundは

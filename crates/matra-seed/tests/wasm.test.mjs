@@ -205,6 +205,13 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     const materializedModule = await WebAssembly.instantiate(await readFile(materializedOutput))
     assert.equal(materializedModule.instance.exports.answer(), 42)
 
+    const selfHostResult = spawnSync("node", ["crates/matra-seed/host/verify-self-host.mjs"], { cwd: root, encoding: "utf8", env: pipelineEnvironment })
+    assert.equal(selfHostResult.status, 1)
+    assert.match(selfHostResult.stdout, /Using cached bootstrap compiler\.\nStage 1: ready \([0-9a-f]{64}\)\n/)
+    assert.match(selfHostResult.stderr, /Stage 2: blocked/)
+    assert.match(selfHostResult.stderr, /examples\/compiler\.md:3:1: parse error: expected fn/)
+    assert.match(selfHostResult.stderr, /struct token \{\n\^\^\^\^\^\^/)
+
     await writeFile(hostInput, "module demo\nfn answer() -> i32 { return value }")
     const hostDiagnostic = spawnSync("node", ["crates/matra-seed/host/compile.mjs", output, hostInput, hostOutput], { cwd: root, encoding: "utf8" })
     assert.equal(hostDiagnostic.status, 1)

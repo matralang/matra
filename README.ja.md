@@ -22,6 +22,11 @@ Matraはpnpm workspaceのmonorepoとして管理されています。公開パ�
 各パッケージは、Coreが定義するツリー表現とparser / renderer境界を共有しながら、
 HTML、Math、Graphics、実行環境統合などのdomain-specificな責務を分担します。
 
+## Compiler bootstrap
+
+Rust seed compilerとMatra製bootstrap compilerの開発状況は
+[`crates/matra-seed`](crates/matra-seed/README.ja.md)を参照してください。
+
 ## Website
 
 公式サイト・ドキュメント・Playgroundは

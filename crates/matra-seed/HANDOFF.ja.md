@@ -1,166 +1,89 @@
-# Matra seed compiler 引き継ぎ
+# Matra bootstrap引き継ぎ
 
-## 現在の状態
+## 目的
 
-bootstrap compilerのsourceは`examples/compiler.md`にあります。seed compilerはMarkdownの
-`*.matra.program` fenceをWasm moduleへcompileします。
+Rust seed compilerからMatra製compiler Wasmを生成し、そのcompiler自身で同じsourceを再compileする
+bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3のbyte一致とする。
 
-- `bytes`はWasmの`(pointer, length)`へlowerされ、parameter、local、return、function callに対応
-- `allocate_bytes`、`byte_set`、`byte_pointer`を実装
-- `[i32]`は同じ`(pointer, length)` layoutで、`allocate_i32_array`、`array_get`、`array_set`を実装
-- bootstrap compilerは`memory`、`alloc(size) -> i32`、
-  `compile(source_pointer, source_length) -> i32`をexport
-- 空sourceの`compile`は36-byte result recordを返し、recordは有効な空Wasm moduleを参照
-- 未対応または不正なsourceはstatus `1`、diagnostic code、分類・source offsetを含むUTF-8 textを返す
-- `struct`は固定長の`i32` field、constructor、field read、parameter/local/returnに対応
-- bootstrap lexerはASCII whitespaceと`//` commentをskipし、EOF、identifier、integer、symbolを読む
-- bootstrap parserは`module`、`import`、`fn` / `export fn`、1個の`i32` parameterを読む
-- bootstrap emitterはliteral return、parameter return、signed LEB128をemitする
-- bootstrap compilerは任意数のfunctionでliteral/parameter returnと0または1引数のcallをemitする
-- call先の名前はfunction tableでWasm function indexへ解決する
-- function tableは固定stride recordでparameter数、body情報、call argument情報を保持する
-- Wasm section length、count、type/function index、body/name lengthはunsigned LEB128でemitする
+## 現在の到達点
 
-## 検証
+2026-08-23時点の状態は次のとおりである。
 
-次のcommandは直近commitで成功しています。
+| Stage | 生成元 | 状態 |
+| --- | --- | --- |
+| stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
+| stage-2 | stage-1 | compiler sourceの3行目で停止 |
+| stage-3 | stage-2 | stage-2未生成のため未到達 |
+
+`pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
+できた場合はbyte一致も検証する。現在の結果は次のとおりで、exit codeは`1`である。
 
 ```text
-pnpm run test:seed
-pnpm run lint:markdown
-```
-
-`tests/wasm.test.mjs`は、空Wasm output、result record、同一instanceの複数call、
-`bytes`のfunction call、`[i32]`のread/writeに加え、bootstrap compilerが生成したWasmの
-literal return、parameter return、negative return、複数function、非ゼロindexのcall、
-parameter付きcall、signature不一致の拒否、130文字のexport名、130 functionとindex `128`のcall、
-parser/unknown call/signature errorのdiagnostic code、text、構造化source rangeを実行検証します。hostは
-expected kindをlabelへ変換し、UTF-8 byte offsetから1-based line/columnを計算して表示します。function内の
-parse errorは失敗したtokenの先頭を指し、期待tokenが欠落した場合はsource末尾を指します。
-
-## 主要なファイル
-
-- `src/lib.rs`: parser、型lowering、Wasm binary emitter
-- `examples/compiler.md`: 自己ホストcompilerの最初のProgram source
-- `host/compiler-host.mjs`: result ABIを読むhost diagnostic formatter
-- `host/compile.mjs`: bootstrap compiler Wasmを実行するNode.js CLI
-- `host/bootstrap-compiler.mjs`: compiler artifactのcache生成・再利用
-- `host/bootstrap.mjs`: seed生成とbootstrap compileをまとめるpipeline
-- `host/materialize.mjs`: compiler artifactとchecksumを指定pathへ出力
-- `tests/wasm.test.mjs`: Node.jsによるWasm実行test
-- `../../.github/workflows/bootstrap-artifact.yml`: artifactを検証・uploadするActions workflow
-- `../../rust-toolchain.toml`: 再現build向けRust toolchain固定
-- `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
-
-## 次の作業: GitHub Releaseへのartifact添付
-
-function tableは先頭にcountを置き、各functionを7-field固定strideで格納する。
-
-```text
-[count, name_start, name_length, parameter_count, body_kind, body_value,
- argument_kind, argument_value, ...]
-```
-
-`body_kind`はliteralが`0`、parameter returnが`1`、callが`2`である。`body_value`はliteral値、
-parameter index、または解決済みWasm function indexを表す。parserは任意数のfunctionをtableへ追加し、
-emitterはsourceを再解析せずtableからtype / function / code sectionを生成する。負のliteral `-1`と`-2`も
-body kindと混同しない。`argument_kind`は引数なしが`0`、literalが`1`、caller parameterが`2`で、
-`argument_value`はliteral値またはlocal indexを表す。
-
-```matra
+Stage 1: ready (<sha256>)
+Stage 2: blocked
+examples/compiler.md:3:1: parse error: expected fn
 struct token {
-  kind: i32
-  start: i32
-  length: i32
-}
-
-let value = token(1, 4, 2)
-return value.kind
+^^^^^^
 ```
 
-array of structは未実装のため、tableにはflattenedな`[i32]`を使う。
+これはstage-1 parserがtop-level `struct`を受理しないためである。`struct`だけを追加してもself-hostは
+完成しない。compiler sourceは複数parameter、`bytes`、struct、array、local、assignment、arithmetic、
+comparison、`if`、`while`、`break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次
+実装する必要がある。
 
-Wasmのsection length、function count、type/function index、body size、name lengthはunsigned LEB128で
-emitする。function tableは事前にfunction数を数え、`count * 7 + 1`要素だけ確保する。
+## 検証済みの資産
 
-失敗時はASCII互換のUTF-8 bytesを確保し、result recordの`diagnostic_pointer`と
-`diagnostic_length`から参照する。現在のmessageは`parse error at <offset>`、
-`unknown function at <offset>`、`argument count mismatch at <offset>`である。unknown callはcallee名、
-signature不一致はargument tokenのoffsetを返す。36-byte result recordの`diagnostic_code`はsuccessが`0`、
-parse errorが`1`、unknown functionが`2`、argument count mismatchが`3`である。
-`diagnostic_offset`と`diagnostic_source_length`はUTF-8 source上のbyte rangeであり、hostが表示用の
-line/columnへ変換する。通常は失敗token全体を指し、EOFで期待tokenが欠落した場合は長さ`0`を返す。
-`diagnostic_expected`はparse errorで期待したgrammar kindを`1`から`15`で表し、それ以外は`0`である。
-`host/compiler-host.mjs`はcodeとexpected kindをlabelへ変換し、line/column、source excerpt、range underlineを
-含む表示文字列を生成する。tabは4-column tab stopへ展開し、multi-byte文字はUnicode code point単位で扱う。
-長さ`0`のrangeはcaretを1個表示する。
+- Rust seedはMarkdownの`*.matra.program` fenceとimport closureをWasmへcompileする
+- bootstrap compilerは任意数の単純function、0または1個の`i32` parameter、literal、parameter return、
+  0または1引数のcallをcompileする
+- signed / unsigned LEB128と可変長のWasm section、index、export名をemitする
+- 36-byte result ABIはstatus、output、diagnostic text、code、UTF-8 source range、expected kindを返す
+- Node.js hostはUTF-8 offsetを1-based line / columnへ変換し、source underlineを表示する
+- compiler artifactはsource、Rust実装、manifest、lockfile、`rustc -Vv`からcache keyを計算する
+- Rust `1.97.1`を[`../../rust-toolchain.toml`](../../rust-toolchain.toml)で固定している
+- 独立cacheで生成したstage-1 artifactがbyte単位で一致する
+- `v*` tagとmanual dispatchでWasmとchecksumをActions artifactへuploadする
 
-seed compilerでbootstrap compiler Wasmを生成し、Node.js hostからProgram sourceをcompileできる。
+36-byte result recordのlayoutは[`../../spec/program.ja.md`](../../spec/program.ja.md)を正とする。実装の
+詳細と利用commandは[`README.ja.md`](README.ja.md)を参照する。
 
-```text
-cargo run --manifest-path crates/matra-seed/Cargo.toml -- \
-  crates/matra-seed/examples/compiler.md compiler.wasm --entry compiler.matra.program
-node crates/matra-seed/host/compile.mjs compiler.wasm input.matra output.wasm
-```
+## 再開手順
 
-host CLIは成功時に生成Wasmを書き込み、失敗時はfile name、line/column、expected label、source underlineを
-stderrへ出してexit code `1`を返す。source sizeに応じてcompiler memoryを事前にgrowする。
+1. worktreeと直近検証を確認する。
 
-rootからはseed生成とbootstrap compileを1 commandで実行できる。
+   ```text
+   git status --short --branch
+   pnpm run test:seed
+   pnpm run lint
+   ```
 
-```text
-pnpm bootstrap:compile -- input.matra output.wasm
-```
+2. self-host baselineを実行する。現在はstage-2 blockedによるexit code `1`が期待値である。
 
-pipelineはcompiler Wasmを`crates/matra-seed/target/bootstrap/<sha256>.wasm`へcacheする。keyは
-`examples/compiler.md`、`src/lib.rs`、`src/main.rs`、`Cargo.toml`、`Cargo.lock`の相対pathとcontent、
-`rustc -Vv`の出力から計算する。checkout pathはkeyへ含めない。入力sourceまたはRust toolchainが変わると
-別artifactを生成し、同じkeyでは既存artifactを再利用する。cache build用temporary directoryは成功・失敗の
-どちらでもcleanupする。`MATRA_BOOTSTRAP_CACHE_DIR`でcache locationをoverrideできる。
+   ```text
+   pnpm bootstrap:verify
+   ```
 
-inner hostのdiagnosticとexit codeはそのまま呼び出し元へ伝播する。testはisolated cacheでpipelineを実行し、
-初回build、2回目cache hit、単一hash artifact、生成Wasmのinstantiate、compile失敗時のdiagnosticを検証する。
-さらに別のisolated cacheへcompiler Wasmを独立生成し、cache keyとartifact bytesが一致することを検証する。
-現在の入力とRust toolchainではbootstrap compiler artifactはbyte単位で再現可能である。
+3. [`examples/compiler.md`](examples/compiler.md)のsource順に、最初のunsupported constructを縦に実装する。
+   Rust seed側ではなく、stage-1 compilerのparser、intermediate table、Wasm emitterを一組として更新する。
 
-cache artifactはrelease向けpathへmaterializeできる。
+4. 変更ごとに`tests/wasm.test.mjs`へ小さいProgramの実行testを追加し、`bootstrap:verify`の停止位置が
+   前進したことを確認する。
 
-```text
-pnpm bootstrap:artifact -- dist/matra-bootstrap.wasm
-```
+5. 関連testとlintが成功した単位で独立commitする。
 
-commandは指定pathへcompiler Wasmをcopyし、artifact bytesのSHA-256をstdoutと
-`dist/matra-bootstrap.wasm.sha256`へ`<checksum>  matra-bootstrap.wasm`形式で出力する。出力先directoryは
-存在しなければ作成する。testはmaterializeしたbytesとcache artifactの一致、checksum、materializeした
-compilerによるProgram compile、生成Wasmの実行を検証する。
+## 次の実装単位
 
-Rust toolchainは`rust-toolchain.toml`で`1.97.1`へ固定する。`bootstrap-artifact.yml`は`v*` tag pushまたは
-manual dispatchで実行し、Ubuntu上でartifactをmaterializeした後、`sha256sum --check`でsidecarを検証する。
-検証済みの`matra-bootstrap.wasm`と`matra-bootstrap.wasm.sha256`は
-`matra-bootstrap-compiler`というActions artifactへuploadする。workflowの権限は`contents: read`のみで、
-GitHub Releaseの作成・更新は行わない。
+top-level `struct` declarationをstage-1 parserへ追加し、field情報を保持できるtable表現を決める。安価な
+完了条件は、`bootstrap:verify`の最初のdiagnosticが3行目の`struct`より後へ進むことである。ただし実装は
+parser受理だけで終わらせず、struct constructorとfield readを含む最小ProgramをWasmへcompile・実行する
+testまでを一単位とする。
 
-`function_definition`はparse error offsetを保持し、`parse_function`の各失敗で検証対象tokenの位置を
-記録する。function内のparse errorはfunction keywordではなく実際に失敗したtokenを指し、期待tokenが
-欠落した場合はEOF offsetを返す。
+その後はcompiler sourceの出現順を基準に、複数parameterと`bytes`、control flow、localとassignment、array、
+memory組み込みを進める。stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
-1. tag push時に既存GitHub Releaseへartifactを添付するか決める。
-2. 自動添付する場合は`contents: write`をtag jobだけへ限定し、release作成責務を明確にする。
-3. release asset名へversionまたはcache keyを含める必要性を検討する。
+## 運用上の判断
 
-functionは0または1個の`i32` parameterを持ち、各bodyがinteger literal、parameter、またはfunction callを
-returnする形をemitする。call argumentはinteger literalまたはcaller parameterに対応し、callee signatureと
-引数数が一致しなければdiagnostic statusを返す。最後のfunctionをexportする。integer literalは正数・負数とも
-signed LEB128へlowerする。大規模sourceをcompileする場合、host側は必要に応じてexportされたmemoryを
-`memory.grow()`してからsourceとtableの領域を確保する。
-
-`fn`と`export fn`はどちらもparseできる。現時点でemitする単関数はexport keywordの有無にかかわらず
-exportされる。
-
-## 注意点
-
-- 現在の`bytes`と`[i32]`は内部で同じpointer/length mapを共有する。structはpointer-onlyの
-  local mapを使用する。
-- `compile_markdown`はimport closureのfunction名重複を検出する。struct名重複も同様に検出する。
-- generated Wasm sectionはidの昇順でemitする。data sectionはcode sectionの後（id 11）に置く。
-- 実装成功ごとにcommitするという利用者の要望がある。
+- 現在の成熟度は`experimental`であり、本番compilerとしてreleaseしない
+- generated Wasmとcacheは`target/`またはrelease出力先へ置き、source管理しない
+- GitHub Actions artifactは検証用であり、GitHub Releaseへの自動添付はまだ行わない
+- self-host成立後もfuzzing、resource limit、ABI version、cross-platform再現性を本番化条件として扱う
