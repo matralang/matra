@@ -167,15 +167,25 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     const hostedModule = await WebAssembly.instantiate(await readFile(hostOutput))
     assert.equal(hostedModule.instance.exports.answer(), 42)
 
+    const pipelineOutput = join(directory, "pipeline-output.wasm")
+    const pipelineResult = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", hostInput, pipelineOutput], { cwd: root, encoding: "utf8" })
+    assert.equal(pipelineResult.status, 0, pipelineResult.stderr)
+    const pipelineModule = await WebAssembly.instantiate(await readFile(pipelineOutput))
+    assert.equal(pipelineModule.instance.exports.answer(), 42)
+
     await writeFile(hostInput, "module demo\nfn answer() -> i32 { return value }")
     const hostDiagnostic = spawnSync("node", ["crates/matra-seed/host/compile.mjs", output, hostInput, hostOutput], { cwd: root, encoding: "utf8" })
     assert.equal(hostDiagnostic.status, 1)
-    assert.equal(hostDiagnostic.stderr, [
+    const expectedHostDiagnostic = [
       `${hostInput}:2:29: parse error: expected value`,
       "fn answer() -> i32 { return value }",
       "                            ^^^^^",
       "",
-    ].join("\n"))
+    ].join("\n")
+    assert.equal(hostDiagnostic.stderr, expectedHostDiagnostic)
+    const pipelineDiagnostic = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", hostInput, pipelineOutput], { cwd: root, encoding: "utf8" })
+    assert.equal(pipelineDiagnostic.status, 1)
+    assert.equal(pipelineDiagnostic.stderr, expectedHostDiagnostic)
 
     const recordPointer = module.instance.exports.compile(0, 0)
     const record = new DataView(module.instance.exports.memory.buffer, recordPointer, 36)

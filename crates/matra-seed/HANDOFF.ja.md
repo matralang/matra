@@ -44,10 +44,11 @@ parse errorは失敗したtokenの先頭を指し、期待tokenが欠落した�
 - `examples/compiler.md`: 自己ホストcompilerの最初のProgram source
 - `host/compiler-host.mjs`: result ABIを読むhost diagnostic formatter
 - `host/compile.mjs`: bootstrap compiler Wasmを実行するNode.js CLI
+- `host/bootstrap.mjs`: seed生成とbootstrap compileをまとめるpipeline
 - `tests/wasm.test.mjs`: Node.jsによるWasm実行test
 - `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
 
-## 次の作業: bootstrap compile pipeline
+## 次の作業: bootstrap compiler artifactの再利用
 
 function tableは先頭にcountを置き、各functionを7-field固定strideで格納する。
 
@@ -101,13 +102,23 @@ node crates/matra-seed/host/compile.mjs compiler.wasm input.matra output.wasm
 host CLIは成功時に生成Wasmを書き込み、失敗時はfile name、line/column、expected label、source underlineを
 stderrへ出してexit code `1`を返す。source sizeに応じてcompiler memoryを事前にgrowする。
 
+rootからはseed生成とbootstrap compileを1 commandで実行できる。
+
+```text
+pnpm bootstrap:compile -- input.matra output.wasm
+```
+
+pipelineはtemporary directoryへcompiler Wasmを生成し、成功・失敗のどちらでもcleanupする。inner hostの
+diagnosticとexit codeはそのまま呼び出し元へ伝播する。testは事前生成artifactを使わずpipelineを実行し、
+生成Wasmのinstantiateとcompile失敗時のdiagnosticを検証する。
+
 `function_definition`はparse error offsetを保持し、`parse_function`の各失敗で検証対象tokenの位置を
 記録する。function内のparse errorはfunction keywordではなく実際に失敗したtokenを指し、期待tokenが
 欠落した場合はEOF offsetを返す。
 
-1. seed compiler Wasmの生成とbootstrap host実行を1 commandへまとめる。
-2. temporary compiler Wasmの配置・再利用方針を決める。
-3. pipeline全体をclean checkoutから実行するend-to-end testを追加する。
+1. 繰り返しcompileでcompiler Wasmを毎回生成せず再利用する方式を決める。
+2. sourceまたはseed compiler変更時にartifactを無効化する基準を定義する。
+3. reproducibleなcompiler artifactをreleaseへ含める必要性を検討する。
 
 functionは0または1個の`i32` parameterを持ち、各bodyがinteger literal、parameter、またはfunction callを
 returnする形をemitする。call argumentはinteger literalまたはcaller parameterに対応し、callee signatureと
