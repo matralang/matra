@@ -45,7 +45,7 @@ export function sourceExcerpt(source, offset, length) {
   }
 }
 
-export function formatCompilerDiagnostic(source, memory, recordPointer) {
+export function formatCompilerDiagnostic(source, memory, recordPointer, fileName) {
   const record = new DataView(memory.buffer, recordPointer, 36)
   const code = record.getInt32(20, true)
   const offset = record.getInt32(24, true)
@@ -55,7 +55,9 @@ export function formatCompilerDiagnostic(source, memory, recordPointer) {
   const label = diagnosticLabels[code] ?? "compiler error"
   const expectedLabel = expectedLabels[expected]
   const expectation = code === 1 && expectedLabel ? `: expected ${expectedLabel}` : ""
-  return `${label}${expectation} at ${excerpt.line}:${excerpt.column}\n${excerpt.excerpt}\n${excerpt.underline}`
+  const location = fileName ? `${fileName}:${excerpt.line}:${excerpt.column}: ` : ""
+  const position = fileName ? "" : ` at ${excerpt.line}:${excerpt.column}`
+  return `${location}${label}${expectation}${position}\n${excerpt.excerpt}\n${excerpt.underline}`
 }
 
 function displayWidth(value, initialWidth = 0) {

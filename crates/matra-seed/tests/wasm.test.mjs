@@ -5,7 +5,7 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
 import { test } from "node:test"
-import { formatCompilerDiagnostic, sourceExcerpt, sourcePosition } from "./compiler-host.mjs"
+import { formatCompilerDiagnostic, sourceExcerpt, sourcePosition } from "../host/compiler-host.mjs"
 
 const root = new URL("../../..", import.meta.url)
 
@@ -158,6 +158,25 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     assert.equal(result.status, 0, result.stderr)
 
     const module = await WebAssembly.instantiate(await readFile(output))
+
+    const hostInput = join(directory, "host-input.matra")
+    const hostOutput = join(directory, "host-output.wasm")
+    await writeFile(hostInput, "module demo\nfn answer() -> i32 { return 42 }")
+    const hostResult = spawnSync("node", ["crates/matra-seed/host/compile.mjs", output, hostInput, hostOutput], { cwd: root, encoding: "utf8" })
+    assert.equal(hostResult.status, 0, hostResult.stderr)
+    const hostedModule = await WebAssembly.instantiate(await readFile(hostOutput))
+    assert.equal(hostedModule.instance.exports.answer(), 42)
+
+    await writeFile(hostInput, "module demo\nfn answer() -> i32 { return value }")
+    const hostDiagnostic = spawnSync("node", ["crates/matra-seed/host/compile.mjs", output, hostInput, hostOutput], { cwd: root, encoding: "utf8" })
+    assert.equal(hostDiagnostic.status, 1)
+    assert.equal(hostDiagnostic.stderr, [
+      `${hostInput}:2:29: parse error: expected value`,
+      "fn answer() -> i32 { return value }",
+      "                            ^^^^^",
+      "",
+    ].join("\n"))
+
     const recordPointer = module.instance.exports.compile(0, 0)
     const record = new DataView(module.instance.exports.memory.buffer, recordPointer, 36)
     assert.equal(record.getInt32(0, true), 0)
