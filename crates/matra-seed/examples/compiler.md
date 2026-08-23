@@ -463,6 +463,44 @@ fn parse_empty_program(source: bytes) -> i32 {
   return 1
 }
 
+fn program_error_offset(source: bytes) -> i32 {
+  let first = next_token(source, 0)
+  if first.kind != 1 {
+    return first.start
+  }
+  if is_module_keyword(source, first) == 0 {
+    return first.start
+  }
+  let name = next_token(source, first.start + first.length)
+  if name.kind != 1 {
+    return name.start
+  }
+  let position = name.start + name.length
+  while position < byte_length(source) {
+    let keyword = next_token(source, position)
+    if keyword.kind == 0 {
+      return keyword.start
+    }
+    if keyword.kind != 1 {
+      return keyword.start
+    }
+    if is_import_keyword(source, keyword) == 1 {
+      let imported = next_token(source, keyword.start + keyword.length)
+      if imported.kind != 1 {
+        return imported.start
+      }
+      position = imported.start + imported.length
+    } else {
+      let function = parse_function(source, keyword.start)
+      if function.status == 0 {
+        return keyword.start
+      }
+      position = function.position
+    }
+  }
+  return byte_length(source)
+}
+
 fn first_function(source: bytes) -> function_definition {
   let module_keyword = next_token(source, 0)
   if module_keyword.kind != 1 {
@@ -1104,21 +1142,22 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
   return output
 }
 
-fn supports_multiple_functions(table: [i32]) -> i32 {
+fn multiple_function_error_offset(source: bytes, table: [i32]) -> i32 {
   let count = array_get(table, 0)
+  let current_function = first_function(source)
   let index = 0
   while index < count {
     let parameter_count = array_get(table, index * 7 + 3)
     let body_kind = array_get(table, index * 7 + 4)
     if body_kind == 1 {
       if parameter_count != 1 {
-        return 0
+        return current_function.name_start
       }
     }
     if body_kind == 2 {
       let called_index = array_get(table, index * 7 + 5)
       if called_index < 0 {
-        return 0
+        return returned_value_token(source, current_function).start
       }
       let argument_kind = array_get(table, index * 7 + 6)
       let argument_count = 0
@@ -1126,17 +1165,21 @@ fn supports_multiple_functions(table: [i32]) -> i32 {
         argument_count = 1
       }
       if array_get(table, called_index * 7 + 3) != argument_count {
-        return 0
+        return call_argument_token(source, current_function).start
       }
       if argument_kind == 2 {
         if parameter_count != 1 {
-          return 0
+          return call_argument_token(source, current_function).start
         }
       }
     }
     index = index + 1
+    if index < count {
+      let next = next_token(source, current_function.position)
+      current_function = parse_function(source, next.start)
+    }
   }
-  return 1
+  return -1
 }
 
 export fn alloc(size: i32) -> i32 {
@@ -1154,13 +1197,47 @@ fn success_record(output: bytes) -> i32 {
   return byte_pointer(diagnostic_length)
 }
 
-fn diagnostic_record() -> i32 {
+fn decimal_length(value: i32) -> i32 {
+  let remaining = value
+  let length = 1
+  while remaining >= 10 {
+    remaining = remaining / 10
+    length = length + 1
+  }
+  return length
+}
+
+fn write_decimal(buffer: bytes, index: i32, value: i32) -> bytes {
+  let remaining = value
+  let position = index + decimal_length(value) - 1
+  while position >= index {
+    let quotient = remaining / 10
+    byte_set(buffer, position, 48 + remaining - quotient * 10)
+    remaining = quotient
+    position = position - 1
+  }
+  return buffer
+}
+
+fn diagnostic_record(offset: i32) -> i32 {
+  let offset_length = decimal_length(offset)
+  let diagnostic = allocate_bytes(9 + offset_length)
+  byte_set(diagnostic, 0, 101)
+  byte_set(diagnostic, 1, 114)
+  byte_set(diagnostic, 2, 114)
+  byte_set(diagnostic, 3, 111)
+  byte_set(diagnostic, 4, 114)
+  byte_set(diagnostic, 5, 32)
+  byte_set(diagnostic, 6, 97)
+  byte_set(diagnostic, 7, 116)
+  byte_set(diagnostic, 8, 32)
+  let diagnostic_written = write_decimal(diagnostic, 9, offset)
   let record = allocate_bytes(20)
   let status = write_i32(record, 0, 1)
   let output_pointer = write_i32(status, 4, 0)
   let output_length = write_i32(output_pointer, 8, 0)
-  let diagnostic_pointer = write_i32(output_length, 12, 0)
-  let diagnostic_length = write_i32(diagnostic_pointer, 16, 0)
+  let diagnostic_pointer = write_i32(output_length, 12, byte_pointer(diagnostic_written))
+  let diagnostic_length = write_i32(diagnostic_pointer, 16, byte_length(diagnostic_written))
   return byte_pointer(diagnostic_length)
 }
 
@@ -1172,17 +1249,18 @@ export fn compile(source: bytes) -> i32 {
     if function.status == 1 {
       output = single_function_module(source, table)
       if array_get(table, 0) > 1 {
-        if supports_multiple_functions(table) == 1 {
+        let error_offset = multiple_function_error_offset(source, table)
+        if error_offset < 0 {
           output = multiple_function_module(source, table)
         } else {
-          return diagnostic_record()
+          return diagnostic_record(error_offset)
         }
       }
     }
     return success_record(output)
   }
 
-  return diagnostic_record()
+  return diagnostic_record(program_error_offset(source))
 }
 ```
 
@@ -1202,5 +1280,6 @@ as fixed seven-field records containing name range, parameter count, body kind,
 body value, argument kind, and argument value. Section lengths, counts, type
 indices, function indices, body sizes, and name lengths use unsigned LEB128.
 `allocate_bytes(size)` returns a `bytes` value backed by the generated module's
-linear memory, and `byte_set(bytes, index, value)` writes one byte. Diagnostics
-remain a placeholder until diagnostic text is implemented.
+linear memory, and `byte_set(bytes, index, value)` writes one byte. Failed
+compilations return UTF-8 diagnostic bytes containing the relevant source
+offset.

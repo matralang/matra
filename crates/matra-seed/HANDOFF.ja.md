@@ -11,7 +11,7 @@ bootstrap compilerのsourceは`examples/compiler.md`にあります。seed compi
 - bootstrap compilerは`memory`、`alloc(size) -> i32`、
   `compile(source_pointer, source_length) -> i32`をexport
 - 空sourceの`compile`は20-byte result recordを返し、recordは有効な空Wasm moduleを参照
-- 未対応または不正なsourceはstatus `1`と空diagnostic fieldを返す
+- 未対応または不正なsourceはstatus `1`とsource offsetを含むUTF-8 diagnosticを返す
 - `struct`は固定長の`i32` field、constructor、field read、parameter/local/returnに対応
 - bootstrap lexerはASCII whitespaceと`//` commentをskipし、EOF、identifier、integer、symbolを読む
 - bootstrap parserは`module`、`import`、`fn` / `export fn`、1個の`i32` parameterを読む
@@ -33,8 +33,8 @@ pnpm run lint:markdown
 `tests/wasm.test.mjs`は、空Wasm output、result record、同一instanceの複数call、
 `bytes`のfunction call、`[i32]`のread/writeに加え、bootstrap compilerが生成したWasmの
 literal return、parameter return、negative return、複数function、非ゼロindexのcall、
-parameter付きcall、signature不一致の拒否、130文字のexport名、130 functionとindex `128`のcallを
-実行検証します。
+parameter付きcall、signature不一致の拒否、130文字のexport名、130 functionとindex `128`のcall、
+parser/unknown call/signature errorのdiagnostic textとsource offsetを実行検証します。
 
 ## 主要なファイル
 
@@ -43,7 +43,7 @@ parameter付きcall、signature不一致の拒否、130文字のexport名、130 
 - `tests/wasm.test.mjs`: Node.jsによるWasm実行test
 - `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
 
-## 次の作業: diagnostic text
+## 次の作業: diagnostic分類
 
 function tableは先頭にcountを置き、各functionを7-field固定strideで格納する。
 
@@ -74,13 +74,15 @@ array of structは未実装のため、tableにはflattenedな`[i32]`を使う�
 Wasmのsection length、function count、type/function index、body size、name lengthはunsigned LEB128で
 emitする。function tableは事前にfunction数を数え、`count * 7 + 1`要素だけ確保する。
 
-次は空のdiagnostic fieldを実際のmessageへ置き換える。
+失敗時は`error at <offset>`というASCII互換のUTF-8 bytesを確保し、result recordの
+`diagnostic_pointer`と`diagnostic_length`から参照する。parser errorは失敗token、unknown callはcallee名、
+signature不一致はargument tokenのoffsetを返す。
 
-1. parser errorとunsupported signatureをerror codeへ分類する。
-2. error codeに対応するASCII diagnostic bytesを確保する。
-3. result recordの`diagnostic_pointer`と`diagnostic_length`へ格納する。
-4. Node.js側でmessageをdecodeして検証する。
-5. source offsetをdiagnosticへ追加する。
+1. parser errorとsemantic errorをerror codeへ分類する。
+2. `error at`を`parse error at`、`unknown function at`などへ具体化する。
+3. function内のparse errorを失敗したtoken位置まで細分化する。
+4. diagnostic codeをABIへ追加する必要性を検討する。
+5. line/column表示をhost側とcompiler側のどちらで担うか決める。
 
 functionは0または1個の`i32` parameterを持ち、各bodyがinteger literal、parameter、またはfunction callを
 returnする形をemitする。call argumentはinteger literalまたはcaller parameterに対応し、callee signatureと

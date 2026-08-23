@@ -120,9 +120,9 @@ A compiler module exports `memory`, `alloc(size: i32) -> i32`, and
 `compile(source_pointer: i32, source_length: i32) -> i32`. Source is UTF-8.
 `compile` returns the pointer to a 20-byte result record in linear memory.
 
-The bootstrap compiler implements this ABI. An empty source returns status `0`
-and a valid empty Wasm module. A non-empty source returns status `1` with empty
-diagnostic fields until diagnostic text is implemented.
+The bootstrap compiler implements this ABI. A successful compilation returns
+status `0` and a valid Wasm module. A failure returns status `1` and UTF-8
+diagnostic text containing a source offset.
 
 | Offset | Field | Meaning |
 | --- | --- | --- |

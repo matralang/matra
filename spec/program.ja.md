@@ -115,8 +115,8 @@ compiler moduleは`memory`、`alloc(size: i32) -> i32`、
 `compile(source_pointer: i32, source_length: i32) -> i32`をexportします。sourceはUTF-8です。
 `compile`はlinear memory上の20-byte result recordへのpointerを返します。
 
-bootstrap compilerはこのABIを実装済みです。空のsourceはstatus `0`と有効な空Wasm moduleを
-返し、空でないsourceはdiagnostic text未実装のためstatus `1`と空のdiagnostic fieldを返します。
+bootstrap compilerはこのABIを実装済みです。成功時はstatus `0`と有効なWasm moduleを返します。
+失敗時はstatus `1`と、source offsetを含むUTF-8 diagnostic textを返します。
 
 | Offset | Field | 意味 |
 | --- | --- | --- |
