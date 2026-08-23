@@ -1196,13 +1196,14 @@ export fn alloc(size: i32) -> i32 {
 }
 
 fn success_record(output: bytes) -> i32 {
-  let record = allocate_bytes(20)
+  let record = allocate_bytes(24)
   let status = write_i32(record, 0, 0)
   let output_pointer = write_i32(status, 4, byte_pointer(output))
   let output_length = write_i32(output_pointer, 8, byte_length(output))
   let diagnostic_pointer = write_i32(output_length, 12, 0)
   let diagnostic_length = write_i32(diagnostic_pointer, 16, 0)
-  return byte_pointer(diagnostic_length)
+  let diagnostic_code = write_i32(diagnostic_length, 20, 0)
+  return byte_pointer(diagnostic_code)
 }
 
 fn decimal_length(value: i32) -> i32 {
@@ -1307,13 +1308,14 @@ fn diagnostic_record(kind: i32, offset: i32) -> i32 {
   byte_set(prefix_written, prefix_length + 2, 116)
   byte_set(prefix_written, prefix_length + 3, 32)
   let diagnostic_written = write_decimal(prefix_written, prefix_length + 4, offset)
-  let record = allocate_bytes(20)
+  let record = allocate_bytes(24)
   let status = write_i32(record, 0, 1)
   let output_pointer = write_i32(status, 4, 0)
   let output_length = write_i32(output_pointer, 8, 0)
   let diagnostic_pointer = write_i32(output_length, 12, byte_pointer(diagnostic_written))
   let diagnostic_length = write_i32(diagnostic_pointer, 16, byte_length(diagnostic_written))
-  return byte_pointer(diagnostic_length)
+  let diagnostic_code = write_i32(diagnostic_length, 20, kind)
+  return byte_pointer(diagnostic_code)
 }
 
 export fn compile(source: bytes) -> i32 {
@@ -1344,7 +1346,7 @@ valid, empty Wasm module `00 61 73 6d 01 00 00 00`. `next_token()` skips ASCII
 whitespace and `//` comments, and distinguishes EOF, ASCII identifiers, integers, and symbols;
 identifier and integer tokens have their complete source range. The temporary
 `token_summary()` export is an integration-test probe. The `compile()` export
-returns a pointer to the 20-byte result record described in the Matra Program
+returns a pointer to the 24-byte result record described in the Matra Program
 specification. `parse_empty_program()` accepts an empty source or the minimal
 non-empty Program header form `module identifier { import identifier }` and maps
 it to an empty Wasm module. It also recognizes functions with integer literal,

@@ -10,8 +10,8 @@ bootstrap compilerのsourceは`examples/compiler.md`にあります。seed compi
 - `[i32]`は同じ`(pointer, length)` layoutで、`allocate_i32_array`、`array_get`、`array_set`を実装
 - bootstrap compilerは`memory`、`alloc(size) -> i32`、
   `compile(source_pointer, source_length) -> i32`をexport
-- 空sourceの`compile`は20-byte result recordを返し、recordは有効な空Wasm moduleを参照
-- 未対応または不正なsourceはstatus `1`と分類・source offsetを含むUTF-8 diagnosticを返す
+- 空sourceの`compile`は24-byte result recordを返し、recordは有効な空Wasm moduleを参照
+- 未対応または不正なsourceはstatus `1`、diagnostic code、分類・source offsetを含むUTF-8 textを返す
 - `struct`は固定長の`i32` field、constructor、field read、parameter/local/returnに対応
 - bootstrap lexerはASCII whitespaceと`//` commentをskipし、EOF、identifier、integer、symbolを読む
 - bootstrap parserは`module`、`import`、`fn` / `export fn`、1個の`i32` parameterを読む
@@ -34,7 +34,7 @@ pnpm run lint:markdown
 `bytes`のfunction call、`[i32]`のread/writeに加え、bootstrap compilerが生成したWasmの
 literal return、parameter return、negative return、複数function、非ゼロindexのcall、
 parameter付きcall、signature不一致の拒否、130文字のexport名、130 functionとindex `128`のcall、
-parser/unknown call/signature errorのdiagnostic textとsource offsetを実行検証します。function内の
+parser/unknown call/signature errorのdiagnostic code、text、source offsetを実行検証します。function内の
 parse errorは失敗したtokenの先頭を指し、期待tokenが欠落した場合はsource末尾を指します。
 
 ## 主要なファイル
@@ -44,7 +44,7 @@ parse errorは失敗したtokenの先頭を指し、期待tokenが欠落した�
 - `tests/wasm.test.mjs`: Node.jsによるWasm実行test
 - `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
 
-## 次の作業: diagnostic codeのABI化
+## 次の作業: diagnostic位置のline/column表示
 
 function tableは先頭にcountを置き、各functionを7-field固定strideで格納する。
 
@@ -78,15 +78,16 @@ emitする。function tableは事前にfunction数を数え、`count * 7 + 1`要
 失敗時はASCII互換のUTF-8 bytesを確保し、result recordの`diagnostic_pointer`と
 `diagnostic_length`から参照する。現在のmessageは`parse error at <offset>`、
 `unknown function at <offset>`、`argument count mismatch at <offset>`である。unknown callはcallee名、
-signature不一致はargument tokenのoffsetを返す。
+signature不一致はargument tokenのoffsetを返す。24-byte result recordの`diagnostic_code`はsuccessが`0`、
+parse errorが`1`、unknown functionが`2`、argument count mismatchが`3`である。
 
 `function_definition`はparse error offsetを保持し、`parse_function`の各失敗で検証対象tokenの位置を
 記録する。function内のparse errorはfunction keywordではなく実際に失敗したtokenを指し、期待tokenが
 欠落した場合はEOF offsetを返す。
 
-1. textをparseせずerror分類を判別できるdiagnostic codeをresult ABIへ追加する必要性を検討する。
-2. ABIを拡張する場合はrecord layoutと既存host側readerを更新する。
-3. line/column表示をhost側とcompiler側のどちらで担うか決める。
+1. line/column表示をhost側とcompiler側のどちらで担うか決める。
+2. compiler側で担う場合はUTF-8 byte offsetからline/columnを計算してdiagnostic textへ追加する。
+3. host側で担う場合はsource offsetを構造化fieldとしてABIへ追加する必要性を検討する。
 
 functionは0または1個の`i32` parameterを持ち、各bodyがinteger literal、parameter、またはfunction callを
 returnする形をemitする。call argumentはinteger literalまたはcaller parameterに対応し、callee signatureと
