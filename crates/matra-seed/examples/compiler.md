@@ -17,6 +17,11 @@ struct function_definition {
   position: i32
 }
 
+struct compile_diagnostic {
+  kind: i32
+  offset: i32
+}
+
 fn is_space(value: i32) -> i32 {
   if value == 9 {
     return 1
@@ -1142,7 +1147,7 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
   return output
 }
 
-fn multiple_function_error_offset(source: bytes, table: [i32]) -> i32 {
+fn multiple_function_diagnostic(source: bytes, table: [i32]) -> compile_diagnostic {
   let count = array_get(table, 0)
   let current_function = first_function(source)
   let index = 0
@@ -1151,13 +1156,15 @@ fn multiple_function_error_offset(source: bytes, table: [i32]) -> i32 {
     let body_kind = array_get(table, index * 7 + 4)
     if body_kind == 1 {
       if parameter_count != 1 {
-        return current_function.name_start
+        return compile_diagnostic(3, current_function.name_start)
       }
     }
     if body_kind == 2 {
       let called_index = array_get(table, index * 7 + 5)
+      let called_token = returned_value_token(source, current_function)
+      let argument_token = call_argument_token(source, current_function)
       if called_index < 0 {
-        return returned_value_token(source, current_function).start
+        return compile_diagnostic(2, called_token.start)
       }
       let argument_kind = array_get(table, index * 7 + 6)
       let argument_count = 0
@@ -1165,11 +1172,11 @@ fn multiple_function_error_offset(source: bytes, table: [i32]) -> i32 {
         argument_count = 1
       }
       if array_get(table, called_index * 7 + 3) != argument_count {
-        return call_argument_token(source, current_function).start
+        return compile_diagnostic(3, argument_token.start)
       }
       if argument_kind == 2 {
         if parameter_count != 1 {
-          return call_argument_token(source, current_function).start
+          return compile_diagnostic(3, argument_token.start)
         }
       }
     }
@@ -1179,7 +1186,7 @@ fn multiple_function_error_offset(source: bytes, table: [i32]) -> i32 {
       current_function = parse_function(source, next.start)
     }
   }
-  return -1
+  return compile_diagnostic(0, 0)
 }
 
 export fn alloc(size: i32) -> i32 {
@@ -1219,19 +1226,86 @@ fn write_decimal(buffer: bytes, index: i32, value: i32) -> bytes {
   return buffer
 }
 
-fn diagnostic_record(offset: i32) -> i32 {
+fn diagnostic_prefix_length(kind: i32) -> i32 {
+  if kind == 1 {
+    return 11
+  }
+  if kind == 2 {
+    return 16
+  }
+  return 23
+}
+
+fn write_diagnostic_prefix(buffer: bytes, kind: i32) -> bytes {
+  if kind == 1 {
+    byte_set(buffer, 0, 112)
+    byte_set(buffer, 1, 97)
+    byte_set(buffer, 2, 114)
+    byte_set(buffer, 3, 115)
+    byte_set(buffer, 4, 101)
+    byte_set(buffer, 5, 32)
+    byte_set(buffer, 6, 101)
+    byte_set(buffer, 7, 114)
+    byte_set(buffer, 8, 114)
+    byte_set(buffer, 9, 111)
+    byte_set(buffer, 10, 114)
+    return buffer
+  }
+  if kind == 2 {
+    byte_set(buffer, 0, 117)
+    byte_set(buffer, 1, 110)
+    byte_set(buffer, 2, 107)
+    byte_set(buffer, 3, 110)
+    byte_set(buffer, 4, 111)
+    byte_set(buffer, 5, 119)
+    byte_set(buffer, 6, 110)
+    byte_set(buffer, 7, 32)
+    byte_set(buffer, 8, 102)
+    byte_set(buffer, 9, 117)
+    byte_set(buffer, 10, 110)
+    byte_set(buffer, 11, 99)
+    byte_set(buffer, 12, 116)
+    byte_set(buffer, 13, 105)
+    byte_set(buffer, 14, 111)
+    byte_set(buffer, 15, 110)
+    return buffer
+  }
+  byte_set(buffer, 0, 97)
+  byte_set(buffer, 1, 114)
+  byte_set(buffer, 2, 103)
+  byte_set(buffer, 3, 117)
+  byte_set(buffer, 4, 109)
+  byte_set(buffer, 5, 101)
+  byte_set(buffer, 6, 110)
+  byte_set(buffer, 7, 116)
+  byte_set(buffer, 8, 32)
+  byte_set(buffer, 9, 99)
+  byte_set(buffer, 10, 111)
+  byte_set(buffer, 11, 117)
+  byte_set(buffer, 12, 110)
+  byte_set(buffer, 13, 116)
+  byte_set(buffer, 14, 32)
+  byte_set(buffer, 15, 109)
+  byte_set(buffer, 16, 105)
+  byte_set(buffer, 17, 115)
+  byte_set(buffer, 18, 109)
+  byte_set(buffer, 19, 97)
+  byte_set(buffer, 20, 116)
+  byte_set(buffer, 21, 99)
+  byte_set(buffer, 22, 104)
+  return buffer
+}
+
+fn diagnostic_record(kind: i32, offset: i32) -> i32 {
+  let prefix_length = diagnostic_prefix_length(kind)
   let offset_length = decimal_length(offset)
-  let diagnostic = allocate_bytes(9 + offset_length)
-  byte_set(diagnostic, 0, 101)
-  byte_set(diagnostic, 1, 114)
-  byte_set(diagnostic, 2, 114)
-  byte_set(diagnostic, 3, 111)
-  byte_set(diagnostic, 4, 114)
-  byte_set(diagnostic, 5, 32)
-  byte_set(diagnostic, 6, 97)
-  byte_set(diagnostic, 7, 116)
-  byte_set(diagnostic, 8, 32)
-  let diagnostic_written = write_decimal(diagnostic, 9, offset)
+  let diagnostic = allocate_bytes(prefix_length + 4 + offset_length)
+  let prefix_written = write_diagnostic_prefix(diagnostic, kind)
+  byte_set(prefix_written, prefix_length, 32)
+  byte_set(prefix_written, prefix_length + 1, 97)
+  byte_set(prefix_written, prefix_length + 2, 116)
+  byte_set(prefix_written, prefix_length + 3, 32)
+  let diagnostic_written = write_decimal(prefix_written, prefix_length + 4, offset)
   let record = allocate_bytes(20)
   let status = write_i32(record, 0, 1)
   let output_pointer = write_i32(status, 4, 0)
@@ -1249,18 +1323,18 @@ export fn compile(source: bytes) -> i32 {
     if function.status == 1 {
       output = single_function_module(source, table)
       if array_get(table, 0) > 1 {
-        let error_offset = multiple_function_error_offset(source, table)
-        if error_offset < 0 {
+        let diagnostic = multiple_function_diagnostic(source, table)
+        if diagnostic.kind == 0 {
           output = multiple_function_module(source, table)
         } else {
-          return diagnostic_record(error_offset)
+          return diagnostic_record(diagnostic.kind, diagnostic.offset)
         }
       }
     }
     return success_record(output)
   }
 
-  return diagnostic_record(program_error_offset(source))
+  return diagnostic_record(1, program_error_offset(source))
 }
 ```
 
@@ -1281,5 +1355,5 @@ body value, argument kind, and argument value. Section lengths, counts, type
 indices, function indices, body sizes, and name lengths use unsigned LEB128.
 `allocate_bytes(size)` returns a `bytes` value backed by the generated module's
 linear memory, and `byte_set(bytes, index, value)` writes one byte. Failed
-compilations return UTF-8 diagnostic bytes containing the relevant source
-offset.
+compilations return classified UTF-8 diagnostic bytes for parse errors, unknown
+functions, and argument count mismatches, including the relevant source offset.

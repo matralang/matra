@@ -11,7 +11,7 @@ bootstrap compilerのsourceは`examples/compiler.md`にあります。seed compi
 - bootstrap compilerは`memory`、`alloc(size) -> i32`、
   `compile(source_pointer, source_length) -> i32`をexport
 - 空sourceの`compile`は20-byte result recordを返し、recordは有効な空Wasm moduleを参照
-- 未対応または不正なsourceはstatus `1`とsource offsetを含むUTF-8 diagnosticを返す
+- 未対応または不正なsourceはstatus `1`と分類・source offsetを含むUTF-8 diagnosticを返す
 - `struct`は固定長の`i32` field、constructor、field read、parameter/local/returnに対応
 - bootstrap lexerはASCII whitespaceと`//` commentをskipし、EOF、identifier、integer、symbolを読む
 - bootstrap parserは`module`、`import`、`fn` / `export fn`、1個の`i32` parameterを読む
@@ -43,7 +43,7 @@ parser/unknown call/signature errorのdiagnostic textとsource offsetを実行�
 - `tests/wasm.test.mjs`: Node.jsによるWasm実行test
 - `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
 
-## 次の作業: diagnostic分類
+## 次の作業: parser diagnostic位置の詳細化
 
 function tableは先頭にcountを置き、各functionを7-field固定strideで格納する。
 
@@ -74,13 +74,14 @@ array of structは未実装のため、tableにはflattenedな`[i32]`を使う�
 Wasmのsection length、function count、type/function index、body size、name lengthはunsigned LEB128で
 emitする。function tableは事前にfunction数を数え、`count * 7 + 1`要素だけ確保する。
 
-失敗時は`error at <offset>`というASCII互換のUTF-8 bytesを確保し、result recordの
-`diagnostic_pointer`と`diagnostic_length`から参照する。parser errorは失敗token、unknown callはcallee名、
+失敗時はASCII互換のUTF-8 bytesを確保し、result recordの`diagnostic_pointer`と
+`diagnostic_length`から参照する。現在のmessageは`parse error at <offset>`、
+`unknown function at <offset>`、`argument count mismatch at <offset>`である。unknown callはcallee名、
 signature不一致はargument tokenのoffsetを返す。
 
-1. parser errorとsemantic errorをerror codeへ分類する。
-2. `error at`を`parse error at`、`unknown function at`などへ具体化する。
-3. function内のparse errorを失敗したtoken位置まで細分化する。
+1. `function_definition`へparse error offsetを追加する。
+2. `parse_function`の各失敗で期待tokenの位置を保持する。
+3. function内のparse errorをfunction keyword位置から失敗token位置へ変更する。
 4. diagnostic codeをABIへ追加する必要性を検討する。
 5. line/column表示をhost側とcompiler側のどちらで担うか決める。
 

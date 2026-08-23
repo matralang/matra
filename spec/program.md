@@ -122,7 +122,7 @@ A compiler module exports `memory`, `alloc(size: i32) -> i32`, and
 
 The bootstrap compiler implements this ABI. A successful compilation returns
 status `0` and a valid Wasm module. A failure returns status `1` and UTF-8
-diagnostic text containing a source offset.
+diagnostic text containing an error category and source offset.
 
 | Offset | Field | Meaning |
 | --- | --- | --- |

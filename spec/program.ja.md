@@ -116,7 +116,7 @@ compiler moduleは`memory`、`alloc(size: i32) -> i32`、
 `compile`はlinear memory上の20-byte result recordへのpointerを返します。
 
 bootstrap compilerはこのABIを実装済みです。成功時はstatus `0`と有効なWasm moduleを返します。
-失敗時はstatus `1`と、source offsetを含むUTF-8 diagnostic textを返します。
+失敗時はstatus `1`と、error分類およびsource offsetを含むUTF-8 diagnostic textを返します。
 
 | Offset | Field | 意味 |
 | --- | --- | --- |
