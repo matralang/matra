@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { createHash } from "node:crypto"
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -189,6 +190,20 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
       await readFile(join(reproducibleEnvironment.MATRA_BOOTSTRAP_CACHE_DIR, reproducibleEntries[0])),
       await readFile(join(pipelineEnvironment.MATRA_BOOTSTRAP_CACHE_DIR, cacheEntries[0])),
     )
+
+    const materializedCompiler = join(directory, "matra-bootstrap.wasm")
+    const materializedResult = spawnSync("node", ["crates/matra-seed/host/materialize.mjs", materializedCompiler], { cwd: root, encoding: "utf8", env: pipelineEnvironment })
+    assert.equal(materializedResult.status, 0, materializedResult.stderr)
+    const materializedBytes = await readFile(materializedCompiler)
+    const materializedChecksum = createHash("sha256").update(materializedBytes).digest("hex")
+    assert.deepEqual(materializedBytes, await readFile(join(pipelineEnvironment.MATRA_BOOTSTRAP_CACHE_DIR, cacheEntries[0])))
+    assert.equal(await readFile(`${materializedCompiler}.sha256`, "utf8"), `${materializedChecksum}  matra-bootstrap.wasm\n`)
+    assert.equal(materializedResult.stdout, `Using cached bootstrap compiler.\n${materializedChecksum}  matra-bootstrap.wasm\n`)
+    const materializedOutput = join(directory, "materialized-output.wasm")
+    const materializedHost = spawnSync("node", ["crates/matra-seed/host/compile.mjs", materializedCompiler, hostInput, materializedOutput], { cwd: root, encoding: "utf8" })
+    assert.equal(materializedHost.status, 0, materializedHost.stderr)
+    const materializedModule = await WebAssembly.instantiate(await readFile(materializedOutput))
+    assert.equal(materializedModule.instance.exports.answer(), 42)
 
     await writeFile(hostInput, "module demo\nfn answer() -> i32 { return value }")
     const hostDiagnostic = spawnSync("node", ["crates/matra-seed/host/compile.mjs", output, hostInput, hostOutput], { cwd: root, encoding: "utf8" })

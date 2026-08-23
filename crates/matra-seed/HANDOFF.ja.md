@@ -44,11 +44,13 @@ parse errorは失敗したtokenの先頭を指し、期待tokenが欠落した�
 - `examples/compiler.md`: 自己ホストcompilerの最初のProgram source
 - `host/compiler-host.mjs`: result ABIを読むhost diagnostic formatter
 - `host/compile.mjs`: bootstrap compiler Wasmを実行するNode.js CLI
+- `host/bootstrap-compiler.mjs`: compiler artifactのcache生成・再利用
 - `host/bootstrap.mjs`: seed生成とbootstrap compileをまとめるpipeline
+- `host/materialize.mjs`: compiler artifactとchecksumを指定pathへ出力
 - `tests/wasm.test.mjs`: Node.jsによるWasm実行test
 - `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
 
-## 次の作業: bootstrap compiler artifactのmaterialize
+## 次の作業: bootstrap compiler artifactのrelease運用
 
 function tableは先頭にcountを置き、各functionを7-field固定strideで格納する。
 
@@ -119,13 +121,24 @@ inner hostのdiagnosticとexit codeはそのまま呼び出し元へ伝播する
 さらに別のisolated cacheへcompiler Wasmを独立生成し、cache keyとartifact bytesが一致することを検証する。
 現在の入力とRust toolchainではbootstrap compiler artifactはbyte単位で再現可能である。
 
+cache artifactはrelease向けpathへmaterializeできる。
+
+```text
+pnpm bootstrap:artifact -- dist/matra-bootstrap.wasm
+```
+
+commandは指定pathへcompiler Wasmをcopyし、artifact bytesのSHA-256をstdoutと
+`dist/matra-bootstrap.wasm.sha256`へ`<checksum>  matra-bootstrap.wasm`形式で出力する。出力先directoryは
+存在しなければ作成する。testはmaterializeしたbytesとcache artifactの一致、checksum、materializeした
+compilerによるProgram compile、生成Wasmの実行を検証する。
+
 `function_definition`はparse error offsetを保持し、`parse_function`の各失敗で検証対象tokenの位置を
 記録する。function内のparse errorはfunction keywordではなく実際に失敗したtokenを指し、期待tokenが
 欠落した場合はEOF offsetを返す。
 
-1. cache artifactを指定pathへcopyし、SHA-256 checksumを出力するcommandを追加する。
-2. materializeしたartifactをbootstrap hostで実行するtestを追加する。
-3. compiler Wasmとchecksumをrelease artifactへ含める運用を決める。
+1. compiler WasmとchecksumをCI / release artifactへ含める条件を決める。
+2. release環境でmaterialize commandを実行し、checksumを検証するjobを追加する。
+3. artifact名へversionまたはcache keyを含める必要性を検討する。
 
 functionは0または1個の`i32` parameterを持ち、各bodyがinteger literal、parameter、またはfunction callを
 returnする形をemitする。call argumentはinteger literalまたはcaller parameterに対応し、callee signatureと
