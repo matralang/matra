@@ -170,6 +170,13 @@ bootstrap compiler uses these kinds:
 | 14 | `)` |
 | 15 | `}` |
 
+A host can map `diagnostic_code` and `diagnostic_expected` to labels and combine
+them with line and column values computed from the source. For example, a parse
+error with expected kind `12` can be displayed as
+`parse error: expected value at 2:29`. The diagnostic text returned by the
+compiler remains a fallback for hosts that do not interpret the structured
+fields.
+
 The host allocates and writes source bytes, calls `compile`, then reads the
 record and its referenced bytes. Memory remains valid until the next `compile`
 call. The ABI gives compiled code no implicit filesystem or network capability.

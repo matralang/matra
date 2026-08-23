@@ -159,6 +159,11 @@ error範囲は`[diagnostic_offset, diagnostic_offset + diagnostic_source_length)
 | 14 | `)` |
 | 15 | `}` |
 
+hostは`diagnostic_code`と`diagnostic_expected`をlabelへ変換し、sourceから計算したline/columnと
+組み合わせて表示できます。例えばexpected kind `12`のparse errorは
+`parse error: expected value at 2:29`と表示します。compilerが返すdiagnostic textは、構造化fieldを
+解釈できないhost向けのfallbackとして利用できます。
+
 hostはsource bytesをallocateして書き込み、`compile`をcallした後、recordと参照先bytesを
 読みます。memoryは次の`compile` callまで有効です。このABIはcompiled codeへfilesystemや
 networkの暗黙のcapabilityを与えません。

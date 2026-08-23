@@ -35,17 +35,18 @@ pnpm run lint:markdown
 literal return、parameter return、negative return、複数function、非ゼロindexのcall、
 parameter付きcall、signature不一致の拒否、130文字のexport名、130 functionとindex `128`のcall、
 parser/unknown call/signature errorのdiagnostic code、text、構造化source rangeを実行検証します。hostは
-UTF-8 byte offsetから1-based line/columnを計算します。function内の
+expected kindをlabelへ変換し、UTF-8 byte offsetから1-based line/columnを計算して表示します。function内の
 parse errorは失敗したtokenの先頭を指し、期待tokenが欠落した場合はsource末尾を指します。
 
 ## 主要なファイル
 
 - `src/lib.rs`: parser、型lowering、Wasm binary emitter
 - `examples/compiler.md`: 自己ホストcompilerの最初のProgram source
+- `tests/compiler-host.mjs`: result ABIを読むhost diagnostic formatter
 - `tests/wasm.test.mjs`: Node.jsによるWasm実行test
 - `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
 
-## 次の作業: expected tokenのhost表示
+## 次の作業: source excerptとrange highlight
 
 function tableは先頭にcountを置き、各functionを7-field固定strideで格納する。
 
@@ -84,14 +85,15 @@ parse errorが`1`、unknown functionが`2`、argument count mismatchが`3`であ
 `diagnostic_offset`と`diagnostic_source_length`はUTF-8 source上のbyte rangeであり、hostが表示用の
 line/columnへ変換する。通常は失敗token全体を指し、EOFで期待tokenが欠落した場合は長さ`0`を返す。
 `diagnostic_expected`はparse errorで期待したgrammar kindを`1`から`15`で表し、それ以外は`0`である。
+`tests/compiler-host.mjs`はcodeとexpected kindをlabelへ変換し、line/columnを含む表示文字列を生成する。
 
 `function_definition`はparse error offsetを保持し、`parse_function`の各失敗で検証対象tokenの位置を
 記録する。function内のparse errorはfunction keywordではなく実際に失敗したtokenを指し、期待tokenが
 欠落した場合はEOF offsetを返す。
 
-1. host側で`diagnostic_expected`を人向けlabelへ変換する。
-2. parse diagnostic表示へexpected labelとline/columnを組み込む。
-3. 複数候補が必要なgrammarを追加するまで、単一expected kindで十分か検証する。
+1. `diagnostic_offset`が指すsource lineをexcerptとして取り出す。
+2. `diagnostic_source_length`に対応するcaretまたはunderlineを生成する。
+3. tabとmulti-byte文字を含むlineで表示columnとhighlight幅を検証する。
 
 functionは0または1個の`i32` parameterを持ち、各bodyがinteger literal、parameter、またはfunction callを
 returnする形をemitする。call argumentはinteger literalまたはcaller parameterに対応し、callee signatureと
