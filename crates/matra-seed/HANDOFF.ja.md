@@ -19,6 +19,7 @@ bootstrap compilerのsourceは`examples/compiler.md`にあります。seed compi
 - bootstrap parserは`module`、`import`、`fn` / `export fn`、1個の`i32` parameterを読む
 - bootstrap emitterはliteral return、parameter return、signed LEB128をemitする
 - bootstrap compilerは2個の引数なしfunctionで、entryからhelperをcallする最小形をemitする
+- call先の名前はfunction tableでWasm function indexへ解決する
 
 ## 検証
 
@@ -69,7 +70,8 @@ recordは`name_start`、`name_length`、`parameter_count`、`return_kind`、`ret
 5. parameter付きcallと複数signatureへ拡張する。
 
 function tableの最初のlayoutは`[count, name_start_0, name_length_0, ...]`である。parserは任意数の
-functionをtableへ追加でき、name-to-index解決にも使える。emitterはまだこのtableを消費していない。
+functionをtableへ追加でき、name-to-index解決にも使える。2関数emitterは解決したindexをcall命令へ
+出力するが、現在対応する形ではhelperが先頭にあるためindexは`0`に限られる。
 
 single functionはliteral return、または1個の`i32` parameterをreturnする形をemitする。
 2関数はhelperがinteger literalをreturnし、entryが引数なしでhelperをcallする形だけをsuccessとして

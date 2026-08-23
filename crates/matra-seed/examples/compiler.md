@@ -526,7 +526,7 @@ fn function_name_table(source: bytes) -> [i32] {
   return table
 }
 
-// A temporary probe verifies the table layout before the emitter consumes it.
+// A temporary probe keeps the function table observable from the integration test.
 export fn function_count(source: bytes) -> i32 {
   let table = function_name_table(source)
   return array_get(table, 0)
@@ -547,14 +547,14 @@ fn function_index_in_table(source: bytes, table: [i32], name: token) -> i32 {
   return -1
 }
 
-// A temporary probe verifies name-to-index resolution before call emission uses it.
+// A temporary probe keeps name-to-index resolution observable from the integration test.
 export fn function_index(source: bytes, offset: i32) -> i32 {
   let table = function_name_table(source)
   let name = next_token(source, offset)
   return function_index_in_table(source, table, name)
 }
 
-fn calls_helper(source: bytes, caller: function_definition, helper: function_definition) -> i32 {
+fn called_function_index(source: bytes, table: [i32], caller: function_definition) -> i32 {
   let name = token(1, caller.name_start, caller.name_length)
   let open = next_token(source, name.start + name.length)
   let close = next_token(source, open.start + open.length)
@@ -564,8 +564,7 @@ fn calls_helper(source: bytes, caller: function_definition, helper: function_def
   let open_body = next_token(source, result_type.start + result_type.length)
   let returned = next_token(source, open_body.start + open_body.length)
   let called = next_token(source, returned.start + returned.length)
-  let helper_name = token(1, helper.name_start, helper.name_length)
-  return same_token(source, called, helper_name)
+  return function_index_in_table(source, table, called)
 }
 
 fn write_i32(buffer: bytes, index: i32, value: i32) -> bytes {
@@ -707,7 +706,7 @@ fn single_function_module(source: bytes, function: function_definition) -> bytes
   return output
 }
 
-fn two_function_module(source: bytes, helper: function_definition, entry: function_definition) -> bytes {
+fn two_function_module(source: bytes, helper: function_definition, entry: function_definition, called_index: i32) -> bytes {
   let value_length = i32_leb_length(helper.return_value)
   let output = allocate_bytes(38 + entry.name_length + value_length)
   byte_set(output, 0, 0)
@@ -753,7 +752,7 @@ fn two_function_module(source: bytes, helper: function_definition, entry: functi
   byte_set(written, code_offset + 7 + value_length, 4)
   byte_set(written, code_offset + 8 + value_length, 0)
   byte_set(written, code_offset + 9 + value_length, 16)
-  byte_set(written, code_offset + 10 + value_length, 0)
+  byte_set(written, code_offset + 10 + value_length, called_index)
   byte_set(written, code_offset + 11 + value_length, 11)
   return written
 }
@@ -786,6 +785,7 @@ fn diagnostic_record() -> i32 {
 export fn compile(source: bytes) -> i32 {
   if parse_empty_program(source) == 1 {
     let function = first_function(source)
+    let table = function_name_table(source)
     let output = empty_module()
     if function.status == 1 {
       output = single_function_module(source, function)
@@ -793,8 +793,9 @@ export fn compile(source: bytes) -> i32 {
       if second.status == 1 {
         if function.return_value >= 0 {
           if second.return_value == -2 {
-            if calls_helper(source, second, function) == 1 {
-              output = two_function_module(source, function, second)
+            let called_index = called_function_index(source, table, second)
+            if called_index == 0 {
+              output = two_function_module(source, function, second, called_index)
             } else {
               return diagnostic_record()
             }
