@@ -15,6 +15,7 @@ struct function_definition {
   name_length: i32
   return_value: i32
   position: i32
+  error_offset: i32
 }
 
 struct compile_diagnostic {
@@ -307,54 +308,54 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
     keyword = next_token(source, keyword.start + keyword.length)
   }
   if is_fn_keyword(source, keyword) == 0 {
-    return function_definition(0, 0, 0, 0, offset)
+    return function_definition(0, 0, 0, 0, offset, keyword.start)
   }
   let name = next_token(source, keyword.start + keyword.length)
   if name.kind != 1 {
-    return function_definition(0, 0, 0, 0, offset)
+    return function_definition(0, 0, 0, 0, offset, name.start)
   }
   let open = next_token(source, name.start + name.length)
   if is_symbol(source, open, 40) == 0 {
-    return function_definition(0, 0, 0, 0, offset)
+    return function_definition(0, 0, 0, 0, offset, open.start)
   }
   let parameter = next_token(source, open.start + open.length)
   let close = parameter
   if is_symbol(source, parameter, 41) == 0 {
     if parameter.kind != 1 {
-      return function_definition(0, 0, 0, 0, offset)
+      return function_definition(0, 0, 0, 0, offset, parameter.start)
     }
     let colon = next_token(source, parameter.start + parameter.length)
     if is_symbol(source, colon, 58) == 0 {
-      return function_definition(0, 0, 0, 0, offset)
+      return function_definition(0, 0, 0, 0, offset, colon.start)
     }
     let parameter_type = next_token(source, colon.start + colon.length)
     if is_i32_type(source, parameter_type) == 0 {
-      return function_definition(0, 0, 0, 0, offset)
+      return function_definition(0, 0, 0, 0, offset, parameter_type.start)
     }
     close = next_token(source, parameter_type.start + parameter_type.length)
     if is_symbol(source, close, 41) == 0 {
-      return function_definition(0, 0, 0, 0, offset)
+      return function_definition(0, 0, 0, 0, offset, close.start)
     }
   }
   let minus = next_token(source, close.start + close.length)
   if is_symbol(source, minus, 45) == 0 {
-    return function_definition(0, 0, 0, 0, offset)
+    return function_definition(0, 0, 0, 0, offset, minus.start)
   }
   let arrow = next_token(source, minus.start + minus.length)
   if is_symbol(source, arrow, 62) == 0 {
-    return function_definition(0, 0, 0, 0, offset)
+    return function_definition(0, 0, 0, 0, offset, arrow.start)
   }
   let result_type = next_token(source, arrow.start + arrow.length)
   if is_i32_type(source, result_type) == 0 {
-    return function_definition(0, 0, 0, 0, offset)
+    return function_definition(0, 0, 0, 0, offset, result_type.start)
   }
   let open_body = next_token(source, result_type.start + result_type.length)
   if is_symbol(source, open_body, 123) == 0 {
-    return function_definition(0, 0, 0, 0, offset)
+    return function_definition(0, 0, 0, 0, offset, open_body.start)
   }
   let returned = next_token(source, open_body.start + open_body.length)
   if is_return_keyword(source, returned) == 0 {
-    return function_definition(0, 0, 0, 0, offset)
+    return function_definition(0, 0, 0, 0, offset, returned.start)
   }
   let returned_value = next_token(source, returned.start + returned.length)
   let return_value = 0
@@ -371,7 +372,7 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
     }
   } else {
     if negative == 1 {
-      return function_definition(0, 0, 0, 0, offset)
+      return function_definition(0, 0, 0, 0, offset, value_token.start)
     }
     let call_open = next_token(source, returned_value.start + returned_value.length)
     if is_symbol(source, call_open, 40) == 1 {
@@ -382,49 +383,49 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
         if is_symbol(source, argument, 45) == 1 {
           argument_value = next_token(source, argument.start + argument.length)
           if argument_value.kind != 2 {
-            return function_definition(0, 0, 0, 0, offset)
+            return function_definition(0, 0, 0, 0, offset, argument_value.start)
           }
         } else {
           if argument.kind == 1 {
             if is_symbol(source, parameter, 41) == 1 {
-              return function_definition(0, 0, 0, 0, offset)
+              return function_definition(0, 0, 0, 0, offset, argument.start)
             }
             if same_token(source, parameter, argument) == 0 {
-              return function_definition(0, 0, 0, 0, offset)
+              return function_definition(0, 0, 0, 0, offset, argument.start)
             }
           } else {
             if argument.kind != 2 {
-              return function_definition(0, 0, 0, 0, offset)
+              return function_definition(0, 0, 0, 0, offset, argument.start)
             }
           }
         }
         call_close = next_token(source, argument_value.start + argument_value.length)
       }
       if is_symbol(source, call_close, 41) == 0 {
-        return function_definition(0, 0, 0, 0, offset)
+        return function_definition(0, 0, 0, 0, offset, call_close.start)
       }
       let call_body_close = next_token(source, call_close.start + call_close.length)
       if is_symbol(source, call_body_close, 125) == 0 {
-        return function_definition(0, 0, 0, 0, offset)
+        return function_definition(0, 0, 0, 0, offset, call_body_close.start)
       }
-      return function_definition(1, name.start, name.length, -2, call_body_close.start + call_body_close.length)
+      return function_definition(1, name.start, name.length, -2, call_body_close.start + call_body_close.length, 0)
     }
     if is_symbol(source, parameter, 41) == 1 {
-      return function_definition(0, 0, 0, 0, offset)
+      return function_definition(0, 0, 0, 0, offset, returned_value.start)
     }
     if same_token(source, parameter, returned_value) == 0 {
-      return function_definition(0, 0, 0, 0, offset)
+      return function_definition(0, 0, 0, 0, offset, returned_value.start)
     }
     return_value = -1
   }
   let close_body = next_token(source, value_token.start + value_token.length)
   if is_symbol(source, close_body, 125) == 0 {
-    return function_definition(0, 0, 0, 0, offset)
+    return function_definition(0, 0, 0, 0, offset, close_body.start)
   }
   let name_start = name.start
   let name_length = name.length
   let next_position = close_body.start + close_body.length
-  return function_definition(1, name_start, name_length, return_value, next_position)
+  return function_definition(1, name_start, name_length, return_value, next_position, 0)
 }
 
 fn parse_empty_program(source: bytes) -> i32 {
@@ -498,7 +499,7 @@ fn program_error_offset(source: bytes) -> i32 {
     } else {
       let function = parse_function(source, keyword.start)
       if function.status == 0 {
-        return keyword.start
+        return function.error_offset
       }
       position = function.position
     }
@@ -509,14 +510,14 @@ fn program_error_offset(source: bytes) -> i32 {
 fn first_function(source: bytes) -> function_definition {
   let module_keyword = next_token(source, 0)
   if module_keyword.kind != 1 {
-    return function_definition(0, 0, 0, 0, 0)
+    return function_definition(0, 0, 0, 0, 0, module_keyword.start)
   }
   let module_name = next_token(source, module_keyword.start + module_keyword.length)
   let position = module_name.start + module_name.length
   while position < byte_length(source) {
     let keyword = next_token(source, position)
     if keyword.kind == 0 {
-      return function_definition(0, 0, 0, 0, position)
+      return function_definition(0, 0, 0, 0, position, keyword.start)
     }
     if is_import_keyword(source, keyword) == 1 {
       let imported = next_token(source, keyword.start + keyword.length)
@@ -525,7 +526,7 @@ fn first_function(source: bytes) -> function_definition {
       return parse_function(source, keyword.start)
     }
   }
-  return function_definition(0, 0, 0, 0, position)
+  return function_definition(0, 0, 0, 0, position, position)
 }
 
 fn function_parameter_count_of(source: bytes, function: function_definition) -> i32 {

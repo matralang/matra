@@ -117,6 +117,8 @@ compiler moduleは`memory`、`alloc(size: i32) -> i32`、
 
 bootstrap compilerはこのABIを実装済みです。成功時はstatus `0`と有効なWasm moduleを返します。
 失敗時はstatus `1`と、error分類およびsource offsetを含むUTF-8 diagnostic textを返します。
+parse errorのsource offsetは検証に失敗したtokenの先頭を指し、期待したtokenが欠落した場合は
+source末尾を指します。
 
 | Offset | Field | 意味 |
 | --- | --- | --- |

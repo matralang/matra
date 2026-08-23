@@ -411,12 +411,29 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     assert.equal(module.instance.exports.function_index(tablePointer, tableSource.length, tableSourceText.indexOf("two")), 1)
     assert.equal(module.instance.exports.function_index(tablePointer, tableSource.length, tableSourceText.indexOf("three")), 2)
 
-    const invalidFunctionSource = new TextEncoder().encode("module demo\nfn answer() -> i32 { return value }")
+    const invalidFunctionSourceText = "module demo\nfn answer() -> i32 { return value }"
+    const invalidFunctionSource = new TextEncoder().encode(invalidFunctionSourceText)
     const invalidFunctionPointer = module.instance.exports.alloc(invalidFunctionSource.length)
     new Uint8Array(module.instance.exports.memory.buffer, invalidFunctionPointer, invalidFunctionSource.length).set(invalidFunctionSource)
     const invalidFunctionRecordPointer = module.instance.exports.compile(invalidFunctionPointer, invalidFunctionSource.length)
     const invalidFunctionRecord = new DataView(module.instance.exports.memory.buffer, invalidFunctionRecordPointer, 20)
     assert.equal(invalidFunctionRecord.getInt32(0, true), 1)
+    const invalidFunctionDiagnosticPointer = invalidFunctionRecord.getInt32(12, true)
+    const invalidFunctionDiagnosticLength = invalidFunctionRecord.getInt32(16, true)
+    const invalidFunctionDiagnostic = new Uint8Array(module.instance.exports.memory.buffer, invalidFunctionDiagnosticPointer, invalidFunctionDiagnosticLength)
+    assert.equal(new TextDecoder().decode(invalidFunctionDiagnostic), `parse error at ${invalidFunctionSourceText.indexOf("value")}`)
+
+    const incompleteFunctionSourceText = "module demo\nfn answer("
+    const incompleteFunctionSource = new TextEncoder().encode(incompleteFunctionSourceText)
+    const incompleteFunctionPointer = module.instance.exports.alloc(incompleteFunctionSource.length)
+    new Uint8Array(module.instance.exports.memory.buffer, incompleteFunctionPointer, incompleteFunctionSource.length).set(incompleteFunctionSource)
+    const incompleteFunctionRecordPointer = module.instance.exports.compile(incompleteFunctionPointer, incompleteFunctionSource.length)
+    const incompleteFunctionRecord = new DataView(module.instance.exports.memory.buffer, incompleteFunctionRecordPointer, 20)
+    assert.equal(incompleteFunctionRecord.getInt32(0, true), 1)
+    const incompleteFunctionDiagnosticPointer = incompleteFunctionRecord.getInt32(12, true)
+    const incompleteFunctionDiagnosticLength = incompleteFunctionRecord.getInt32(16, true)
+    const incompleteFunctionDiagnostic = new Uint8Array(module.instance.exports.memory.buffer, incompleteFunctionDiagnosticPointer, incompleteFunctionDiagnosticLength)
+    assert.equal(new TextDecoder().decode(incompleteFunctionDiagnostic), `parse error at ${incompleteFunctionSourceText.length}`)
   } finally {
     await rm(directory, { recursive: true, force: true })
   }

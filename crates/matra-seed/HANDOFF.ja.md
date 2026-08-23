@@ -34,7 +34,8 @@ pnpm run lint:markdown
 `bytes`のfunction call、`[i32]`のread/writeに加え、bootstrap compilerが生成したWasmの
 literal return、parameter return、negative return、複数function、非ゼロindexのcall、
 parameter付きcall、signature不一致の拒否、130文字のexport名、130 functionとindex `128`のcall、
-parser/unknown call/signature errorのdiagnostic textとsource offsetを実行検証します。
+parser/unknown call/signature errorのdiagnostic textとsource offsetを実行検証します。function内の
+parse errorは失敗したtokenの先頭を指し、期待tokenが欠落した場合はsource末尾を指します。
 
 ## 主要なファイル
 
@@ -43,7 +44,7 @@ parser/unknown call/signature errorのdiagnostic textとsource offsetを実行�
 - `tests/wasm.test.mjs`: Node.jsによるWasm実行test
 - `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
 
-## 次の作業: parser diagnostic位置の詳細化
+## 次の作業: diagnostic codeのABI化
 
 function tableは先頭にcountを置き、各functionを7-field固定strideで格納する。
 
@@ -79,11 +80,13 @@ emitする。function tableは事前にfunction数を数え、`count * 7 + 1`要
 `unknown function at <offset>`、`argument count mismatch at <offset>`である。unknown callはcallee名、
 signature不一致はargument tokenのoffsetを返す。
 
-1. `function_definition`へparse error offsetを追加する。
-2. `parse_function`の各失敗で期待tokenの位置を保持する。
-3. function内のparse errorをfunction keyword位置から失敗token位置へ変更する。
-4. diagnostic codeをABIへ追加する必要性を検討する。
-5. line/column表示をhost側とcompiler側のどちらで担うか決める。
+`function_definition`はparse error offsetを保持し、`parse_function`の各失敗で検証対象tokenの位置を
+記録する。function内のparse errorはfunction keywordではなく実際に失敗したtokenを指し、期待tokenが
+欠落した場合はEOF offsetを返す。
+
+1. textをparseせずerror分類を判別できるdiagnostic codeをresult ABIへ追加する必要性を検討する。
+2. ABIを拡張する場合はrecord layoutと既存host側readerを更新する。
+3. line/column表示をhost側とcompiler側のどちらで担うか決める。
 
 functionは0または1個の`i32` parameterを持ち、各bodyがinteger literal、parameter、またはfunction callを
 returnする形をemitする。call argumentはinteger literalまたはcaller parameterに対応し、callee signatureと
