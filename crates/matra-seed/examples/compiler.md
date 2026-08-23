@@ -433,18 +433,7 @@ fn parse_empty_program(source: bytes) -> i32 {
       if function.status == 0 {
         return 0
       }
-      let next = next_token(source, function.position)
-      if next.kind == 0 {
-        return 1
-      }
-      let second = parse_function(source, next.start)
-      if second.status == 0 {
-        return 0
-      }
-      if next_token(source, second.position).kind != 0 {
-        return 0
-      }
-      return 1
+      position = function.position
     }
   }
   return 1
@@ -470,18 +459,6 @@ fn first_function(source: bytes) -> function_definition {
     }
   }
   return function_definition(0, 0, 0, 0, position)
-}
-
-fn second_function(source: bytes) -> function_definition {
-  let first = first_function(source)
-  if first.status == 0 {
-    return function_definition(0, 0, 0, 0, 0)
-  }
-  let second = next_token(source, first.position)
-  if second.kind == 0 {
-    return function_definition(0, 0, 0, 0, first.position)
-  }
-  return parse_function(source, second.start)
 }
 
 fn function_name_table(source: bytes) -> [i32] {
@@ -706,9 +683,24 @@ fn single_function_module(source: bytes, function: function_definition) -> bytes
   return output
 }
 
-fn two_function_module(source: bytes, helper: function_definition, entry: function_definition, called_index: i32) -> bytes {
-  let value_length = i32_leb_length(helper.return_value)
-  let output = allocate_bytes(38 + entry.name_length + value_length)
+fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
+  let count = array_get(table, 0)
+  let function = first_function(source)
+  let code_length = 1
+  let index = 0
+  while index < count {
+    let body_length = 4
+    if function.return_value != -2 {
+      body_length = 3 + i32_leb_length(function.return_value)
+    }
+    code_length = code_length + 1 + body_length
+    index = index + 1
+    if index < count {
+      let next = next_token(source, function.position)
+      function = parse_function(source, next.start)
+    }
+  }
+  let output = allocate_bytes(26 + count + function.name_length + code_length)
   byte_set(output, 0, 0)
   byte_set(output, 1, 97)
   byte_set(output, 2, 115)
@@ -725,36 +717,79 @@ fn two_function_module(source: bytes, helper: function_definition, entry: functi
   byte_set(output, 13, 1)
   byte_set(output, 14, 127)
   byte_set(output, 15, 3)
-  byte_set(output, 16, 3)
-  byte_set(output, 17, 2)
-  byte_set(output, 18, 0)
-  byte_set(output, 19, 0)
-  byte_set(output, 20, 7)
-  byte_set(output, 21, 4 + entry.name_length)
-  byte_set(output, 22, 1)
-  byte_set(output, 23, entry.name_length)
-  let index = 0
-  while index < entry.name_length {
-    byte_set(output, 24 + index, byte_at(source, entry.name_start + index))
+  byte_set(output, 16, 1 + count)
+  byte_set(output, 17, count)
+  index = 0
+  while index < count {
+    byte_set(output, 18 + index, 0)
     index = index + 1
   }
-  byte_set(output, 24 + entry.name_length, 0)
-  byte_set(output, 25 + entry.name_length, 1)
-  let code_offset = 26 + entry.name_length
+  let export_offset = 18 + count
+  byte_set(output, export_offset, 7)
+  byte_set(output, export_offset + 1, 4 + function.name_length)
+  byte_set(output, export_offset + 2, 1)
+  byte_set(output, export_offset + 3, function.name_length)
+  index = 0
+  while index < function.name_length {
+    byte_set(output, export_offset + 4 + index, byte_at(source, function.name_start + index))
+    index = index + 1
+  }
+  byte_set(output, export_offset + 4 + function.name_length, 0)
+  byte_set(output, export_offset + 5 + function.name_length, count - 1)
+  let code_offset = export_offset + 6 + function.name_length
   byte_set(output, code_offset, 10)
-  byte_set(output, code_offset + 1, 10 + value_length)
-  byte_set(output, code_offset + 2, 2)
-  byte_set(output, code_offset + 3, 3 + value_length)
-  byte_set(output, code_offset + 4, 0)
-  byte_set(output, code_offset + 5, 65)
-  let written = write_i32_leb(output, code_offset + 6, helper.return_value)
-  byte_set(written, code_offset + 6 + value_length, 11)
-  byte_set(written, code_offset + 7 + value_length, 4)
-  byte_set(written, code_offset + 8 + value_length, 0)
-  byte_set(written, code_offset + 9 + value_length, 16)
-  byte_set(written, code_offset + 10 + value_length, called_index)
-  byte_set(written, code_offset + 11 + value_length, 11)
-  return written
+  byte_set(output, code_offset + 1, code_length)
+  byte_set(output, code_offset + 2, count)
+  let position = code_offset + 3
+  function = first_function(source)
+  index = 0
+  while index < count {
+    if function.return_value == -2 {
+      let called_index = called_function_index(source, table, function)
+      byte_set(output, position, 4)
+      byte_set(output, position + 1, 0)
+      byte_set(output, position + 2, 16)
+      byte_set(output, position + 3, called_index)
+      byte_set(output, position + 4, 11)
+      position = position + 5
+    } else {
+      let value_length = i32_leb_length(function.return_value)
+      byte_set(output, position, 3 + value_length)
+      byte_set(output, position + 1, 0)
+      byte_set(output, position + 2, 65)
+      let written = write_i32_leb(output, position + 3, function.return_value)
+      byte_set(written, position + 3 + value_length, 11)
+      position = position + 4 + value_length
+    }
+    index = index + 1
+    if index < count {
+      let body_next = next_token(source, function.position)
+      function = parse_function(source, body_next.start)
+    }
+  }
+  return output
+}
+
+fn supports_multiple_functions(source: bytes, table: [i32]) -> i32 {
+  let count = array_get(table, 0)
+  let function = first_function(source)
+  let index = 0
+  while index < count {
+    if function.return_value == -1 {
+      return 0
+    }
+    if function.return_value == -2 {
+      if called_function_index(source, table, function) < 0 {
+        return 0
+      }
+    }
+    index = index + 1
+    if index < count {
+      let next = next_token(source, function.position)
+      function = parse_function(source, next.start)
+    }
+  }
+  return 1
 }
 
 export fn alloc(size: i32) -> i32 {
@@ -789,19 +824,9 @@ export fn compile(source: bytes) -> i32 {
     let output = empty_module()
     if function.status == 1 {
       output = single_function_module(source, function)
-      let second = second_function(source)
-      if second.status == 1 {
-        if function.return_value >= 0 {
-          if second.return_value == -2 {
-            let called_index = called_function_index(source, table, second)
-            if called_index == 0 {
-              output = two_function_module(source, function, second, called_index)
-            } else {
-              return diagnostic_record()
-            }
-          } else {
-            return diagnostic_record()
-          }
+      if array_get(table, 0) > 1 {
+        if supports_multiple_functions(source, table) == 1 {
+          output = multiple_function_module(source, table)
         } else {
           return diagnostic_record()
         }
@@ -822,12 +847,11 @@ identifier and integer tokens have their complete source range. The temporary
 returns a pointer to the 20-byte result record described in the Matra Program
 specification. `parse_empty_program()` accepts an empty source or the minimal
 non-empty Program header form `module identifier { import identifier }` and maps
-it to an empty Wasm module. It also recognizes an initial function form with no
-parameters and a nonnegative integer `return` expression. Such a
-function is emitted with one Wasm type, function, export, and code entry.
-One `i32` parameter returning itself is also supported.
-The initial two-function form emits a literal-returning helper and an entry
-function that calls it.
+it to an empty Wasm module. It also recognizes functions with integer literal
+and zero-argument function call `return` expressions. Multiple parameterless
+functions share one Wasm type, the last function is exported, and call names are
+resolved to their Wasm function indices. A single `i32` parameter returning
+itself is also supported.
 `allocate_bytes(size)` returns a `bytes` value backed by the generated module's
 linear memory, and `byte_set(bytes, index, value)` writes one byte. Diagnostics
 remain a placeholder until diagnostic text is implemented.

@@ -2,8 +2,6 @@
 
 ## 現在の状態
 
-作業ツリーはcleanです。直近の完了commitは`4750383 bootstrap emitterでsigned LEB128を一般化する`です。
-
 bootstrap compilerのsourceは`examples/compiler.md`にあります。seed compilerはMarkdownの
 `*.matra.program` fenceをWasm moduleへcompileします。
 
@@ -13,12 +11,12 @@ bootstrap compilerのsourceは`examples/compiler.md`にあります。seed compi
 - bootstrap compilerは`memory`、`alloc(size) -> i32`、
   `compile(source_pointer, source_length) -> i32`をexport
 - 空sourceの`compile`は20-byte result recordを返し、recordは有効な空Wasm moduleを参照
-- 非空sourceは暫定的にstatus `1`と空diagnostic fieldを返す
+- 未対応または不正なsourceはstatus `1`と空diagnostic fieldを返す
 - `struct`は固定長の`i32` field、constructor、field read、parameter/local/returnに対応
 - bootstrap lexerはASCII whitespaceと`//` commentをskipし、EOF、identifier、integer、symbolを読む
 - bootstrap parserは`module`、`import`、`fn` / `export fn`、1個の`i32` parameterを読む
 - bootstrap emitterはliteral return、parameter return、signed LEB128をemitする
-- bootstrap compilerは2個の引数なしfunctionで、entryからhelperをcallする最小形をemitする
+- bootstrap compilerは任意数の引数なしfunctionでliteral returnと引数なしcallをemitする
 - call先の名前はfunction tableでWasm function indexへ解決する
 
 ## 検証
@@ -32,7 +30,7 @@ pnpm run lint:markdown
 
 `tests/wasm.test.mjs`は、空Wasm output、result record、同一instanceの複数call、
 `bytes`のfunction call、`[i32]`のread/writeに加え、bootstrap compilerが生成したWasmの
-literal return、parameter return、negative return、helper callを実行検証します。
+literal return、parameter return、negative return、複数function、非ゼロindexのcallを実行検証します。
 
 ## 主要なファイル
 
@@ -41,11 +39,11 @@ literal return、parameter return、negative return、helper callを実行検証
 - `tests/wasm.test.mjs`: Node.jsによるWasm実行test
 - `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
 
-## 次の作業: function一覧の一般化
+## 次の作業: function recordとsignatureの一般化
 
-現在のbootstrap emitterは、single functionと「helper + entry」の2関数形を直接生成する。
-任意数のfunction、parameter付きcall、function indexを扱うため、function definitionをflattenedな
-`[i32]` tableへ格納する。
+現在のfunction tableは`[count, name_start_0, name_length_0, ...]`という最小layoutである。
+parserは任意数のfunctionをtableへ追加し、emitterはtable長からtype / function / code sectionを生成する。
+call target名はtableでWasm function indexへ解決し、非ゼロindexもemitできる。
 
 ```matra
 struct token {
@@ -58,32 +56,24 @@ let value = token(1, 4, 2)
 return value.kind
 ```
 
-recordは`name_start`、`name_length`、`parameter_count`、`return_kind`、`return_value`などの
-固定fieldを持つ。array of structが未実装のため、recordごとに固定strideで配置する。
+次はtableを固定strideのrecordへ拡張し、`name_start`、`name_length`、`parameter_count`、
+`return_kind`、`return_value`などを保持する。array of structは未実装のためflattenedな`[i32]`を使う。
 
 推奨する実装順は次のとおり。
 
 1. function tableのrecord layoutとstrideを定義する。
-2. parserがfunctionを反復してtableへ追加する。
-3. emitterがtable長からtype / function / code sectionを生成する。
-4. call target名をtableで解決し、function indexをemitする。
-5. parameter付きcallと複数signatureへ拡張する。
+2. parameter情報とbody kindをparserからtableへ格納する。
+3. parameter数ごとにWasm typeを生成してfunction sectionから参照する。
+4. parameter付きcallのargumentを検証してemitする。
+5. section lengthとfunction indexをunsigned LEB128へ一般化する。
 
-function tableの最初のlayoutは`[count, name_start_0, name_length_0, ...]`である。parserは任意数の
-functionをtableへ追加でき、name-to-index解決にも使える。2関数emitterは解決したindexをcall命令へ
-出力するが、現在対応する形ではhelperが先頭にあるためindexは`0`に限られる。
-
-single functionはliteral return、または1個の`i32` parameterをreturnする形をemitする。
-2関数はhelperがinteger literalをreturnし、entryが引数なしでhelperをcallする形だけをsuccessとして
-emitする。未対応の複数function形・未解決callはfunctionを落としたWasmを生成せずdiagnostic statusを返す。
-integer literalは正数・負数ともsigned LEB128へlowerする。
+single functionはliteral return、または1個の`i32` parameterをreturnする形をemitする。複数functionは
+引数なしに限り、各bodyがinteger literalまたは引数なしcallをreturnする形をemitする。最後のfunctionを
+exportし、未解決callや複数function内のparameterはdiagnostic statusを返す。integer literalは正数・負数とも
+signed LEB128へlowerする。複数function用sectionのlength、count、indexはまだ1-byte値に限られる。
 
 `fn`と`export fn`はどちらもparseできる。現時点でemitする単関数はexport keywordの有無にかかわらず
 exportされる。
-
-現時点で2個のfunctionがあるProgramは、helperがnonnegative integer literalをreturnし、entryが
-引数なしでhelperをcallする形だけをsuccessとしてemitする。call targetがhelperと一致しない場合を
-含め、それ以外はfunctionを落としたWasmを生成せずdiagnostic statusを返す。
 
 ## 注意点
 
