@@ -370,7 +370,31 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
     }
     let call_open = next_token(source, returned_value.start + returned_value.length)
     if is_symbol(source, call_open, 40) == 1 {
-      let call_close = next_token(source, call_open.start + call_open.length)
+      let argument = next_token(source, call_open.start + call_open.length)
+      let call_close = argument
+      if is_symbol(source, argument, 41) == 0 {
+        let argument_value = argument
+        if is_symbol(source, argument, 45) == 1 {
+          argument_value = next_token(source, argument.start + argument.length)
+          if argument_value.kind != 2 {
+            return function_definition(0, 0, 0, 0, offset)
+          }
+        } else {
+          if argument.kind == 1 {
+            if is_symbol(source, parameter, 41) == 1 {
+              return function_definition(0, 0, 0, 0, offset)
+            }
+            if same_token(source, parameter, argument) == 0 {
+              return function_definition(0, 0, 0, 0, offset)
+            }
+          } else {
+            if argument.kind != 2 {
+              return function_definition(0, 0, 0, 0, offset)
+            }
+          }
+        }
+        call_close = next_token(source, argument_value.start + argument_value.length)
+      }
       if is_symbol(source, call_close, 41) == 0 {
         return function_definition(0, 0, 0, 0, offset)
       }
@@ -504,6 +528,38 @@ fn function_body_kind_of(source: bytes, function: function_definition) -> i32 {
   return 1
 }
 
+fn call_argument_token(source: bytes, function: function_definition) -> token {
+  let called = returned_value_token(source, function)
+  let call_open = next_token(source, called.start + called.length)
+  return next_token(source, call_open.start + call_open.length)
+}
+
+fn call_argument_kind_of(source: bytes, function: function_definition) -> i32 {
+  let argument = call_argument_token(source, function)
+  if is_symbol(source, argument, 41) == 1 {
+    return 0
+  }
+  if is_symbol(source, argument, 45) == 1 {
+    return 1
+  }
+  if argument.kind == 2 {
+    return 1
+  }
+  return 2
+}
+
+fn call_argument_value_of(source: bytes, function: function_definition) -> i32 {
+  let argument = call_argument_token(source, function)
+  if is_symbol(source, argument, 45) == 1 {
+    let value = next_token(source, argument.start + argument.length)
+    return -read_small_integer(source, value)
+  }
+  if argument.kind == 2 {
+    return read_small_integer(source, argument)
+  }
+  return 0
+}
+
 fn function_table(source: bytes) -> [i32] {
   let table: [i32] = allocate_i32_array(byte_length(source) + 1)
   array_set(table, 0, 0)
@@ -546,11 +602,13 @@ fn function_table(source: bytes) -> [i32] {
       if body_kind == 2 {
         body_value = -1
       }
-      array_set(table, count * 5 + 1, function.name_start)
-      array_set(table, count * 5 + 2, function.name_length)
-      array_set(table, count * 5 + 3, parameter_count)
-      array_set(table, count * 5 + 4, body_kind)
-      array_set(table, count * 5 + 5, body_value)
+      array_set(table, count * 7 + 1, function.name_start)
+      array_set(table, count * 7 + 2, function.name_length)
+      array_set(table, count * 7 + 3, parameter_count)
+      array_set(table, count * 7 + 4, body_kind)
+      array_set(table, count * 7 + 5, body_value)
+      array_set(table, count * 7 + 6, 0)
+      array_set(table, count * 7 + 7, 0)
       array_set(table, 0, count + 1)
       position = function.position
     }
@@ -558,8 +616,10 @@ fn function_table(source: bytes) -> [i32] {
   let current_function = first_function(source)
   let index = 0
   while index < array_get(table, 0) {
-    if array_get(table, index * 5 + 4) == 2 {
-      array_set(table, index * 5 + 5, called_function_index(source, table, current_function))
+    if array_get(table, index * 7 + 4) == 2 {
+      array_set(table, index * 7 + 5, called_function_index(source, table, current_function))
+      array_set(table, index * 7 + 6, call_argument_kind_of(source, current_function))
+      array_set(table, index * 7 + 7, call_argument_value_of(source, current_function))
     }
     index = index + 1
     if index < array_get(table, 0) {
@@ -580,8 +640,8 @@ fn function_index_in_table(source: bytes, table: [i32], name: token) -> i32 {
   let index = 0
   let count = array_get(table, 0)
   while index < count {
-    let name_start = array_get(table, index * 5 + 1)
-    let name_length = array_get(table, index * 5 + 2)
+    let name_start = array_get(table, index * 7 + 1)
+    let name_length = array_get(table, index * 7 + 2)
     let candidate = token(1, name_start, name_length)
     if same_token(source, candidate, name) == 1 {
       return index
@@ -600,17 +660,17 @@ export fn function_index(source: bytes, offset: i32) -> i32 {
 
 export fn function_parameter_count(source: bytes, index: i32) -> i32 {
   let table = function_table(source)
-  return array_get(table, index * 5 + 3)
+  return array_get(table, index * 7 + 3)
 }
 
 export fn function_body_kind(source: bytes, index: i32) -> i32 {
   let table = function_table(source)
-  return array_get(table, index * 5 + 4)
+  return array_get(table, index * 7 + 4)
 }
 
 export fn function_body_value(source: bytes, index: i32) -> i32 {
   let table = function_table(source)
-  return array_get(table, index * 5 + 5)
+  return array_get(table, index * 7 + 5)
 }
 
 fn called_function_index(source: bytes, table: [i32], caller: function_definition) -> i32 {
@@ -762,16 +822,26 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
   let code_length = 1
   let index = 0
   while index < count {
+    let sized_body_kind = array_get(table, index * 7 + 4)
     let body_length = 4
-    if array_get(table, index * 5 + 4) == 0 {
-      body_length = 3 + i32_leb_length(array_get(table, index * 5 + 5))
+    if sized_body_kind == 0 {
+      body_length = 3 + i32_leb_length(array_get(table, index * 7 + 5))
+    }
+    if sized_body_kind == 2 {
+      let sized_argument_kind = array_get(table, index * 7 + 6)
+      if sized_argument_kind == 1 {
+        body_length = 5 + i32_leb_length(array_get(table, index * 7 + 7))
+      }
+      if sized_argument_kind == 2 {
+        body_length = 6
+      }
     }
     code_length = code_length + 1 + body_length
     index = index + 1
   }
-  let last_name_start = array_get(table, (count - 1) * 5 + 1)
-  let last_name_length = array_get(table, (count - 1) * 5 + 2)
-  let output = allocate_bytes(26 + count + last_name_length + code_length)
+  let last_name_start = array_get(table, (count - 1) * 7 + 1)
+  let last_name_length = array_get(table, (count - 1) * 7 + 2)
+  let output = allocate_bytes(31 + count + last_name_length + code_length)
   byte_set(output, 0, 0)
   byte_set(output, 1, 97)
   byte_set(output, 2, 115)
@@ -781,21 +851,26 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
   byte_set(output, 6, 0)
   byte_set(output, 7, 0)
   byte_set(output, 8, 1)
-  byte_set(output, 9, 5)
-  byte_set(output, 10, 1)
+  byte_set(output, 9, 10)
+  byte_set(output, 10, 2)
   byte_set(output, 11, 96)
   byte_set(output, 12, 0)
   byte_set(output, 13, 1)
   byte_set(output, 14, 127)
-  byte_set(output, 15, 3)
-  byte_set(output, 16, 1 + count)
-  byte_set(output, 17, count)
+  byte_set(output, 15, 96)
+  byte_set(output, 16, 1)
+  byte_set(output, 17, 127)
+  byte_set(output, 18, 1)
+  byte_set(output, 19, 127)
+  byte_set(output, 20, 3)
+  byte_set(output, 21, 1 + count)
+  byte_set(output, 22, count)
   index = 0
   while index < count {
-    byte_set(output, 18 + index, 0)
+    byte_set(output, 23 + index, array_get(table, index * 7 + 3))
     index = index + 1
   }
-  let export_offset = 18 + count
+  let export_offset = 23 + count
   byte_set(output, export_offset, 7)
   byte_set(output, export_offset + 1, 4 + last_name_length)
   byte_set(output, export_offset + 2, 1)
@@ -814,23 +889,57 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
   let position = code_offset + 3
   index = 0
   while index < count {
-    let body_kind = array_get(table, index * 5 + 4)
-    let body_value = array_get(table, index * 5 + 5)
+    let body_kind = array_get(table, index * 7 + 4)
+    let body_value = array_get(table, index * 7 + 5)
     if body_kind == 2 {
-      byte_set(output, position, 4)
-      byte_set(output, position + 1, 0)
-      byte_set(output, position + 2, 16)
-      byte_set(output, position + 3, body_value)
-      byte_set(output, position + 4, 11)
-      position = position + 5
+      let argument_kind = array_get(table, index * 7 + 6)
+      let argument_value = array_get(table, index * 7 + 7)
+      if argument_kind == 0 {
+        byte_set(output, position, 4)
+        byte_set(output, position + 1, 0)
+        byte_set(output, position + 2, 16)
+        byte_set(output, position + 3, body_value)
+        byte_set(output, position + 4, 11)
+        position = position + 5
+      }
+      if argument_kind == 1 {
+        let argument_length = i32_leb_length(argument_value)
+        byte_set(output, position, 5 + argument_length)
+        byte_set(output, position + 1, 0)
+        byte_set(output, position + 2, 65)
+        let argument_written = write_i32_leb(output, position + 3, argument_value)
+        byte_set(argument_written, position + 3 + argument_length, 16)
+        byte_set(argument_written, position + 4 + argument_length, body_value)
+        byte_set(argument_written, position + 5 + argument_length, 11)
+        position = position + 6 + argument_length
+      }
+      if argument_kind == 2 {
+        byte_set(output, position, 6)
+        byte_set(output, position + 1, 0)
+        byte_set(output, position + 2, 32)
+        byte_set(output, position + 3, argument_value)
+        byte_set(output, position + 4, 16)
+        byte_set(output, position + 5, body_value)
+        byte_set(output, position + 6, 11)
+        position = position + 7
+      }
     } else {
-      let value_length = i32_leb_length(body_value)
-      byte_set(output, position, 3 + value_length)
-      byte_set(output, position + 1, 0)
-      byte_set(output, position + 2, 65)
-      let written = write_i32_leb(output, position + 3, body_value)
-      byte_set(written, position + 3 + value_length, 11)
-      position = position + 4 + value_length
+      if body_kind == 1 {
+        byte_set(output, position, 4)
+        byte_set(output, position + 1, 0)
+        byte_set(output, position + 2, 32)
+        byte_set(output, position + 3, body_value)
+        byte_set(output, position + 4, 11)
+        position = position + 5
+      } else {
+        let value_length = i32_leb_length(body_value)
+        byte_set(output, position, 3 + value_length)
+        byte_set(output, position + 1, 0)
+        byte_set(output, position + 2, 65)
+        let written = write_i32_leb(output, position + 3, body_value)
+        byte_set(written, position + 3 + value_length, 11)
+        position = position + 4 + value_length
+      }
     }
     index = index + 1
   }
@@ -841,12 +950,30 @@ fn supports_multiple_functions(table: [i32]) -> i32 {
   let count = array_get(table, 0)
   let index = 0
   while index < count {
-    if array_get(table, index * 5 + 3) != 0 {
-      return 0
-    }
-    if array_get(table, index * 5 + 4) == 2 {
-      if array_get(table, index * 5 + 5) < 0 {
+    let parameter_count = array_get(table, index * 7 + 3)
+    let body_kind = array_get(table, index * 7 + 4)
+    if body_kind == 1 {
+      if parameter_count != 1 {
         return 0
+      }
+    }
+    if body_kind == 2 {
+      let called_index = array_get(table, index * 7 + 5)
+      if called_index < 0 {
+        return 0
+      }
+      let argument_kind = array_get(table, index * 7 + 6)
+      let argument_count = 0
+      if argument_kind != 0 {
+        argument_count = 1
+      }
+      if array_get(table, called_index * 7 + 3) != argument_count {
+        return 0
+      }
+      if argument_kind == 2 {
+        if parameter_count != 1 {
+          return 0
+        }
       }
     }
     index = index + 1
@@ -909,12 +1036,12 @@ identifier and integer tokens have their complete source range. The temporary
 returns a pointer to the 20-byte result record described in the Matra Program
 specification. `parse_empty_program()` accepts an empty source or the minimal
 non-empty Program header form `module identifier { import identifier }` and maps
-it to an empty Wasm module. It also recognizes functions with integer literal
-and zero-argument function call `return` expressions. Multiple parameterless
-functions share one Wasm type, the last function is exported, and call names are
-resolved to their Wasm function indices. Function metadata is stored as fixed
-five-field records containing name range, parameter count, body kind, and body
-value. A single `i32` parameter returning itself is also supported.
+it to an empty Wasm module. It also recognizes functions with integer literal,
+parameter, and function call `return` expressions. Multiple functions use Wasm
+types for zero or one `i32` parameter, the last function is exported, and call
+names are resolved to their Wasm function indices. Function metadata is stored
+as fixed seven-field records containing name range, parameter count, body kind,
+body value, argument kind, and argument value.
 `allocate_bytes(size)` returns a `bytes` value backed by the generated module's
 linear memory, and `byte_set(bytes, index, value)` writes one byte. Diagnostics
 remain a placeholder until diagnostic text is implemented.

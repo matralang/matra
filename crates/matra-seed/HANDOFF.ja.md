@@ -16,9 +16,9 @@ bootstrap compilerのsourceは`examples/compiler.md`にあります。seed compi
 - bootstrap lexerはASCII whitespaceと`//` commentをskipし、EOF、identifier、integer、symbolを読む
 - bootstrap parserは`module`、`import`、`fn` / `export fn`、1個の`i32` parameterを読む
 - bootstrap emitterはliteral return、parameter return、signed LEB128をemitする
-- bootstrap compilerは任意数の引数なしfunctionでliteral returnと引数なしcallをemitする
+- bootstrap compilerは任意数のfunctionでliteral/parameter returnと0または1引数のcallをemitする
 - call先の名前はfunction tableでWasm function indexへ解決する
-- function tableは固定stride recordでparameter数、body種別、body値を保持する
+- function tableは固定stride recordでparameter数、body情報、call argument情報を保持する
 
 ## 検証
 
@@ -31,7 +31,8 @@ pnpm run lint:markdown
 
 `tests/wasm.test.mjs`は、空Wasm output、result record、同一instanceの複数call、
 `bytes`のfunction call、`[i32]`のread/writeに加え、bootstrap compilerが生成したWasmの
-literal return、parameter return、negative return、複数function、非ゼロindexのcallを実行検証します。
+literal return、parameter return、negative return、複数function、非ゼロindexのcall、
+parameter付きcallとsignature不一致の拒否を実行検証します。
 
 ## 主要なファイル
 
@@ -40,18 +41,20 @@ literal return、parameter return、negative return、複数function、非ゼロ
 - `tests/wasm.test.mjs`: Node.jsによるWasm実行test
 - `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
 
-## 次の作業: parameter付きcallと複数signature
+## 次の作業: unsigned LEB128によるWasm size一般化
 
-function tableは先頭にcountを置き、各functionを5-field固定strideで格納する。
+function tableは先頭にcountを置き、各functionを7-field固定strideで格納する。
 
 ```text
-[count, name_start, name_length, parameter_count, body_kind, body_value, ...]
+[count, name_start, name_length, parameter_count, body_kind, body_value,
+ argument_kind, argument_value, ...]
 ```
 
 `body_kind`はliteralが`0`、parameter returnが`1`、callが`2`である。`body_value`はliteral値、
 parameter index、または解決済みWasm function indexを表す。parserは任意数のfunctionをtableへ追加し、
 emitterはsourceを再解析せずtableからtype / function / code sectionを生成する。負のliteral `-1`と`-2`も
-body kindと混同しない。
+body kindと混同しない。`argument_kind`は引数なしが`0`、literalが`1`、caller parameterが`2`で、
+`argument_value`はliteral値またはlocal indexを表す。
 
 ```matra
 struct token {
@@ -68,16 +71,16 @@ array of structは未実装のため、tableにはflattenedな`[i32]`を使う�
 
 推奨する実装順は次のとおり。
 
-1. call expressionで1個の`i32` argumentをparseする。
-2. parameter数ごとにWasm typeを生成してfunction sectionから参照する。
-3. parameter付きfunction bodyのlocal indexをemitする。
-4. call argumentを検証してcall命令の前にemitする。
-5. section lengthとfunction indexをunsigned LEB128へ一般化する。
+1. unsigned LEB128のlength計算とwriterを実装する。
+2. type / function / export / code section lengthをLEB128でemitする。
+3. function count、type index、function indexをLEB128でemitする。
+4. 128 bytesを超えるcode sectionと128個以上のfunctionを実行検証する。
+5. result recordへdiagnostic textを格納する。
 
-single functionはliteral return、または1個の`i32` parameterをreturnする形をemitする。複数functionは
-引数なしに限り、各bodyがinteger literalまたは引数なしcallをreturnする形をemitする。最後のfunctionを
-exportし、未解決callや複数function内のparameterはdiagnostic statusを返す。integer literalは正数・負数とも
-signed LEB128へlowerする。複数function用sectionのlength、count、indexはまだ1-byte値に限られる。
+functionは0または1個の`i32` parameterを持ち、各bodyがinteger literal、parameter、またはfunction callを
+returnする形をemitする。call argumentはinteger literalまたはcaller parameterに対応し、callee signatureと
+引数数が一致しなければdiagnostic statusを返す。最後のfunctionをexportする。integer literalは正数・負数とも
+signed LEB128へlowerする。sectionのlength、count、type/function indexはまだ1-byte値に限られる。
 
 `fn`と`export fn`はどちらもparseできる。現時点でemitする単関数はexport keywordの有無にかかわらず
 exportされる。
