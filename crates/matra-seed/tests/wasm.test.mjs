@@ -349,6 +349,38 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     const compiledLiteralFunctions = await WebAssembly.instantiate(literalFunctionsOutput)
     assert.equal(compiledLiteralFunctions.instance.exports.second(), 2)
 
+    const longFunctionName = "a".repeat(130)
+    const longNameSource = new TextEncoder().encode(`module demo\nfn ${longFunctionName}() -> i32 { return 42 }`)
+    const longNamePointer = module.instance.exports.alloc(longNameSource.length)
+    new Uint8Array(module.instance.exports.memory.buffer, longNamePointer, longNameSource.length).set(longNameSource)
+    const longNameRecordPointer = module.instance.exports.compile(longNamePointer, longNameSource.length)
+    const longNameRecord = new DataView(module.instance.exports.memory.buffer, longNameRecordPointer, 20)
+    assert.equal(longNameRecord.getInt32(0, true), 0)
+    const longNameOutputPointer = longNameRecord.getInt32(4, true)
+    const longNameOutputLength = longNameRecord.getInt32(8, true)
+    const longNameOutput = new Uint8Array(module.instance.exports.memory.buffer, longNameOutputPointer, longNameOutputLength)
+    const compiledLongName = await WebAssembly.instantiate(longNameOutput)
+    assert.equal(compiledLongName.instance.exports[longFunctionName](), 42)
+
+    const largeSectionSourceText = [
+      "module demo",
+      ...Array.from({ length: 129 }, (_, index) => `fn value${index}() -> i32 { return ${index} }`),
+      "fn answer() -> i32 { return value128() }",
+    ].join("\n")
+    const largeCompiler = await WebAssembly.instantiate(await readFile(output))
+    largeCompiler.instance.exports.memory.grow(1)
+    const largeSectionSource = new TextEncoder().encode(largeSectionSourceText)
+    const largeSectionPointer = largeCompiler.instance.exports.alloc(largeSectionSource.length)
+    new Uint8Array(largeCompiler.instance.exports.memory.buffer, largeSectionPointer, largeSectionSource.length).set(largeSectionSource)
+    const largeSectionRecordPointer = largeCompiler.instance.exports.compile(largeSectionPointer, largeSectionSource.length)
+    const largeSectionRecord = new DataView(largeCompiler.instance.exports.memory.buffer, largeSectionRecordPointer, 20)
+    assert.equal(largeSectionRecord.getInt32(0, true), 0)
+    const largeSectionOutputPointer = largeSectionRecord.getInt32(4, true)
+    const largeSectionOutputLength = largeSectionRecord.getInt32(8, true)
+    const largeSectionOutput = new Uint8Array(largeCompiler.instance.exports.memory.buffer, largeSectionOutputPointer, largeSectionOutputLength)
+    const compiledLargeSection = await WebAssembly.instantiate(largeSectionOutput)
+    assert.equal(compiledLargeSection.instance.exports.answer(), 128)
+
     const unknownCallSource = new TextEncoder().encode("module demo\nfn helper() -> i32 { return 1 }\nfn answer() -> i32 { return other() }")
     const unknownCallPointer = module.instance.exports.alloc(unknownCallSource.length)
     new Uint8Array(module.instance.exports.memory.buffer, unknownCallPointer, unknownCallSource.length).set(unknownCallSource)

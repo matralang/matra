@@ -560,9 +560,52 @@ fn call_argument_value_of(source: bytes, function: function_definition) -> i32 {
   return 0
 }
 
+fn count_functions(source: bytes) -> i32 {
+  let module_keyword = next_token(source, 0)
+  if is_module_keyword(source, module_keyword) == 0 {
+    return -1
+  }
+  let module_name = next_token(source, module_keyword.start + module_keyword.length)
+  if module_name.kind != 1 {
+    return -1
+  }
+  let position = module_name.start + module_name.length
+  let count = 0
+  while position < byte_length(source) {
+    let keyword = next_token(source, position)
+    if keyword.kind == 0 {
+      return count
+    }
+    if is_import_keyword(source, keyword) == 1 {
+      let imported = next_token(source, keyword.start + keyword.length)
+      if imported.kind != 1 {
+        return -1
+      }
+      position = imported.start + imported.length
+    } else {
+      let function = parse_function(source, keyword.start)
+      if function.status == 0 {
+        return -1
+      }
+      count = count + 1
+      position = function.position
+    }
+  }
+  return count
+}
+
 fn function_table(source: bytes) -> [i32] {
-  let table: [i32] = allocate_i32_array(byte_length(source) + 1)
+  let function_total = count_functions(source)
+  let capacity = 1
+  if function_total > 0 {
+    capacity = function_total * 7 + 1
+  }
+  let table: [i32] = allocate_i32_array(capacity)
   array_set(table, 0, 0)
+  if function_total < 0 {
+    array_set(table, 0, -1)
+    return table
+  }
   let module_keyword = next_token(source, 0)
   if is_module_keyword(source, module_keyword) == 0 {
     array_set(table, 0, -1)
@@ -756,15 +799,49 @@ fn write_i32_leb(buffer: bytes, index: i32, value: i32) -> bytes {
   return buffer
 }
 
-fn single_function_module(source: bytes, function: function_definition) -> bytes {
-  let parameter_count = 0
-  let value_length = 1
-  if function.return_value == -1 {
-    parameter_count = 1
-  } else {
-    value_length = i32_leb_length(function.return_value)
+fn u32_leb_length(value: i32) -> i32 {
+  let remaining = value
+  let length = 1
+  while remaining >= 128 {
+    remaining = remaining / 128
+    length = length + 1
   }
-  let output = allocate_bytes(32 + parameter_count + function.name_length + value_length)
+  return length
+}
+
+fn write_u32_leb(buffer: bytes, index: i32, value: i32) -> bytes {
+  let remaining = value
+  let position = index
+  while 1 {
+    let quotient = remaining / 128
+    let byte = remaining - quotient * 128
+    remaining = quotient
+    if remaining == 0 {
+      byte_set(buffer, position, byte)
+      return buffer
+    }
+    byte_set(buffer, position, byte + 128)
+    position = position + 1
+  }
+  return buffer
+}
+
+fn single_function_module(source: bytes, table: [i32]) -> bytes {
+  let name_start = array_get(table, 1)
+  let name_length = array_get(table, 2)
+  let parameter_count = array_get(table, 3)
+  let body_kind = array_get(table, 4)
+  let body_value = array_get(table, 5)
+  let type_payload_length = 5 + parameter_count
+  let function_payload_length = 2
+  let export_payload_length = 1 + u32_leb_length(name_length) + name_length + 1 + 1
+  let body_length = 3 + i32_leb_length(body_value)
+  if body_kind == 1 {
+    body_length = 3 + u32_leb_length(body_value)
+  }
+  let code_payload_length = 1 + u32_leb_length(body_length) + body_length
+  let output_length = 8 + 1 + u32_leb_length(type_payload_length) + type_payload_length + 1 + u32_leb_length(function_payload_length) + function_payload_length + 1 + u32_leb_length(export_payload_length) + export_payload_length + 1 + u32_leb_length(code_payload_length) + code_payload_length
+  let output = allocate_bytes(output_length)
   byte_set(output, 0, 0)
   byte_set(output, 1, 97)
   byte_set(output, 2, 115)
@@ -773,53 +850,79 @@ fn single_function_module(source: bytes, function: function_definition) -> bytes
   byte_set(output, 5, 0)
   byte_set(output, 6, 0)
   byte_set(output, 7, 0)
-  byte_set(output, 8, 1)
-  byte_set(output, 9, 5 + parameter_count)
-  byte_set(output, 10, 1)
-  byte_set(output, 11, 96)
-  byte_set(output, 12, parameter_count)
+  let position = 8
+  byte_set(output, position, 1)
+  position = position + 1
+  let type_length_written = write_u32_leb(output, position, type_payload_length)
+  position = position + u32_leb_length(type_payload_length)
+  let type_count_written = write_u32_leb(type_length_written, position, 1)
+  position = position + 1
+  byte_set(type_count_written, position, 96)
+  position = position + 1
+  let parameter_count_written = write_u32_leb(output, position, parameter_count)
+  position = position + u32_leb_length(parameter_count)
   if parameter_count == 1 {
-    byte_set(output, 13, 127)
+    byte_set(parameter_count_written, position, 127)
+    position = position + 1
   }
-  byte_set(output, 13 + parameter_count, 1)
-  byte_set(output, 14 + parameter_count, 127)
-  byte_set(output, 15 + parameter_count, 3)
-  byte_set(output, 16 + parameter_count, 2)
-  byte_set(output, 17 + parameter_count, 1)
-  byte_set(output, 18 + parameter_count, 0)
-  byte_set(output, 19 + parameter_count, 7)
-  byte_set(output, 20 + parameter_count, 4 + function.name_length)
-  byte_set(output, 21 + parameter_count, 1)
-  byte_set(output, 22 + parameter_count, function.name_length)
+  byte_set(output, position, 1)
+  byte_set(output, position + 1, 127)
+  position = position + 2
+  byte_set(output, position, 3)
+  position = position + 1
+  let function_length_written = write_u32_leb(output, position, function_payload_length)
+  position = position + 1
+  let function_count_written = write_u32_leb(function_length_written, position, 1)
+  position = position + 1
+  let type_index_written = write_u32_leb(function_count_written, position, 0)
+  position = position + 1
+  byte_set(type_index_written, position, 7)
+  position = position + 1
+  let export_length_written = write_u32_leb(output, position, export_payload_length)
+  position = position + u32_leb_length(export_payload_length)
+  let export_count_written = write_u32_leb(export_length_written, position, 1)
+  position = position + 1
+  let name_length_written = write_u32_leb(export_count_written, position, name_length)
+  position = position + u32_leb_length(name_length)
   let index = 0
-  while index < function.name_length {
-    byte_set(output, 23 + parameter_count + index, byte_at(source, function.name_start + index))
+  while index < name_length {
+    byte_set(name_length_written, position, byte_at(source, name_start + index))
+    position = position + 1
     index = index + 1
   }
-  let code_offset = 25 + parameter_count + function.name_length
-  byte_set(output, 23 + parameter_count + function.name_length, 0)
-  byte_set(output, 24 + parameter_count + function.name_length, 0)
-  byte_set(output, code_offset, 10)
-  byte_set(output, code_offset + 1, 5 + value_length)
-  byte_set(output, code_offset + 2, 1)
-  byte_set(output, code_offset + 3, 3 + value_length)
-  byte_set(output, code_offset + 4, 0)
-  if function.return_value == -1 {
-    byte_set(output, code_offset + 5, 32)
-    byte_set(output, code_offset + 6, 0)
+  byte_set(output, position, 0)
+  position = position + 1
+  let export_index_written = write_u32_leb(output, position, 0)
+  position = position + 1
+  byte_set(export_index_written, position, 10)
+  position = position + 1
+  let code_length_written = write_u32_leb(output, position, code_payload_length)
+  position = position + u32_leb_length(code_payload_length)
+  let code_count_written = write_u32_leb(code_length_written, position, 1)
+  position = position + 1
+  let body_length_written = write_u32_leb(code_count_written, position, body_length)
+  position = position + u32_leb_length(body_length)
+  byte_set(body_length_written, position, 0)
+  position = position + 1
+  if body_kind == 1 {
+    byte_set(output, position, 32)
+    position = position + 1
+    let local_index_written = write_u32_leb(output, position, body_value)
+    position = position + u32_leb_length(body_value)
+    byte_set(local_index_written, position, 11)
   } else {
-    byte_set(output, code_offset + 5, 65)
-    let written = write_i32_leb(output, code_offset + 6, function.return_value)
-    byte_set(written, code_offset + 6 + value_length, 11)
-    return written
+    byte_set(output, position, 65)
+    position = position + 1
+    let value_written = write_i32_leb(output, position, body_value)
+    position = position + i32_leb_length(body_value)
+    byte_set(value_written, position, 11)
   }
-  byte_set(output, code_offset + 7, 11)
   return output
 }
 
 fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
   let count = array_get(table, 0)
-  let code_length = 1
+  let code_payload_length = u32_leb_length(count)
   let index = 0
   while index < count {
     let sized_body_kind = array_get(table, index * 7 + 4)
@@ -827,21 +930,30 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
     if sized_body_kind == 0 {
       body_length = 3 + i32_leb_length(array_get(table, index * 7 + 5))
     }
+    if sized_body_kind == 1 {
+      body_length = 3 + u32_leb_length(array_get(table, index * 7 + 5))
+    }
     if sized_body_kind == 2 {
       let sized_argument_kind = array_get(table, index * 7 + 6)
+      let sized_target_length = u32_leb_length(array_get(table, index * 7 + 5))
+      body_length = 3 + sized_target_length
       if sized_argument_kind == 1 {
-        body_length = 5 + i32_leb_length(array_get(table, index * 7 + 7))
+        body_length = 4 + i32_leb_length(array_get(table, index * 7 + 7)) + sized_target_length
       }
       if sized_argument_kind == 2 {
-        body_length = 6
+        body_length = 4 + u32_leb_length(array_get(table, index * 7 + 7)) + sized_target_length
       }
     }
-    code_length = code_length + 1 + body_length
+    code_payload_length = code_payload_length + u32_leb_length(body_length) + body_length
     index = index + 1
   }
   let last_name_start = array_get(table, (count - 1) * 7 + 1)
   let last_name_length = array_get(table, (count - 1) * 7 + 2)
-  let output = allocate_bytes(31 + count + last_name_length + code_length)
+  let type_payload_length = 10
+  let function_payload_length = u32_leb_length(count) + count
+  let export_payload_length = u32_leb_length(1) + u32_leb_length(last_name_length) + last_name_length + 1 + u32_leb_length(count - 1)
+  let output_length = 8 + 1 + u32_leb_length(type_payload_length) + type_payload_length + 1 + u32_leb_length(function_payload_length) + function_payload_length + 1 + u32_leb_length(export_payload_length) + export_payload_length + 1 + u32_leb_length(code_payload_length) + code_payload_length
+  let output = allocate_bytes(output_length)
   byte_set(output, 0, 0)
   byte_set(output, 1, 97)
   byte_set(output, 2, 115)
@@ -850,95 +962,141 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
   byte_set(output, 5, 0)
   byte_set(output, 6, 0)
   byte_set(output, 7, 0)
-  byte_set(output, 8, 1)
-  byte_set(output, 9, 10)
-  byte_set(output, 10, 2)
-  byte_set(output, 11, 96)
-  byte_set(output, 12, 0)
-  byte_set(output, 13, 1)
-  byte_set(output, 14, 127)
-  byte_set(output, 15, 96)
-  byte_set(output, 16, 1)
-  byte_set(output, 17, 127)
-  byte_set(output, 18, 1)
-  byte_set(output, 19, 127)
-  byte_set(output, 20, 3)
-  byte_set(output, 21, 1 + count)
-  byte_set(output, 22, count)
+  let position = 8
+  byte_set(output, position, 1)
+  position = position + 1
+  let type_length_written = write_u32_leb(output, position, type_payload_length)
+  position = position + u32_leb_length(type_payload_length)
+  let type_count_written = write_u32_leb(type_length_written, position, 2)
+  position = position + 1
+  byte_set(type_count_written, position, 96)
+  byte_set(type_count_written, position + 1, 0)
+  byte_set(type_count_written, position + 2, 1)
+  byte_set(type_count_written, position + 3, 127)
+  byte_set(type_count_written, position + 4, 96)
+  byte_set(type_count_written, position + 5, 1)
+  byte_set(type_count_written, position + 6, 127)
+  byte_set(type_count_written, position + 7, 1)
+  byte_set(type_count_written, position + 8, 127)
+  position = position + 9
+  byte_set(output, position, 3)
+  position = position + 1
+  let function_length_written = write_u32_leb(output, position, function_payload_length)
+  position = position + u32_leb_length(function_payload_length)
+  let function_count_written = write_u32_leb(function_length_written, position, count)
+  position = position + u32_leb_length(count)
   index = 0
   while index < count {
-    byte_set(output, 23 + index, array_get(table, index * 7 + 3))
+    let type_index = array_get(table, index * 7 + 3)
+    let type_index_written = write_u32_leb(function_count_written, position, type_index)
+    position = position + u32_leb_length(type_index)
     index = index + 1
   }
-  let export_offset = 23 + count
-  byte_set(output, export_offset, 7)
-  byte_set(output, export_offset + 1, 4 + last_name_length)
-  byte_set(output, export_offset + 2, 1)
-  byte_set(output, export_offset + 3, last_name_length)
+  byte_set(output, position, 7)
+  position = position + 1
+  let export_length_written = write_u32_leb(output, position, export_payload_length)
+  position = position + u32_leb_length(export_payload_length)
+  let export_count_written = write_u32_leb(export_length_written, position, 1)
+  position = position + 1
+  let name_length_written = write_u32_leb(export_count_written, position, last_name_length)
+  position = position + u32_leb_length(last_name_length)
   index = 0
   while index < last_name_length {
-    byte_set(output, export_offset + 4 + index, byte_at(source, last_name_start + index))
+    byte_set(name_length_written, position, byte_at(source, last_name_start + index))
+    position = position + 1
     index = index + 1
   }
-  byte_set(output, export_offset + 4 + last_name_length, 0)
-  byte_set(output, export_offset + 5 + last_name_length, count - 1)
-  let code_offset = export_offset + 6 + last_name_length
-  byte_set(output, code_offset, 10)
-  byte_set(output, code_offset + 1, code_length)
-  byte_set(output, code_offset + 2, count)
-  let position = code_offset + 3
+  byte_set(output, position, 0)
+  position = position + 1
+  let export_index_written = write_u32_leb(output, position, count - 1)
+  position = position + u32_leb_length(count - 1)
+  byte_set(export_index_written, position, 10)
+  position = position + 1
+  let code_length_written = write_u32_leb(output, position, code_payload_length)
+  position = position + u32_leb_length(code_payload_length)
+  let code_count_written = write_u32_leb(code_length_written, position, count)
+  position = position + u32_leb_length(count)
   index = 0
   while index < count {
     let body_kind = array_get(table, index * 7 + 4)
     let body_value = array_get(table, index * 7 + 5)
+    let emitted_body_length = 4
+    if body_kind == 0 {
+      emitted_body_length = 3 + i32_leb_length(body_value)
+    }
+    if body_kind == 1 {
+      emitted_body_length = 3 + u32_leb_length(body_value)
+    }
+    if body_kind == 2 {
+      let emitted_argument_kind = array_get(table, index * 7 + 6)
+      let emitted_target_length = u32_leb_length(body_value)
+      emitted_body_length = 3 + emitted_target_length
+      if emitted_argument_kind == 1 {
+        emitted_body_length = 4 + i32_leb_length(array_get(table, index * 7 + 7)) + emitted_target_length
+      }
+      if emitted_argument_kind == 2 {
+        emitted_body_length = 4 + u32_leb_length(array_get(table, index * 7 + 7)) + emitted_target_length
+      }
+    }
+    let body_length_written = write_u32_leb(code_count_written, position, emitted_body_length)
+    position = position + u32_leb_length(emitted_body_length)
     if body_kind == 2 {
       let argument_kind = array_get(table, index * 7 + 6)
       let argument_value = array_get(table, index * 7 + 7)
       if argument_kind == 0 {
-        byte_set(output, position, 4)
-        byte_set(output, position + 1, 0)
-        byte_set(output, position + 2, 16)
-        byte_set(output, position + 3, body_value)
-        byte_set(output, position + 4, 11)
-        position = position + 5
+        byte_set(body_length_written, position, 0)
+        byte_set(body_length_written, position + 1, 16)
+        position = position + 2
+        let empty_call_index_written = write_u32_leb(output, position, body_value)
+        position = position + u32_leb_length(body_value)
+        byte_set(empty_call_index_written, position, 11)
+        position = position + 1
       }
       if argument_kind == 1 {
         let argument_length = i32_leb_length(argument_value)
-        byte_set(output, position, 5 + argument_length)
-        byte_set(output, position + 1, 0)
-        byte_set(output, position + 2, 65)
-        let argument_written = write_i32_leb(output, position + 3, argument_value)
-        byte_set(argument_written, position + 3 + argument_length, 16)
-        byte_set(argument_written, position + 4 + argument_length, body_value)
-        byte_set(argument_written, position + 5 + argument_length, 11)
-        position = position + 6 + argument_length
+        byte_set(body_length_written, position, 0)
+        byte_set(body_length_written, position + 1, 65)
+        position = position + 2
+        let argument_written = write_i32_leb(output, position, argument_value)
+        position = position + argument_length
+        byte_set(argument_written, position, 16)
+        position = position + 1
+        let literal_call_index_written = write_u32_leb(output, position, body_value)
+        position = position + u32_leb_length(body_value)
+        byte_set(literal_call_index_written, position, 11)
+        position = position + 1
       }
       if argument_kind == 2 {
-        byte_set(output, position, 6)
-        byte_set(output, position + 1, 0)
-        byte_set(output, position + 2, 32)
-        byte_set(output, position + 3, argument_value)
-        byte_set(output, position + 4, 16)
-        byte_set(output, position + 5, body_value)
-        byte_set(output, position + 6, 11)
-        position = position + 7
+        byte_set(body_length_written, position, 0)
+        byte_set(body_length_written, position + 1, 32)
+        position = position + 2
+        let local_index_written = write_u32_leb(output, position, argument_value)
+        position = position + u32_leb_length(argument_value)
+        byte_set(local_index_written, position, 16)
+        position = position + 1
+        let parameter_call_index_written = write_u32_leb(output, position, body_value)
+        position = position + u32_leb_length(body_value)
+        byte_set(parameter_call_index_written, position, 11)
+        position = position + 1
       }
     } else {
       if body_kind == 1 {
-        byte_set(output, position, 4)
-        byte_set(output, position + 1, 0)
-        byte_set(output, position + 2, 32)
-        byte_set(output, position + 3, body_value)
-        byte_set(output, position + 4, 11)
-        position = position + 5
+        byte_set(body_length_written, position, 0)
+        byte_set(body_length_written, position + 1, 32)
+        position = position + 2
+        let returned_local_written = write_u32_leb(output, position, body_value)
+        position = position + u32_leb_length(body_value)
+        byte_set(returned_local_written, position, 11)
+        position = position + 1
       } else {
         let value_length = i32_leb_length(body_value)
-        byte_set(output, position, 3 + value_length)
-        byte_set(output, position + 1, 0)
-        byte_set(output, position + 2, 65)
-        let written = write_i32_leb(output, position + 3, body_value)
-        byte_set(written, position + 3 + value_length, 11)
-        position = position + 4 + value_length
+        byte_set(body_length_written, position, 0)
+        byte_set(body_length_written, position + 1, 65)
+        position = position + 2
+        let written = write_i32_leb(output, position, body_value)
+        position = position + value_length
+        byte_set(written, position, 11)
+        position = position + 1
       }
     }
     index = index + 1
@@ -1012,7 +1170,7 @@ export fn compile(source: bytes) -> i32 {
     let table = function_table(source)
     let output = empty_module()
     if function.status == 1 {
-      output = single_function_module(source, function)
+      output = single_function_module(source, table)
       if array_get(table, 0) > 1 {
         if supports_multiple_functions(table) == 1 {
           output = multiple_function_module(source, table)
@@ -1041,7 +1199,8 @@ parameter, and function call `return` expressions. Multiple functions use Wasm
 types for zero or one `i32` parameter, the last function is exported, and call
 names are resolved to their Wasm function indices. Function metadata is stored
 as fixed seven-field records containing name range, parameter count, body kind,
-body value, argument kind, and argument value.
+body value, argument kind, and argument value. Section lengths, counts, type
+indices, function indices, body sizes, and name lengths use unsigned LEB128.
 `allocate_bytes(size)` returns a `bytes` value backed by the generated module's
 linear memory, and `byte_set(bytes, index, value)` writes one byte. Diagnostics
 remain a placeholder until diagnostic text is implemented.

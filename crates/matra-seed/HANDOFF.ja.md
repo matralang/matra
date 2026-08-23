@@ -19,6 +19,7 @@ bootstrap compilerのsourceは`examples/compiler.md`にあります。seed compi
 - bootstrap compilerは任意数のfunctionでliteral/parameter returnと0または1引数のcallをemitする
 - call先の名前はfunction tableでWasm function indexへ解決する
 - function tableは固定stride recordでparameter数、body情報、call argument情報を保持する
+- Wasm section length、count、type/function index、body/name lengthはunsigned LEB128でemitする
 
 ## 検証
 
@@ -32,7 +33,8 @@ pnpm run lint:markdown
 `tests/wasm.test.mjs`は、空Wasm output、result record、同一instanceの複数call、
 `bytes`のfunction call、`[i32]`のread/writeに加え、bootstrap compilerが生成したWasmの
 literal return、parameter return、negative return、複数function、非ゼロindexのcall、
-parameter付きcallとsignature不一致の拒否を実行検証します。
+parameter付きcall、signature不一致の拒否、130文字のexport名、130 functionとindex `128`のcallを
+実行検証します。
 
 ## 主要なファイル
 
@@ -41,7 +43,7 @@ parameter付きcallとsignature不一致の拒否を実行検証します。
 - `tests/wasm.test.mjs`: Node.jsによるWasm実行test
 - `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
 
-## 次の作業: unsigned LEB128によるWasm size一般化
+## 次の作業: diagnostic text
 
 function tableは先頭にcountを置き、各functionを7-field固定strideで格納する。
 
@@ -69,18 +71,22 @@ return value.kind
 
 array of structは未実装のため、tableにはflattenedな`[i32]`を使う。
 
-推奨する実装順は次のとおり。
+Wasmのsection length、function count、type/function index、body size、name lengthはunsigned LEB128で
+emitする。function tableは事前にfunction数を数え、`count * 7 + 1`要素だけ確保する。
 
-1. unsigned LEB128のlength計算とwriterを実装する。
-2. type / function / export / code section lengthをLEB128でemitする。
-3. function count、type index、function indexをLEB128でemitする。
-4. 128 bytesを超えるcode sectionと128個以上のfunctionを実行検証する。
-5. result recordへdiagnostic textを格納する。
+次は空のdiagnostic fieldを実際のmessageへ置き換える。
+
+1. parser errorとunsupported signatureをerror codeへ分類する。
+2. error codeに対応するASCII diagnostic bytesを確保する。
+3. result recordの`diagnostic_pointer`と`diagnostic_length`へ格納する。
+4. Node.js側でmessageをdecodeして検証する。
+5. source offsetをdiagnosticへ追加する。
 
 functionは0または1個の`i32` parameterを持ち、各bodyがinteger literal、parameter、またはfunction callを
 returnする形をemitする。call argumentはinteger literalまたはcaller parameterに対応し、callee signatureと
 引数数が一致しなければdiagnostic statusを返す。最後のfunctionをexportする。integer literalは正数・負数とも
-signed LEB128へlowerする。sectionのlength、count、type/function indexはまだ1-byte値に限られる。
+signed LEB128へlowerする。大規模sourceをcompileする場合、host側は必要に応じてexportされたmemoryを
+`memory.grow()`してからsourceとtableの領域を確保する。
 
 `fn`と`export fn`はどちらもparseできる。現時点でemitする単関数はexport keywordの有無にかかわらず
 exportされる。
