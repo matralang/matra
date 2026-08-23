@@ -18,6 +18,7 @@ bootstrap compilerのsourceは`examples/compiler.md`にあります。seed compi
 - bootstrap emitterはliteral return、parameter return、signed LEB128をemitする
 - bootstrap compilerは任意数の引数なしfunctionでliteral returnと引数なしcallをemitする
 - call先の名前はfunction tableでWasm function indexへ解決する
+- function tableは固定stride recordでparameter数、body種別、body値を保持する
 
 ## 検証
 
@@ -39,11 +40,18 @@ literal return、parameter return、negative return、複数function、非ゼロ
 - `tests/wasm.test.mjs`: Node.jsによるWasm実行test
 - `../../spec/program.ja.md` と `../../spec/program.md`: Program draft
 
-## 次の作業: function recordとsignatureの一般化
+## 次の作業: parameter付きcallと複数signature
 
-現在のfunction tableは`[count, name_start_0, name_length_0, ...]`という最小layoutである。
-parserは任意数のfunctionをtableへ追加し、emitterはtable長からtype / function / code sectionを生成する。
-call target名はtableでWasm function indexへ解決し、非ゼロindexもemitできる。
+function tableは先頭にcountを置き、各functionを5-field固定strideで格納する。
+
+```text
+[count, name_start, name_length, parameter_count, body_kind, body_value, ...]
+```
+
+`body_kind`はliteralが`0`、parameter returnが`1`、callが`2`である。`body_value`はliteral値、
+parameter index、または解決済みWasm function indexを表す。parserは任意数のfunctionをtableへ追加し、
+emitterはsourceを再解析せずtableからtype / function / code sectionを生成する。負のliteral `-1`と`-2`も
+body kindと混同しない。
 
 ```matra
 struct token {
@@ -56,15 +64,14 @@ let value = token(1, 4, 2)
 return value.kind
 ```
 
-次はtableを固定strideのrecordへ拡張し、`name_start`、`name_length`、`parameter_count`、
-`return_kind`、`return_value`などを保持する。array of structは未実装のためflattenedな`[i32]`を使う。
+array of structは未実装のため、tableにはflattenedな`[i32]`を使う。
 
 推奨する実装順は次のとおり。
 
-1. function tableのrecord layoutとstrideを定義する。
-2. parameter情報とbody kindをparserからtableへ格納する。
-3. parameter数ごとにWasm typeを生成してfunction sectionから参照する。
-4. parameter付きcallのargumentを検証してemitする。
+1. call expressionで1個の`i32` argumentをparseする。
+2. parameter数ごとにWasm typeを生成してfunction sectionから参照する。
+3. parameter付きfunction bodyのlocal indexをemitする。
+4. call argumentを検証してcall命令の前にemitする。
 5. section lengthとfunction indexをunsigned LEB128へ一般化する。
 
 single functionはliteral return、または1個の`i32` parameterをreturnする形をemitする。複数functionは
