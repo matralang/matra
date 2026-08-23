@@ -532,6 +532,28 @@ export fn function_count(source: bytes) -> i32 {
   return array_get(table, 0)
 }
 
+fn function_index_in_table(source: bytes, table: [i32], name: token) -> i32 {
+  let index = 0
+  let count = array_get(table, 0)
+  while index < count {
+    let name_start = array_get(table, index * 2 + 1)
+    let name_length = array_get(table, index * 2 + 2)
+    let candidate = token(1, name_start, name_length)
+    if same_token(source, candidate, name) == 1 {
+      return index
+    }
+    index = index + 1
+  }
+  return -1
+}
+
+// A temporary probe verifies name-to-index resolution before call emission uses it.
+export fn function_index(source: bytes, offset: i32) -> i32 {
+  let table = function_name_table(source)
+  let name = next_token(source, offset)
+  return function_index_in_table(source, table, name)
+}
+
 fn calls_helper(source: bytes, caller: function_definition, helper: function_definition) -> i32 {
   let name = token(1, caller.name_start, caller.name_length)
   let open = next_token(source, name.start + name.length)

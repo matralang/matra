@@ -69,7 +69,7 @@ recordは`name_start`、`name_length`、`parameter_count`、`return_kind`、`ret
 5. parameter付きcallと複数signatureへ拡張する。
 
 function tableの最初のlayoutは`[count, name_start_0, name_length_0, ...]`である。parserは任意数の
-functionをtableへ追加でき、emitterはまだこのtableを消費していない。
+functionをtableへ追加でき、name-to-index解決にも使える。emitterはまだこのtableを消費していない。
 
 single functionはliteral return、または1個の`i32` parameterをreturnする形をemitする。
 2関数はhelperがinteger literalをreturnし、entryが引数なしでhelperをcallする形だけをsuccessとして
