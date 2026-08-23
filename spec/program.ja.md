@@ -113,7 +113,7 @@ binary emitterとABI record向けの暫定intrinsicです。
 
 compiler moduleは`memory`、`alloc(size: i32) -> i32`、
 `compile(source_pointer: i32, source_length: i32) -> i32`をexportします。sourceはUTF-8です。
-`compile`はlinear memory上の28-byte result recordへのpointerを返します。
+`compile`はlinear memory上の32-byte result recordへのpointerを返します。
 
 bootstrap compilerはこのABIを実装済みです。成功時はstatus `0`と有効なWasm moduleを返します。
 失敗時はstatus `1`と、error分類およびsource offsetを含むUTF-8 diagnostic textを返します。
@@ -129,10 +129,13 @@ source末尾を指します。
 | 16 | `diagnostic_length: i32` | diagnosticのbyte length |
 | 20 | `diagnostic_code: i32` | error分類。success時は`0` |
 | 24 | `diagnostic_offset: i32` | UTF-8 source上のerror byte offset |
+| 28 | `diagnostic_source_length: i32` | error範囲のbyte length |
 
 bootstrap compilerのdiagnostic codeは、parse errorが`1`、unknown functionが`2`、
 argument count mismatchが`3`です。hostはdiagnostic textをparseせず、このcodeでerrorを分類できます。
 compilerは位置をUTF-8 byte offsetで返し、hostが保持するsourceから表示用のlineとcolumnを計算します。
+error範囲は`[diagnostic_offset, diagnostic_offset + diagnostic_source_length)`の半開区間です。
+期待tokenがEOFで欠落した場合は、source末尾に長さ`0`の範囲を返します。
 
 hostはsource bytesをallocateして書き込み、`compile`をcallした後、recordと参照先bytesを
 読みます。memoryは次の`compile` callまで有効です。このABIはcompiled codeへfilesystemや

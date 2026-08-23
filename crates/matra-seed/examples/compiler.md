@@ -1196,7 +1196,7 @@ export fn alloc(size: i32) -> i32 {
 }
 
 fn success_record(output: bytes) -> i32 {
-  let record = allocate_bytes(28)
+  let record = allocate_bytes(32)
   let status = write_i32(record, 0, 0)
   let output_pointer = write_i32(status, 4, byte_pointer(output))
   let output_length = write_i32(output_pointer, 8, byte_length(output))
@@ -1204,7 +1204,8 @@ fn success_record(output: bytes) -> i32 {
   let diagnostic_length = write_i32(diagnostic_pointer, 16, 0)
   let diagnostic_code = write_i32(diagnostic_length, 20, 0)
   let diagnostic_offset = write_i32(diagnostic_code, 24, 0)
-  return byte_pointer(diagnostic_offset)
+  let diagnostic_source_length = write_i32(diagnostic_offset, 28, 0)
+  return byte_pointer(diagnostic_source_length)
 }
 
 fn decimal_length(value: i32) -> i32 {
@@ -1299,7 +1300,7 @@ fn write_diagnostic_prefix(buffer: bytes, kind: i32) -> bytes {
   return buffer
 }
 
-fn diagnostic_record(kind: i32, offset: i32) -> i32 {
+fn diagnostic_record(source: bytes, kind: i32, offset: i32) -> i32 {
   let prefix_length = diagnostic_prefix_length(kind)
   let offset_length = decimal_length(offset)
   let diagnostic = allocate_bytes(prefix_length + 4 + offset_length)
@@ -1309,7 +1310,8 @@ fn diagnostic_record(kind: i32, offset: i32) -> i32 {
   byte_set(prefix_written, prefix_length + 2, 116)
   byte_set(prefix_written, prefix_length + 3, 32)
   let diagnostic_written = write_decimal(prefix_written, prefix_length + 4, offset)
-  let record = allocate_bytes(28)
+  let diagnostic_token = next_token(source, offset)
+  let record = allocate_bytes(32)
   let status = write_i32(record, 0, 1)
   let output_pointer = write_i32(status, 4, 0)
   let output_length = write_i32(output_pointer, 8, 0)
@@ -1317,7 +1319,8 @@ fn diagnostic_record(kind: i32, offset: i32) -> i32 {
   let diagnostic_length = write_i32(diagnostic_pointer, 16, byte_length(diagnostic_written))
   let diagnostic_code = write_i32(diagnostic_length, 20, kind)
   let diagnostic_offset = write_i32(diagnostic_code, 24, offset)
-  return byte_pointer(diagnostic_offset)
+  let diagnostic_source_length = write_i32(diagnostic_offset, 28, diagnostic_token.length)
+  return byte_pointer(diagnostic_source_length)
 }
 
 export fn compile(source: bytes) -> i32 {
@@ -1332,14 +1335,14 @@ export fn compile(source: bytes) -> i32 {
         if diagnostic.kind == 0 {
           output = multiple_function_module(source, table)
         } else {
-          return diagnostic_record(diagnostic.kind, diagnostic.offset)
+          return diagnostic_record(source, diagnostic.kind, diagnostic.offset)
         }
       }
     }
     return success_record(output)
   }
 
-  return diagnostic_record(1, program_error_offset(source))
+  return diagnostic_record(source, 1, program_error_offset(source))
 }
 ```
 
@@ -1348,7 +1351,7 @@ valid, empty Wasm module `00 61 73 6d 01 00 00 00`. `next_token()` skips ASCII
 whitespace and `//` comments, and distinguishes EOF, ASCII identifiers, integers, and symbols;
 identifier and integer tokens have their complete source range. The temporary
 `token_summary()` export is an integration-test probe. The `compile()` export
-returns a pointer to the 28-byte result record described in the Matra Program
+returns a pointer to the 32-byte result record described in the Matra Program
 specification. `parse_empty_program()` accepts an empty source or the minimal
 non-empty Program header form `module identifier { import identifier }` and maps
 it to an empty Wasm module. It also recognizes functions with integer literal,
