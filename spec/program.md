@@ -118,7 +118,7 @@ and ABI records.
 
 A compiler module exports `memory`, `alloc(size: i32) -> i32`, and
 `compile(source_pointer: i32, source_length: i32) -> i32`. Source is UTF-8.
-`compile` returns the pointer to a 24-byte result record in linear memory.
+`compile` returns the pointer to a 28-byte result record in linear memory.
 
 The bootstrap compiler implements this ABI. A successful compilation returns
 status `0` and a valid Wasm module. A failure returns status `1` and UTF-8
@@ -134,10 +134,13 @@ validation, or to the end of the source when an expected token is missing.
 | 12 | `diagnostic_pointer: i32` | UTF-8 diagnostic bytes on failure |
 | 16 | `diagnostic_length: i32` | Byte length of the diagnostic |
 | 20 | `diagnostic_code: i32` | Error category; `0` on success |
+| 24 | `diagnostic_offset: i32` | Error byte offset in the UTF-8 source |
 
 The bootstrap compiler uses diagnostic code `1` for parse errors, `2` for
 unknown functions, and `3` for argument count mismatches. A host can classify
 an error from this code without parsing the diagnostic text.
+The compiler reports positions as UTF-8 byte offsets. The host computes display
+line and column values from the source it retains.
 
 The host allocates and writes source bytes, calls `compile`, then reads the
 record and its referenced bytes. Memory remains valid until the next `compile`
