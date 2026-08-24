@@ -173,6 +173,21 @@ function getTrailingSlashRedirectScript(basePath: string): string {
   return `if(location.pathname!==${JSON.stringify(rootPath)}&&location.pathname.endsWith("/")){location.replace(location.pathname.slice(0,-1)+location.search+location.hash)}`
 }
 
+// GitHub Pages serves this for any unmatched path, including trailing-slash
+// requests to our flat .html routes (e.g. "/spec/"), which would otherwise 404.
+function getNotFoundPage(basePath: string): string {
+  return [
+    "<!DOCTYPE html>",
+    '<html lang="ja">',
+    "<head>",
+    '<meta charset="utf-8">',
+    `<script>${getTrailingSlashRedirectScript(basePath)}</script>`,
+    "</head>",
+    "<body></body>",
+    "</html>",
+  ].join("\n") + "\n"
+}
+
 function assertNoOutputCollisions(pagesDirAbs: string, filesAbs: string[]) {
   const seen = new Map<string, string>() // outRel -> inRel
   const collisions: Array<{ outRel: string; a: string; b: string }> = []
@@ -387,6 +402,8 @@ async function handler() {
     fs.writeFileSync(outputPath, htmlContent)
     console.log(`Generated HTML file at: ${outputPath}`)
   }))
+
+  fs.writeFileSync(path.join(outputDir, "404.html"), getNotFoundPage(basePath))
 
   const publicDir = path.join(process.cwd(), "src", "public")
   if (fs.existsSync(publicDir)) {
