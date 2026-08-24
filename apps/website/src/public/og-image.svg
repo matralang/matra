@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800" role="img" aria-labelledby="title description">
+  <title id="title">Matra</title>
+  <desc id="description">Structure first. Domain later.</desc>
+  <rect width="1280" height="800" fill="#101814"/>
+  <path d="M0 112H1280M0 688H1280" stroke="#d5e5dc" stroke-opacity=".2" stroke-width="2"/>
+  <path d="M160 0V800M1120 0V800" stroke="#d5e5dc" stroke-opacity=".12" stroke-width="2"/>
+  <text x="160" y="495" fill="#65cfa0" font-family="Manrope, sans-serif" font-size="340" font-weight="700" letter-spacing="0">M</text>
+  <text x="452" y="407" fill="#f3f7f4" font-family="Manrope, sans-serif" font-size="132" font-weight="700" letter-spacing="0">Matra</text>
+  <text x="460" y="475" fill="#b9c9bf" font-family="DM Mono, monospace" font-size="27" letter-spacing="0">STRUCTURE FIRST. DOMAIN LATER.</text>
+  <text x="160" y="654" fill="#65cfa0" font-family="DM Mono, monospace" font-size="24" letter-spacing="0">A language for structured documents</text>
+</svg>

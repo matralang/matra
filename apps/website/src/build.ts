@@ -64,6 +64,10 @@ const googleTagManagerHead = parse(`
 
 const sharedHeadNodes = parse(`
   $root {
+    link[rel="icon", href="/favicon.ico", sizes="any"];
+    link[rel="icon", href="/favicon.svg", type="image/svg+xml"];
+    meta[property="og:image", content="/og-image.png"];
+    meta[name="twitter:image", content="/og-image.png"];
     link[rel="preconnect", href="https://fonts.googleapis.com"];
     link[rel="preconnect", href="https://fonts.gstatic.com", crossorigin="anonymous"];
     link[href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap", rel="stylesheet"];
@@ -329,6 +333,11 @@ async function handler() {
     fs.writeFileSync(outputPath, htmlContent)
     console.log(`Generated HTML file at: ${outputPath}`)
   }))
+
+  const publicDir = path.join(process.cwd(), "src", "public")
+  if (fs.existsSync(publicDir)) {
+    fs.cpSync(publicDir, outputDir, { recursive: true })
+  }
 
   const assetsDir = path.join(outputDir, "assets")
   fs.mkdirSync(assetsDir, { recursive: true })
