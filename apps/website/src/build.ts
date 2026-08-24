@@ -158,10 +158,16 @@ function toOutputPath(pagesDirAbs: string, filePathAbs: string): string {
 }
 
 function toCanonicalUrl(outputPath: string): string {
-  const route = outputPath === "index.html"
+  const normalizedOutputPath = outputPath.split(path.sep).join("/")
+  const route = normalizedOutputPath === "index.html"
     ? "/"
-    : `/${outputPath.replace(/index\.html$/, "")}`
+    : `/${normalizedOutputPath.replace(/\/index\.html$/, "")}`
   return new URL(route, canonicalOrigin).href
+}
+
+function getTrailingSlashRedirectScript(basePath: string): string {
+  const rootPath = basePath ? `${basePath}/` : "/"
+  return `if(location.pathname!==${JSON.stringify(rootPath)}&&location.pathname.endsWith("/")){location.replace(location.pathname.slice(0,-1)+location.search+location.hash)}`
 }
 
 function assertNoOutputCollisions(pagesDirAbs: string, filesAbs: string[]) {
@@ -200,7 +206,25 @@ function hasNode(nodes: unknown[], tag: string, prop?: [string, string]): boolea
   )
 }
 
-function applySiteChrome(ast: ReturnType<typeof parse>, canonicalUrl: string) {
+function normalizeInternalLinks(ast: ReturnType<typeof parse>) {
+  const normalize = (nodes: unknown[]) => {
+    for (const node of nodes) {
+      if (!isNode(node)) continue
+      if (typeof node.props.href === "string" && node.props.href.startsWith("/")) {
+        const match = node.props.href.match(/^([^?#]*)(.*)$/)
+        const path = match?.[1] ?? node.props.href
+        const suffix = match?.[2] ?? ""
+        if (path !== "/") node.props.href = `${path.replace(/\/+$/, "")}${suffix}`
+      }
+      normalize(node.children)
+    }
+  }
+
+  normalize(ast.children)
+  return ast
+}
+
+function applySiteChrome(ast: ReturnType<typeof parse>, canonicalUrl: string, basePath: string) {
   const head = ast.children.find(node => isNode(node) && node.tag === "head")
   const body = ast.children.find(node => isNode(node) && node.tag === "body")
   if (!isNode(head) || !isNode(body)) return ast
@@ -217,6 +241,13 @@ function applySiteChrome(ast: ReturnType<typeof parse>, canonicalUrl: string) {
     head.children.push({ tag: "meta", props: { property: "og:url", content: canonicalUrl }, children: [] })
   }
   if (!hasNode(head.children, "script")) head.children.push(googleTagManagerHead)
+  if (!hasNode(head.children, "script", ["data-trailing-slash-redirect", "true"])) {
+    head.children.push({
+      tag: "script",
+      props: { "data-trailing-slash-redirect": "true" },
+      children: [getTrailingSlashRedirectScript(basePath)],
+    })
+  }
 
   if (!hasNode(body.children, "noscript")) body.children.unshift(googleTagManagerBody)
   if (!hasNode(body.children, "header")) {
@@ -231,13 +262,14 @@ function applySpecificationLayout(ast: ReturnType<typeof parse>, layout: PageMet
   if (layout !== "specification") return ast
 
   const body = ast.children.find(node => isNode(node) && node.tag === "body")
-  const main = body?.children.find(node => isNode(node) && node.tag === "main")
+  if (!isNode(body)) return ast
+  const main = body.children.find(node => isNode(node) && node.tag === "main")
   if (!isNode(main) || hasNode(main.children, "aside")) return ast
 
   const content = main.children.find(node =>
     isNode(node) && node.tag === "article" && node.props.class === "docs-content",
   )
-  if (!content) return ast
+  if (!isNode(content)) return ast
 
   main.children = [{
     tag: "div",
@@ -333,16 +365,20 @@ async function handler() {
       fs.mkdirSync(outDir, { recursive: true })
     }
 
-    const ast = applySpecificationLayout(
-      applySiteChrome(injectMarkdownCode(
-        parse(source, { sourceId: path.relative(process.cwd(), filePath) }),
-        markdown,
-        filePath,
-      ), toCanonicalUrl(outRel)),
+    const ast = normalizeInternalLinks(applySpecificationLayout(
+      applySiteChrome(
+        injectMarkdownCode(
+          parse(source, { sourceId: path.relative(process.cwd(), filePath) }),
+          markdown,
+          filePath,
+        ),
+        toCanonicalUrl(outRel),
+        basePath,
+      ),
       metadata?.layout ?? (path.relative(pagesDir, filePath).startsWith(`spec${path.sep}`)
         ? "specification"
         : "site"),
-    )
+    ))
     const htmlContent = `${DOCTYPE}\n${toHTML(ast, { basePath, pretty: true })}\n`
 
     fs.writeFileSync(outputPath, htmlContent)
