@@ -66,13 +66,15 @@ const sharedHeadNodes = parse(`
   $root {
     link[rel="icon", href="/favicon.ico", sizes="any"];
     link[rel="icon", href="/favicon.svg", type="image/svg+xml"];
-    meta[property="og:image", content="/og-image.png"];
-    meta[name="twitter:image", content="/og-image.png"];
+    meta[property="og:image", content="https://matralang.org/og-image.png"];
+    meta[name="twitter:image", content="https://matralang.org/og-image.png"];
     link[rel="preconnect", href="https://fonts.googleapis.com"];
     link[rel="preconnect", href="https://fonts.gstatic.com", crossorigin="anonymous"];
     link[href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap", rel="stylesheet"];
   }
 `).children
+
+const canonicalOrigin = "https://matralang.org"
 
 function getBasePath(): string {
   const raw = process.env.SITE_BASE_PATH?.trim() ?? ""
@@ -155,6 +157,13 @@ function toOutputPath(pagesDirAbs: string, filePathAbs: string): string {
   return path.join(noExt, "index.html")
 }
 
+function toCanonicalUrl(outputPath: string): string {
+  const route = outputPath === "index.html"
+    ? "/"
+    : `/${outputPath.replace(/index\.html$/, "")}`
+  return new URL(route, canonicalOrigin).href
+}
+
 function assertNoOutputCollisions(pagesDirAbs: string, filesAbs: string[]) {
   const seen = new Map<string, string>() // outRel -> inRel
   const collisions: Array<{ outRel: string; a: string; b: string }> = []
@@ -191,7 +200,7 @@ function hasNode(nodes: unknown[], tag: string, prop?: [string, string]): boolea
   )
 }
 
-function applySiteChrome(ast: ReturnType<typeof parse>) {
+function applySiteChrome(ast: ReturnType<typeof parse>, canonicalUrl: string) {
   const head = ast.children.find(node => isNode(node) && node.tag === "head")
   const body = ast.children.find(node => isNode(node) && node.tag === "body")
   if (!isNode(head) || !isNode(body)) return ast
@@ -200,6 +209,12 @@ function applySiteChrome(ast: ReturnType<typeof parse>) {
     if (isNode(node) && !hasNode(head.children, node.tag, ["href", String(node.props.href)])) {
       head.children.push(node)
     }
+  }
+  if (!hasNode(head.children, "link", ["rel", "canonical"])) {
+    head.children.push({ tag: "link", props: { rel: "canonical", href: canonicalUrl }, children: [] })
+  }
+  if (!hasNode(head.children, "meta", ["property", "og:url"])) {
+    head.children.push({ tag: "meta", props: { property: "og:url", content: canonicalUrl }, children: [] })
   }
   if (!hasNode(head.children, "script")) head.children.push(googleTagManagerHead)
 
@@ -323,7 +338,7 @@ async function handler() {
         parse(source, { sourceId: path.relative(process.cwd(), filePath) }),
         markdown,
         filePath,
-      )),
+      ), toCanonicalUrl(outRel)),
       metadata?.layout ?? (path.relative(pagesDir, filePath).startsWith(`spec${path.sep}`)
         ? "specification"
         : "site"),
