@@ -23,6 +23,12 @@ export default matra`
       meta[charset="UTF-8"];
       meta[name="viewport", content="width=device-width, initial-scale=1"];
       meta[name="description", content="Matraのparser、renderer、domain packageを一覧できます。"];
+      meta[property="og:type", content="website"];
+      meta[property="og:title", content="公式パッケージ — Matra"];
+      meta[property="og:description", content="Matraのparser、renderer、domain packageを一覧できます。"];
+      meta[name="twitter:card", content="summary_large_image"];
+      meta[name="twitter:title", content="公式パッケージ — Matra"];
+      meta[name="twitter:description", content="Matraのparser、renderer、domain packageを一覧できます。"];
       meta[name="theme-color", content="#101814"];
       title { "公式パッケージ — Matra" }
       link[rel="stylesheet", href="/app.css"];

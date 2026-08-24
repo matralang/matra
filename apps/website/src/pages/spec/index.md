@@ -26,9 +26,15 @@ export default matra`
     head {
       meta[charset="UTF-8"];
       meta[name="viewport", content="width=device-width, initial-scale=1"];
-      meta[name="description", content="Matra Specification v0.2 Index"];
+      meta[name="description", content="Matraのデータモデル、AST、文法、parserを定義する言語仕様です。"];
+      meta[property="og:type", content="website"];
+      meta[property="og:title", content="Matra Specification v0.2"];
+      meta[property="og:description", content="Matraのデータモデル、AST、文法、parserを定義する言語仕様です。"];
+      meta[name="twitter:card", content="summary_large_image"];
+      meta[name="twitter:title", content="Matra Specification v0.2"];
+      meta[name="twitter:description", content="Matraのデータモデル、AST、文法、parserを定義する言語仕様です。"];
       meta[name="theme-color", content="#101814"];
-      title { "Index — Matra Specification v0.2" }
+      title { "Matra Specification v0.2" }
       link[rel="stylesheet", href="/app.css"];
     }
     body {
