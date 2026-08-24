@@ -142,26 +142,29 @@ function toOutputPath(pagesDirAbs: string, filePathAbs: string): string {
   const rel = path.relative(pagesDirAbs, filePathAbs) // e.g. "about.md" or "about/index.md"
   const noExt = rel.replace(/\.md$/, "")
 
-  // "index" (root) -> "index.html"
+  // "index" (root) -> "index.html" (must stay a directory index for the site root)
   if (noExt === "index") {
     return "index.html"
   }
 
-  // ".../index" -> ".../index.html"
+  // ".../index" -> "....html"
+  // (e.g. "spec/index" -> "spec.html", so "/spec" resolves without a directory redirect)
   if (noExt.endsWith(`${path.sep}index`)) {
-    return noExt + ".html"
+    return `${noExt.slice(0, -`${path.sep}index`.length)}.html`
   }
 
-  // "about" -> "about/index.html"
-  // "blog/post" -> "blog/post/index.html"
-  return path.join(noExt, "index.html")
+  // Flat output avoids GitHub Pages' directory redirect (adding a trailing slash)
+  // that would otherwise fire for "about/index.html"-style output.
+  // "about" -> "about.html"
+  // "blog/post" -> "blog/post.html"
+  return `${noExt}.html`
 }
 
 function toCanonicalUrl(outputPath: string): string {
   const normalizedOutputPath = outputPath.split(path.sep).join("/")
   const route = normalizedOutputPath === "index.html"
     ? "/"
-    : `/${normalizedOutputPath.replace(/\/index\.html$/, "")}`
+    : `/${normalizedOutputPath.replace(/\.html$/, "")}`
   return new URL(route, canonicalOrigin).href
 }
 
