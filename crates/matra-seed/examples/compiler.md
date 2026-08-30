@@ -581,6 +581,56 @@ fn expression_end(source: bytes, operand: token) -> token {
   return current
 }
 
+fn parse_loop_conditional(source: bytes, offset: i32) -> function_definition {
+  let keyword = next_token(source, offset)
+  let called = next_token(source, keyword.start + keyword.length)
+  let call_open = next_token(source, called.start + called.length)
+  if is_symbol(source, call_open, 40) == 0 {
+    return function_definition(0, 0, 0, 0, offset, call_open.start, 4)
+  }
+  let argument = next_token(source, call_open.start + call_open.length)
+  while is_symbol(source, argument, 41) == 0 {
+    if argument.kind != 1 {
+      if argument.kind != 2 {
+        return function_definition(0, 0, 0, 0, offset, argument.start, 13)
+      }
+    }
+    let separator = next_token(source, argument.start + argument.length)
+    if is_symbol(source, separator, 44) == 1 {
+      argument = next_token(source, separator.start + separator.length)
+    } else {
+      argument = separator
+    }
+  }
+  let operator = next_token(source, argument.start + argument.length)
+  let right = next_token(source, operator.start + operator.length)
+  if is_symbol(source, right, 61) == 1 {
+    right = next_token(source, right.start + right.length)
+  }
+  if right.kind != 1 {
+    if right.kind != 2 {
+      return function_definition(0, 0, 0, 0, offset, right.start, 13)
+    }
+  }
+  let open = next_token(source, right.start + right.length)
+  if is_symbol(source, open, 123) == 0 {
+    return function_definition(0, 0, 0, 0, offset, open.start, 10)
+  }
+  let current = next_token(source, open.start + open.length)
+  while is_symbol(source, current, 125) == 0 {
+    if current.kind != 1 {
+      return function_definition(0, 0, 0, 0, offset, current.start, 2)
+    }
+    let equals = next_token(source, current.start + current.length)
+    if is_symbol(source, equals, 61) == 0 {
+      return function_definition(0, 0, 0, 0, offset, equals.start, 13)
+    }
+    let operand = next_token(source, equals.start + equals.length)
+    current = expression_end(source, operand)
+  }
+  return function_definition(1, 0, 0, 0, current.start + current.length, 0, 0)
+}
+
 fn parse_while_statement(source: bytes, offset: i32) -> function_definition {
   let keyword = next_token(source, offset)
   let left = next_token(source, keyword.start + keyword.length)
@@ -603,6 +653,13 @@ fn parse_while_statement(source: bytes, offset: i32) -> function_definition {
   }
   let current = next_token(source, open.start + open.length)
   while is_symbol(source, current, 125) == 0 {
+    if is_if_keyword(source, current) == 1 {
+      let conditional = parse_loop_conditional(source, current.start)
+      if conditional.status == 0 {
+        return conditional
+      }
+      current = next_token(source, conditional.position)
+    } else {
     let target = current
     if is_let_keyword(source, current) == 1 {
       target = next_token(source, current.start + current.length)
@@ -647,6 +704,7 @@ fn parse_while_statement(source: bytes, offset: i32) -> function_definition {
         }
         current = next_token(source, next_operand.start + next_operand.length)
       }
+    }
     }
   }
   return function_definition(1, 0, 0, 0, current.start + current.length, 0, 0)
@@ -1792,6 +1850,11 @@ fn while_statement_length(source: bytes, table: [i32], function: function_defini
   let current = next_token(source, open.start + open.length)
   let length = 12 + operand_length(source, function, left) + operand_length(source, function, right)
   while is_symbol(source, current, 125) == 0 {
+    if is_if_keyword(source, current) == 1 {
+      length = length + loop_conditional_length(source, table, function, current)
+      let conditional = parse_loop_conditional(source, current.start)
+      current = next_token(source, conditional.position)
+    } else {
     let target = current
     if is_let_keyword(source, current) == 1 {
       target = next_token(source, current.start + current.length)
@@ -1821,6 +1884,45 @@ fn while_statement_length(source: bytes, table: [i32], function: function_defini
       }
     }
     length = length + 1 + u32_leb_length(variable_index(source, function, target))
+    current = after_operand
+    }
+  }
+  return length
+}
+
+fn loop_conditional_length(source: bytes, table: [i32], function: function_definition, statement: token) -> i32 {
+  let called = next_token(source, statement.start + statement.length)
+  let call_open = next_token(source, called.start + called.length)
+  let argument = next_token(source, call_open.start + call_open.length)
+  let length = 5 + u32_leb_length(function_index_in_table(source, table, called))
+  while is_symbol(source, argument, 41) == 0 {
+    length = length + operand_length(source, function, argument)
+    let separator = next_token(source, argument.start + argument.length)
+    if is_symbol(source, separator, 44) == 1 {
+      argument = next_token(source, separator.start + separator.length)
+    } else {
+      argument = separator
+    }
+  }
+  let operator = next_token(source, argument.start + argument.length)
+  let right = next_token(source, operator.start + operator.length)
+  if is_symbol(source, right, 61) == 1 {
+    right = next_token(source, right.start + right.length)
+  }
+  length = length + operand_length(source, function, right)
+  let open = next_token(source, right.start + right.length)
+  let current = next_token(source, open.start + open.length)
+  while is_symbol(source, current, 125) == 0 {
+    let equals = next_token(source, current.start + current.length)
+    let operand = next_token(source, equals.start + equals.length)
+    length = length + operand_length(source, function, operand)
+    let after_operand = next_token(source, operand.start + operand.length)
+    while is_arithmetic_operator(source, after_operand) == 1 {
+      let next_operand = next_token(source, after_operand.start + after_operand.length)
+      length = length + operand_length(source, function, next_operand) + 1
+      after_operand = next_token(source, next_operand.start + next_operand.length)
+    }
+    length = length + 1 + u32_leb_length(variable_index(source, function, current))
     current = after_operand
   }
   return length
@@ -1893,6 +1995,11 @@ fn write_while_statement(buffer: bytes, index: i32, source: bytes, table: [i32],
   position = position + 4
   let current = next_token(source, open.start + open.length)
   while is_symbol(source, current, 125) == 0 {
+    if is_if_keyword(source, current) == 1 {
+      position = write_loop_conditional(buffer, position, source, table, function, current)
+      let conditional = parse_loop_conditional(source, current.start)
+      current = next_token(source, conditional.position)
+    } else {
     let target = current
     if is_let_keyword(source, current) == 1 {
       target = next_token(source, current.start + current.length)
@@ -1933,12 +2040,68 @@ fn write_while_statement(buffer: bytes, index: i32, source: bytes, table: [i32],
     let target_index = variable_index(source, function, target)
     let target_written = write_u32_leb(buffer, position, target_index)
     position = position + u32_leb_length(target_index)
+    }
   }
   byte_set(buffer, position, 12)
   byte_set(buffer, position + 1, 0)
   byte_set(buffer, position + 2, 11)
   byte_set(buffer, position + 3, 11)
   return position + 4
+}
+
+fn write_loop_conditional(buffer: bytes, index: i32, source: bytes, table: [i32], function: function_definition, statement: token) -> i32 {
+  let position = index
+  let called = next_token(source, statement.start + statement.length)
+  let call_open = next_token(source, called.start + called.length)
+  let argument = next_token(source, call_open.start + call_open.length)
+  while is_symbol(source, argument, 41) == 0 {
+    position = write_operand(buffer, position, source, function, argument)
+    let separator = next_token(source, argument.start + argument.length)
+    if is_symbol(source, separator, 44) == 1 {
+      argument = next_token(source, separator.start + separator.length)
+    } else {
+      argument = separator
+    }
+  }
+  byte_set(buffer, position, 16)
+  position = position + 1
+  let called_index = function_index_in_table(source, table, called)
+  let call_written = write_u32_leb(buffer, position, called_index)
+  position = position + u32_leb_length(called_index)
+  let operator = next_token(source, argument.start + argument.length)
+  let right = next_token(source, operator.start + operator.length)
+  if is_symbol(source, right, 61) == 1 {
+    right = next_token(source, right.start + right.length)
+  }
+  position = write_operand(buffer, position, source, function, right)
+  byte_set(buffer, position, comparison_opcode(source, operator))
+  byte_set(buffer, position + 1, 4)
+  byte_set(buffer, position + 2, 64)
+  position = position + 3
+  let open = next_token(source, right.start + right.length)
+  let current = next_token(source, open.start + open.length)
+  while is_symbol(source, current, 125) == 0 {
+    let target = current
+    let equals = next_token(source, target.start + target.length)
+    let operand = next_token(source, equals.start + equals.length)
+    position = write_operand(buffer, position, source, function, operand)
+    current = next_token(source, operand.start + operand.length)
+    while is_arithmetic_operator(source, current) == 1 {
+      let arithmetic = current
+      let next_operand = next_token(source, arithmetic.start + arithmetic.length)
+      position = write_operand(buffer, position, source, function, next_operand)
+      byte_set(buffer, position, arithmetic_opcode(source, arithmetic))
+      position = position + 1
+      current = next_token(source, next_operand.start + next_operand.length)
+    }
+    byte_set(buffer, position, 33)
+    position = position + 1
+    let target_index = variable_index(source, function, target)
+    let target_written = write_u32_leb(buffer, position, target_index)
+    position = position + u32_leb_length(target_index)
+  }
+  byte_set(buffer, position, 11)
+  return position + 1
 }
 
 fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], function: function_definition) -> bytes {
