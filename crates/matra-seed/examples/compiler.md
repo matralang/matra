@@ -640,6 +640,10 @@ fn expression_end(source: bytes, operand: token) -> token {
   while is_arithmetic_operator(source, current) == 1 {
     let next_operand = next_token(source, current.start + current.length)
     current = next_token(source, next_operand.start + next_operand.length)
+    if is_symbol(source, current, 46) == 1 {
+      let next_field = next_token(source, current.start + current.length)
+      current = next_token(source, next_field.start + next_field.length)
+    }
   }
   return current
 }
@@ -891,7 +895,31 @@ fn parse_while_statement(source: bytes, offset: i32) -> function_definition {
       return function_definition(0, 0, 0, 0, offset, right.start, 13)
     }
   }
-  let open = next_token(source, right.start + right.length)
+  let right_end = next_token(source, right.start + right.length)
+  if is_symbol(source, right_end, 46) == 1 {
+    let right_field = next_token(source, right_end.start + right_end.length)
+    if right_field.kind != 1 {
+      return function_definition(0, 0, 0, 0, offset, right_field.start, 2)
+    }
+    right_end = next_token(source, right_field.start + right_field.length)
+  }
+  while is_arithmetic_operator(source, right_end) == 1 {
+    let right_arithmetic_operand = next_token(source, right_end.start + right_end.length)
+    if right_arithmetic_operand.kind != 1 {
+      if right_arithmetic_operand.kind != 2 {
+        return function_definition(0, 0, 0, 0, offset, right_arithmetic_operand.start, 13)
+      }
+    }
+    right_end = next_token(source, right_arithmetic_operand.start + right_arithmetic_operand.length)
+    if is_symbol(source, right_end, 46) == 1 {
+      let right_arithmetic_field = next_token(source, right_end.start + right_end.length)
+      if right_arithmetic_field.kind != 1 {
+        return function_definition(0, 0, 0, 0, offset, right_arithmetic_field.start, 2)
+      }
+      right_end = next_token(source, right_arithmetic_field.start + right_arithmetic_field.length)
+    }
+  }
+  let open = right_end
   if is_symbol(source, open, 123) == 0 {
     return function_definition(0, 0, 0, 0, offset, open.start, 10)
   }
@@ -1738,7 +1766,7 @@ fn local_count_of(source: bytes, function: function_definition) -> i32 {
     let left = next_token(source, current.start + current.length)
     let operator = next_token(source, left.start + left.length)
     let right = next_token(source, operator.start + operator.length)
-    let open = next_token(source, right.start + right.length)
+    let open = expression_end(source, right)
     current = next_token(source, open.start + open.length)
     while is_symbol(source, current, 125) == 0 {
       if is_if_keyword(source, current) == 1 {
@@ -1816,7 +1844,7 @@ fn variable_index(source: bytes, function: function_definition, target: token) -
     let left = next_token(source, current.start + current.length)
     let operator = next_token(source, left.start + left.length)
     let right = next_token(source, operator.start + operator.length)
-    let open = next_token(source, right.start + right.length)
+    let open = expression_end(source, right)
     current = next_token(source, open.start + open.length)
     while is_symbol(source, current, 125) == 0 {
       if is_if_keyword(source, current) == 1 {
@@ -2537,9 +2565,27 @@ fn while_statement_length(source: bytes, table: [i32], function: function_defini
   let left = next_token(source, statement.start + statement.length)
   let operator = next_token(source, left.start + left.length)
   let right = next_token(source, operator.start + operator.length)
-  let open = next_token(source, right.start + right.length)
-  let current = next_token(source, open.start + open.length)
   let length = 12 + operand_length(source, function, left) + operand_length(source, function, right)
+  let right_end = next_token(source, right.start + right.length)
+  if is_symbol(source, right_end, 46) == 1 {
+    let right_field = next_token(source, right_end.start + right_end.length)
+    let right_field_index = local_struct_field_index(source, table, function, right, right_field)
+    length = length + 2 + u32_leb_length(right_field_index * 4)
+    right_end = next_token(source, right_field.start + right_field.length)
+  }
+  while is_arithmetic_operator(source, right_end) == 1 {
+    let right_arithmetic_operand = next_token(source, right_end.start + right_end.length)
+    length = length + operand_length(source, function, right_arithmetic_operand) + 1
+    right_end = next_token(source, right_arithmetic_operand.start + right_arithmetic_operand.length)
+    if is_symbol(source, right_end, 46) == 1 {
+      let right_arithmetic_field = next_token(source, right_end.start + right_end.length)
+      let right_arithmetic_field_index = local_struct_field_index(source, table, function, right_arithmetic_operand, right_arithmetic_field)
+      length = length + 2 + u32_leb_length(right_arithmetic_field_index * 4)
+      right_end = next_token(source, right_arithmetic_field.start + right_arithmetic_field.length)
+    }
+  }
+  let open = right_end
+  let current = next_token(source, open.start + open.length)
   while is_symbol(source, current, 125) == 0 {
     if is_if_keyword(source, current) == 1 {
       let conditional_left = next_token(source, current.start + current.length)
@@ -3035,7 +3081,7 @@ fn write_while_statement(buffer: bytes, index: i32, source: bytes, table: [i32],
   let left = next_token(source, statement.start + statement.length)
   let operator = next_token(source, left.start + left.length)
   let right = next_token(source, operator.start + operator.length)
-  let open = next_token(source, right.start + right.length)
+  let right_end = next_token(source, right.start + right.length)
   byte_set(buffer, position, 2)
   byte_set(buffer, position + 1, 64)
   byte_set(buffer, position + 2, 3)
@@ -3043,11 +3089,40 @@ fn write_while_statement(buffer: bytes, index: i32, source: bytes, table: [i32],
   position = position + 4
   position = write_operand(buffer, position, source, function, left)
   position = write_operand(buffer, position, source, function, right)
+  if is_symbol(source, right_end, 46) == 1 {
+    let right_field = next_token(source, right_end.start + right_end.length)
+    let right_field_index = local_struct_field_index(source, table, function, right, right_field)
+    byte_set(buffer, position, 40)
+    byte_set(buffer, position + 1, 2)
+    position = position + 2
+    let right_field_offset_written = write_u32_leb(buffer, position, right_field_index * 4)
+    position = position + u32_leb_length(right_field_index * 4)
+    right_end = next_token(source, right_field.start + right_field.length)
+  }
+  while is_arithmetic_operator(source, right_end) == 1 {
+    let right_arithmetic = right_end
+    let right_arithmetic_operand = next_token(source, right_arithmetic.start + right_arithmetic.length)
+    position = write_operand(buffer, position, source, function, right_arithmetic_operand)
+    right_end = next_token(source, right_arithmetic_operand.start + right_arithmetic_operand.length)
+    if is_symbol(source, right_end, 46) == 1 {
+      let right_arithmetic_field = next_token(source, right_end.start + right_end.length)
+      let right_arithmetic_field_index = local_struct_field_index(source, table, function, right_arithmetic_operand, right_arithmetic_field)
+      byte_set(buffer, position, 40)
+      byte_set(buffer, position + 1, 2)
+      position = position + 2
+      let right_arithmetic_field_offset_written = write_u32_leb(buffer, position, right_arithmetic_field_index * 4)
+      position = position + u32_leb_length(right_arithmetic_field_index * 4)
+      right_end = next_token(source, right_arithmetic_field.start + right_arithmetic_field.length)
+    }
+    byte_set(buffer, position, arithmetic_opcode(source, right_arithmetic))
+    position = position + 1
+  }
   byte_set(buffer, position, comparison_opcode(source, operator))
   byte_set(buffer, position + 1, 69)
   byte_set(buffer, position + 2, 13)
   byte_set(buffer, position + 3, 1)
   position = position + 4
+  let open = right_end
   let current = next_token(source, open.start + open.length)
   while is_symbol(source, current, 125) == 0 {
     if is_if_keyword(source, current) == 1 {
