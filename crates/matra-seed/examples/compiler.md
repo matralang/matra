@@ -725,8 +725,13 @@ fn parse_loop_conditional(source: bytes, offset: i32) -> function_definition {
 fn parse_loop_local_conditional(source: bytes, offset: i32) -> function_definition {
   let keyword = next_token(source, offset)
   let left = next_token(source, keyword.start + keyword.length)
-  let operator = next_token(source, left.start + left.length)
+  let left_operator = next_token(source, left.start + left.length)
+  let operator = left_operator
   let right = next_token(source, operator.start + operator.length)
+  if is_arithmetic_operator(source, left_operator) == 1 {
+    operator = next_token(source, right.start + right.length)
+    right = next_token(source, operator.start + operator.length)
+  }
   if is_symbol(source, right, 61) == 1 {
     right = next_token(source, right.start + right.length)
   }
@@ -740,10 +745,26 @@ fn parse_loop_local_conditional(source: bytes, offset: i32) -> function_definiti
     return function_definition(0, 0, 0, 0, offset, open.start, 10)
   }
   let statement = next_token(source, open.start + open.length)
-  if is_break_keyword(source, statement) == 0 {
-    return function_definition(0, 0, 0, 0, offset, statement.start, 2)
+  let close = statement
+  if is_break_keyword(source, statement) == 1 {
+    close = next_token(source, statement.start + statement.length)
+  } else {
+    if is_if_keyword(source, statement) == 0 {
+      return function_definition(0, 0, 0, 0, offset, statement.start, 2)
+    }
+    let nested_left = next_token(source, statement.start + statement.length)
+    let nested_open = next_token(source, nested_left.start + nested_left.length)
+    let nested = function_definition(0, 0, 0, 0, statement.start, 0, 0)
+    if is_symbol(source, nested_open, 40) == 1 {
+      nested = parse_loop_conditional(source, statement.start)
+    } else {
+      nested = parse_loop_local_conditional(source, statement.start)
+    }
+    if nested.status == 0 {
+      return nested
+    }
+    close = next_token(source, nested.position)
   }
-  let close = next_token(source, statement.start + statement.length)
   if is_symbol(source, close, 125) == 0 {
     return function_definition(0, 0, 0, 0, offset, close.start, 15)
   }
@@ -2008,7 +2029,7 @@ fn while_statement_length(source: bytes, table: [i32], function: function_defini
         length = length + loop_conditional_length(source, table, function, current)
         conditional = parse_loop_conditional(source, current.start)
       } else {
-        length = length + loop_local_conditional_length(source, function, current)
+        length = length + loop_local_conditional_length(source, table, function, current)
         conditional = parse_loop_local_conditional(source, current.start)
       }
       current = next_token(source, conditional.position)
@@ -2079,7 +2100,7 @@ fn loop_conditional_length(source: bytes, table: [i32], function: function_defin
         length = length + loop_conditional_length(source, table, function, current)
         nested = parse_loop_conditional(source, current.start)
       } else {
-        length = length + loop_local_conditional_length(source, function, current)
+        length = length + loop_local_conditional_length(source, table, function, current)
         nested = parse_loop_local_conditional(source, current.start)
       }
       current = next_token(source, nested.position)
@@ -2111,7 +2132,7 @@ fn loop_conditional_length(source: bytes, table: [i32], function: function_defin
           length = length + loop_conditional_length(source, table, function, else_statement)
           else_nested = parse_loop_conditional(source, else_statement.start)
         } else {
-          length = length + loop_local_conditional_length(source, function, else_statement)
+          length = length + loop_local_conditional_length(source, table, function, else_statement)
           else_nested = parse_loop_local_conditional(source, else_statement.start)
         }
         else_statement = next_token(source, else_nested.position)
@@ -2133,14 +2154,33 @@ fn loop_conditional_length(source: bytes, table: [i32], function: function_defin
   return length
 }
 
-fn loop_local_conditional_length(source: bytes, function: function_definition, statement: token) -> i32 {
+fn loop_local_conditional_length(source: bytes, table: [i32], function: function_definition, statement: token) -> i32 {
   let left = next_token(source, statement.start + statement.length)
-  let operator = next_token(source, left.start + left.length)
+  let left_operator = next_token(source, left.start + left.length)
+  let operator = left_operator
   let right = next_token(source, operator.start + operator.length)
+  let length = operand_length(source, function, left) + 6
+  if is_arithmetic_operator(source, left_operator) == 1 {
+    length = length + operand_length(source, function, right) + 1
+    operator = next_token(source, right.start + right.length)
+    right = next_token(source, operator.start + operator.length)
+  }
   if is_symbol(source, right, 61) == 1 {
     right = next_token(source, right.start + right.length)
   }
-  return operand_length(source, function, left) + operand_length(source, function, right) + 6
+  length = length + operand_length(source, function, right)
+  let open = next_token(source, right.start + right.length)
+  let nested_statement = next_token(source, open.start + open.length)
+  if is_if_keyword(source, nested_statement) == 1 {
+    let nested_left = next_token(source, nested_statement.start + nested_statement.length)
+    let nested_open = next_token(source, nested_left.start + nested_left.length)
+    length = length - 2
+    if is_symbol(source, nested_open, 40) == 1 {
+      return length + loop_conditional_length(source, table, function, nested_statement)
+    }
+    return length + loop_local_conditional_length(source, table, function, nested_statement)
+  }
+  return length
 }
 
 fn local_body_length(source: bytes, table: [i32], function: function_definition) -> i32 {
@@ -2218,7 +2258,7 @@ fn write_while_statement(buffer: bytes, index: i32, source: bytes, table: [i32],
         position = write_loop_conditional(buffer, position, source, table, function, current)
         conditional = parse_loop_conditional(source, current.start)
       } else {
-        position = write_loop_local_conditional(buffer, position, source, function, current, 2)
+        position = write_loop_local_conditional(buffer, position, source, table, function, current, 2)
         conditional = parse_loop_local_conditional(source, current.start)
       }
       current = next_token(source, conditional.position)
@@ -2312,7 +2352,7 @@ fn write_loop_conditional(buffer: bytes, index: i32, source: bytes, table: [i32]
         position = write_loop_conditional(buffer, position, source, table, function, current)
         nested = parse_loop_conditional(source, current.start)
       } else {
-        position = write_loop_local_conditional(buffer, position, source, function, current, 3)
+        position = write_loop_local_conditional(buffer, position, source, table, function, current, 3)
         nested = parse_loop_local_conditional(source, current.start)
       }
       current = next_token(source, nested.position)
@@ -2352,7 +2392,7 @@ fn write_loop_conditional(buffer: bytes, index: i32, source: bytes, table: [i32]
           position = write_loop_conditional(buffer, position, source, table, function, else_statement)
           else_nested = parse_loop_conditional(source, else_statement.start)
         } else {
-          position = write_loop_local_conditional(buffer, position, source, function, else_statement, 3)
+          position = write_loop_local_conditional(buffer, position, source, table, function, else_statement, 3)
           else_nested = parse_loop_local_conditional(source, else_statement.start)
         }
         else_statement = next_token(source, else_nested.position)
@@ -2382,23 +2422,45 @@ fn write_loop_conditional(buffer: bytes, index: i32, source: bytes, table: [i32]
   return position + 1
 }
 
-fn write_loop_local_conditional(buffer: bytes, index: i32, source: bytes, function: function_definition, statement: token, break_depth: i32) -> i32 {
+fn write_loop_local_conditional(buffer: bytes, index: i32, source: bytes, table: [i32], function: function_definition, statement: token, break_depth: i32) -> i32 {
   let position = index
   let left = next_token(source, statement.start + statement.length)
-  let operator = next_token(source, left.start + left.length)
+  let left_operator = next_token(source, left.start + left.length)
+  let operator = left_operator
   let right = next_token(source, operator.start + operator.length)
+  position = write_operand(buffer, position, source, function, left)
+  if is_arithmetic_operator(source, left_operator) == 1 {
+    position = write_operand(buffer, position, source, function, right)
+    byte_set(buffer, position, arithmetic_opcode(source, left_operator))
+    position = position + 1
+    operator = next_token(source, right.start + right.length)
+    right = next_token(source, operator.start + operator.length)
+  }
   if is_symbol(source, right, 61) == 1 {
     right = next_token(source, right.start + right.length)
   }
-  position = write_operand(buffer, position, source, function, left)
   position = write_operand(buffer, position, source, function, right)
   byte_set(buffer, position, comparison_opcode(source, operator))
   byte_set(buffer, position + 1, 4)
   byte_set(buffer, position + 2, 64)
-  byte_set(buffer, position + 3, 12)
-  byte_set(buffer, position + 4, break_depth)
-  byte_set(buffer, position + 5, 11)
-  return position + 6
+  position = position + 3
+  let open = next_token(source, right.start + right.length)
+  let nested_statement = next_token(source, open.start + open.length)
+  if is_if_keyword(source, nested_statement) == 1 {
+    let nested_left = next_token(source, nested_statement.start + nested_statement.length)
+    let nested_open = next_token(source, nested_left.start + nested_left.length)
+    if is_symbol(source, nested_open, 40) == 1 {
+      position = write_loop_conditional(buffer, position, source, table, function, nested_statement)
+    } else {
+      position = write_loop_local_conditional(buffer, position, source, table, function, nested_statement, break_depth + 1)
+    }
+  } else {
+    byte_set(buffer, position, 12)
+    byte_set(buffer, position + 1, break_depth)
+    position = position + 2
+  }
+  byte_set(buffer, position, 11)
+  return position + 1
 }
 
 fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], function: function_definition) -> bytes {
