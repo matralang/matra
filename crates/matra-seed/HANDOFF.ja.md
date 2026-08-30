@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの70行目で停止 |
+| stage-2 | stage-1 | compiler sourceの71行目で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,15 +21,16 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:70:3: parse error: expected return
-   while position < source_length {
-   ^^^^^
+examples/compiler.md:71:9: parse error: expected integer
+      let value = byte_at(source, position)
+            ^^^^^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
 comparison `if` chain、nested `if`、複数parameter、`bytes` input、struct constructor returnもcompileできる。
-local declaration、四則演算、local return、1引数のlocal initializer callもcompileできる。現在は`while`を
-受理しないため停止する。compiler sourceは`bytes` return、array、assignment、`while`、
+local declaration、四則演算、local return、1引数のlocal initializer call、basic `while`とassignmentも
+compileできる。現在はloop body内のlocal call initializerを受理しないため停止する。compiler sourceは
+`bytes` return、array、nested loop body、
 `break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
 
 ## 検証済みの資産
@@ -98,10 +99,13 @@ diagnosticは68行目のlocal declarationへ進んだ。
 1引数のfunction callをlocal initializerとして追加した。`identity(value)`の結果をlocalへ格納して返す実行testが
 成功し、最初のdiagnosticは70行目の`while`へ進んだ。
 
+local同士のcomparisonを条件とするbasic `while`と、loop body内のlocal assignmentを追加した。localを5まで
+incrementして返す実行testが成功し、最初のdiagnosticは71行目のloop内local call initializerへ進んだ。
+
 ## 次の実装単位
 
-compiler sourceの出現順に`while`と`break`をparserとWasm emitterへ追加する。
-その後はassignment、`bytes` returnと複数function call ABI、array、memory組み込みを進める。
+compiler sourceの出現順にloop body内のlocal declarationとcall initializer、nested `if`、`break`を追加する。
+その後は`bytes` returnと複数function call ABI、array、memory組み込みを進める。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
 ## Stage-3進捗
@@ -116,8 +120,8 @@ stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検�
 - [ ] `bytes` returnと複数function call ABIを実装する
 - [x] `i32` local declarationとarithmeticを実装する
 - [x] 1引数のlocal initializer callを実装する
-- [ ] assignmentを実装する
-- [ ] `while`、`break`を実装する
+- [x] basic `while`とlocal assignmentを実装する
+- [ ] loop bodyのlocal declaration、nested `if`、`break`を実装する
 - [ ] arrayと組み込みmemory操作を実装する
 - [ ] stage-1からstage-2を生成する
 - [ ] stage-2からstage-3を生成する
