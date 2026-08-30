@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの138行目で停止 |
+| stage-2 | stage-1 | compiler sourceの139行目で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,9 +21,9 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:138:44: parse error: expected i32
-fn is_module_keyword(source: bytes, value: token) -> i32 {
-                                                                ^^^^^
+examples/compiler.md:139:6: parse error: expected value
+   if value.length != 6 {
+       ^^^^^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
@@ -35,7 +35,8 @@ conditionalの`else`もcompileできる。function bodyではwhile後のconditio
 call-result conditional、そのbodyのassignmentと`while`、call argument内nested callもcompileできる。
 constructor return argument内の算術、local initializer callのliteral argumentを含む複数argument、
 functionごとの複数parameter call ABIもcompileできる。local bodyの最終returnにある算術式を
-含むlocal struct field accessもcompileできる。struct型parameterを受理しないため停止する。
+含むlocal struct field accessとstruct型parameterもcompileできる。現在はconditional左辺のstruct field
+accessを受理しないため停止する。
 compiler sourceは`bytes` return、array、nested loop body、
 `break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
 
@@ -167,9 +168,12 @@ parameter slot数から生成するようにした。2引数callの実行testが
 local initializer callの返却struct型からfield offsetを解決し、local struct pointerへの`i32.load`と後続算術を
 追加した。multiple-function moduleにもstruct constructor bodyとmemoryを追加し、最初のdiagnosticは138行目へ進んだ。
 
+定義済みstruct型をfunction parameterとして許可し、pointerを1つの`i32` slotとして扱うようにした。
+struct pointerを受け取って返す実行testが成功し、最初のdiagnosticは139行目へ進んだ。
+
 ## 次の実装単位
 
-compiler sourceの出現順にstruct型parameterを追加する。
+compiler sourceの出現順にconditional左辺のstruct field accessを追加する。
 その後は`bytes` returnと複数function call ABI、array、memory組み込みを進める。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
@@ -206,7 +210,8 @@ stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検�
 - [x] local initializer callの複数argumentとliteral argumentを実装する
 - [x] multiple-function moduleの複数parameter call ABIを実装する
 - [x] local bodyのlocal struct field accessと最終return算術を実装する
-- [ ] struct型parameterを実装する
+- [x] struct型parameterを実装する
+- [ ] conditional左辺のstruct field accessを実装する
 - [ ] arrayと組み込みmemory操作を実装する
 - [ ] stage-1からstage-2を生成する
 - [ ] stage-2からstage-3を生成する

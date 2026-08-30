@@ -12,8 +12,8 @@ Matra ProgramをWebAssemblyへcompileするRust製seed compilerと、Matraで記
 - stage-1によるcompiler自身のcompileは未達である
 
 self-host検証はstage-1、stage-2、stage-3の順にcompiler sourceをcompileし、stage-2とstage-3の
-byte一致を判定する。現在はcompiler sourceの最初のstruct型parameterでstage-2が停止するため、commandは
-exit code `1`を返す。
+byte一致を判定する。現在はcompiler sourceの最初のconditional左辺struct field accessでstage-2が停止するため、
+commandはexit code `1`を返す。
 
 ```text
 pnpm bootstrap:verify

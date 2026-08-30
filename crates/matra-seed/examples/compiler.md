@@ -1263,7 +1263,9 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
       let parameter_type = next_token(source, colon.start + colon.length)
       if is_i32_type(source, parameter_type) == 0 {
         if is_bytes_type(source, parameter_type) == 0 {
-          return function_definition(0, 0, 0, 0, offset, parameter_type.start, 7)
+          if struct_field_count(source, parameter_type) < 0 {
+            return function_definition(0, 0, 0, 0, offset, parameter_type.start, 7)
+          }
         }
       }
       close = next_token(source, parameter_type.start + parameter_type.length)
