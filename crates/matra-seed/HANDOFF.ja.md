@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの74行目で停止 |
+| stage-2 | stage-1 | compiler sourceの75行目で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,15 +21,16 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:74:12: parse error: expected integer
-   } else {
-         ^
+examples/compiler.md:75:10: parse error: expected integer
+     if value == 47 {
+       ^^^^^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
 comparison `if` chain、nested `if`、複数parameter、`bytes` input、struct constructor returnもcompileできる。
 local declaration、四則演算、local return、1引数のlocal initializer call、basic `while`とassignment、
-loop内local call、call result comparisonもcompileできる。現在はloop内conditionalの`else`を受理しないため停止する。
+loop内local call、call result comparisonと`else`もcompileできる。現在はloop内のlocal comparisonを条件とする
+nested `if`を受理しないため停止する。
 compiler sourceは`bytes` return、array、nested loop body、
 `break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
 
@@ -108,9 +109,13 @@ loop body内のlocal declarationをWasm local countとindexへ含め、call init
 loop body内でfunction callのresultを比較するconditionalとassignment bodyを追加した。条件の偽・真を通る
 実行testが成功し、最初のdiagnosticは74行目の`else`へ進んだ。
 
+loop conditionalの`else`とassignment bodyを追加した。thenとelseの両branchを通る実行testが成功し、最初の
+diagnosticは75行目のlocal comparisonを条件とするnested `if`へ進んだ。併せてloop helperのindentationを
+block階層どおりに修正した。
+
 ## 次の実装単位
 
-compiler sourceの出現順にloop内conditionalの`else`、nested `if`、`break`を追加する。
+compiler sourceの出現順にloop内のlocal comparison conditional、さらにnested `if`と`break`を追加する。
 その後は`bytes` returnと複数function call ABI、array、memory組み込みを進める。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
@@ -129,7 +134,8 @@ stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検�
 - [x] basic `while`とlocal assignmentを実装する
 - [x] loop bodyのlocal declarationとcall initializerを実装する
 - [x] loop bodyのcall result comparisonを実装する
-- [ ] loop内conditionalの`else`、nested `if`、`break`を実装する
+- [x] loop内conditionalの`else`を実装する
+- [ ] loop内local comparison、nested `if`、`break`を実装する
 - [ ] arrayと組み込みmemory操作を実装する
 - [ ] stage-1からstage-2を生成する
 - [ ] stage-2からstage-3を生成する
