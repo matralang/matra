@@ -7,12 +7,12 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 
 ## 現在の到達点
 
-2026-08-23時点の状態は次のとおりである。
+2026-08-30時点の状態は次のとおりである。
 
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの3行目で停止 |
+| stage-2 | stage-1 | compiler sourceの43行目で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,15 +21,15 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:3:1: parse error: expected fn
-struct token {
-^^^^^^
+examples/compiler.md:43:5: parse error: expected return
+   if value <= 90 {
+   ^^
 ```
 
-これはstage-1 parserがtop-level `struct`を受理しないためである。`struct`だけを追加してもself-hostは
-完成しない。compiler sourceは複数parameter、`bytes`、struct、array、local、assignment、arithmetic、
-comparison、`if`、`while`、`break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次
-実装する必要がある。
+stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
+flatなcomparison `if` chainと複数の`return`もcompileできる。現在はnested `if`を受理しないため停止する。
+compiler sourceは複数parameter、`bytes`、array、local、assignment、arithmetic、nested `if`、`while`、
+`break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
 
 ## 検証済みの資産
 
@@ -71,15 +71,36 @@ comparison、`if`、`while`、`break`、組み込みmemory操作を使用して�
 
 5. 関連testとlintが成功した単位で独立commitする。
 
+## 完了した実装単位
+
+top-level `struct` declarationをstage-1 parserへ追加し、literal constructorのfield readをfunction tableの
+body kindとして保持する実装を追加した。`pair(20, 22).right`を返す最小Programの実行testが成功し、
+`bootstrap:verify`の最初のdiagnosticは3行目の`struct`から26行目の`if`へ進んだ。
+
+parameterとinteger literalのcomparisonを条件とするflat `if` chainと複数の`return`を追加した。6種類の
+comparisonを含む最小Programの実行testが成功し、最初のdiagnosticは43行目のnested `if`へ進んだ。
+
 ## 次の実装単位
 
-top-level `struct` declarationをstage-1 parserへ追加し、field情報を保持できるtable表現を決める。安価な
-完了条件は、`bootstrap:verify`の最初のdiagnosticが3行目の`struct`より後へ進むことである。ただし実装は
-parser受理だけで終わらせず、struct constructorとfield readを含む最小ProgramをWasmへcompile・実行する
-testまでを一単位とする。
+compiler sourceの出現順にnested `if`をparserとWasm emitterへ追加する。最小Programの分岐結果を実行testで
+検証し、`bootstrap:verify`の停止位置を次の未対応構文へ進める。その後は複数parameterと`bytes`、localと
+assignment、`while`と`break`、array、memory組み込みを進める。stage-2が生成できた時点でstage-3生成と
+byte一致が自動的に検証される。
 
-その後はcompiler sourceの出現順を基準に、複数parameterと`bytes`、control flow、localとassignment、array、
-memory組み込みを進める。stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
+## Stage-3進捗
+
+- [x] Rust seedから再現可能なstage-1を生成する
+- [x] stage-1で単純なfunction、parameter、callをcompileする
+- [x] top-level `struct`、literal constructor、field readを実装する
+- [x] comparison、flat `if` chain、複数の`return`を実装する
+- [ ] nested `if`を実装する
+- [ ] 複数parameterと`bytes`を実装する
+- [ ] local、assignment、arithmeticを実装する
+- [ ] `while`、`break`を実装する
+- [ ] arrayと組み込みmemory操作を実装する
+- [ ] stage-1からstage-2を生成する
+- [ ] stage-2からstage-3を生成する
+- [ ] stage-2とstage-3のbyte一致を検証する
 
 ## 運用上の判断
 
