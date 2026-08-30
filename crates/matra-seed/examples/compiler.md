@@ -801,6 +801,38 @@ fn parse_loop_local_conditional(source: bytes, offset: i32) -> function_definiti
   if is_symbol(source, close, 125) == 0 {
     return function_definition(0, 0, 0, 0, offset, close.start, 15)
   }
+  let after_then = next_token(source, close.start + close.length)
+  if is_else_keyword(source, after_then) == 1 {
+    let else_open = next_token(source, after_then.start + after_then.length)
+    if is_symbol(source, else_open, 123) == 0 {
+      return function_definition(0, 0, 0, 0, offset, else_open.start, 10)
+    }
+    let else_statement = next_token(source, else_open.start + else_open.length)
+    let else_close = else_statement
+    if is_break_keyword(source, else_statement) == 1 {
+      else_close = next_token(source, else_statement.start + else_statement.length)
+    } else {
+      if is_if_keyword(source, else_statement) == 0 {
+        return function_definition(0, 0, 0, 0, offset, else_statement.start, 2)
+      }
+      let else_nested_left = next_token(source, else_statement.start + else_statement.length)
+      let else_nested_open = next_token(source, else_nested_left.start + else_nested_left.length)
+      let else_nested = function_definition(0, 0, 0, 0, else_statement.start, 0, 0)
+      if is_symbol(source, else_nested_open, 40) == 1 {
+        else_nested = parse_loop_conditional(source, else_statement.start)
+      } else {
+        else_nested = parse_loop_local_conditional(source, else_statement.start)
+      }
+      if else_nested.status == 0 {
+        return else_nested
+      }
+      else_close = next_token(source, else_nested.position)
+    }
+    if is_symbol(source, else_close, 125) == 0 {
+      return function_definition(0, 0, 0, 0, offset, else_close.start, 15)
+    }
+    return function_definition(1, 0, 0, 0, else_close.start + else_close.length, 0, 0)
+  }
   return function_definition(1, 0, 0, 0, close.start + close.length, 0, 0)
 }
 
@@ -2231,14 +2263,35 @@ fn loop_local_conditional_length(source: bytes, table: [i32], function: function
   length = length + operand_length(source, function, right)
   let open = next_token(source, right.start + right.length)
   let nested_statement = next_token(source, open.start + open.length)
+  let then_close = next_token(source, nested_statement.start + nested_statement.length)
   if is_if_keyword(source, nested_statement) == 1 {
     let nested_left = next_token(source, nested_statement.start + nested_statement.length)
     let nested_open = next_token(source, nested_left.start + nested_left.length)
     length = length - 2
     if is_symbol(source, nested_open, 40) == 1 {
-      return length + loop_conditional_length(source, table, function, nested_statement)
+      length = length + loop_conditional_length(source, table, function, nested_statement)
+      let call_nested = parse_loop_conditional(source, nested_statement.start)
+      then_close = next_token(source, call_nested.position)
+    } else {
+      length = length + loop_local_conditional_length(source, table, function, nested_statement)
+      let local_nested = parse_loop_local_conditional(source, nested_statement.start)
+      then_close = next_token(source, local_nested.position)
     }
-    return length + loop_local_conditional_length(source, table, function, nested_statement)
+  }
+  let after_then = next_token(source, then_close.start + then_close.length)
+  if is_else_keyword(source, after_then) == 1 {
+    length = length + 1
+    let else_open = next_token(source, after_then.start + after_then.length)
+    let else_statement = next_token(source, else_open.start + else_open.length)
+    if is_if_keyword(source, else_statement) == 1 {
+      let else_nested_left = next_token(source, else_statement.start + else_statement.length)
+      let else_nested_open = next_token(source, else_nested_left.start + else_nested_left.length)
+      if is_symbol(source, else_nested_open, 40) == 1 {
+        return length + loop_conditional_length(source, table, function, else_statement)
+      }
+      return length + loop_local_conditional_length(source, table, function, else_statement)
+    }
+    return length + 2
   }
   return length
 }
@@ -2540,18 +2593,43 @@ fn write_loop_local_conditional(buffer: bytes, index: i32, source: bytes, table:
   position = position + 3
   let open = next_token(source, right.start + right.length)
   let nested_statement = next_token(source, open.start + open.length)
+  let then_close = next_token(source, nested_statement.start + nested_statement.length)
   if is_if_keyword(source, nested_statement) == 1 {
     let nested_left = next_token(source, nested_statement.start + nested_statement.length)
     let nested_open = next_token(source, nested_left.start + nested_left.length)
     if is_symbol(source, nested_open, 40) == 1 {
       position = write_loop_conditional(buffer, position, source, table, function, nested_statement, break_depth + 1)
+      let call_nested = parse_loop_conditional(source, nested_statement.start)
+      then_close = next_token(source, call_nested.position)
     } else {
       position = write_loop_local_conditional(buffer, position, source, table, function, nested_statement, break_depth + 1)
+      let local_nested = parse_loop_local_conditional(source, nested_statement.start)
+      then_close = next_token(source, local_nested.position)
     }
   } else {
     byte_set(buffer, position, 12)
     byte_set(buffer, position + 1, break_depth)
     position = position + 2
+  }
+  let after_then = next_token(source, then_close.start + then_close.length)
+  if is_else_keyword(source, after_then) == 1 {
+    byte_set(buffer, position, 5)
+    position = position + 1
+    let else_open = next_token(source, after_then.start + after_then.length)
+    let else_statement = next_token(source, else_open.start + else_open.length)
+    if is_if_keyword(source, else_statement) == 1 {
+      let else_nested_left = next_token(source, else_statement.start + else_statement.length)
+      let else_nested_open = next_token(source, else_nested_left.start + else_nested_left.length)
+      if is_symbol(source, else_nested_open, 40) == 1 {
+        position = write_loop_conditional(buffer, position, source, table, function, else_statement, break_depth + 1)
+      } else {
+        position = write_loop_local_conditional(buffer, position, source, table, function, else_statement, break_depth + 1)
+      }
+    } else {
+      byte_set(buffer, position, 12)
+      byte_set(buffer, position + 1, break_depth)
+      position = position + 2
+    }
   }
   byte_set(buffer, position, 11)
   return position + 1
