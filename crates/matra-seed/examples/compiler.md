@@ -1429,7 +1429,7 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
     return parse_local_body(source, returned.start, name)
   }
   if is_if_keyword(source, returned) == 1 {
-    return parse_conditional_body(source, returned.start, name, parameter)
+    return parse_local_body(source, returned.start, name)
   }
   if is_return_keyword(source, returned) == 0 {
     return function_definition(0, 0, 0, 0, offset, returned.start, 11)
@@ -1749,7 +1749,7 @@ fn function_body_kind_of(source: bytes, function: function_definition) -> i32 {
     return 6
   }
   if is_if_keyword(source, first) == 1 {
-    return 4
+    return 6
   }
   let value = returned_value_token(source, function)
   if is_symbol(source, value, 45) == 1 {
@@ -2990,7 +2990,11 @@ fn local_return_conditional_length(source: bytes, table: [i32], function: functi
 fn local_body_length(source: bytes, table: [i32], function: function_definition) -> i32 {
   let current = function_body_first_token(source, function)
   let local_index = function_parameter_count_of(source, function)
-  let length = 2 + u32_leb_length(local_count_of(source, function))
+  let local_count = local_count_of(source, function)
+  let length = 1
+  if local_count > 0 {
+    length = 2 + u32_leb_length(local_count)
+  }
   while is_let_keyword(source, current) == 1 {
     let name = next_token(source, current.start + current.length)
     let equals = next_token(source, name.start + name.length)
@@ -3676,12 +3680,17 @@ fn write_local_return_conditional(buffer: bytes, index: i32, source: bytes, tabl
 fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], function: function_definition) -> bytes {
   let position = index
   let local_count = local_count_of(source, function)
-  byte_set(buffer, position, 1)
-  position = position + 1
-  let count_written = write_u32_leb(buffer, position, local_count)
-  position = position + u32_leb_length(local_count)
-  byte_set(count_written, position, 127)
-  position = position + 1
+  if local_count > 0 {
+    byte_set(buffer, position, 1)
+    position = position + 1
+    let count_written = write_u32_leb(buffer, position, local_count)
+    position = position + u32_leb_length(local_count)
+    byte_set(count_written, position, 127)
+    position = position + 1
+  } else {
+    byte_set(buffer, position, 0)
+    position = position + 1
+  }
   let current = function_body_first_token(source, function)
   let local_index = function_parameter_count_of(source, function)
   while is_let_keyword(source, current) == 1 {
