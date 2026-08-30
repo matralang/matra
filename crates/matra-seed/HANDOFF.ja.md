@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの68行目で停止 |
+| stage-2 | stage-1 | compiler sourceの69行目で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,16 +21,16 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:68:3: parse error: expected return
-   let position = offset
-   ^^^
+examples/compiler.md:69:34: parse error: expected return
+   let source_length = byte_length(source)
+                                                 ^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
 comparison `if` chain、nested `if`、複数parameter、`bytes` input、struct constructor returnもcompileできる。
-現在はlocal declarationを受理しないため停止する。compiler sourceは`bytes` return、array、local、
-assignment、arithmetic、`while`、`break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次
-実装する必要がある。
+local declaration、四則演算、local returnもcompileできる。現在はlocal initializer内のfunction callを受理
+しないため停止する。compiler sourceは`bytes` return、array、call initializer、assignment、`while`、
+`break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
 
 ## 検証済みの資産
 
@@ -92,10 +92,13 @@ struct return typeとliteral constructor returnを追加した。constructorは1
 生成し、fieldを4-byte間隔で格納してpointerを返す。返却pointerから2 fieldを読む実行testが成功し、最初の
 diagnosticは68行目のlocal declarationへ進んだ。
 
+`i32` local declaration、parameter/literal/local operandの四則演算、local returnを追加した。
+`value * 2 + 2`をlocalへ格納して返す実行testが成功し、最初のdiagnosticは69行目のcall initializerへ進んだ。
+
 ## 次の実装単位
 
-compiler sourceの出現順にlocal declarationとassignment、arithmeticをparser、function table、Wasm emitterへ
-追加する。その後は`bytes` returnと複数function call ABI、`while`と`break`、array、memory組み込みを進める。
+compiler sourceの出現順にlocal initializer内のfunction callをparser、function table、Wasm emitterへ追加する。
+その後はassignment、`bytes` returnと複数function call ABI、`while`と`break`、array、memory組み込みを進める。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
 ## Stage-3進捗
@@ -108,7 +111,8 @@ stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検�
 - [x] 複数parameterと`bytes` input ABIを実装する
 - [x] struct return typeとliteral constructor returnを実装する
 - [ ] `bytes` returnと複数function call ABIを実装する
-- [ ] local、assignment、arithmeticを実装する
+- [x] `i32` local declarationとarithmeticを実装する
+- [ ] local initializer callとassignmentを実装する
 - [ ] `while`、`break`を実装する
 - [ ] arrayと組み込みmemory操作を実装する
 - [ ] stage-1からstage-2を生成する

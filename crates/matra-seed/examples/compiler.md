@@ -289,6 +289,22 @@ fn is_if_keyword(source: bytes, value: token) -> i32 {
   return 1
 }
 
+fn is_let_keyword(source: bytes, value: token) -> i32 {
+  if value.length != 3 {
+    return 0
+  }
+  if byte_at(source, value.start) != 108 {
+    return 0
+  }
+  if byte_at(source, value.start + 1) != 101 {
+    return 0
+  }
+  if byte_at(source, value.start + 2) != 116 {
+    return 0
+  }
+  return 1
+}
+
 fn is_i32_type(source: bytes, value: token) -> i32 {
   if value.length != 3 {
     return 0
@@ -509,6 +525,61 @@ fn parse_conditional_body(source: bytes, offset: i32, name: token, parameter: to
   return function_definition(1, name.start, name.length, read_small_integer(source, final_value), close_body.start + close_body.length, 0, 0)
 }
 
+fn is_arithmetic_operator(source: bytes, value: token) -> i32 {
+  if is_symbol(source, value, 43) == 1 {
+    return 1
+  }
+  if is_symbol(source, value, 45) == 1 {
+    return 1
+  }
+  if is_symbol(source, value, 42) == 1 {
+    return 1
+  }
+  return is_symbol(source, value, 47)
+}
+
+fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definition {
+  let current = next_token(source, offset)
+  while is_let_keyword(source, current) == 1 {
+    let local_name = next_token(source, current.start + current.length)
+    if local_name.kind != 1 {
+      return function_definition(0, 0, 0, 0, offset, local_name.start, 2)
+    }
+    let equals = next_token(source, local_name.start + local_name.length)
+    if is_symbol(source, equals, 61) == 0 {
+      return function_definition(0, 0, 0, 0, offset, equals.start, 13)
+    }
+    let operand = next_token(source, equals.start + equals.length)
+    if operand.kind != 1 {
+      if operand.kind != 2 {
+        return function_definition(0, 0, 0, 0, offset, operand.start, 13)
+      }
+    }
+    current = next_token(source, operand.start + operand.length)
+    while is_arithmetic_operator(source, current) == 1 {
+      let next_operand = next_token(source, current.start + current.length)
+      if next_operand.kind != 1 {
+        if next_operand.kind != 2 {
+          return function_definition(0, 0, 0, 0, offset, next_operand.start, 13)
+        }
+      }
+      current = next_token(source, next_operand.start + next_operand.length)
+    }
+  }
+  if is_return_keyword(source, current) == 0 {
+    return function_definition(0, 0, 0, 0, offset, current.start, 11)
+  }
+  let returned = next_token(source, current.start + current.length)
+  if returned.kind != 1 {
+    return function_definition(0, 0, 0, 0, offset, returned.start, 12)
+  }
+  let close = next_token(source, returned.start + returned.length)
+  if is_symbol(source, close, 125) == 0 {
+    return function_definition(0, 0, 0, 0, offset, close.start, 15)
+  }
+  return function_definition(1, name.start, name.length, 0, close.start + close.length, 0, 0)
+}
+
 fn parse_function(source: bytes, offset: i32) -> function_definition {
   let keyword = next_token(source, offset)
   if is_export_keyword(source, keyword) == 1 {
@@ -575,6 +646,9 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
     return function_definition(0, 0, 0, 0, offset, open_body.start, 10)
   }
   let returned = next_token(source, open_body.start + open_body.length)
+  if is_let_keyword(source, returned) == 1 {
+    return parse_local_body(source, returned.start, name)
+  }
   if is_if_keyword(source, returned) == 1 {
     return parse_conditional_body(source, returned.start, name, parameter)
   }
@@ -881,6 +955,9 @@ fn function_body_first_token(source: bytes, function: function_definition) -> to
 
 fn function_body_kind_of(source: bytes, function: function_definition) -> i32 {
   let first = function_body_first_token(source, function)
+  if is_let_keyword(source, first) == 1 {
+    return 6
+  }
   if is_if_keyword(source, first) == 1 {
     return 4
   }
@@ -907,6 +984,47 @@ fn function_body_kind_of(source: bytes, function: function_definition) -> i32 {
     return 2
   }
   return 1
+}
+
+fn local_count_of(source: bytes, function: function_definition) -> i32 {
+  let current = function_body_first_token(source, function)
+  let count = 0
+  while is_let_keyword(source, current) == 1 {
+    let name = next_token(source, current.start + current.length)
+    let equals = next_token(source, name.start + name.length)
+    let operand = next_token(source, equals.start + equals.length)
+    current = next_token(source, operand.start + operand.length)
+    while is_arithmetic_operator(source, current) == 1 {
+      let next_operand = next_token(source, current.start + current.length)
+      current = next_token(source, next_operand.start + next_operand.length)
+    }
+    count = count + 1
+  }
+  return count
+}
+
+fn variable_index(source: bytes, function: function_definition, target: token) -> i32 {
+  let parameter_index = returned_parameter_index(source, function, target)
+  if parameter_index >= 0 {
+    return parameter_index
+  }
+  let current = function_body_first_token(source, function)
+  let index = function_parameter_count_of(source, function)
+  while is_let_keyword(source, current) == 1 {
+    let name = next_token(source, current.start + current.length)
+    if same_token(source, name, target) == 1 {
+      return index
+    }
+    let equals = next_token(source, name.start + name.length)
+    let operand = next_token(source, equals.start + equals.length)
+    current = next_token(source, operand.start + operand.length)
+    while is_arithmetic_operator(source, current) == 1 {
+      let next_operand = next_token(source, current.start + current.length)
+      current = next_token(source, next_operand.start + next_operand.length)
+    }
+    index = index + 1
+  }
+  return -1
 }
 
 fn struct_field_index(source: bytes, struct_name: token, field_name: token) -> i32 {
@@ -1103,6 +1221,9 @@ fn function_table(source: bytes) -> [i32] {
         }
         if body_kind == 5 {
           body_value = struct_field_count(source, returned_value_token(source, function))
+        }
+        if body_kind == 6 {
+          body_value = local_count_of(source, function)
         }
         array_set(table, count * 7 + 1, function.name_start)
         array_set(table, count * 7 + 2, function.name_length)
@@ -1461,6 +1582,103 @@ fn write_struct_constructor_body(buffer: bytes, index: i32, source: bytes, funct
   return buffer
 }
 
+fn arithmetic_opcode(source: bytes, operator: token) -> i32 {
+  let value = byte_at(source, operator.start)
+  if value == 43 {
+    return 106
+  }
+  if value == 45 {
+    return 107
+  }
+  if value == 42 {
+    return 108
+  }
+  return 109
+}
+
+fn operand_length(source: bytes, function: function_definition, operand: token) -> i32 {
+  if operand.kind == 2 {
+    return 1 + i32_leb_length(read_small_integer(source, operand))
+  }
+  return 1 + u32_leb_length(variable_index(source, function, operand))
+}
+
+fn local_body_length(source: bytes, function: function_definition) -> i32 {
+  let current = function_body_first_token(source, function)
+  let local_index = function_parameter_count_of(source, function)
+  let length = 2 + u32_leb_length(local_count_of(source, function))
+  while is_let_keyword(source, current) == 1 {
+    let name = next_token(source, current.start + current.length)
+    let equals = next_token(source, name.start + name.length)
+    let operand = next_token(source, equals.start + equals.length)
+    length = length + operand_length(source, function, operand)
+    current = next_token(source, operand.start + operand.length)
+    while is_arithmetic_operator(source, current) == 1 {
+      let next_operand = next_token(source, current.start + current.length)
+      length = length + operand_length(source, function, next_operand) + 1
+      current = next_token(source, next_operand.start + next_operand.length)
+    }
+    length = length + 1 + u32_leb_length(local_index)
+    local_index = local_index + 1
+  }
+  let returned = next_token(source, current.start + current.length)
+  return length + 2 + u32_leb_length(variable_index(source, function, returned))
+}
+
+fn write_operand(buffer: bytes, index: i32, source: bytes, function: function_definition, operand: token) -> i32 {
+  if operand.kind == 2 {
+    byte_set(buffer, index, 65)
+    let value = read_small_integer(source, operand)
+    let integer_written = write_i32_leb(buffer, index + 1, value)
+    return index + 1 + i32_leb_length(value)
+  }
+  byte_set(buffer, index, 32)
+  let variable = variable_index(source, function, operand)
+  let variable_written = write_u32_leb(buffer, index + 1, variable)
+  return index + 1 + u32_leb_length(variable)
+}
+
+fn write_local_body(buffer: bytes, index: i32, source: bytes, function: function_definition) -> bytes {
+  let position = index
+  let local_count = local_count_of(source, function)
+  byte_set(buffer, position, 1)
+  position = position + 1
+  let count_written = write_u32_leb(buffer, position, local_count)
+  position = position + u32_leb_length(local_count)
+  byte_set(count_written, position, 127)
+  position = position + 1
+  let current = function_body_first_token(source, function)
+  let local_index = function_parameter_count_of(source, function)
+  while is_let_keyword(source, current) == 1 {
+    let name = next_token(source, current.start + current.length)
+    let equals = next_token(source, name.start + name.length)
+    let operand = next_token(source, equals.start + equals.length)
+    position = write_operand(buffer, position, source, function, operand)
+    current = next_token(source, operand.start + operand.length)
+    while is_arithmetic_operator(source, current) == 1 {
+      let operator = current
+      let next_operand = next_token(source, operator.start + operator.length)
+      position = write_operand(buffer, position, source, function, next_operand)
+      byte_set(buffer, position, arithmetic_opcode(source, operator))
+      position = position + 1
+      current = next_token(source, next_operand.start + next_operand.length)
+    }
+    byte_set(buffer, position, 33)
+    position = position + 1
+    let local_written = write_u32_leb(buffer, position, local_index)
+    position = position + u32_leb_length(local_index)
+    local_index = local_index + 1
+  }
+  let returned = next_token(source, current.start + current.length)
+  byte_set(buffer, position, 32)
+  position = position + 1
+  let returned_index = variable_index(source, function, returned)
+  let returned_written = write_u32_leb(buffer, position, returned_index)
+  position = position + u32_leb_length(returned_index)
+  byte_set(returned_written, position, 11)
+  return buffer
+}
+
 fn single_function_module(source: bytes, table: [i32]) -> bytes {
   let name_start = array_get(table, 1)
   let name_length = array_get(table, 2)
@@ -1479,6 +1697,9 @@ fn single_function_module(source: bytes, table: [i32]) -> bytes {
   }
   if body_kind == 5 {
     body_length = struct_constructor_body_length(source, first_function(source))
+  }
+  if body_kind == 6 {
+    body_length = local_body_length(source, first_function(source))
   }
   let code_payload_length = 1 + u32_leb_length(body_length) + body_length
   let memory_section_length = 0
@@ -1580,6 +1801,9 @@ fn single_function_module(source: bytes, table: [i32]) -> bytes {
   if body_kind == 5 {
     return write_struct_constructor_body(output, position, source, first_function(source))
   }
+  if body_kind == 6 {
+    return write_local_body(output, position, source, first_function(source))
+  }
   byte_set(body_length_written, position, 0)
   position = position + 1
   if body_kind == 1 {
@@ -1627,6 +1851,9 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
     }
     if sized_body_kind == 4 {
       body_length = conditional_body_length(source, function_at_index(source, index))
+    }
+    if sized_body_kind == 6 {
+      body_length = local_body_length(source, function_at_index(source, index))
     }
     code_payload_length = code_payload_length + u32_leb_length(body_length) + body_length
     index = index + 1
@@ -1728,8 +1955,15 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
     if body_kind == 4 {
       emitted_body_length = conditional_body_length(source, function_at_index(source, index))
     }
+    if body_kind == 6 {
+      emitted_body_length = local_body_length(source, function_at_index(source, index))
+    }
     let body_length_written = write_u32_leb(code_count_written, position, emitted_body_length)
     position = position + u32_leb_length(emitted_body_length)
+    if body_kind == 6 {
+      let local_written = write_local_body(output, position, source, function_at_index(source, index))
+      position = position + emitted_body_length
+    } else {
     if body_kind == 4 {
       let conditional_written = write_conditional_body(output, position, source, function_at_index(source, index))
       position = position + emitted_body_length
@@ -1792,6 +2026,7 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
         byte_set(written, position, 11)
         position = position + 1
       }
+    }
     }
     }
     index = index + 1
