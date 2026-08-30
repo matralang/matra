@@ -929,6 +929,23 @@ fn parse_local_return_conditional(source: bytes, offset: i32) -> function_defini
     return function_definition(0, 0, 0, 0, offset, left.start, 13)
   }
   let operator = next_token(source, left.start + left.length)
+  if is_symbol(source, operator, 40) == 1 {
+    let condition_argument = next_token(source, operator.start + operator.length)
+    while is_symbol(source, condition_argument, 41) == 0 {
+      if condition_argument.kind != 1 {
+        if condition_argument.kind != 2 {
+          return function_definition(0, 0, 0, 0, offset, condition_argument.start, 13)
+        }
+      }
+      let condition_separator = next_token(source, condition_argument.start + condition_argument.length)
+      if is_symbol(source, condition_separator, 44) == 1 {
+        condition_argument = next_token(source, condition_separator.start + condition_separator.length)
+      } else {
+        condition_argument = condition_separator
+      }
+    }
+    operator = next_token(source, condition_argument.start + condition_argument.length)
+  }
   let right = next_token(source, operator.start + operator.length)
   if is_symbol(source, right, 61) == 1 {
     right = next_token(source, right.start + right.length)
@@ -2446,11 +2463,28 @@ fn loop_local_conditional_length(source: bytes, table: [i32], function: function
 fn local_return_conditional_length(source: bytes, table: [i32], function: function_definition, statement: token) -> i32 {
   let left = next_token(source, statement.start + statement.length)
   let operator = next_token(source, left.start + left.length)
+  let length = 5
+  if is_symbol(source, operator, 40) == 1 {
+    let condition_argument = next_token(source, operator.start + operator.length)
+    while is_symbol(source, condition_argument, 41) == 0 {
+      length = length + operand_length(source, function, condition_argument)
+      let condition_separator = next_token(source, condition_argument.start + condition_argument.length)
+      if is_symbol(source, condition_separator, 44) == 1 {
+        condition_argument = next_token(source, condition_separator.start + condition_separator.length)
+      } else {
+        condition_argument = condition_separator
+      }
+    }
+    length = length + 1 + u32_leb_length(function_index_in_table(source, table, left))
+    operator = next_token(source, condition_argument.start + condition_argument.length)
+  } else {
+    length = length + operand_length(source, function, left)
+  }
   let right = next_token(source, operator.start + operator.length)
   if is_symbol(source, right, 61) == 1 {
     right = next_token(source, right.start + right.length)
   }
-  let length = operand_length(source, function, left) + operand_length(source, function, right) + 5
+  length = length + operand_length(source, function, right)
   let open = next_token(source, right.start + right.length)
   let returned = next_token(source, open.start + open.length)
   let value = next_token(source, returned.start + returned.length)
@@ -2856,11 +2890,30 @@ fn write_local_return_conditional(buffer: bytes, index: i32, source: bytes, tabl
   let position = index
   let left = next_token(source, statement.start + statement.length)
   let operator = next_token(source, left.start + left.length)
+  if is_symbol(source, operator, 40) == 1 {
+    let condition_argument = next_token(source, operator.start + operator.length)
+    while is_symbol(source, condition_argument, 41) == 0 {
+      position = write_operand(buffer, position, source, function, condition_argument)
+      let condition_separator = next_token(source, condition_argument.start + condition_argument.length)
+      if is_symbol(source, condition_separator, 44) == 1 {
+        condition_argument = next_token(source, condition_separator.start + condition_separator.length)
+      } else {
+        condition_argument = condition_separator
+      }
+    }
+    byte_set(buffer, position, 16)
+    position = position + 1
+    let condition_called_index = function_index_in_table(source, table, left)
+    let condition_call_written = write_u32_leb(buffer, position, condition_called_index)
+    position = position + u32_leb_length(condition_called_index)
+    operator = next_token(source, condition_argument.start + condition_argument.length)
+  } else {
+    position = write_operand(buffer, position, source, function, left)
+  }
   let right = next_token(source, operator.start + operator.length)
   if is_symbol(source, right, 61) == 1 {
     right = next_token(source, right.start + right.length)
   }
-  position = write_operand(buffer, position, source, function, left)
   position = write_operand(buffer, position, source, function, right)
   byte_set(buffer, position, comparison_opcode(source, operator))
   byte_set(buffer, position + 1, 4)
