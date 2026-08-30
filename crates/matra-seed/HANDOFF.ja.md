@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの105行目で停止 |
+| stage-2 | stage-1 | compiler sourceの115行目で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,21 +21,19 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:105:31: parse error: expected integer
-   if is_identifier(byte_at(source, position)) == 1 {
-               ^
+examples/compiler.md:115:37: parse error: expected integer
+   return token(1, start, position - start)
+                           ^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
 comparison `if` chain、nested `if`、複数parameter、`bytes` input、struct constructor returnもcompileできる。
 local declaration、四則演算、local return、1引数のlocal initializer call、basic `while`とassignment、
 loop内local call、call result comparisonと`else`もcompileできる。現在はloop内のlocal comparisonを条件とする
-nested `if`と`break`、左辺算術付きcomparison、call argument内の算術もcompileできる。現在はnested
-`while`とloop local conditionalの`else`もcompileできる。現在はwhile後のconditional statementを
-function bodyとしてcompileでき、conditional後のlocal declarationもcompileできる。現在はそのlocal
-initializerにあるcallと後続のlocal conditionalもcompileできる。現在はfunction bodyのcall-result conditionalを
-compileでき、そのbodyのassignmentもcompileできる。現在はconditional body内の`while`を受理しないため
-compileできる。現在はnested callをcall argumentとして受理しないため停止する。
+nested `if`と`break`、左辺算術付きcomparison、call argument内の算術、nested `while`、loop local
+conditionalの`else`もcompileできる。function bodyではwhile後のconditional、後続local declarationとcall、
+call-result conditional、そのbodyのassignmentと`while`、call argument内nested callもcompileできる。
+現在はconstructor return argument内の算術を受理しないため停止する。
 compiler sourceは`bytes` return、array、nested loop body、
 `break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
 
@@ -155,9 +153,12 @@ early returnする実行testが成功し、最初のdiagnosticは104行目のcon
 local return conditional bodyから既存のwhile parser・length・writerをdispatchするようにした。conditional内whileの
 実行testが成功し、最初のdiagnosticは105行目のnested call argumentへ進んだ。
 
+local return conditionalとloop conditionalのcall argumentに1段nested callを追加した。inner callからouter callへ
+値を渡す実行testが成功し、最初のdiagnosticは115行目のconstructor return argument内算術へ進んだ。
+
 ## 次の実装単位
 
-compiler sourceの出現順にcall argument内のnested callを追加する。
+compiler sourceの出現順にconstructor return argument内の算術を追加する。
 その後は`bytes` returnと複数function call ABI、array、memory組み込みを進める。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
@@ -189,7 +190,8 @@ stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検�
 - [x] function bodyのcall-result conditionalを実装する
 - [x] function-body conditionalのassignmentを実装する
 - [x] function-body conditional内の`while`を実装する
-- [ ] call argument内のnested callを実装する
+- [x] call argument内のnested callを実装する
+- [ ] constructor return argument内の算術を実装する
 - [ ] arrayと組み込みmemory操作を実装する
 - [ ] stage-1からstage-2を生成する
 - [ ] stage-2からstage-3を生成する
