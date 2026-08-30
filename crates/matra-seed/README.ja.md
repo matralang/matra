@@ -12,7 +12,7 @@ Matra ProgramをWebAssemblyへcompileするRust製seed compilerと、Matraで記
 - stage-1によるcompiler自身のcompileは未達である
 
 self-host検証はstage-1、stage-2、stage-3の順にcompiler sourceをcompileし、stage-2とstage-3の
-byte一致を判定する。現在はcompiler sourceの最初のwhile後のconditional statementでstage-2が停止するため、
+byte一致を判定する。現在はcompiler sourceの最初のconditional後のlocal declarationでstage-2が停止するため、
 commandはexit code `1`を返す。
 
 ```text
