@@ -392,6 +392,38 @@ fn parse_struct(source: bytes, offset: i32) -> function_definition {
   return function_definition(1, name.start, name.length, 0, field.start + field.length, 0, 0)
 }
 
+fn struct_field_count(source: bytes, struct_name: token) -> i32 {
+  let module_keyword = next_token(source, 0)
+  let module_name = next_token(source, module_keyword.start + module_keyword.length)
+  let position = module_name.start + module_name.length
+  while position < byte_length(source) {
+    let keyword = next_token(source, position)
+    if is_import_keyword(source, keyword) == 1 {
+      let imported = next_token(source, keyword.start + keyword.length)
+      position = imported.start + imported.length
+    } else {
+      if is_struct_keyword(source, keyword) == 0 {
+        return -1
+      }
+      let name = next_token(source, keyword.start + keyword.length)
+      let open = next_token(source, name.start + name.length)
+      let field = next_token(source, open.start + open.length)
+      let count = 0
+      while is_symbol(source, field, 125) == 0 {
+        count = count + 1
+        let colon = next_token(source, field.start + field.length)
+        let field_type = next_token(source, colon.start + colon.length)
+        field = next_token(source, field_type.start + field_type.length)
+      }
+      if same_token(source, name, struct_name) == 1 {
+        return count
+      }
+      position = field.start + field.length
+    }
+  }
+  return -1
+}
+
 fn parse_conditional_statement(source: bytes, offset: i32, parameter: token) -> function_definition {
     let keyword = next_token(source, offset)
     let left = next_token(source, keyword.start + keyword.length)
@@ -532,7 +564,11 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
   }
   let result_type = next_token(source, arrow.start + arrow.length)
   if is_i32_type(source, result_type) == 0 {
-    return function_definition(0, 0, 0, 0, offset, result_type.start, 7)
+    if is_bytes_type(source, result_type) == 0 {
+      if struct_field_count(source, result_type) < 0 {
+        return function_definition(0, 0, 0, 0, offset, result_type.start, 7)
+      }
+    }
   }
   let open_body = next_token(source, result_type.start + result_type.length)
   if is_symbol(source, open_body, 123) == 0 {
@@ -865,6 +901,9 @@ fn function_body_kind_of(source: bytes, function: function_definition) -> i32 {
     if is_symbol(source, after_call, 46) == 1 {
       return 3
     }
+    if struct_field_count(source, value) >= 0 {
+      return 5
+    }
     return 2
   }
   return 1
@@ -1061,6 +1100,9 @@ fn function_table(source: bytes) -> [i32] {
         }
         if body_kind == 3 {
           body_value = struct_field_value_of(source, function)
+        }
+        if body_kind == 5 {
+          body_value = struct_field_count(source, returned_value_token(source, function))
         }
         array_set(table, count * 7 + 1, function.name_start)
         array_set(table, count * 7 + 2, function.name_length)
@@ -1365,6 +1407,60 @@ fn write_conditional_body(buffer: bytes, index: i32, source: bytes, function: fu
   return buffer
 }
 
+fn struct_constructor_body_length(source: bytes, function: function_definition) -> i32 {
+  let constructor = returned_value_token(source, function)
+  let open = next_token(source, constructor.start + constructor.length)
+  let argument = next_token(source, open.start + open.length)
+  let offset = 0
+  let length = 4
+  while is_symbol(source, argument, 41) == 0 {
+    length = length + 5 + i32_leb_length(read_small_integer(source, argument)) + u32_leb_length(offset)
+    let separator = next_token(source, argument.start + argument.length)
+    if is_symbol(source, separator, 44) == 1 {
+      argument = next_token(source, separator.start + separator.length)
+    } else {
+      argument = separator
+    }
+    offset = offset + 4
+  }
+  return length
+}
+
+fn write_struct_constructor_body(buffer: bytes, index: i32, source: bytes, function: function_definition) -> bytes {
+  let position = index
+  byte_set(buffer, position, 0)
+  position = position + 1
+  let constructor = returned_value_token(source, function)
+  let open = next_token(source, constructor.start + constructor.length)
+  let argument = next_token(source, open.start + open.length)
+  let offset = 0
+  while is_symbol(source, argument, 41) == 0 {
+    byte_set(buffer, position, 65)
+    byte_set(buffer, position + 1, 0)
+    byte_set(buffer, position + 2, 65)
+    position = position + 3
+    let value = read_small_integer(source, argument)
+    let value_written = write_i32_leb(buffer, position, value)
+    position = position + i32_leb_length(value)
+    byte_set(value_written, position, 54)
+    byte_set(value_written, position + 1, 2)
+    position = position + 2
+    let offset_written = write_u32_leb(buffer, position, offset)
+    position = position + u32_leb_length(offset)
+    let separator = next_token(source, argument.start + argument.length)
+    if is_symbol(source, separator, 44) == 1 {
+      argument = next_token(source, separator.start + separator.length)
+    } else {
+      argument = separator
+    }
+    offset = offset + 4
+  }
+  byte_set(buffer, position, 65)
+  byte_set(buffer, position + 1, 0)
+  byte_set(buffer, position + 2, 11)
+  return buffer
+}
+
 fn single_function_module(source: bytes, table: [i32]) -> bytes {
   let name_start = array_get(table, 1)
   let name_length = array_get(table, 2)
@@ -1381,8 +1477,16 @@ fn single_function_module(source: bytes, table: [i32]) -> bytes {
   if body_kind == 4 {
     body_length = conditional_body_length(source, first_function(source))
   }
+  if body_kind == 5 {
+    body_length = struct_constructor_body_length(source, first_function(source))
+  }
   let code_payload_length = 1 + u32_leb_length(body_length) + body_length
-  let output_length = 8 + 1 + u32_leb_length(type_payload_length) + type_payload_length + 1 + u32_leb_length(function_payload_length) + function_payload_length + 1 + u32_leb_length(export_payload_length) + export_payload_length + 1 + u32_leb_length(code_payload_length) + code_payload_length
+  let memory_section_length = 0
+  if body_kind == 5 {
+    memory_section_length = 5
+    export_payload_length = export_payload_length + 9
+  }
+  let output_length = 8 + 1 + u32_leb_length(type_payload_length) + type_payload_length + 1 + u32_leb_length(function_payload_length) + function_payload_length + memory_section_length + 1 + u32_leb_length(export_payload_length) + export_payload_length + 1 + u32_leb_length(code_payload_length) + code_payload_length
   let output = allocate_bytes(output_length)
   byte_set(output, 0, 0)
   byte_set(output, 1, 97)
@@ -1420,11 +1524,23 @@ fn single_function_module(source: bytes, table: [i32]) -> bytes {
   position = position + 1
   let type_index_written = write_u32_leb(function_count_written, position, 0)
   position = position + 1
+  if body_kind == 5 {
+    byte_set(type_index_written, position, 5)
+    byte_set(type_index_written, position + 1, 3)
+    byte_set(type_index_written, position + 2, 1)
+    byte_set(type_index_written, position + 3, 0)
+    byte_set(type_index_written, position + 4, 1)
+    position = position + 5
+  }
   byte_set(type_index_written, position, 7)
   position = position + 1
   let export_length_written = write_u32_leb(output, position, export_payload_length)
   position = position + u32_leb_length(export_payload_length)
-  let export_count_written = write_u32_leb(export_length_written, position, 1)
+  let export_count = 1
+  if body_kind == 5 {
+    export_count = 2
+  }
+  let export_count_written = write_u32_leb(export_length_written, position, export_count)
   position = position + 1
   let name_length_written = write_u32_leb(export_count_written, position, name_length)
   position = position + u32_leb_length(name_length)
@@ -1438,6 +1554,18 @@ fn single_function_module(source: bytes, table: [i32]) -> bytes {
   position = position + 1
   let export_index_written = write_u32_leb(output, position, 0)
   position = position + 1
+  if body_kind == 5 {
+    byte_set(export_index_written, position, 6)
+    byte_set(export_index_written, position + 1, 109)
+    byte_set(export_index_written, position + 2, 101)
+    byte_set(export_index_written, position + 3, 109)
+    byte_set(export_index_written, position + 4, 111)
+    byte_set(export_index_written, position + 5, 114)
+    byte_set(export_index_written, position + 6, 121)
+    byte_set(export_index_written, position + 7, 2)
+    byte_set(export_index_written, position + 8, 0)
+    position = position + 9
+  }
   byte_set(export_index_written, position, 10)
   position = position + 1
   let code_length_written = write_u32_leb(output, position, code_payload_length)
@@ -1448,6 +1576,9 @@ fn single_function_module(source: bytes, table: [i32]) -> bytes {
   position = position + u32_leb_length(body_length)
   if body_kind == 4 {
     return write_conditional_body(output, position, source, first_function(source))
+  }
+  if body_kind == 5 {
+    return write_struct_constructor_body(output, position, source, first_function(source))
   }
   byte_set(body_length_written, position, 0)
   position = position + 1

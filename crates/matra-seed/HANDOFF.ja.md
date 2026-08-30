@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの67行目のreturn typeで停止 |
+| stage-2 | stage-1 | compiler sourceの68行目で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,15 +21,16 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:67:46: parse error: expected i32
-fn next_token(source: bytes, offset: i32) -> token {
-                                             ^^^^^
+examples/compiler.md:68:3: parse error: expected return
+   let position = offset
+   ^^^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
-comparison `if` chain、nested `if`、複数parameter、`bytes` inputもcompileできる。現在はstruct return typeを
-受理しないため停止する。compiler sourceはstruct/`bytes` return、array、local、assignment、arithmetic、
-`while`、`break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
+comparison `if` chain、nested `if`、複数parameter、`bytes` input、struct constructor returnもcompileできる。
+現在はlocal declarationを受理しないため停止する。compiler sourceは`bytes` return、array、local、
+assignment、arithmetic、`while`、`break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次
+実装する必要がある。
 
 ## 検証済みの資産
 
@@ -87,11 +88,15 @@ conditional statementのparserとWasm emitterを再帰化し、nested `if`を追
 loweringした。後続の`i32` parameterを返す実行testが成功し、最初のdiagnosticは同じ67行目のstruct return
 typeへ進んだ。
 
+struct return typeとliteral constructor returnを追加した。constructorは1-pageのWasm memoryを持つmoduleを
+生成し、fieldを4-byte間隔で格納してpointerを返す。返却pointerから2 fieldを読む実行testが成功し、最初の
+diagnosticは68行目のlocal declarationへ進んだ。
+
 ## 次の実装単位
 
-compiler sourceの出現順にstruct return typeとconstructor returnをparser、function table、Wasm emitterへ
-追加する。その後は`bytes` returnと複数function call ABI、localとassignment、`while`と`break`、array、
-memory組み込みを進める。stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
+compiler sourceの出現順にlocal declarationとassignment、arithmeticをparser、function table、Wasm emitterへ
+追加する。その後は`bytes` returnと複数function call ABI、`while`と`break`、array、memory組み込みを進める。
+stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
 ## Stage-3進捗
 
@@ -101,7 +106,8 @@ memory組み込みを進める。stage-2が生成できた時点でstage-3生成
 - [x] comparison、flat `if` chain、複数の`return`を実装する
 - [x] nested `if`を実装する
 - [x] 複数parameterと`bytes` input ABIを実装する
-- [ ] struct/`bytes` returnと複数function call ABIを実装する
+- [x] struct return typeとliteral constructor returnを実装する
+- [ ] `bytes` returnと複数function call ABIを実装する
 - [ ] local、assignment、arithmeticを実装する
 - [ ] `while`、`break`を実装する
 - [ ] arrayと組み込みmemory操作を実装する
