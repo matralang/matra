@@ -184,6 +184,54 @@ compiler sourceの出現順にconditional call argument内のstruct field access
 その後は`bytes` returnと複数function call ABI、array、memory組み込みを進める。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
+## 次セッションの開始地点
+
+直近の完了commitは`d412030`（`feat(matra-seed): call引数内のstruct field参照を実装`）である。
+次に扱うsourceは[`examples/compiler.md`](examples/compiler.md)の次の条件である。
+
+```matra
+if byte_at(source, value.start + 1) != 111 {
+```
+
+最初に検証する仮説は、call argumentのfield access後に算術operandを読む処理がないため、`+`をcall argumentの
+separatorとして扱って停止する、というものである。最小testは
+[`tests/wasm.test.mjs`](tests/wasm.test.mjs)の`structConditionalSource`を、たとえば
+`read(value.left + 1)`を実行する形へ拡張する。memory上の隣接fieldに異なる値を置き、正しいoffsetの値だけが
+返ることを確認するとwriterの誤りも判別できる。
+
+実装では次の3経路でtoken cursorを同じ順序に保つ。
+
+- `parse_local_return_conditional`: field token後にarithmetic operatorと右operandを受理する
+- `local_return_conditional_length`: pointer operand、`i32.load`、右operand、arithmetic opcodeの長さを加える
+- `write_local_return_conditional`: field load後に右operandとarithmetic opcodeをemitする
+
+body先頭のcall-result conditionalは`parse_conditional_body`、`conditional_body_length`、
+`write_conditional_body`から上記local conditional経路へdispatchされる。struct field indexは
+`local_struct_field_index`、Wasm operandは`operand_length`と`write_operand`を再利用する。field loadは
+`i32.load`（opcode `40`）、alignment immediate `2`、offset `field_index * 4`である。
+
+Matraのlocal名はfunction全体で重複できないため、追加する一時名は同じfunction内で一意にする。source編集時は
+block階層ごとに2 spaces、tabなしを維持する。機械検査に加えて、変更blockの深さを目視する。
+
+```text
+awk 'match($0, /^ +/) && RLENGTH % 2 == 1 { print NR ":" $0; invalid = 1 } END { exit invalid }' crates/matra-seed/examples/compiler.md
+! grep -n $'\t' crates/matra-seed/examples/compiler.md
+```
+
+最初のfocused testと完了時の検証commandは次のとおりである。terminalでは`rg`を利用できないため、text検索には
+`grep`を使う。
+
+```text
+node --test --test-name-pattern='bootstrap compiler maps' crates/matra-seed/tests/wasm.test.mjs
+pnpm run test:seed
+pnpm bootstrap:verify
+pnpm run lint
+git diff --check
+```
+
+stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、停止位置が現在の145行目より後へ進むことを
+確認する。各実装単位はtest、lint、bootstrap停止位置、indentationを確認してから独立commitにする。
+
 ## Stage-3進捗
 
 - [x] Rust seedから再現可能なstage-1を生成する
