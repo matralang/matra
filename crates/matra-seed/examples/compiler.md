@@ -556,6 +556,19 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
       }
     }
     current = next_token(source, operand.start + operand.length)
+    if is_symbol(source, current, 40) == 1 {
+      let argument = next_token(source, current.start + current.length)
+      if argument.kind != 1 {
+        if argument.kind != 2 {
+          return function_definition(0, 0, 0, 0, offset, argument.start, 13)
+        }
+      }
+      let close_call = next_token(source, argument.start + argument.length)
+      if is_symbol(source, close_call, 41) == 0 {
+        return function_definition(0, 0, 0, 0, offset, close_call.start, 15)
+      }
+      current = next_token(source, close_call.start + close_call.length)
+    }
     while is_arithmetic_operator(source, current) == 1 {
       let next_operand = next_token(source, current.start + current.length)
       if next_operand.kind != 1 {
@@ -994,6 +1007,11 @@ fn local_count_of(source: bytes, function: function_definition) -> i32 {
     let equals = next_token(source, name.start + name.length)
     let operand = next_token(source, equals.start + equals.length)
     current = next_token(source, operand.start + operand.length)
+    if is_symbol(source, current, 40) == 1 {
+      let argument = next_token(source, current.start + current.length)
+      let close_call = next_token(source, argument.start + argument.length)
+      current = next_token(source, close_call.start + close_call.length)
+    }
     while is_arithmetic_operator(source, current) == 1 {
       let next_operand = next_token(source, current.start + current.length)
       current = next_token(source, next_operand.start + next_operand.length)
@@ -1018,6 +1036,11 @@ fn variable_index(source: bytes, function: function_definition, target: token) -
     let equals = next_token(source, name.start + name.length)
     let operand = next_token(source, equals.start + equals.length)
     current = next_token(source, operand.start + operand.length)
+    if is_symbol(source, current, 40) == 1 {
+      let argument = next_token(source, current.start + current.length)
+      let close_call = next_token(source, argument.start + argument.length)
+      current = next_token(source, close_call.start + close_call.length)
+    }
     while is_arithmetic_operator(source, current) == 1 {
       let next_operand = next_token(source, current.start + current.length)
       current = next_token(source, next_operand.start + next_operand.length)
@@ -1603,7 +1626,7 @@ fn operand_length(source: bytes, function: function_definition, operand: token) 
   return 1 + u32_leb_length(variable_index(source, function, operand))
 }
 
-fn local_body_length(source: bytes, function: function_definition) -> i32 {
+fn local_body_length(source: bytes, table: [i32], function: function_definition) -> i32 {
   let current = function_body_first_token(source, function)
   let local_index = function_parameter_count_of(source, function)
   let length = 2 + u32_leb_length(local_count_of(source, function))
@@ -1611,8 +1634,15 @@ fn local_body_length(source: bytes, function: function_definition) -> i32 {
     let name = next_token(source, current.start + current.length)
     let equals = next_token(source, name.start + name.length)
     let operand = next_token(source, equals.start + equals.length)
-    length = length + operand_length(source, function, operand)
     current = next_token(source, operand.start + operand.length)
+    if is_symbol(source, current, 40) == 1 {
+      let argument = next_token(source, current.start + current.length)
+      length = length + operand_length(source, function, argument) + 1 + u32_leb_length(function_index_in_table(source, table, operand))
+      let close_call = next_token(source, argument.start + argument.length)
+      current = next_token(source, close_call.start + close_call.length)
+    } else {
+      length = length + operand_length(source, function, operand)
+    }
     while is_arithmetic_operator(source, current) == 1 {
       let next_operand = next_token(source, current.start + current.length)
       length = length + operand_length(source, function, next_operand) + 1
@@ -1638,7 +1668,7 @@ fn write_operand(buffer: bytes, index: i32, source: bytes, function: function_de
   return index + 1 + u32_leb_length(variable)
 }
 
-fn write_local_body(buffer: bytes, index: i32, source: bytes, function: function_definition) -> bytes {
+fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], function: function_definition) -> bytes {
   let position = index
   let local_count = local_count_of(source, function)
   byte_set(buffer, position, 1)
@@ -1653,8 +1683,20 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, function: function
     let name = next_token(source, current.start + current.length)
     let equals = next_token(source, name.start + name.length)
     let operand = next_token(source, equals.start + equals.length)
-    position = write_operand(buffer, position, source, function, operand)
     current = next_token(source, operand.start + operand.length)
+    if is_symbol(source, current, 40) == 1 {
+      let argument = next_token(source, current.start + current.length)
+      position = write_operand(buffer, position, source, function, argument)
+      byte_set(buffer, position, 16)
+      position = position + 1
+      let called_index = function_index_in_table(source, table, operand)
+      let call_written = write_u32_leb(buffer, position, called_index)
+      position = position + u32_leb_length(called_index)
+      let close_call = next_token(source, argument.start + argument.length)
+      current = next_token(source, close_call.start + close_call.length)
+    } else {
+      position = write_operand(buffer, position, source, function, operand)
+    }
     while is_arithmetic_operator(source, current) == 1 {
       let operator = current
       let next_operand = next_token(source, operator.start + operator.length)
@@ -1699,7 +1741,7 @@ fn single_function_module(source: bytes, table: [i32]) -> bytes {
     body_length = struct_constructor_body_length(source, first_function(source))
   }
   if body_kind == 6 {
-    body_length = local_body_length(source, first_function(source))
+    body_length = local_body_length(source, table, first_function(source))
   }
   let code_payload_length = 1 + u32_leb_length(body_length) + body_length
   let memory_section_length = 0
@@ -1802,7 +1844,7 @@ fn single_function_module(source: bytes, table: [i32]) -> bytes {
     return write_struct_constructor_body(output, position, source, first_function(source))
   }
   if body_kind == 6 {
-    return write_local_body(output, position, source, first_function(source))
+    return write_local_body(output, position, source, table, first_function(source))
   }
   byte_set(body_length_written, position, 0)
   position = position + 1
@@ -1853,7 +1895,7 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
       body_length = conditional_body_length(source, function_at_index(source, index))
     }
     if sized_body_kind == 6 {
-      body_length = local_body_length(source, function_at_index(source, index))
+      body_length = local_body_length(source, table, function_at_index(source, index))
     }
     code_payload_length = code_payload_length + u32_leb_length(body_length) + body_length
     index = index + 1
@@ -1956,12 +1998,12 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
       emitted_body_length = conditional_body_length(source, function_at_index(source, index))
     }
     if body_kind == 6 {
-      emitted_body_length = local_body_length(source, function_at_index(source, index))
+      emitted_body_length = local_body_length(source, table, function_at_index(source, index))
     }
     let body_length_written = write_u32_leb(code_count_written, position, emitted_body_length)
     position = position + u32_leb_length(emitted_body_length)
     if body_kind == 6 {
-      let local_written = write_local_body(output, position, source, function_at_index(source, index))
+      let local_written = write_local_body(output, position, source, table, function_at_index(source, index))
       position = position + emitted_body_length
     } else {
       if body_kind == 4 {
