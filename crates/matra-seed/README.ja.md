@@ -6,13 +6,13 @@ Matra ProgramをWebAssemblyへcompileするRust製seed compilerと、Matraで記
 ## 現在地
 
 - Rust seedから再現可能なstage-1 compiler Wasmを生成できる
-- stage-1は限定されたMatra Program、literal struct field read、nested comparison `if`をWasmへcompileできる
+- stage-1は限定されたMatra Program、struct field read、nested `if`、`bytes` inputをWasmへcompileできる
 - diagnosticは36-byte result ABIでsource rangeと期待grammarを返す
 - compiler artifactはcontent-addressed cacheとSHA-256 sidecarを持つ
 - stage-1によるcompiler自身のcompileは未達である
 
 self-host検証はstage-1、stage-2、stage-3の順にcompiler sourceをcompileし、stage-2とstage-3の
-byte一致を判定する。現在はcompiler sourceの最初の`bytes` parameterでstage-2が停止するため、commandは
+byte一致を判定する。現在はcompiler sourceの最初のstruct return typeでstage-2が停止するため、commandは
 exit code `1`を返す。
 
 ```text

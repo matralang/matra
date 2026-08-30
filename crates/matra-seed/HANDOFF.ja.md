@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの67行目で停止 |
+| stage-2 | stage-1 | compiler sourceの67行目のreturn typeで停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,15 +21,15 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:67:23: parse error: expected i32
+examples/compiler.md:67:46: parse error: expected i32
 fn next_token(source: bytes, offset: i32) -> token {
-                 ^^^^^
+                                             ^^^^^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
-comparison `if` chain、nested `if`、複数の`return`もcompileできる。現在は`bytes` parameterを受理しないため
-停止する。compiler sourceは複数parameter、`bytes`、array、local、assignment、arithmetic、`while`、`break`、
-組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
+comparison `if` chain、nested `if`、複数parameter、`bytes` inputもcompileできる。現在はstruct return typeを
+受理しないため停止する。compiler sourceはstruct/`bytes` return、array、local、assignment、arithmetic、
+`while`、`break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
 
 ## 検証済みの資産
 
@@ -83,12 +83,15 @@ comparisonを含む最小Programの実行testが成功し、最初のdiagnostic�
 conditional statementのparserとWasm emitterを再帰化し、nested `if`を追加した。内外の条件が成功または失敗
 する3経路の実行testが成功し、最初のdiagnosticは67行目の`bytes` parameterへ進んだ。
 
+カンマ区切りの複数parameterと`bytes` inputを追加し、`bytes`をpointerとlengthの2つのWasm `i32` slotへ
+loweringした。後続の`i32` parameterを返す実行testが成功し、最初のdiagnosticは同じ67行目のstruct return
+typeへ進んだ。
+
 ## 次の実装単位
 
-compiler sourceの出現順に複数parameterと`bytes`の型・ABI loweringをparser、function table、Wasm emitterへ
-追加する。最小Programの実行testでpointerとlengthの受け渡しを検証し、`bootstrap:verify`の停止位置を次の
-未対応構文へ進める。その後はlocalとassignment、`while`と`break`、array、memory組み込みを進める。
-stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
+compiler sourceの出現順にstruct return typeとconstructor returnをparser、function table、Wasm emitterへ
+追加する。その後は`bytes` returnと複数function call ABI、localとassignment、`while`と`break`、array、
+memory組み込みを進める。stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
 ## Stage-3進捗
 
@@ -97,7 +100,8 @@ stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検�
 - [x] top-level `struct`、literal constructor、field readを実装する
 - [x] comparison、flat `if` chain、複数の`return`を実装する
 - [x] nested `if`を実装する
-- [ ] 複数parameterと`bytes`を実装する
+- [x] 複数parameterと`bytes` input ABIを実装する
+- [ ] struct/`bytes` returnと複数function call ABIを実装する
 - [ ] local、assignment、arithmeticを実装する
 - [ ] `while`、`break`を実装する
 - [ ] arrayと組み込みmemory操作を実装する

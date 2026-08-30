@@ -305,6 +305,28 @@ fn is_i32_type(source: bytes, value: token) -> i32 {
   return 1
 }
 
+fn is_bytes_type(source: bytes, value: token) -> i32 {
+  if value.length != 5 {
+    return 0
+  }
+  if byte_at(source, value.start) != 98 {
+    return 0
+  }
+  if byte_at(source, value.start + 1) != 121 {
+    return 0
+  }
+  if byte_at(source, value.start + 2) != 116 {
+    return 0
+  }
+  if byte_at(source, value.start + 3) != 101 {
+    return 0
+  }
+  if byte_at(source, value.start + 4) != 115 {
+    return 0
+  }
+  return 1
+}
+
 fn is_symbol(source: bytes, value: token, expected: i32) -> i32 {
   if value.kind != 3 {
     return 0
@@ -474,20 +496,30 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
   let parameter = next_token(source, open.start + open.length)
   let close = parameter
   if is_symbol(source, parameter, 41) == 0 {
-    if parameter.kind != 1 {
-      return function_definition(0, 0, 0, 0, offset, parameter.start, 5)
-    }
-    let colon = next_token(source, parameter.start + parameter.length)
-    if is_symbol(source, colon, 58) == 0 {
-      return function_definition(0, 0, 0, 0, offset, colon.start, 6)
-    }
-    let parameter_type = next_token(source, colon.start + colon.length)
-    if is_i32_type(source, parameter_type) == 0 {
-      return function_definition(0, 0, 0, 0, offset, parameter_type.start, 7)
-    }
-    close = next_token(source, parameter_type.start + parameter_type.length)
-    if is_symbol(source, close, 41) == 0 {
-      return function_definition(0, 0, 0, 0, offset, close.start, 14)
+    let current_parameter = parameter
+    while is_symbol(source, close, 41) == 0 {
+      if current_parameter.kind != 1 {
+        return function_definition(0, 0, 0, 0, offset, current_parameter.start, 5)
+      }
+      let colon = next_token(source, current_parameter.start + current_parameter.length)
+      if is_symbol(source, colon, 58) == 0 {
+        return function_definition(0, 0, 0, 0, offset, colon.start, 6)
+      }
+      let parameter_type = next_token(source, colon.start + colon.length)
+      if is_i32_type(source, parameter_type) == 0 {
+        if is_bytes_type(source, parameter_type) == 0 {
+          return function_definition(0, 0, 0, 0, offset, parameter_type.start, 7)
+        }
+      }
+      close = next_token(source, parameter_type.start + parameter_type.length)
+      if is_symbol(source, close, 44) == 1 {
+        current_parameter = next_token(source, close.start + close.length)
+        close = current_parameter
+      } else {
+        if is_symbol(source, close, 41) == 0 {
+          return function_definition(0, 0, 0, 0, offset, close.start, 14)
+        }
+      }
     }
   }
   let minus = next_token(source, close.start + close.length)
@@ -580,10 +612,11 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
       }
       return function_definition(1, name.start, name.length, -2, call_body_close.start + call_body_close.length, 0, 0)
     }
-    if is_symbol(source, parameter, 41) == 1 {
+    if returned_value.kind != 1 {
       return function_definition(0, 0, 0, 0, offset, returned_value.start, 12)
     }
-    if same_token(source, parameter, returned_value) == 0 {
+    let current_function = function_definition(1, name.start, name.length, 0, offset, 0, 0)
+    if returned_parameter_index(source, current_function, returned_value) < 0 {
       return function_definition(0, 0, 0, 0, offset, returned_value.start, 12)
     }
     return_value = -1
@@ -731,26 +764,68 @@ fn function_at_index(source: bytes, target: i32) -> function_definition {
   return function
 }
 
+fn function_parameter_close(source: bytes, function: function_definition) -> token {
+  let name = token(1, function.name_start, function.name_length)
+  let open = next_token(source, name.start + name.length)
+  let current = next_token(source, open.start + open.length)
+  while is_symbol(source, current, 41) == 0 {
+    let colon = next_token(source, current.start + current.length)
+    let parameter_type = next_token(source, colon.start + colon.length)
+    current = next_token(source, parameter_type.start + parameter_type.length)
+    if is_symbol(source, current, 44) == 1 {
+      current = next_token(source, current.start + current.length)
+    }
+  }
+  return current
+}
+
 fn function_parameter_count_of(source: bytes, function: function_definition) -> i32 {
   let name = token(1, function.name_start, function.name_length)
   let open = next_token(source, name.start + name.length)
-  let parameter = next_token(source, open.start + open.length)
-  if is_symbol(source, parameter, 41) == 1 {
-    return 0
+  let current = next_token(source, open.start + open.length)
+  let count = 0
+  while is_symbol(source, current, 41) == 0 {
+    let colon = next_token(source, current.start + current.length)
+    let parameter_type = next_token(source, colon.start + colon.length)
+    if is_bytes_type(source, parameter_type) == 1 {
+      count = count + 2
+    } else {
+      count = count + 1
+    }
+    current = next_token(source, parameter_type.start + parameter_type.length)
+    if is_symbol(source, current, 44) == 1 {
+      current = next_token(source, current.start + current.length)
+    }
   }
-  return 1
+  return count
+}
+
+fn returned_parameter_index(source: bytes, function: function_definition, returned: token) -> i32 {
+  let name = token(1, function.name_start, function.name_length)
+  let open = next_token(source, name.start + name.length)
+  let current = next_token(source, open.start + open.length)
+  let index = 0
+  while is_symbol(source, current, 41) == 0 {
+    if same_token(source, current, returned) == 1 {
+      return index
+    }
+    let colon = next_token(source, current.start + current.length)
+    let parameter_type = next_token(source, colon.start + colon.length)
+    if is_bytes_type(source, parameter_type) == 1 {
+      index = index + 2
+    } else {
+      index = index + 1
+    }
+    current = next_token(source, parameter_type.start + parameter_type.length)
+    if is_symbol(source, current, 44) == 1 {
+      current = next_token(source, current.start + current.length)
+    }
+  }
+  return -1
 }
 
 fn returned_value_token(source: bytes, function: function_definition) -> token {
-  let name = token(1, function.name_start, function.name_length)
-  let open = next_token(source, name.start + name.length)
-  let parameter = next_token(source, open.start + open.length)
-  let close = parameter
-  if is_symbol(source, parameter, 41) == 0 {
-    let colon = next_token(source, parameter.start + parameter.length)
-    let parameter_type = next_token(source, colon.start + colon.length)
-    close = next_token(source, parameter_type.start + parameter_type.length)
-  }
+  let close = function_parameter_close(source, function)
   let minus = next_token(source, close.start + close.length)
   let arrow = next_token(source, minus.start + minus.length)
   let result_type = next_token(source, arrow.start + arrow.length)
@@ -760,15 +835,7 @@ fn returned_value_token(source: bytes, function: function_definition) -> token {
 }
 
 fn function_body_first_token(source: bytes, function: function_definition) -> token {
-  let name = token(1, function.name_start, function.name_length)
-  let open = next_token(source, name.start + name.length)
-  let parameter = next_token(source, open.start + open.length)
-  let close = parameter
-  if is_symbol(source, parameter, 41) == 0 {
-    let colon = next_token(source, parameter.start + parameter.length)
-    let parameter_type = next_token(source, colon.start + colon.length)
-    close = next_token(source, parameter_type.start + parameter_type.length)
-  }
+  let close = function_parameter_close(source, function)
   let minus = next_token(source, close.start + close.length)
   let arrow = next_token(source, minus.start + minus.length)
   let result_type = next_token(source, arrow.start + arrow.length)
@@ -987,7 +1054,7 @@ fn function_table(source: bytes) -> [i32] {
         let body_kind = function_body_kind_of(source, function)
         let body_value = function.return_value
         if body_kind == 1 {
-          body_value = 0
+          body_value = returned_parameter_index(source, function, returned_value_token(source, function))
         }
         if body_kind == 2 {
           body_value = -1
@@ -1336,9 +1403,11 @@ fn single_function_module(source: bytes, table: [i32]) -> bytes {
   position = position + 1
   let parameter_count_written = write_u32_leb(output, position, parameter_count)
   position = position + u32_leb_length(parameter_count)
-  if parameter_count == 1 {
+  let parameter_index = 0
+  while parameter_index < parameter_count {
     byte_set(parameter_count_written, position, 127)
     position = position + 1
+    parameter_index = parameter_index + 1
   }
   byte_set(output, position, 1)
   byte_set(output, position + 1, 127)
