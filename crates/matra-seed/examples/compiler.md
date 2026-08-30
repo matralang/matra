@@ -1031,6 +1031,32 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
     }
     current = next_token(source, conditional.position)
   }
+  while is_let_keyword(source, current) == 1 {
+    let trailing_local_name = next_token(source, current.start + current.length)
+    if trailing_local_name.kind != 1 {
+      return function_definition(0, 0, 0, 0, offset, trailing_local_name.start, 2)
+    }
+    let trailing_equals = next_token(source, trailing_local_name.start + trailing_local_name.length)
+    if is_symbol(source, trailing_equals, 61) == 0 {
+      return function_definition(0, 0, 0, 0, offset, trailing_equals.start, 13)
+    }
+    let trailing_operand = next_token(source, trailing_equals.start + trailing_equals.length)
+    if trailing_operand.kind != 1 {
+      if trailing_operand.kind != 2 {
+        return function_definition(0, 0, 0, 0, offset, trailing_operand.start, 13)
+      }
+    }
+    current = next_token(source, trailing_operand.start + trailing_operand.length)
+    while is_arithmetic_operator(source, current) == 1 {
+      let trailing_next_operand = next_token(source, current.start + current.length)
+      if trailing_next_operand.kind != 1 {
+        if trailing_next_operand.kind != 2 {
+          return function_definition(0, 0, 0, 0, offset, trailing_next_operand.start, 13)
+        }
+      }
+      current = next_token(source, trailing_next_operand.start + trailing_next_operand.length)
+    }
+  }
   if is_return_keyword(source, current) == 0 {
     return function_definition(0, 0, 0, 0, offset, current.start, 11)
   }
@@ -1498,6 +1524,18 @@ fn local_count_of(source: bytes, function: function_definition) -> i32 {
         current = expression_end(source, loop_operand)
       }
     }
+    current = next_token(source, current.start + current.length)
+  }
+  while is_if_keyword(source, current) == 1 {
+    let trailing_conditional = parse_local_return_conditional(source, current.start)
+    current = next_token(source, trailing_conditional.position)
+  }
+  while is_let_keyword(source, current) == 1 {
+    let trailing_name = next_token(source, current.start + current.length)
+    let trailing_equals = next_token(source, trailing_name.start + trailing_name.length)
+    let trailing_operand = next_token(source, trailing_equals.start + trailing_equals.length)
+    current = expression_end(source, trailing_operand)
+    count = count + 1
   }
   return count
 }
@@ -1559,6 +1597,21 @@ fn variable_index(source: bytes, function: function_definition, target: token) -
         current = expression_end(source, loop_operand)
       }
     }
+    current = next_token(source, current.start + current.length)
+  }
+  while is_if_keyword(source, current) == 1 {
+    let trailing_conditional = parse_local_return_conditional(source, current.start)
+    current = next_token(source, trailing_conditional.position)
+  }
+  while is_let_keyword(source, current) == 1 {
+    let trailing_name = next_token(source, current.start + current.length)
+    if same_token(source, trailing_name, target) == 1 {
+      return index
+    }
+    let trailing_equals = next_token(source, trailing_name.start + trailing_name.length)
+    let trailing_operand = next_token(source, trailing_equals.start + trailing_equals.length)
+    current = expression_end(source, trailing_operand)
+    index = index + 1
   }
   return -1
 }
@@ -2423,6 +2476,20 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     let conditional = parse_local_return_conditional(source, current.start)
     current = next_token(source, conditional.position)
   }
+  while is_let_keyword(source, current) == 1 {
+    let trailing_name = next_token(source, current.start + current.length)
+    let trailing_equals = next_token(source, trailing_name.start + trailing_name.length)
+    let trailing_operand = next_token(source, trailing_equals.start + trailing_equals.length)
+    length = length + operand_length(source, function, trailing_operand)
+    current = next_token(source, trailing_operand.start + trailing_operand.length)
+    while is_arithmetic_operator(source, current) == 1 {
+      let trailing_next_operand = next_token(source, current.start + current.length)
+      length = length + operand_length(source, function, trailing_next_operand) + 1
+      current = next_token(source, trailing_next_operand.start + trailing_next_operand.length)
+    }
+    length = length + 1 + u32_leb_length(local_index)
+    local_index = local_index + 1
+  }
   let returned = next_token(source, current.start + current.length)
   return length + 2 + u32_leb_length(variable_index(source, function, returned))
 }
@@ -2828,6 +2895,26 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     position = write_local_return_conditional(buffer, position, source, table, function, current)
     let conditional = parse_local_return_conditional(source, current.start)
     current = next_token(source, conditional.position)
+  }
+  while is_let_keyword(source, current) == 1 {
+    let trailing_name = next_token(source, current.start + current.length)
+    let trailing_equals = next_token(source, trailing_name.start + trailing_name.length)
+    let trailing_operand = next_token(source, trailing_equals.start + trailing_equals.length)
+    position = write_operand(buffer, position, source, function, trailing_operand)
+    current = next_token(source, trailing_operand.start + trailing_operand.length)
+    while is_arithmetic_operator(source, current) == 1 {
+      let trailing_operator = current
+      let trailing_next_operand = next_token(source, trailing_operator.start + trailing_operator.length)
+      position = write_operand(buffer, position, source, function, trailing_next_operand)
+      byte_set(buffer, position, arithmetic_opcode(source, trailing_operator))
+      position = position + 1
+      current = next_token(source, trailing_next_operand.start + trailing_next_operand.length)
+    }
+    byte_set(buffer, position, 33)
+    position = position + 1
+    let trailing_local_written = write_u32_leb(buffer, position, local_index)
+    position = position + u32_leb_length(local_index)
+    local_index = local_index + 1
   }
   let returned = next_token(source, current.start + current.length)
   byte_set(buffer, position, 32)
