@@ -961,20 +961,28 @@ fn parse_local_return_conditional(source: bytes, offset: i32) -> function_defini
   }
   let body_statement = next_token(source, open.start + open.length)
   while is_return_keyword(source, body_statement) == 0 {
-    if body_statement.kind != 1 {
-      return function_definition(0, 0, 0, 0, offset, body_statement.start, 2)
-    }
-    let body_equals = next_token(source, body_statement.start + body_statement.length)
-    if is_symbol(source, body_equals, 61) == 0 {
-      return function_definition(0, 0, 0, 0, offset, body_equals.start, 13)
-    }
-    let body_operand = next_token(source, body_equals.start + body_equals.length)
-    if body_operand.kind != 1 {
-      if body_operand.kind != 2 {
-        return function_definition(0, 0, 0, 0, offset, body_operand.start, 13)
+    if is_while_keyword(source, body_statement) == 1 {
+      let body_while = parse_while_statement(source, body_statement.start)
+      if body_while.status == 0 {
+        return body_while
       }
+      body_statement = next_token(source, body_while.position)
+    } else {
+      if body_statement.kind != 1 {
+        return function_definition(0, 0, 0, 0, offset, body_statement.start, 2)
+      }
+      let body_equals = next_token(source, body_statement.start + body_statement.length)
+      if is_symbol(source, body_equals, 61) == 0 {
+        return function_definition(0, 0, 0, 0, offset, body_equals.start, 13)
+      }
+      let body_operand = next_token(source, body_equals.start + body_equals.length)
+      if body_operand.kind != 1 {
+        if body_operand.kind != 2 {
+          return function_definition(0, 0, 0, 0, offset, body_operand.start, 13)
+        }
+      }
+      body_statement = expression_end(source, body_operand)
     }
-    body_statement = expression_end(source, body_operand)
   }
   let returned = body_statement
   let value = next_token(source, returned.start + returned.length)
@@ -2502,17 +2510,23 @@ fn local_return_conditional_length(source: bytes, table: [i32], function: functi
   let open = next_token(source, right.start + right.length)
   let body_statement = next_token(source, open.start + open.length)
   while is_return_keyword(source, body_statement) == 0 {
-    let body_equals = next_token(source, body_statement.start + body_statement.length)
-    let body_operand = next_token(source, body_equals.start + body_equals.length)
-    length = length + operand_length(source, function, body_operand)
-    let body_after_operand = next_token(source, body_operand.start + body_operand.length)
-    while is_arithmetic_operator(source, body_after_operand) == 1 {
-      let body_next_operand = next_token(source, body_after_operand.start + body_after_operand.length)
-      length = length + operand_length(source, function, body_next_operand) + 1
-      body_after_operand = next_token(source, body_next_operand.start + body_next_operand.length)
+    if is_while_keyword(source, body_statement) == 1 {
+      length = length + while_statement_length(source, table, function, body_statement)
+      let body_while = parse_while_statement(source, body_statement.start)
+      body_statement = next_token(source, body_while.position)
+    } else {
+      let body_equals = next_token(source, body_statement.start + body_statement.length)
+      let body_operand = next_token(source, body_equals.start + body_equals.length)
+      length = length + operand_length(source, function, body_operand)
+      let body_after_operand = next_token(source, body_operand.start + body_operand.length)
+      while is_arithmetic_operator(source, body_after_operand) == 1 {
+        let body_next_operand = next_token(source, body_after_operand.start + body_after_operand.length)
+        length = length + operand_length(source, function, body_next_operand) + 1
+        body_after_operand = next_token(source, body_next_operand.start + body_next_operand.length)
+      }
+      length = length + 1 + u32_leb_length(variable_index(source, function, body_statement))
+      body_statement = body_after_operand
     }
-    length = length + 1 + u32_leb_length(variable_index(source, function, body_statement))
-    body_statement = body_after_operand
   }
   let returned = body_statement
   let value = next_token(source, returned.start + returned.length)
@@ -2950,24 +2964,30 @@ fn write_local_return_conditional(buffer: bytes, index: i32, source: bytes, tabl
   let open = next_token(source, right.start + right.length)
   let body_statement = next_token(source, open.start + open.length)
   while is_return_keyword(source, body_statement) == 0 {
-    let body_target = body_statement
-    let body_equals = next_token(source, body_target.start + body_target.length)
-    let body_operand = next_token(source, body_equals.start + body_equals.length)
-    position = write_operand(buffer, position, source, function, body_operand)
-    body_statement = next_token(source, body_operand.start + body_operand.length)
-    while is_arithmetic_operator(source, body_statement) == 1 {
-      let body_arithmetic = body_statement
-      let body_next_operand = next_token(source, body_arithmetic.start + body_arithmetic.length)
-      position = write_operand(buffer, position, source, function, body_next_operand)
-      byte_set(buffer, position, arithmetic_opcode(source, body_arithmetic))
+    if is_while_keyword(source, body_statement) == 1 {
+      position = write_while_statement(buffer, position, source, table, function, body_statement)
+      let body_while = parse_while_statement(source, body_statement.start)
+      body_statement = next_token(source, body_while.position)
+    } else {
+      let body_target = body_statement
+      let body_equals = next_token(source, body_target.start + body_target.length)
+      let body_operand = next_token(source, body_equals.start + body_equals.length)
+      position = write_operand(buffer, position, source, function, body_operand)
+      body_statement = next_token(source, body_operand.start + body_operand.length)
+      while is_arithmetic_operator(source, body_statement) == 1 {
+        let body_arithmetic = body_statement
+        let body_next_operand = next_token(source, body_arithmetic.start + body_arithmetic.length)
+        position = write_operand(buffer, position, source, function, body_next_operand)
+        byte_set(buffer, position, arithmetic_opcode(source, body_arithmetic))
+        position = position + 1
+        body_statement = next_token(source, body_next_operand.start + body_next_operand.length)
+      }
+      byte_set(buffer, position, 33)
       position = position + 1
-      body_statement = next_token(source, body_next_operand.start + body_next_operand.length)
+      let body_target_index = variable_index(source, function, body_target)
+      let body_target_written = write_u32_leb(buffer, position, body_target_index)
+      position = position + u32_leb_length(body_target_index)
     }
-    byte_set(buffer, position, 33)
-    position = position + 1
-    let body_target_index = variable_index(source, function, body_target)
-    let body_target_written = write_u32_leb(buffer, position, body_target_index)
-    position = position + u32_leb_length(body_target_index)
   }
   let returned = body_statement
   let value = next_token(source, returned.start + returned.length)
