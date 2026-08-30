@@ -506,10 +506,17 @@ fn struct_field_count(source: bytes, struct_name: token) -> i32 {
 fn parse_conditional_statement(source: bytes, offset: i32, parameter: token) -> function_definition {
     let keyword = next_token(source, offset)
     let left = next_token(source, keyword.start + keyword.length)
-    if same_token(source, left, parameter) == 0 {
+  if left.kind != 1 {
       return function_definition(0, 0, 0, 0, offset, left.start, 12)
     }
     let operator = next_token(source, left.start + left.length)
+    if is_symbol(source, operator, 46) == 1 {
+      let left_field = next_token(source, operator.start + operator.length)
+      if left_field.kind != 1 {
+        return function_definition(0, 0, 0, 0, offset, left_field.start, 2)
+      }
+      operator = next_token(source, left_field.start + left_field.length)
+    }
     if operator.kind != 3 {
       return function_definition(0, 0, 0, 0, offset, operator.start, 13)
     }
@@ -946,39 +953,47 @@ fn parse_local_return_conditional(source: bytes, offset: i32) -> function_defini
     return function_definition(0, 0, 0, 0, offset, left.start, 13)
   }
   let operator = next_token(source, left.start + left.length)
-  if is_symbol(source, operator, 40) == 1 {
-    let condition_argument = next_token(source, operator.start + operator.length)
-    while is_symbol(source, condition_argument, 41) == 0 {
-      if condition_argument.kind != 1 {
-        if condition_argument.kind != 2 {
-          return function_definition(0, 0, 0, 0, offset, condition_argument.start, 13)
+  if is_symbol(source, operator, 46) == 1 {
+    let left_field = next_token(source, operator.start + operator.length)
+    if left_field.kind != 1 {
+      return function_definition(0, 0, 0, 0, offset, left_field.start, 2)
+    }
+    operator = next_token(source, left_field.start + left_field.length)
+  } else {
+    if is_symbol(source, operator, 40) == 1 {
+      let condition_argument = next_token(source, operator.start + operator.length)
+      while is_symbol(source, condition_argument, 41) == 0 {
+        if condition_argument.kind != 1 {
+          if condition_argument.kind != 2 {
+            return function_definition(0, 0, 0, 0, offset, condition_argument.start, 13)
+          }
         }
-      }
-      let condition_separator = next_token(source, condition_argument.start + condition_argument.length)
-      if is_symbol(source, condition_separator, 40) == 1 {
-        let nested_condition_argument = next_token(source, condition_separator.start + condition_separator.length)
-        while is_symbol(source, nested_condition_argument, 41) == 0 {
-          if nested_condition_argument.kind != 1 {
-            if nested_condition_argument.kind != 2 {
-              return function_definition(0, 0, 0, 0, offset, nested_condition_argument.start, 13)
+        let condition_separator = next_token(source, condition_argument.start + condition_argument.length)
+        if is_symbol(source, condition_separator, 40) == 1 {
+          let nested_condition_argument = next_token(source, condition_separator.start + condition_separator.length)
+          while is_symbol(source, nested_condition_argument, 41) == 0 {
+            if nested_condition_argument.kind != 1 {
+              if nested_condition_argument.kind != 2 {
+                return function_definition(0, 0, 0, 0, offset, nested_condition_argument.start, 13)
+              }
+            }
+            let nested_condition_separator = next_token(source, nested_condition_argument.start + nested_condition_argument.length)
+            if is_symbol(source, nested_condition_separator, 44) == 1 {
+              nested_condition_argument = next_token(source, nested_condition_separator.start + nested_condition_separator.length)
+            } else {
+              nested_condition_argument = nested_condition_separator
             }
           }
-          let nested_condition_separator = next_token(source, nested_condition_argument.start + nested_condition_argument.length)
-          if is_symbol(source, nested_condition_separator, 44) == 1 {
-            nested_condition_argument = next_token(source, nested_condition_separator.start + nested_condition_separator.length)
-          } else {
-            nested_condition_argument = nested_condition_separator
-          }
+          condition_separator = next_token(source, nested_condition_argument.start + nested_condition_argument.length)
         }
-        condition_separator = next_token(source, nested_condition_argument.start + nested_condition_argument.length)
+        if is_symbol(source, condition_separator, 44) == 1 {
+          condition_argument = next_token(source, condition_separator.start + condition_separator.length)
+        } else {
+          condition_argument = condition_separator
+        }
       }
-      if is_symbol(source, condition_separator, 44) == 1 {
-        condition_argument = next_token(source, condition_separator.start + condition_separator.length)
-      } else {
-        condition_argument = condition_separator
-      }
+      operator = next_token(source, condition_argument.start + condition_argument.length)
     }
-    operator = next_token(source, condition_argument.start + condition_argument.length)
   }
   let right = next_token(source, operator.start + operator.length)
   if is_symbol(source, right, 61) == 1 {
@@ -1832,7 +1847,29 @@ fn struct_field_index(source: bytes, struct_name: token, field_name: token) -> i
   return -1
 }
 
+fn parameter_struct_field_index(source: bytes, function: function_definition, target: token, field: token) -> i32 {
+  let function_name = token(1, function.name_start, function.name_length)
+  let open = next_token(source, function_name.start + function_name.length)
+  let parameter_name = next_token(source, open.start + open.length)
+  while is_symbol(source, parameter_name, 41) == 0 {
+    let colon = next_token(source, parameter_name.start + parameter_name.length)
+    let parameter_type = next_token(source, colon.start + colon.length)
+    if same_token(source, parameter_name, target) == 1 {
+      return struct_field_index(source, parameter_type, field)
+    }
+    parameter_name = next_token(source, parameter_type.start + parameter_type.length)
+    if is_symbol(source, parameter_name, 44) == 1 {
+      parameter_name = next_token(source, parameter_name.start + parameter_name.length)
+    }
+  }
+  return -1
+}
+
 fn local_struct_field_index(source: bytes, table: [i32], function: function_definition, target: token, field: token) -> i32 {
+  let parameter_field_index = parameter_struct_field_index(source, function, target, field)
+  if parameter_field_index >= 0 {
+    return parameter_field_index
+  }
   let current = function_body_first_token(source, function)
   while is_let_keyword(source, current) == 1 {
     let local_name = next_token(source, current.start + current.length)
@@ -2222,19 +2259,27 @@ fn comparison_opcode(source: bytes, operator: token) -> i32 {
   return 74
 }
 
-fn conditional_statement_length(source: bytes, statement: token) -> i32 {
+fn conditional_statement_length(source: bytes, function: function_definition, statement: token) -> i32 {
   let left = next_token(source, statement.start + statement.length)
   let operator = next_token(source, left.start + left.length)
+  let field_load_length = 0
+  if is_symbol(source, operator, 46) == 1 {
+    let left_field = next_token(source, operator.start + operator.length)
+    let left_field_index = parameter_struct_field_index(source, function, left, left_field)
+    field_load_length = 2 + u32_leb_length(left_field_index * 4)
+    operator = next_token(source, left_field.start + left_field.length)
+  }
   let right = next_token(source, operator.start + operator.length)
   if is_symbol(source, right, 61) == 1 {
     right = next_token(source, right.start + right.length)
   }
   let open = next_token(source, right.start + right.length)
   let current = next_token(source, open.start + open.length)
-  let length = 7 + i32_leb_length(read_small_integer(source, right))
+  let left_index = returned_parameter_index(source, function, left)
+  let length = 6 + u32_leb_length(left_index) + field_load_length + i32_leb_length(read_small_integer(source, right))
   while is_symbol(source, current, 125) == 0 {
     if is_if_keyword(source, current) == 1 {
-      length = length + conditional_statement_length(source, current)
+      length = length + conditional_statement_length(source, function, current)
       let nested = parse_conditional_statement(source, current.start, left)
       current = next_token(source, nested.position)
     } else {
@@ -2250,7 +2295,7 @@ fn conditional_body_length(source: bytes, function: function_definition) -> i32 
   let current = function_body_first_token(source, function)
   let length = 1
   while is_if_keyword(source, current) == 1 {
-    length = length + conditional_statement_length(source, current)
+    length = length + conditional_statement_length(source, function, current)
     let parameter = next_token(source, current.start + current.length)
     let statement = parse_conditional_statement(source, current.start, parameter)
     current = next_token(source, statement.position)
@@ -2259,19 +2304,31 @@ fn conditional_body_length(source: bytes, function: function_definition) -> i32 
   return length + 2 + i32_leb_length(read_small_integer(source, final_value))
 }
 
-fn write_conditional_statement(buffer: bytes, index: i32, source: bytes, statement: token) -> i32 {
+fn write_conditional_statement(buffer: bytes, index: i32, source: bytes, function: function_definition, statement: token) -> i32 {
     let position = index
     let left = next_token(source, statement.start + statement.length)
     let operator = next_token(source, left.start + left.length)
+    let left_field_index = -1
+    if is_symbol(source, operator, 46) == 1 {
+      let left_field = next_token(source, operator.start + operator.length)
+      left_field_index = parameter_struct_field_index(source, function, left, left_field)
+      operator = next_token(source, left_field.start + left_field.length)
+    }
     let right = next_token(source, operator.start + operator.length)
     if is_symbol(source, right, 61) == 1 {
       right = next_token(source, right.start + right.length)
     }
     let open = next_token(source, right.start + right.length)
-    byte_set(buffer, position, 32)
-    byte_set(buffer, position + 1, 0)
-    byte_set(buffer, position + 2, 65)
-    position = position + 3
+    position = write_operand(buffer, position, source, function, left)
+    if left_field_index >= 0 {
+      byte_set(buffer, position, 40)
+      byte_set(buffer, position + 1, 2)
+      position = position + 2
+      let left_field_offset_written = write_u32_leb(buffer, position, left_field_index * 4)
+      position = position + u32_leb_length(left_field_index * 4)
+    }
+    byte_set(buffer, position, 65)
+    position = position + 1
     let right_value = read_small_integer(source, right)
     let right_written = write_i32_leb(buffer, position, right_value)
     position = position + i32_leb_length(right_value)
@@ -2282,7 +2339,7 @@ fn write_conditional_statement(buffer: bytes, index: i32, source: bytes, stateme
     let current = next_token(source, open.start + open.length)
     while is_symbol(source, current, 125) == 0 {
       if is_if_keyword(source, current) == 1 {
-        position = write_conditional_statement(buffer, position, source, current)
+        position = write_conditional_statement(buffer, position, source, function, current)
         let nested = parse_conditional_statement(source, current.start, left)
         current = next_token(source, nested.position)
       } else {
@@ -2307,7 +2364,7 @@ fn write_conditional_body(buffer: bytes, index: i32, source: bytes, function: fu
   position = position + 1
   let current = function_body_first_token(source, function)
   while is_if_keyword(source, current) == 1 {
-    position = write_conditional_statement(buffer, position, source, current)
+    position = write_conditional_statement(buffer, position, source, function, current)
     let parameter = next_token(source, current.start + current.length)
     let statement = parse_conditional_statement(source, current.start, parameter)
     current = next_token(source, statement.position)
@@ -2634,36 +2691,43 @@ fn local_return_conditional_length(source: bytes, table: [i32], function: functi
   let left = next_token(source, statement.start + statement.length)
   let operator = next_token(source, left.start + left.length)
   let length = 5
-  if is_symbol(source, operator, 40) == 1 {
-    let condition_argument = next_token(source, operator.start + operator.length)
-    while is_symbol(source, condition_argument, 41) == 0 {
-      let condition_separator = next_token(source, condition_argument.start + condition_argument.length)
-      if is_symbol(source, condition_separator, 40) == 1 {
-        let nested_condition_argument = next_token(source, condition_separator.start + condition_separator.length)
-        while is_symbol(source, nested_condition_argument, 41) == 0 {
-          length = length + operand_length(source, function, nested_condition_argument)
-          let nested_condition_separator = next_token(source, nested_condition_argument.start + nested_condition_argument.length)
-          if is_symbol(source, nested_condition_separator, 44) == 1 {
-            nested_condition_argument = next_token(source, nested_condition_separator.start + nested_condition_separator.length)
-          } else {
-            nested_condition_argument = nested_condition_separator
-          }
-        }
-        length = length + 1 + u32_leb_length(function_index_in_table(source, table, condition_argument))
-        condition_separator = next_token(source, nested_condition_argument.start + nested_condition_argument.length)
-      } else {
-        length = length + operand_length(source, function, condition_argument)
-      }
-      if is_symbol(source, condition_separator, 44) == 1 {
-        condition_argument = next_token(source, condition_separator.start + condition_separator.length)
-      } else {
-        condition_argument = condition_separator
-      }
-    }
-    length = length + 1 + u32_leb_length(function_index_in_table(source, table, left))
-    operator = next_token(source, condition_argument.start + condition_argument.length)
+  if is_symbol(source, operator, 46) == 1 {
+    let left_field = next_token(source, operator.start + operator.length)
+    let left_field_index = local_struct_field_index(source, table, function, left, left_field)
+    length = length + operand_length(source, function, left) + 2 + u32_leb_length(left_field_index * 4)
+    operator = next_token(source, left_field.start + left_field.length)
   } else {
-    length = length + operand_length(source, function, left)
+    if is_symbol(source, operator, 40) == 1 {
+      let condition_argument = next_token(source, operator.start + operator.length)
+      while is_symbol(source, condition_argument, 41) == 0 {
+        let condition_separator = next_token(source, condition_argument.start + condition_argument.length)
+        if is_symbol(source, condition_separator, 40) == 1 {
+          let nested_condition_argument = next_token(source, condition_separator.start + condition_separator.length)
+          while is_symbol(source, nested_condition_argument, 41) == 0 {
+            length = length + operand_length(source, function, nested_condition_argument)
+            let nested_condition_separator = next_token(source, nested_condition_argument.start + nested_condition_argument.length)
+            if is_symbol(source, nested_condition_separator, 44) == 1 {
+              nested_condition_argument = next_token(source, nested_condition_separator.start + nested_condition_separator.length)
+            } else {
+              nested_condition_argument = nested_condition_separator
+            }
+          }
+          length = length + 1 + u32_leb_length(function_index_in_table(source, table, condition_argument))
+          condition_separator = next_token(source, nested_condition_argument.start + nested_condition_argument.length)
+        } else {
+          length = length + operand_length(source, function, condition_argument)
+        }
+        if is_symbol(source, condition_separator, 44) == 1 {
+          condition_argument = next_token(source, condition_separator.start + condition_separator.length)
+        } else {
+          condition_argument = condition_separator
+        }
+      }
+      length = length + 1 + u32_leb_length(function_index_in_table(source, table, left))
+      operator = next_token(source, condition_argument.start + condition_argument.length)
+    } else {
+      length = length + operand_length(source, function, left)
+    }
   }
   let right = next_token(source, operator.start + operator.length)
   if is_symbol(source, right, 61) == 1 {
@@ -3176,44 +3240,56 @@ fn write_local_return_conditional(buffer: bytes, index: i32, source: bytes, tabl
   let position = index
   let left = next_token(source, statement.start + statement.length)
   let operator = next_token(source, left.start + left.length)
-  if is_symbol(source, operator, 40) == 1 {
-    let condition_argument = next_token(source, operator.start + operator.length)
-    while is_symbol(source, condition_argument, 41) == 0 {
-      let condition_separator = next_token(source, condition_argument.start + condition_argument.length)
-      if is_symbol(source, condition_separator, 40) == 1 {
-        let nested_condition_argument = next_token(source, condition_separator.start + condition_separator.length)
-        while is_symbol(source, nested_condition_argument, 41) == 0 {
-          position = write_operand(buffer, position, source, function, nested_condition_argument)
-          let nested_condition_separator = next_token(source, nested_condition_argument.start + nested_condition_argument.length)
-          if is_symbol(source, nested_condition_separator, 44) == 1 {
-            nested_condition_argument = next_token(source, nested_condition_separator.start + nested_condition_separator.length)
-          } else {
-            nested_condition_argument = nested_condition_separator
-          }
-        }
-        byte_set(buffer, position, 16)
-        position = position + 1
-        let nested_condition_called_index = function_index_in_table(source, table, condition_argument)
-        let nested_condition_call_written = write_u32_leb(buffer, position, nested_condition_called_index)
-        position = position + u32_leb_length(nested_condition_called_index)
-        condition_separator = next_token(source, nested_condition_argument.start + nested_condition_argument.length)
-      } else {
-        position = write_operand(buffer, position, source, function, condition_argument)
-      }
-      if is_symbol(source, condition_separator, 44) == 1 {
-        condition_argument = next_token(source, condition_separator.start + condition_separator.length)
-      } else {
-        condition_argument = condition_separator
-      }
-    }
-    byte_set(buffer, position, 16)
-    position = position + 1
-    let condition_called_index = function_index_in_table(source, table, left)
-    let condition_call_written = write_u32_leb(buffer, position, condition_called_index)
-    position = position + u32_leb_length(condition_called_index)
-    operator = next_token(source, condition_argument.start + condition_argument.length)
-  } else {
+  if is_symbol(source, operator, 46) == 1 {
     position = write_operand(buffer, position, source, function, left)
+    let left_field = next_token(source, operator.start + operator.length)
+    let left_field_index = local_struct_field_index(source, table, function, left, left_field)
+    byte_set(buffer, position, 40)
+    byte_set(buffer, position + 1, 2)
+    position = position + 2
+    let left_field_offset_written = write_u32_leb(buffer, position, left_field_index * 4)
+    position = position + u32_leb_length(left_field_index * 4)
+    operator = next_token(source, left_field.start + left_field.length)
+  } else {
+    if is_symbol(source, operator, 40) == 1 {
+      let condition_argument = next_token(source, operator.start + operator.length)
+      while is_symbol(source, condition_argument, 41) == 0 {
+        let condition_separator = next_token(source, condition_argument.start + condition_argument.length)
+        if is_symbol(source, condition_separator, 40) == 1 {
+          let nested_condition_argument = next_token(source, condition_separator.start + condition_separator.length)
+          while is_symbol(source, nested_condition_argument, 41) == 0 {
+            position = write_operand(buffer, position, source, function, nested_condition_argument)
+            let nested_condition_separator = next_token(source, nested_condition_argument.start + nested_condition_argument.length)
+            if is_symbol(source, nested_condition_separator, 44) == 1 {
+              nested_condition_argument = next_token(source, nested_condition_separator.start + nested_condition_separator.length)
+            } else {
+              nested_condition_argument = nested_condition_separator
+            }
+          }
+          byte_set(buffer, position, 16)
+          position = position + 1
+          let nested_condition_called_index = function_index_in_table(source, table, condition_argument)
+          let nested_condition_call_written = write_u32_leb(buffer, position, nested_condition_called_index)
+          position = position + u32_leb_length(nested_condition_called_index)
+          condition_separator = next_token(source, nested_condition_argument.start + nested_condition_argument.length)
+        } else {
+          position = write_operand(buffer, position, source, function, condition_argument)
+        }
+        if is_symbol(source, condition_separator, 44) == 1 {
+          condition_argument = next_token(source, condition_separator.start + condition_separator.length)
+        } else {
+          condition_argument = condition_separator
+        }
+      }
+      byte_set(buffer, position, 16)
+      position = position + 1
+      let condition_called_index = function_index_in_table(source, table, left)
+      let condition_call_written = write_u32_leb(buffer, position, condition_called_index)
+      position = position + u32_leb_length(condition_called_index)
+      operator = next_token(source, condition_argument.start + condition_argument.length)
+    } else {
+      position = write_operand(buffer, position, source, function, left)
+    }
   }
   let right = next_token(source, operator.start + operator.length)
   if is_symbol(source, right, 61) == 1 {
