@@ -1078,16 +1078,20 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
     current = next_token(source, operand.start + operand.length)
     if is_symbol(source, current, 40) == 1 {
       let argument = next_token(source, current.start + current.length)
-      if argument.kind != 1 {
-        if argument.kind != 2 {
-          return function_definition(0, 0, 0, 0, offset, argument.start, 13)
+      while is_symbol(source, argument, 41) == 0 {
+        if argument.kind != 1 {
+          if argument.kind != 2 {
+            return function_definition(0, 0, 0, 0, offset, argument.start, 13)
+          }
+        }
+        let argument_separator = next_token(source, argument.start + argument.length)
+        if is_symbol(source, argument_separator, 44) == 1 {
+          argument = next_token(source, argument_separator.start + argument_separator.length)
+        } else {
+          argument = argument_separator
         }
       }
-      let close_call = next_token(source, argument.start + argument.length)
-      if is_symbol(source, close_call, 41) == 0 {
-        return function_definition(0, 0, 0, 0, offset, close_call.start, 15)
-      }
-      current = next_token(source, close_call.start + close_call.length)
+      current = next_token(source, argument.start + argument.length)
     }
     while is_arithmetic_operator(source, current) == 1 {
       let next_operand = next_token(source, current.start + current.length)
@@ -2673,9 +2677,17 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     current = next_token(source, operand.start + operand.length)
     if is_symbol(source, current, 40) == 1 {
       let argument = next_token(source, current.start + current.length)
-      length = length + operand_length(source, function, argument) + 1 + u32_leb_length(function_index_in_table(source, table, operand))
-      let close_call = next_token(source, argument.start + argument.length)
-      current = next_token(source, close_call.start + close_call.length)
+      while is_symbol(source, argument, 41) == 0 {
+        length = length + operand_length(source, function, argument)
+        let argument_separator = next_token(source, argument.start + argument.length)
+        if is_symbol(source, argument_separator, 44) == 1 {
+          argument = next_token(source, argument_separator.start + argument_separator.length)
+        } else {
+          argument = argument_separator
+        }
+      }
+      length = length + 1 + u32_leb_length(function_index_in_table(source, table, operand))
+      current = next_token(source, argument.start + argument.length)
     } else {
       length = length + operand_length(source, function, operand)
     }
@@ -3233,14 +3245,21 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     current = next_token(source, operand.start + operand.length)
     if is_symbol(source, current, 40) == 1 {
       let argument = next_token(source, current.start + current.length)
-      position = write_operand(buffer, position, source, function, argument)
+      while is_symbol(source, argument, 41) == 0 {
+        position = write_operand(buffer, position, source, function, argument)
+        let argument_separator = next_token(source, argument.start + argument.length)
+        if is_symbol(source, argument_separator, 44) == 1 {
+          argument = next_token(source, argument_separator.start + argument_separator.length)
+        } else {
+          argument = argument_separator
+        }
+      }
       byte_set(buffer, position, 16)
       position = position + 1
       let called_index = function_index_in_table(source, table, operand)
       let call_written = write_u32_leb(buffer, position, called_index)
       position = position + u32_leb_length(called_index)
-      let close_call = next_token(source, argument.start + argument.length)
-      current = next_token(source, close_call.start + close_call.length)
+      current = next_token(source, argument.start + argument.length)
     } else {
       position = write_operand(buffer, position, source, function, operand)
     }
@@ -3551,8 +3570,15 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
   }
   let last_name_start = array_get(table, (count - 1) * 7 + 1)
   let last_name_length = array_get(table, (count - 1) * 7 + 2)
-  let type_payload_length = 10
-  let function_payload_length = u32_leb_length(count) + count
+  let type_payload_length = u32_leb_length(count)
+  let function_payload_length = u32_leb_length(count)
+  index = 0
+  while index < count {
+    let type_parameter_count = array_get(table, index * 7 + 3)
+    type_payload_length = type_payload_length + 3 + u32_leb_length(type_parameter_count) + type_parameter_count
+    function_payload_length = function_payload_length + u32_leb_length(index)
+    index = index + 1
+  }
   let export_payload_length = u32_leb_length(1) + u32_leb_length(last_name_length) + last_name_length + 1 + u32_leb_length(count - 1)
   let output_length = 8 + 1 + u32_leb_length(type_payload_length) + type_payload_length + 1 + u32_leb_length(function_payload_length) + function_payload_length + 1 + u32_leb_length(export_payload_length) + export_payload_length + 1 + u32_leb_length(code_payload_length) + code_payload_length
   let output = allocate_bytes(output_length)
@@ -3569,18 +3595,26 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
   position = position + 1
   let type_length_written = write_u32_leb(output, position, type_payload_length)
   position = position + u32_leb_length(type_payload_length)
-  let type_count_written = write_u32_leb(type_length_written, position, 2)
-  position = position + 1
-  byte_set(type_count_written, position, 96)
-  byte_set(type_count_written, position + 1, 0)
-  byte_set(type_count_written, position + 2, 1)
-  byte_set(type_count_written, position + 3, 127)
-  byte_set(type_count_written, position + 4, 96)
-  byte_set(type_count_written, position + 5, 1)
-  byte_set(type_count_written, position + 6, 127)
-  byte_set(type_count_written, position + 7, 1)
-  byte_set(type_count_written, position + 8, 127)
-  position = position + 9
+  let type_count_written = write_u32_leb(type_length_written, position, count)
+  position = position + u32_leb_length(count)
+  index = 0
+  while index < count {
+    byte_set(type_count_written, position, 96)
+    position = position + 1
+    let emitted_parameter_count = array_get(table, index * 7 + 3)
+    let emitted_parameter_count_written = write_u32_leb(output, position, emitted_parameter_count)
+    position = position + u32_leb_length(emitted_parameter_count)
+    let emitted_parameter_index = 0
+    while emitted_parameter_index < emitted_parameter_count {
+      byte_set(emitted_parameter_count_written, position, 127)
+      position = position + 1
+      emitted_parameter_index = emitted_parameter_index + 1
+    }
+    byte_set(output, position, 1)
+    byte_set(output, position + 1, 127)
+    position = position + 2
+    index = index + 1
+  }
   byte_set(output, position, 3)
   position = position + 1
   let function_length_written = write_u32_leb(output, position, function_payload_length)
@@ -3589,9 +3623,8 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
   position = position + u32_leb_length(count)
   index = 0
   while index < count {
-    let type_index = array_get(table, index * 7 + 3)
-    let type_index_written = write_u32_leb(function_count_written, position, type_index)
-    position = position + u32_leb_length(type_index)
+    let type_index_written = write_u32_leb(function_count_written, position, index)
+    position = position + u32_leb_length(index)
     index = index + 1
   }
   byte_set(output, position, 7)
