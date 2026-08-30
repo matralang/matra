@@ -621,6 +621,10 @@ fn is_arithmetic_operator(source: bytes, value: token) -> i32 {
 
 fn expression_end(source: bytes, operand: token) -> token {
   let current = next_token(source, operand.start + operand.length)
+  if is_symbol(source, current, 46) == 1 {
+    let field = next_token(source, current.start + current.length)
+    current = next_token(source, field.start + field.length)
+  }
   if is_symbol(source, current, 40) == 1 {
     current = next_token(source, current.start + current.length)
     while is_symbol(source, current, 41) == 0 {
@@ -1119,6 +1123,13 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
       }
     }
     current = next_token(source, operand.start + operand.length)
+    if is_symbol(source, current, 46) == 1 {
+      let field = next_token(source, current.start + current.length)
+      if field.kind != 1 {
+        return function_definition(0, 0, 0, 0, offset, field.start, 2)
+      }
+      current = next_token(source, field.start + field.length)
+    }
     if is_symbol(source, current, 40) == 1 {
       let argument = next_token(source, current.start + current.length)
       while is_symbol(source, argument, 41) == 0 {
@@ -1176,6 +1187,13 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
       }
     }
     current = next_token(source, trailing_operand.start + trailing_operand.length)
+    if is_symbol(source, current, 46) == 1 {
+      let trailing_field = next_token(source, current.start + current.length)
+      if trailing_field.kind != 1 {
+        return function_definition(0, 0, 0, 0, offset, trailing_field.start, 2)
+      }
+      current = next_token(source, trailing_field.start + trailing_field.length)
+    }
     if is_symbol(source, current, 40) == 1 {
       let trailing_argument = next_token(source, current.start + current.length)
       while is_symbol(source, trailing_argument, 41) == 0 {
@@ -1192,16 +1210,15 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
         }
       }
       current = next_token(source, trailing_argument.start + trailing_argument.length)
-    } else {
-      while is_arithmetic_operator(source, current) == 1 {
-        let trailing_next_operand = next_token(source, current.start + current.length)
-        if trailing_next_operand.kind != 1 {
-          if trailing_next_operand.kind != 2 {
-            return function_definition(0, 0, 0, 0, offset, trailing_next_operand.start, 13)
-          }
+    }
+    while is_arithmetic_operator(source, current) == 1 {
+      let trailing_next_operand = next_token(source, current.start + current.length)
+      if trailing_next_operand.kind != 1 {
+        if trailing_next_operand.kind != 2 {
+          return function_definition(0, 0, 0, 0, offset, trailing_next_operand.start, 13)
         }
-        current = next_token(source, trailing_next_operand.start + trailing_next_operand.length)
       }
+      current = next_token(source, trailing_next_operand.start + trailing_next_operand.length)
     }
   }
   while is_if_keyword(source, current) == 1 {
@@ -1702,6 +1719,10 @@ fn local_count_of(source: bytes, function: function_definition) -> i32 {
     let equals = next_token(source, name.start + name.length)
     let operand = next_token(source, equals.start + equals.length)
     current = next_token(source, operand.start + operand.length)
+    if is_symbol(source, current, 46) == 1 {
+      let field = next_token(source, current.start + current.length)
+      current = next_token(source, field.start + field.length)
+    }
     if is_symbol(source, current, 40) == 1 {
       let argument = next_token(source, current.start + current.length)
       let close_call = next_token(source, argument.start + argument.length)
@@ -1776,6 +1797,10 @@ fn variable_index(source: bytes, function: function_definition, target: token) -
     let equals = next_token(source, name.start + name.length)
     let operand = next_token(source, equals.start + equals.length)
     current = next_token(source, operand.start + operand.length)
+    if is_symbol(source, current, 46) == 1 {
+      let field = next_token(source, current.start + current.length)
+      current = next_token(source, field.start + field.length)
+    }
     if is_symbol(source, current, 40) == 1 {
       let argument = next_token(source, current.start + current.length)
       let close_call = next_token(source, argument.start + argument.length)
@@ -2865,21 +2890,28 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     let equals = next_token(source, name.start + name.length)
     let operand = next_token(source, equals.start + equals.length)
     current = next_token(source, operand.start + operand.length)
-    if is_symbol(source, current, 40) == 1 {
-      let argument = next_token(source, current.start + current.length)
-      while is_symbol(source, argument, 41) == 0 {
-        length = length + operand_length(source, function, argument)
-        let argument_separator = next_token(source, argument.start + argument.length)
-        if is_symbol(source, argument_separator, 44) == 1 {
-          argument = next_token(source, argument_separator.start + argument_separator.length)
-        } else {
-          argument = argument_separator
-        }
-      }
-      length = length + 1 + u32_leb_length(function_index_in_table(source, table, operand))
-      current = next_token(source, argument.start + argument.length)
+    if is_symbol(source, current, 46) == 1 {
+      let field = next_token(source, current.start + current.length)
+      let field_index = local_struct_field_index(source, table, function, operand, field)
+      length = length + operand_length(source, function, operand) + 2 + u32_leb_length(field_index * 4)
+      current = next_token(source, field.start + field.length)
     } else {
-      length = length + operand_length(source, function, operand)
+      if is_symbol(source, current, 40) == 1 {
+        let argument = next_token(source, current.start + current.length)
+        while is_symbol(source, argument, 41) == 0 {
+          length = length + operand_length(source, function, argument)
+          let argument_separator = next_token(source, argument.start + argument.length)
+          if is_symbol(source, argument_separator, 44) == 1 {
+            argument = next_token(source, argument_separator.start + argument_separator.length)
+          } else {
+            argument = argument_separator
+          }
+        }
+        length = length + 1 + u32_leb_length(function_index_in_table(source, table, operand))
+        current = next_token(source, argument.start + argument.length)
+      } else {
+        length = length + operand_length(source, function, operand)
+      }
     }
     while is_arithmetic_operator(source, current) == 1 {
       let next_operand = next_token(source, current.start + current.length)
@@ -2904,26 +2936,33 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     let trailing_equals = next_token(source, trailing_name.start + trailing_name.length)
     let trailing_operand = next_token(source, trailing_equals.start + trailing_equals.length)
     current = next_token(source, trailing_operand.start + trailing_operand.length)
-    if is_symbol(source, current, 40) == 1 {
-      let trailing_argument = next_token(source, current.start + current.length)
-      while is_symbol(source, trailing_argument, 41) == 0 {
-        length = length + operand_length(source, function, trailing_argument)
-        let trailing_separator = next_token(source, trailing_argument.start + trailing_argument.length)
-        if is_symbol(source, trailing_separator, 44) == 1 {
-          trailing_argument = next_token(source, trailing_separator.start + trailing_separator.length)
-        } else {
-          trailing_argument = trailing_separator
-        }
-      }
-      length = length + 1 + u32_leb_length(function_index_in_table(source, table, trailing_operand))
-      current = next_token(source, trailing_argument.start + trailing_argument.length)
+    if is_symbol(source, current, 46) == 1 {
+      let trailing_field = next_token(source, current.start + current.length)
+      let trailing_field_index = local_struct_field_index(source, table, function, trailing_operand, trailing_field)
+      length = length + operand_length(source, function, trailing_operand) + 2 + u32_leb_length(trailing_field_index * 4)
+      current = next_token(source, trailing_field.start + trailing_field.length)
     } else {
-      length = length + operand_length(source, function, trailing_operand)
-      while is_arithmetic_operator(source, current) == 1 {
-        let trailing_next_operand = next_token(source, current.start + current.length)
-        length = length + operand_length(source, function, trailing_next_operand) + 1
-        current = next_token(source, trailing_next_operand.start + trailing_next_operand.length)
+      if is_symbol(source, current, 40) == 1 {
+        let trailing_argument = next_token(source, current.start + current.length)
+        while is_symbol(source, trailing_argument, 41) == 0 {
+          length = length + operand_length(source, function, trailing_argument)
+          let trailing_separator = next_token(source, trailing_argument.start + trailing_argument.length)
+          if is_symbol(source, trailing_separator, 44) == 1 {
+            trailing_argument = next_token(source, trailing_separator.start + trailing_separator.length)
+          } else {
+            trailing_argument = trailing_separator
+          }
+        }
+        length = length + 1 + u32_leb_length(function_index_in_table(source, table, trailing_operand))
+        current = next_token(source, trailing_argument.start + trailing_argument.length)
+      } else {
+        length = length + operand_length(source, function, trailing_operand)
       }
+    }
+    while is_arithmetic_operator(source, current) == 1 {
+      let trailing_next_operand = next_token(source, current.start + current.length)
+      length = length + operand_length(source, function, trailing_next_operand) + 1
+      current = next_token(source, trailing_next_operand.start + trailing_next_operand.length)
     }
     length = length + 1 + u32_leb_length(local_index)
     local_index = local_index + 1
@@ -3485,25 +3524,37 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     let equals = next_token(source, name.start + name.length)
     let operand = next_token(source, equals.start + equals.length)
     current = next_token(source, operand.start + operand.length)
-    if is_symbol(source, current, 40) == 1 {
-      let argument = next_token(source, current.start + current.length)
-      while is_symbol(source, argument, 41) == 0 {
-        position = write_operand(buffer, position, source, function, argument)
-        let argument_separator = next_token(source, argument.start + argument.length)
-        if is_symbol(source, argument_separator, 44) == 1 {
-          argument = next_token(source, argument_separator.start + argument_separator.length)
-        } else {
-          argument = argument_separator
-        }
-      }
-      byte_set(buffer, position, 16)
-      position = position + 1
-      let called_index = function_index_in_table(source, table, operand)
-      let call_written = write_u32_leb(buffer, position, called_index)
-      position = position + u32_leb_length(called_index)
-      current = next_token(source, argument.start + argument.length)
-    } else {
+    if is_symbol(source, current, 46) == 1 {
       position = write_operand(buffer, position, source, function, operand)
+      let field = next_token(source, current.start + current.length)
+      let field_index = local_struct_field_index(source, table, function, operand, field)
+      byte_set(buffer, position, 40)
+      byte_set(buffer, position + 1, 2)
+      position = position + 2
+      let field_offset_written = write_u32_leb(buffer, position, field_index * 4)
+      position = position + u32_leb_length(field_index * 4)
+      current = next_token(source, field.start + field.length)
+    } else {
+      if is_symbol(source, current, 40) == 1 {
+        let argument = next_token(source, current.start + current.length)
+        while is_symbol(source, argument, 41) == 0 {
+          position = write_operand(buffer, position, source, function, argument)
+          let argument_separator = next_token(source, argument.start + argument.length)
+          if is_symbol(source, argument_separator, 44) == 1 {
+            argument = next_token(source, argument_separator.start + argument_separator.length)
+          } else {
+            argument = argument_separator
+          }
+        }
+        byte_set(buffer, position, 16)
+        position = position + 1
+        let called_index = function_index_in_table(source, table, operand)
+        let call_written = write_u32_leb(buffer, position, called_index)
+        position = position + u32_leb_length(called_index)
+        current = next_token(source, argument.start + argument.length)
+      } else {
+        position = write_operand(buffer, position, source, function, operand)
+      }
     }
     while is_arithmetic_operator(source, current) == 1 {
       let operator = current
@@ -3534,33 +3585,45 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     let trailing_equals = next_token(source, trailing_name.start + trailing_name.length)
     let trailing_operand = next_token(source, trailing_equals.start + trailing_equals.length)
     current = next_token(source, trailing_operand.start + trailing_operand.length)
-    if is_symbol(source, current, 40) == 1 {
-      let trailing_argument = next_token(source, current.start + current.length)
-      while is_symbol(source, trailing_argument, 41) == 0 {
-        position = write_operand(buffer, position, source, function, trailing_argument)
-        let trailing_separator = next_token(source, trailing_argument.start + trailing_argument.length)
-        if is_symbol(source, trailing_separator, 44) == 1 {
-          trailing_argument = next_token(source, trailing_separator.start + trailing_separator.length)
-        } else {
-          trailing_argument = trailing_separator
-        }
-      }
-      byte_set(buffer, position, 16)
-      position = position + 1
-      let trailing_called_index = function_index_in_table(source, table, trailing_operand)
-      let trailing_call_written = write_u32_leb(buffer, position, trailing_called_index)
-      position = position + u32_leb_length(trailing_called_index)
-      current = next_token(source, trailing_argument.start + trailing_argument.length)
-    } else {
+    if is_symbol(source, current, 46) == 1 {
       position = write_operand(buffer, position, source, function, trailing_operand)
-      while is_arithmetic_operator(source, current) == 1 {
-        let trailing_operator = current
-        let trailing_next_operand = next_token(source, trailing_operator.start + trailing_operator.length)
-        position = write_operand(buffer, position, source, function, trailing_next_operand)
-        byte_set(buffer, position, arithmetic_opcode(source, trailing_operator))
+      let trailing_field = next_token(source, current.start + current.length)
+      let trailing_field_index = local_struct_field_index(source, table, function, trailing_operand, trailing_field)
+      byte_set(buffer, position, 40)
+      byte_set(buffer, position + 1, 2)
+      position = position + 2
+      let trailing_field_offset_written = write_u32_leb(buffer, position, trailing_field_index * 4)
+      position = position + u32_leb_length(trailing_field_index * 4)
+      current = next_token(source, trailing_field.start + trailing_field.length)
+    } else {
+      if is_symbol(source, current, 40) == 1 {
+        let trailing_argument = next_token(source, current.start + current.length)
+        while is_symbol(source, trailing_argument, 41) == 0 {
+          position = write_operand(buffer, position, source, function, trailing_argument)
+          let trailing_separator = next_token(source, trailing_argument.start + trailing_argument.length)
+          if is_symbol(source, trailing_separator, 44) == 1 {
+            trailing_argument = next_token(source, trailing_separator.start + trailing_separator.length)
+          } else {
+            trailing_argument = trailing_separator
+          }
+        }
+        byte_set(buffer, position, 16)
         position = position + 1
-        current = next_token(source, trailing_next_operand.start + trailing_next_operand.length)
+        let trailing_called_index = function_index_in_table(source, table, trailing_operand)
+        let trailing_call_written = write_u32_leb(buffer, position, trailing_called_index)
+        position = position + u32_leb_length(trailing_called_index)
+        current = next_token(source, trailing_argument.start + trailing_argument.length)
+      } else {
+        position = write_operand(buffer, position, source, function, trailing_operand)
       }
+    }
+    while is_arithmetic_operator(source, current) == 1 {
+      let trailing_operator = current
+      let trailing_next_operand = next_token(source, trailing_operator.start + trailing_operator.length)
+      position = write_operand(buffer, position, source, function, trailing_next_operand)
+      byte_set(buffer, position, arithmetic_opcode(source, trailing_operator))
+      position = position + 1
+      current = next_token(source, trailing_next_operand.start + trailing_next_operand.length)
     }
     byte_set(buffer, position, 33)
     position = position + 1
