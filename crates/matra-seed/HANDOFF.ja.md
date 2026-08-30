@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの43行目で停止 |
+| stage-2 | stage-1 | compiler sourceの67行目で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,15 +21,15 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:43:5: parse error: expected return
-   if value <= 90 {
-   ^^
+examples/compiler.md:67:23: parse error: expected i32
+fn next_token(source: bytes, offset: i32) -> token {
+                 ^^^^^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
-flatなcomparison `if` chainと複数の`return`もcompileできる。現在はnested `if`を受理しないため停止する。
-compiler sourceは複数parameter、`bytes`、array、local、assignment、arithmetic、nested `if`、`while`、
-`break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
+comparison `if` chain、nested `if`、複数の`return`もcompileできる。現在は`bytes` parameterを受理しないため
+停止する。compiler sourceは複数parameter、`bytes`、array、local、assignment、arithmetic、`while`、`break`、
+組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
 
 ## 検証済みの資産
 
@@ -80,12 +80,15 @@ body kindとして保持する実装を追加した。`pair(20, 22).right`を返
 parameterとinteger literalのcomparisonを条件とするflat `if` chainと複数の`return`を追加した。6種類の
 comparisonを含む最小Programの実行testが成功し、最初のdiagnosticは43行目のnested `if`へ進んだ。
 
+conditional statementのparserとWasm emitterを再帰化し、nested `if`を追加した。内外の条件が成功または失敗
+する3経路の実行testが成功し、最初のdiagnosticは67行目の`bytes` parameterへ進んだ。
+
 ## 次の実装単位
 
-compiler sourceの出現順にnested `if`をparserとWasm emitterへ追加する。最小Programの分岐結果を実行testで
-検証し、`bootstrap:verify`の停止位置を次の未対応構文へ進める。その後は複数parameterと`bytes`、localと
-assignment、`while`と`break`、array、memory組み込みを進める。stage-2が生成できた時点でstage-3生成と
-byte一致が自動的に検証される。
+compiler sourceの出現順に複数parameterと`bytes`の型・ABI loweringをparser、function table、Wasm emitterへ
+追加する。最小Programの実行testでpointerとlengthの受け渡しを検証し、`bootstrap:verify`の停止位置を次の
+未対応構文へ進める。その後はlocalとassignment、`while`と`break`、array、memory組み込みを進める。
+stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
 ## Stage-3進捗
 
@@ -93,7 +96,7 @@ byte一致が自動的に検証される。
 - [x] stage-1で単純なfunction、parameter、callをcompileする
 - [x] top-level `struct`、literal constructor、field readを実装する
 - [x] comparison、flat `if` chain、複数の`return`を実装する
-- [ ] nested `if`を実装する
+- [x] nested `if`を実装する
 - [ ] 複数parameterと`bytes`を実装する
 - [ ] local、assignment、arithmeticを実装する
 - [ ] `while`、`break`を実装する

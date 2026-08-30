@@ -370,10 +370,9 @@ fn parse_struct(source: bytes, offset: i32) -> function_definition {
   return function_definition(1, name.start, name.length, 0, field.start + field.length, 0, 0)
 }
 
-fn parse_conditional_body(source: bytes, offset: i32, name: token, parameter: token) -> function_definition {
-  let current = next_token(source, offset)
-  while is_if_keyword(source, current) == 1 {
-    let left = next_token(source, current.start + current.length)
+fn parse_conditional_statement(source: bytes, offset: i32, parameter: token) -> function_definition {
+    let keyword = next_token(source, offset)
+    let left = next_token(source, keyword.start + keyword.length)
     if same_token(source, left, parameter) == 0 {
       return function_definition(0, 0, 0, 0, offset, left.start, 12)
     }
@@ -411,19 +410,36 @@ fn parse_conditional_body(source: bytes, offset: i32, name: token, parameter: to
     if is_symbol(source, open, 123) == 0 {
       return function_definition(0, 0, 0, 0, offset, open.start, 10)
     }
-    let returned = next_token(source, open.start + open.length)
-    if is_return_keyword(source, returned) == 0 {
-      return function_definition(0, 0, 0, 0, offset, returned.start, 11)
+    let current = next_token(source, open.start + open.length)
+    while is_symbol(source, current, 125) == 0 {
+      if is_if_keyword(source, current) == 1 {
+        let nested = parse_conditional_statement(source, current.start, parameter)
+        if nested.status == 0 {
+          return nested
+        }
+        current = next_token(source, nested.position)
+      } else {
+        if is_return_keyword(source, current) == 0 {
+          return function_definition(0, 0, 0, 0, offset, current.start, 11)
+        }
+        let returned_value = next_token(source, current.start + current.length)
+        if returned_value.kind != 2 {
+          return function_definition(0, 0, 0, 0, offset, returned_value.start, 13)
+        }
+        current = next_token(source, returned_value.start + returned_value.length)
+      }
     }
-    let returned_value = next_token(source, returned.start + returned.length)
-    if returned_value.kind != 2 {
-      return function_definition(0, 0, 0, 0, offset, returned_value.start, 13)
+    return function_definition(1, 0, 0, 0, current.start + current.length, 0, 0)
+}
+
+fn parse_conditional_body(source: bytes, offset: i32, name: token, parameter: token) -> function_definition {
+  let current = next_token(source, offset)
+  while is_if_keyword(source, current) == 1 {
+    let statement = parse_conditional_statement(source, current.start, parameter)
+    if statement.status == 0 {
+      return statement
     }
-    let close = next_token(source, returned_value.start + returned_value.length)
-    if is_symbol(source, close, 125) == 0 {
-      return function_definition(0, 0, 0, 0, offset, close.start, 15)
-    }
-    current = next_token(source, close.start + close.length)
+    current = next_token(source, statement.position)
   }
   if is_return_keyword(source, current) == 0 {
     return function_definition(0, 0, 0, 0, offset, current.start, 11)
@@ -1161,27 +1177,6 @@ fn write_u32_leb(buffer: bytes, index: i32, value: i32) -> bytes {
   return buffer
 }
 
-fn conditional_body_length(source: bytes, function: function_definition) -> i32 {
-  let current = function_body_first_token(source, function)
-  let length = 0
-  while is_if_keyword(source, current) == 1 {
-    let left = next_token(source, current.start + current.length)
-    let operator = next_token(source, left.start + left.length)
-    let right = next_token(source, operator.start + operator.length)
-    if is_symbol(source, right, 61) == 1 {
-      right = next_token(source, right.start + right.length)
-    }
-    let open = next_token(source, right.start + right.length)
-    let returned = next_token(source, open.start + open.length)
-    let returned_value = next_token(source, returned.start + returned.length)
-    let close = next_token(source, returned_value.start + returned_value.length)
-    length = length + 9 + i32_leb_length(read_small_integer(source, right)) + i32_leb_length(read_small_integer(source, returned_value))
-    current = next_token(source, close.start + close.length)
-  }
-  let final_value = next_token(source, current.start + current.length)
-  return length + 3 + i32_leb_length(read_small_integer(source, final_value))
-}
-
 fn comparison_opcode(source: bytes, operator: token) -> i32 {
   let value = byte_at(source, operator.start)
   if value == 61 {
@@ -1203,22 +1198,52 @@ fn comparison_opcode(source: bytes, operator: token) -> i32 {
   return 74
 }
 
-fn write_conditional_body(buffer: bytes, index: i32, source: bytes, function: function_definition) -> bytes {
-  let position = index
-  byte_set(buffer, position, 0)
-  position = position + 1
+fn conditional_statement_length(source: bytes, statement: token) -> i32 {
+  let left = next_token(source, statement.start + statement.length)
+  let operator = next_token(source, left.start + left.length)
+  let right = next_token(source, operator.start + operator.length)
+  if is_symbol(source, right, 61) == 1 {
+    right = next_token(source, right.start + right.length)
+  }
+  let open = next_token(source, right.start + right.length)
+  let current = next_token(source, open.start + open.length)
+  let length = 7 + i32_leb_length(read_small_integer(source, right))
+  while is_symbol(source, current, 125) == 0 {
+    if is_if_keyword(source, current) == 1 {
+      length = length + conditional_statement_length(source, current)
+      let nested = parse_conditional_statement(source, current.start, left)
+      current = next_token(source, nested.position)
+    } else {
+      let returned_value = next_token(source, current.start + current.length)
+      length = length + 2 + i32_leb_length(read_small_integer(source, returned_value))
+      current = next_token(source, returned_value.start + returned_value.length)
+    }
+  }
+  return length
+}
+
+fn conditional_body_length(source: bytes, function: function_definition) -> i32 {
   let current = function_body_first_token(source, function)
+  let length = 1
   while is_if_keyword(source, current) == 1 {
-    let left = next_token(source, current.start + current.length)
+    length = length + conditional_statement_length(source, current)
+    let parameter = next_token(source, current.start + current.length)
+    let statement = parse_conditional_statement(source, current.start, parameter)
+    current = next_token(source, statement.position)
+  }
+  let final_value = next_token(source, current.start + current.length)
+  return length + 2 + i32_leb_length(read_small_integer(source, final_value))
+}
+
+fn write_conditional_statement(buffer: bytes, index: i32, source: bytes, statement: token) -> i32 {
+    let position = index
+    let left = next_token(source, statement.start + statement.length)
     let operator = next_token(source, left.start + left.length)
     let right = next_token(source, operator.start + operator.length)
     if is_symbol(source, right, 61) == 1 {
       right = next_token(source, right.start + right.length)
     }
     let open = next_token(source, right.start + right.length)
-    let returned = next_token(source, open.start + open.length)
-    let returned_value = next_token(source, returned.start + returned.length)
-    let close = next_token(source, returned_value.start + returned_value.length)
     byte_set(buffer, position, 32)
     byte_set(buffer, position + 1, 0)
     byte_set(buffer, position + 2, 65)
@@ -1229,15 +1254,39 @@ fn write_conditional_body(buffer: bytes, index: i32, source: bytes, function: fu
     byte_set(right_written, position, comparison_opcode(source, operator))
     byte_set(right_written, position + 1, 4)
     byte_set(right_written, position + 2, 64)
-    byte_set(right_written, position + 3, 65)
-    position = position + 4
-    let return_value = read_small_integer(source, returned_value)
-    let return_written = write_i32_leb(buffer, position, return_value)
-    position = position + i32_leb_length(return_value)
-    byte_set(return_written, position, 15)
-    byte_set(return_written, position + 1, 11)
-    position = position + 2
-    current = next_token(source, close.start + close.length)
+    position = position + 3
+    let current = next_token(source, open.start + open.length)
+    while is_symbol(source, current, 125) == 0 {
+      if is_if_keyword(source, current) == 1 {
+        position = write_conditional_statement(buffer, position, source, current)
+        let nested = parse_conditional_statement(source, current.start, left)
+        current = next_token(source, nested.position)
+      } else {
+        let returned_value = next_token(source, current.start + current.length)
+        let return_value = read_small_integer(source, returned_value)
+        byte_set(buffer, position, 65)
+        position = position + 1
+        let return_written = write_i32_leb(buffer, position, return_value)
+        position = position + i32_leb_length(return_value)
+        byte_set(return_written, position, 15)
+        position = position + 1
+        current = next_token(source, returned_value.start + returned_value.length)
+      }
+    }
+    byte_set(buffer, position, 11)
+    return position + 1
+}
+
+fn write_conditional_body(buffer: bytes, index: i32, source: bytes, function: function_definition) -> bytes {
+  let position = index
+  byte_set(buffer, position, 0)
+  position = position + 1
+  let current = function_body_first_token(source, function)
+  while is_if_keyword(source, current) == 1 {
+    position = write_conditional_statement(buffer, position, source, current)
+    let parameter = next_token(source, current.start + current.length)
+    let statement = parse_conditional_statement(source, current.start, parameter)
+    current = next_token(source, statement.position)
   }
   let final_value = next_token(source, current.start + current.length)
   let final_integer = read_small_integer(source, final_value)
