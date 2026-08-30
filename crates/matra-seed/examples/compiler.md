@@ -637,6 +637,15 @@ fn parse_loop_conditional(source: bytes, offset: i32) -> function_definition {
       }
     }
     let separator = next_token(source, argument.start + argument.length)
+    while is_arithmetic_operator(source, separator) == 1 {
+      let next_argument_operand = next_token(source, separator.start + separator.length)
+      if next_argument_operand.kind != 1 {
+        if next_argument_operand.kind != 2 {
+          return function_definition(0, 0, 0, 0, offset, next_argument_operand.start, 13)
+        }
+      }
+      separator = next_token(source, next_argument_operand.start + next_argument_operand.length)
+    }
     if is_symbol(source, separator, 44) == 1 {
       argument = next_token(source, separator.start + separator.length)
     } else {
@@ -2077,6 +2086,11 @@ fn loop_conditional_length(source: bytes, table: [i32], function: function_defin
   while is_symbol(source, argument, 41) == 0 {
     length = length + operand_length(source, function, argument)
     let separator = next_token(source, argument.start + argument.length)
+    while is_arithmetic_operator(source, separator) == 1 {
+      let arithmetic_operand = next_token(source, separator.start + separator.length)
+      length = length + operand_length(source, function, arithmetic_operand) + 1
+      separator = next_token(source, arithmetic_operand.start + arithmetic_operand.length)
+    }
     if is_symbol(source, separator, 44) == 1 {
       argument = next_token(source, separator.start + separator.length)
     } else {
@@ -2320,6 +2334,14 @@ fn write_loop_conditional(buffer: bytes, index: i32, source: bytes, table: [i32]
   while is_symbol(source, argument, 41) == 0 {
     position = write_operand(buffer, position, source, function, argument)
     let separator = next_token(source, argument.start + argument.length)
+    while is_arithmetic_operator(source, separator) == 1 {
+      let argument_arithmetic = separator
+      let argument_arithmetic_operand = next_token(source, argument_arithmetic.start + argument_arithmetic.length)
+      position = write_operand(buffer, position, source, function, argument_arithmetic_operand)
+      byte_set(buffer, position, arithmetic_opcode(source, argument_arithmetic))
+      position = position + 1
+      separator = next_token(source, argument_arithmetic_operand.start + argument_arithmetic_operand.length)
+    }
     if is_symbol(source, separator, 44) == 1 {
       argument = next_token(source, separator.start + separator.length)
     } else {

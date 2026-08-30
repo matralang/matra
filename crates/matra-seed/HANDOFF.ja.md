@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの77行目で停止 |
+| stage-2 | stage-1 | compiler sourceの79行目で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,17 +21,17 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:77:39: parse error: expected integer
-     if byte_at(source, position + 1) == 47 {
-                  ^
+examples/compiler.md:79:19: parse error: expected integer
+      while position < source_length {
+         ^^^^^^^^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
 comparison `if` chain、nested `if`、複数parameter、`bytes` input、struct constructor returnもcompileできる。
 local declaration、四則演算、local return、1引数のlocal initializer call、basic `while`とassignment、
 loop内local call、call result comparisonと`else`もcompileできる。現在はloop内のlocal comparisonを条件とする
-nested `if`と`break`、左辺算術付きcomparisonもcompileできる。現在はcall argument内の算術を受理しないため
-停止する。
+nested `if`と`break`、左辺算術付きcomparison、call argument内の算術もcompileできる。現在はnested
+`while`をstatementとして受理しないため停止する。
 compiler sourceは`bytes` return、array、nested loop body、
 `break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
 
@@ -121,9 +121,12 @@ comparisonへ進んだ。
 local comparisonの左辺に算術式を追加し、local conditional bodyの再帰処理と深さに応じた`break`を追加した。
 4階層目のbranchから脱出する実行testが成功し、最初のdiagnosticは77行目のcall argument内算術へ進んだ。
 
+loop conditionalのcall argumentに算術式のparse・length計算・emitを追加した。算術argument付きcallの
+実行testが成功し、最初のdiagnosticは79行目のnested `while`へ進んだ。
+
 ## 次の実装単位
 
-compiler sourceの出現順にcall argument内の算術と、さらに深いnested conditional bodyを追加する。
+compiler sourceの出現順にnested `while` statementを追加する。
 その後は`bytes` returnと複数function call ABI、array、memory組み込みを進める。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
@@ -145,7 +148,8 @@ stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検�
 - [x] loop内conditionalの`else`を実装する
 - [x] loop内local comparisonとnested `break`を実装する
 - [x] 左辺算術付きcomparisonと深いnested `if`を実装する
-- [ ] call argument内の算術を実装する
+- [x] call argument内の算術を実装する
+- [ ] nested `while` statementを実装する
 - [ ] arrayと組み込みmemory操作を実装する
 - [ ] stage-1からstage-2を生成する
 - [ ] stage-2からstage-3を生成する
