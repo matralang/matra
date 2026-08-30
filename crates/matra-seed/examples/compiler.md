@@ -1964,70 +1964,70 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
       let local_written = write_local_body(output, position, source, function_at_index(source, index))
       position = position + emitted_body_length
     } else {
-    if body_kind == 4 {
-      let conditional_written = write_conditional_body(output, position, source, function_at_index(source, index))
-      position = position + emitted_body_length
-    } else {
-    if body_kind == 2 {
-      let argument_kind = array_get(table, index * 7 + 6)
-      let argument_value = array_get(table, index * 7 + 7)
-      if argument_kind == 0 {
-        byte_set(body_length_written, position, 0)
-        byte_set(body_length_written, position + 1, 16)
-        position = position + 2
-        let empty_call_index_written = write_u32_leb(output, position, body_value)
-        position = position + u32_leb_length(body_value)
-        byte_set(empty_call_index_written, position, 11)
-        position = position + 1
-      }
-      if argument_kind == 1 {
-        let argument_length = i32_leb_length(argument_value)
-        byte_set(body_length_written, position, 0)
-        byte_set(body_length_written, position + 1, 65)
-        position = position + 2
-        let argument_written = write_i32_leb(output, position, argument_value)
-        position = position + argument_length
-        byte_set(argument_written, position, 16)
-        position = position + 1
-        let literal_call_index_written = write_u32_leb(output, position, body_value)
-        position = position + u32_leb_length(body_value)
-        byte_set(literal_call_index_written, position, 11)
-        position = position + 1
-      }
-      if argument_kind == 2 {
-        byte_set(body_length_written, position, 0)
-        byte_set(body_length_written, position + 1, 32)
-        position = position + 2
-        let local_index_written = write_u32_leb(output, position, argument_value)
-        position = position + u32_leb_length(argument_value)
-        byte_set(local_index_written, position, 16)
-        position = position + 1
-        let parameter_call_index_written = write_u32_leb(output, position, body_value)
-        position = position + u32_leb_length(body_value)
-        byte_set(parameter_call_index_written, position, 11)
-        position = position + 1
-      }
-    } else {
-      if body_kind == 1 {
-        byte_set(body_length_written, position, 0)
-        byte_set(body_length_written, position + 1, 32)
-        position = position + 2
-        let returned_local_written = write_u32_leb(output, position, body_value)
-        position = position + u32_leb_length(body_value)
-        byte_set(returned_local_written, position, 11)
-        position = position + 1
+      if body_kind == 4 {
+        let conditional_written = write_conditional_body(output, position, source, function_at_index(source, index))
+        position = position + emitted_body_length
       } else {
-        let value_length = i32_leb_length(body_value)
-        byte_set(body_length_written, position, 0)
-        byte_set(body_length_written, position + 1, 65)
-        position = position + 2
-        let written = write_i32_leb(output, position, body_value)
-        position = position + value_length
-        byte_set(written, position, 11)
-        position = position + 1
+        if body_kind == 2 {
+          let argument_kind = array_get(table, index * 7 + 6)
+          let argument_value = array_get(table, index * 7 + 7)
+          if argument_kind == 0 {
+            byte_set(body_length_written, position, 0)
+            byte_set(body_length_written, position + 1, 16)
+            position = position + 2
+            let empty_call_index_written = write_u32_leb(output, position, body_value)
+            position = position + u32_leb_length(body_value)
+            byte_set(empty_call_index_written, position, 11)
+            position = position + 1
+          }
+          if argument_kind == 1 {
+            let argument_length = i32_leb_length(argument_value)
+            byte_set(body_length_written, position, 0)
+            byte_set(body_length_written, position + 1, 65)
+            position = position + 2
+            let argument_written = write_i32_leb(output, position, argument_value)
+            position = position + argument_length
+            byte_set(argument_written, position, 16)
+            position = position + 1
+            let literal_call_index_written = write_u32_leb(output, position, body_value)
+            position = position + u32_leb_length(body_value)
+            byte_set(literal_call_index_written, position, 11)
+            position = position + 1
+          }
+          if argument_kind == 2 {
+            byte_set(body_length_written, position, 0)
+            byte_set(body_length_written, position + 1, 32)
+            position = position + 2
+            let local_index_written = write_u32_leb(output, position, argument_value)
+            position = position + u32_leb_length(argument_value)
+            byte_set(local_index_written, position, 16)
+            position = position + 1
+            let parameter_call_index_written = write_u32_leb(output, position, body_value)
+            position = position + u32_leb_length(body_value)
+            byte_set(parameter_call_index_written, position, 11)
+            position = position + 1
+          }
+        } else {
+          if body_kind == 1 {
+            byte_set(body_length_written, position, 0)
+            byte_set(body_length_written, position + 1, 32)
+            position = position + 2
+            let returned_local_written = write_u32_leb(output, position, body_value)
+            position = position + u32_leb_length(body_value)
+            byte_set(returned_local_written, position, 11)
+            position = position + 1
+          } else {
+            let value_length = i32_leb_length(body_value)
+            byte_set(body_length_written, position, 0)
+            byte_set(body_length_written, position + 1, 65)
+            position = position + 2
+            let written = write_i32_leb(output, position, body_value)
+            position = position + value_length
+            byte_set(written, position, 11)
+            position = position + 1
+          }
+        }
       }
-    }
-    }
     }
     index = index + 1
   }
