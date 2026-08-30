@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの102行目で停止 |
+| stage-2 | stage-1 | compiler sourceの102行目のcall-result条件で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,9 +21,9 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:102:3: parse error: expected return
+examples/compiler.md:102:25: parse error: expected {
    if is_identifier(first) == 1 {
-   ^^
+                                    ^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
@@ -33,7 +33,8 @@ loop内local call、call result comparisonと`else`もcompileできる。現在�
 nested `if`と`break`、左辺算術付きcomparison、call argument内の算術もcompileできる。現在はnested
 `while`とloop local conditionalの`else`もcompileできる。現在はwhile後のconditional statementを
 function bodyとしてcompileでき、conditional後のlocal declarationもcompileできる。現在はそのlocal
-initializerにあるcallもcompileできる。現在は後続のconditional statementを受理しないため停止する。
+initializerにあるcallと後続のlocal conditionalもcompileできる。現在はfunction bodyのcall-result conditionalを
+受理しないため停止する。
 compiler sourceは`bytes` return、array、nested loop body、
 `break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
 
@@ -141,9 +142,12 @@ conditional後のlocal declarationをparseし、local count/index・length計算
 conditional後localのcall initializerをparse・length計算・emitへ追加した。call結果をlocal経由で返す実行testが
 成功し、最初のdiagnosticは102行目の後続conditional statementへ進んだ。
 
+local declaration後にもlocal early-return conditionalをdispatchできるようにした。post-local conditionalの
+実行testが成功し、最初のdiagnosticは102行目のcall-result conditionalへ進んだ。
+
 ## 次の実装単位
 
-compiler sourceの出現順にlocal declaration後のconditional statementを追加する。
+compiler sourceの出現順にfunction bodyのcall-result conditionalを追加する。
 その後は`bytes` returnと複数function call ABI、array、memory組み込みを進める。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
@@ -171,7 +175,8 @@ stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検�
 - [x] while後のconditional statementとearly returnを実装する
 - [x] conditional後のlocal declarationを実装する
 - [x] conditional後localのcall initializerを実装する
-- [ ] local declaration後のconditional statementを実装する
+- [x] local declaration後のconditional statementを実装する
+- [ ] function bodyのcall-result conditionalを実装する
 - [ ] arrayと組み込みmemory操作を実装する
 - [ ] stage-1からstage-2を生成する
 - [ ] stage-2からstage-3を生成する

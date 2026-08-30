@@ -1075,6 +1075,13 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
       }
     }
   }
+  while is_if_keyword(source, current) == 1 {
+    let final_conditional = parse_local_return_conditional(source, current.start)
+    if final_conditional.status == 0 {
+      return final_conditional
+    }
+    current = next_token(source, final_conditional.position)
+  }
   if is_return_keyword(source, current) == 0 {
     return function_definition(0, 0, 0, 0, offset, current.start, 11)
   }
@@ -1555,6 +1562,10 @@ fn local_count_of(source: bytes, function: function_definition) -> i32 {
     current = expression_end(source, trailing_operand)
     count = count + 1
   }
+  while is_if_keyword(source, current) == 1 {
+    let post_local_conditional = parse_local_return_conditional(source, current.start)
+    current = next_token(source, post_local_conditional.position)
+  }
   return count
 }
 
@@ -1630,6 +1641,10 @@ fn variable_index(source: bytes, function: function_definition, target: token) -
     let trailing_operand = next_token(source, trailing_equals.start + trailing_equals.length)
     current = expression_end(source, trailing_operand)
     index = index + 1
+  }
+  while is_if_keyword(source, current) == 1 {
+    let post_local_conditional = parse_local_return_conditional(source, current.start)
+    current = next_token(source, post_local_conditional.position)
   }
   return -1
 }
@@ -2523,6 +2538,11 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     length = length + 1 + u32_leb_length(local_index)
     local_index = local_index + 1
   }
+  while is_if_keyword(source, current) == 1 {
+    length = length + local_return_conditional_length(source, table, function, current)
+    let post_local_conditional = parse_local_return_conditional(source, current.start)
+    current = next_token(source, post_local_conditional.position)
+  }
   let returned = next_token(source, current.start + current.length)
   return length + 2 + u32_leb_length(variable_index(source, function, returned))
 }
@@ -2967,6 +2987,11 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     let trailing_local_written = write_u32_leb(buffer, position, local_index)
     position = position + u32_leb_length(local_index)
     local_index = local_index + 1
+  }
+  while is_if_keyword(source, current) == 1 {
+    position = write_local_return_conditional(buffer, position, source, table, function, current)
+    let post_local_conditional = parse_local_return_conditional(source, current.start)
+    current = next_token(source, post_local_conditional.position)
   }
   let returned = next_token(source, current.start + current.length)
   byte_set(buffer, position, 32)
