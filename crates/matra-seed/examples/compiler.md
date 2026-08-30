@@ -1035,6 +1035,15 @@ fn parse_local_return_conditional(source: bytes, offset: i32) -> function_defini
         }
       }
       let separator = next_token(source, argument.start + argument.length)
+      while is_arithmetic_operator(source, separator) == 1 {
+        let return_arithmetic_operand = next_token(source, separator.start + separator.length)
+        if return_arithmetic_operand.kind != 1 {
+          if return_arithmetic_operand.kind != 2 {
+            return function_definition(0, 0, 0, 0, offset, return_arithmetic_operand.start, 13)
+          }
+        }
+        separator = next_token(source, return_arithmetic_operand.start + return_arithmetic_operand.length)
+      }
       if is_symbol(source, separator, 44) == 1 {
         argument = next_token(source, separator.start + separator.length)
       } else {
@@ -1163,6 +1172,32 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
     return function_definition(0, 0, 0, 0, offset, returned.start, 12)
   }
   let close = next_token(source, returned.start + returned.length)
+  if is_symbol(source, close, 40) == 1 {
+    let constructor_argument = next_token(source, close.start + close.length)
+    while is_symbol(source, constructor_argument, 41) == 0 {
+      if constructor_argument.kind != 1 {
+        if constructor_argument.kind != 2 {
+          return function_definition(0, 0, 0, 0, offset, constructor_argument.start, 13)
+        }
+      }
+      let constructor_separator = next_token(source, constructor_argument.start + constructor_argument.length)
+      while is_arithmetic_operator(source, constructor_separator) == 1 {
+        let constructor_arithmetic_operand = next_token(source, constructor_separator.start + constructor_separator.length)
+        if constructor_arithmetic_operand.kind != 1 {
+          if constructor_arithmetic_operand.kind != 2 {
+            return function_definition(0, 0, 0, 0, offset, constructor_arithmetic_operand.start, 13)
+          }
+        }
+        constructor_separator = next_token(source, constructor_arithmetic_operand.start + constructor_arithmetic_operand.length)
+      }
+      if is_symbol(source, constructor_separator, 44) == 1 {
+        constructor_argument = next_token(source, constructor_separator.start + constructor_separator.length)
+      } else {
+        constructor_argument = constructor_separator
+      }
+    }
+    close = next_token(source, constructor_argument.start + constructor_argument.length)
+  }
   if is_symbol(source, close, 125) == 0 {
     return function_definition(0, 0, 0, 0, offset, close.start, 15)
   }
@@ -2597,17 +2632,30 @@ fn local_return_conditional_length(source: bytes, table: [i32], function: functi
   let after_value = next_token(source, value.start + value.length)
   if is_symbol(source, after_value, 40) == 1 {
     let argument = next_token(source, after_value.start + after_value.length)
+    let constructor_offset = 0
     while is_symbol(source, argument, 41) == 0 {
-      length = length + operand_length(source, function, argument)
+      if struct_field_count(source, value) >= 0 {
+        length = length + 4 + operand_length(source, function, argument) + u32_leb_length(constructor_offset)
+      } else {
+        length = length + operand_length(source, function, argument)
+      }
       let separator = next_token(source, argument.start + argument.length)
+      while is_arithmetic_operator(source, separator) == 1 {
+        let return_arithmetic_operand = next_token(source, separator.start + separator.length)
+        length = length + operand_length(source, function, return_arithmetic_operand) + 1
+        separator = next_token(source, return_arithmetic_operand.start + return_arithmetic_operand.length)
+      }
       if is_symbol(source, separator, 44) == 1 {
         argument = next_token(source, separator.start + separator.length)
       } else {
         argument = separator
       }
+      constructor_offset = constructor_offset + 4
     }
     if struct_field_count(source, value) < 0 {
       length = length + 1 + u32_leb_length(function_index_in_table(source, table, value))
+    } else {
+      length = length + 2
     }
     return length
   }
@@ -2684,6 +2732,27 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     current = next_token(source, post_local_conditional.position)
   }
   let returned = next_token(source, current.start + current.length)
+  let return_open = next_token(source, returned.start + returned.length)
+  if is_symbol(source, return_open, 40) == 1 {
+    let constructor_argument = next_token(source, return_open.start + return_open.length)
+    let constructor_offset = 0
+    while is_symbol(source, constructor_argument, 41) == 0 {
+      length = length + 4 + operand_length(source, function, constructor_argument) + u32_leb_length(constructor_offset)
+      let constructor_separator = next_token(source, constructor_argument.start + constructor_argument.length)
+      while is_arithmetic_operator(source, constructor_separator) == 1 {
+        let constructor_arithmetic_operand = next_token(source, constructor_separator.start + constructor_separator.length)
+        length = length + operand_length(source, function, constructor_arithmetic_operand) + 1
+        constructor_separator = next_token(source, constructor_arithmetic_operand.start + constructor_arithmetic_operand.length)
+      }
+      if is_symbol(source, constructor_separator, 44) == 1 {
+        constructor_argument = next_token(source, constructor_separator.start + constructor_separator.length)
+      } else {
+        constructor_argument = constructor_separator
+      }
+      constructor_offset = constructor_offset + 4
+    }
+    return length + 3
+  }
   return length + 2 + u32_leb_length(variable_index(source, function, returned))
 }
 
@@ -3096,14 +3165,36 @@ fn write_local_return_conditional(buffer: bytes, index: i32, source: bytes, tabl
   let after_value = next_token(source, value.start + value.length)
   if is_symbol(source, after_value, 40) == 1 {
     let argument = next_token(source, after_value.start + after_value.length)
+    let constructor_offset = 0
     while is_symbol(source, argument, 41) == 0 {
+      if struct_field_count(source, value) >= 0 {
+        byte_set(buffer, position, 65)
+        byte_set(buffer, position + 1, 0)
+        position = position + 2
+      }
       position = write_operand(buffer, position, source, function, argument)
       let separator = next_token(source, argument.start + argument.length)
+      while is_arithmetic_operator(source, separator) == 1 {
+        let return_arithmetic = separator
+        let return_arithmetic_operand = next_token(source, return_arithmetic.start + return_arithmetic.length)
+        position = write_operand(buffer, position, source, function, return_arithmetic_operand)
+        byte_set(buffer, position, arithmetic_opcode(source, return_arithmetic))
+        position = position + 1
+        separator = next_token(source, return_arithmetic_operand.start + return_arithmetic_operand.length)
+      }
+      if struct_field_count(source, value) >= 0 {
+        byte_set(buffer, position, 54)
+        byte_set(buffer, position + 1, 2)
+        position = position + 2
+        let constructor_offset_written = write_u32_leb(buffer, position, constructor_offset)
+        position = position + u32_leb_length(constructor_offset)
+      }
       if is_symbol(source, separator, 44) == 1 {
         argument = next_token(source, separator.start + separator.length)
       } else {
         argument = separator
       }
+      constructor_offset = constructor_offset + 4
     }
     if struct_field_count(source, value) < 0 {
       byte_set(buffer, position, 16)
@@ -3111,6 +3202,10 @@ fn write_local_return_conditional(buffer: bytes, index: i32, source: bytes, tabl
       let called_index = function_index_in_table(source, table, value)
       let call_written = write_u32_leb(buffer, position, called_index)
       position = position + u32_leb_length(called_index)
+    } else {
+      byte_set(buffer, position, 65)
+      byte_set(buffer, position + 1, 0)
+      position = position + 2
     }
   } else {
     position = write_operand(buffer, position, source, function, value)
@@ -3218,6 +3313,41 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     current = next_token(source, post_local_conditional.position)
   }
   let returned = next_token(source, current.start + current.length)
+  let return_open = next_token(source, returned.start + returned.length)
+  if is_symbol(source, return_open, 40) == 1 {
+    let constructor_argument = next_token(source, return_open.start + return_open.length)
+    let constructor_offset = 0
+    while is_symbol(source, constructor_argument, 41) == 0 {
+      byte_set(buffer, position, 65)
+      byte_set(buffer, position + 1, 0)
+      position = position + 2
+      position = write_operand(buffer, position, source, function, constructor_argument)
+      let constructor_separator = next_token(source, constructor_argument.start + constructor_argument.length)
+      while is_arithmetic_operator(source, constructor_separator) == 1 {
+        let constructor_arithmetic = constructor_separator
+        let constructor_arithmetic_operand = next_token(source, constructor_arithmetic.start + constructor_arithmetic.length)
+        position = write_operand(buffer, position, source, function, constructor_arithmetic_operand)
+        byte_set(buffer, position, arithmetic_opcode(source, constructor_arithmetic))
+        position = position + 1
+        constructor_separator = next_token(source, constructor_arithmetic_operand.start + constructor_arithmetic_operand.length)
+      }
+      byte_set(buffer, position, 54)
+      byte_set(buffer, position + 1, 2)
+      position = position + 2
+      let constructor_offset_written = write_u32_leb(buffer, position, constructor_offset)
+      position = position + u32_leb_length(constructor_offset)
+      if is_symbol(source, constructor_separator, 44) == 1 {
+        constructor_argument = next_token(source, constructor_separator.start + constructor_separator.length)
+      } else {
+        constructor_argument = constructor_separator
+      }
+      constructor_offset = constructor_offset + 4
+    }
+    byte_set(buffer, position, 65)
+    byte_set(buffer, position + 1, 0)
+    byte_set(buffer, position + 2, 11)
+    return buffer
+  }
   byte_set(buffer, position, 32)
   position = position + 1
   let returned_index = variable_index(source, function, returned)
@@ -3251,7 +3381,20 @@ fn single_function_module(source: bytes, table: [i32]) -> bytes {
   }
   let code_payload_length = 1 + u32_leb_length(body_length) + body_length
   let memory_section_length = 0
+  let memory_required = 0
   if body_kind == 5 {
+    memory_required = 1
+  }
+  if body_kind == 6 {
+    let function_close = function_parameter_close(source, first_function(source))
+    let function_minus = next_token(source, function_close.start + function_close.length)
+    let function_arrow = next_token(source, function_minus.start + function_minus.length)
+    let function_result_type = next_token(source, function_arrow.start + function_arrow.length)
+    if struct_field_count(source, function_result_type) >= 0 {
+      memory_required = 1
+    }
+  }
+  if memory_required == 1 {
     memory_section_length = 5
     export_payload_length = export_payload_length + 9
   }
@@ -3293,7 +3436,7 @@ fn single_function_module(source: bytes, table: [i32]) -> bytes {
   position = position + 1
   let type_index_written = write_u32_leb(function_count_written, position, 0)
   position = position + 1
-  if body_kind == 5 {
+  if memory_required == 1 {
     byte_set(type_index_written, position, 5)
     byte_set(type_index_written, position + 1, 3)
     byte_set(type_index_written, position + 2, 1)
@@ -3306,7 +3449,7 @@ fn single_function_module(source: bytes, table: [i32]) -> bytes {
   let export_length_written = write_u32_leb(output, position, export_payload_length)
   position = position + u32_leb_length(export_payload_length)
   let export_count = 1
-  if body_kind == 5 {
+  if memory_required == 1 {
     export_count = 2
   }
   let export_count_written = write_u32_leb(export_length_written, position, export_count)
@@ -3323,7 +3466,7 @@ fn single_function_module(source: bytes, table: [i32]) -> bytes {
   position = position + 1
   let export_index_written = write_u32_leb(output, position, 0)
   position = position + 1
-  if body_kind == 5 {
+  if memory_required == 1 {
     byte_set(export_index_written, position, 6)
     byte_set(export_index_written, position + 1, 109)
     byte_set(export_index_written, position + 2, 101)
