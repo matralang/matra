@@ -986,6 +986,15 @@ fn parse_local_return_conditional(source: bytes, offset: i32) -> function_defini
             return function_definition(0, 0, 0, 0, offset, condition_field.start, 2)
           }
           condition_separator = next_token(source, condition_field.start + condition_field.length)
+          while is_arithmetic_operator(source, condition_separator) == 1 {
+            let condition_arithmetic_operand = next_token(source, condition_separator.start + condition_separator.length)
+            if condition_arithmetic_operand.kind != 1 {
+              if condition_arithmetic_operand.kind != 2 {
+                return function_definition(0, 0, 0, 0, offset, condition_arithmetic_operand.start, 13)
+              }
+            }
+            condition_separator = next_token(source, condition_arithmetic_operand.start + condition_arithmetic_operand.length)
+          }
         } else {
           if is_symbol(source, condition_separator, 40) == 1 {
             let nested_condition_argument = next_token(source, condition_separator.start + condition_separator.length)
@@ -2751,6 +2760,11 @@ fn local_return_conditional_length(source: bytes, table: [i32], function: functi
           let condition_field_index = local_struct_field_index(source, table, function, condition_argument, condition_field)
           length = length + operand_length(source, function, condition_argument) + 2 + u32_leb_length(condition_field_index * 4)
           condition_separator = next_token(source, condition_field.start + condition_field.length)
+          while is_arithmetic_operator(source, condition_separator) == 1 {
+            let condition_arithmetic_operand = next_token(source, condition_separator.start + condition_separator.length)
+            length = length + operand_length(source, function, condition_arithmetic_operand) + 1
+            condition_separator = next_token(source, condition_arithmetic_operand.start + condition_arithmetic_operand.length)
+          }
         } else {
           if is_symbol(source, condition_separator, 40) == 1 {
             let nested_condition_argument = next_token(source, condition_separator.start + condition_separator.length)
@@ -3317,6 +3331,14 @@ fn write_local_return_conditional(buffer: bytes, index: i32, source: bytes, tabl
           let condition_field_offset_written = write_u32_leb(buffer, position, condition_field_index * 4)
           position = position + u32_leb_length(condition_field_index * 4)
           condition_separator = next_token(source, condition_field.start + condition_field.length)
+          while is_arithmetic_operator(source, condition_separator) == 1 {
+            let condition_arithmetic = condition_separator
+            let condition_arithmetic_operand = next_token(source, condition_arithmetic.start + condition_arithmetic.length)
+            position = write_operand(buffer, position, source, function, condition_arithmetic_operand)
+            byte_set(buffer, position, arithmetic_opcode(source, condition_arithmetic))
+            position = position + 1
+            condition_separator = next_token(source, condition_arithmetic_operand.start + condition_arithmetic_operand.length)
+          }
         } else {
           if is_symbol(source, condition_separator, 40) == 1 {
             let nested_condition_argument = next_token(source, condition_separator.start + condition_separator.length)
