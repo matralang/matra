@@ -644,6 +644,18 @@ fn expression_end(source: bytes, operand: token) -> token {
       let next_field = next_token(source, current.start + current.length)
       current = next_token(source, next_field.start + next_field.length)
     }
+    if is_symbol(source, current, 40) == 1 {
+      let next_argument = next_token(source, current.start + current.length)
+      while is_symbol(source, next_argument, 41) == 0 {
+        let next_separator = next_token(source, next_argument.start + next_argument.length)
+        if is_symbol(source, next_separator, 44) == 1 {
+          next_argument = next_token(source, next_separator.start + next_separator.length)
+        } else {
+          next_argument = next_separator
+        }
+      }
+      current = next_token(source, next_argument.start + next_argument.length)
+    }
   }
   return current
 }
@@ -982,6 +994,23 @@ fn parse_while_statement(source: bytes, offset: i32) -> function_definition {
             }
           }
           current = next_token(source, next_operand.start + next_operand.length)
+          if is_symbol(source, current, 40) == 1 {
+            let arithmetic_argument = next_token(source, current.start + current.length)
+            while is_symbol(source, arithmetic_argument, 41) == 0 {
+              if arithmetic_argument.kind != 1 {
+                if arithmetic_argument.kind != 2 {
+                  return function_definition(0, 0, 0, 0, offset, arithmetic_argument.start, 13)
+                }
+              }
+              let arithmetic_separator = next_token(source, arithmetic_argument.start + arithmetic_argument.length)
+              if is_symbol(source, arithmetic_separator, 44) == 1 {
+                arithmetic_argument = next_token(source, arithmetic_separator.start + arithmetic_separator.length)
+              } else {
+                arithmetic_argument = arithmetic_separator
+              }
+            }
+            current = next_token(source, arithmetic_argument.start + arithmetic_argument.length)
+          }
         }
       }
     }
@@ -2624,8 +2653,24 @@ fn while_statement_length(source: bytes, table: [i32], function: function_defini
         length = length + operand_length(source, function, operand)
         while is_arithmetic_operator(source, after_operand) == 1 {
           let next_operand = next_token(source, after_operand.start + after_operand.length)
-          length = length + operand_length(source, function, next_operand) + 1
           after_operand = next_token(source, next_operand.start + next_operand.length)
+          if is_symbol(source, after_operand, 40) == 1 {
+            let arithmetic_argument = next_token(source, after_operand.start + after_operand.length)
+            while is_symbol(source, arithmetic_argument, 41) == 0 {
+              length = length + operand_length(source, function, arithmetic_argument)
+              let arithmetic_separator = next_token(source, arithmetic_argument.start + arithmetic_argument.length)
+              if is_symbol(source, arithmetic_separator, 44) == 1 {
+                arithmetic_argument = next_token(source, arithmetic_separator.start + arithmetic_separator.length)
+              } else {
+                arithmetic_argument = arithmetic_separator
+              }
+            }
+            length = length + 1 + u32_leb_length(function_index_in_table(source, table, next_operand))
+            after_operand = next_token(source, arithmetic_argument.start + arithmetic_argument.length)
+          } else {
+            length = length + operand_length(source, function, next_operand)
+          }
+          length = length + 1
         }
       }
       length = length + 1 + u32_leb_length(variable_index(source, function, target))
@@ -3167,10 +3212,29 @@ fn write_while_statement(buffer: bytes, index: i32, source: bytes, table: [i32],
         while is_arithmetic_operator(source, current) == 1 {
           let arithmetic = current
           let next_operand = next_token(source, arithmetic.start + arithmetic.length)
-          position = write_operand(buffer, position, source, function, next_operand)
+          current = next_token(source, next_operand.start + next_operand.length)
+          if is_symbol(source, current, 40) == 1 {
+            let arithmetic_argument = next_token(source, current.start + current.length)
+            while is_symbol(source, arithmetic_argument, 41) == 0 {
+              position = write_operand(buffer, position, source, function, arithmetic_argument)
+              let arithmetic_separator = next_token(source, arithmetic_argument.start + arithmetic_argument.length)
+              if is_symbol(source, arithmetic_separator, 44) == 1 {
+                arithmetic_argument = next_token(source, arithmetic_separator.start + arithmetic_separator.length)
+              } else {
+                arithmetic_argument = arithmetic_separator
+              }
+            }
+            byte_set(buffer, position, 16)
+            position = position + 1
+            let arithmetic_called_index = function_index_in_table(source, table, next_operand)
+            let arithmetic_call_written = write_u32_leb(buffer, position, arithmetic_called_index)
+            position = position + u32_leb_length(arithmetic_called_index)
+            current = next_token(source, arithmetic_argument.start + arithmetic_argument.length)
+          } else {
+            position = write_operand(buffer, position, source, function, next_operand)
+          }
           byte_set(buffer, position, arithmetic_opcode(source, arithmetic))
           position = position + 1
-          current = next_token(source, next_operand.start + next_operand.length)
         }
       }
       byte_set(buffer, position, 33)
