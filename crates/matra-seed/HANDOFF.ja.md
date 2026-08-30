@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの145行目で停止 |
+| stage-2 | stage-1 | compiler sourceの423行目で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,9 +21,9 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:145:34: parse error: expected integer
-   if byte_at(source, value.start + 1) != 111 {
-                                                 ^
+examples/compiler.md:423:35: parse error: expected identifier
+    result = result * 10 + byte_at(source, position) - 48
+                                  ^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
@@ -35,8 +35,9 @@ conditionalの`else`もcompileできる。function bodyではwhile後のconditio
 call-result conditional、そのbodyのassignmentと`while`、call argument内nested callもcompileできる。
 constructor return argument内の算術、local initializer callのliteral argumentを含む複数argument、
 functionごとの複数parameter call ABIもcompileできる。local bodyの最終returnにある算術式を
-含むlocal struct field access、struct型parameter、conditional左辺とcall argument内のstruct field accessも
-compileできる。現在はconditional call argument内のstruct field accessに続く算術を受理しないため停止する。
+含むlocal struct field access、struct型parameter、conditional左辺とcall argument内のstruct field access、
+field accessに続く算術、local initializerのfield access、while右辺のfield accessと算術もcompileできる。
+現在はassignment算術式の途中にあるfunction callを受理しないため停止する。
 compiler sourceは`bytes` return、array、nested loop body、
 `break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
 
@@ -178,37 +179,46 @@ body先頭のcall-result conditionalをlocal conditional実装へdispatchし、�
 accessをpointer loadとしてparse・length計算・emitするようにした。field値をcallへ渡す実行testが成功し、
 diagnosticは145行目へ進んだ。
 
+conditional call argumentのstruct field access後に算術operandをparse・length計算・emitするようにした。
+隣接fieldに異なる値を置いた実行testが成功し、diagnosticは421行目へ進んだ。commitは`915e24d`である。
+
+先頭localとconditional後localのinitializerにstruct field accessを追加し、式終端、local count、variable indexの
+cursorもfield tokenへ対応させた。異なるfieldを2つのlocalへ保存する実行testが成功し、diagnosticは422行目へ
+進んだ。commitは`5638580`である。
+
+while comparison右辺のstruct field accessと後続算術をparse・length計算・emitするようにした。2つのfieldの
+合計までloopする実行testが成功し、diagnosticは423行目へ進んだ。commitは`53613a0`である。
+
 ## 次の実装単位
 
-compiler sourceの出現順にconditional call argument内のstruct field accessに続く算術を追加する。
-その後は`bytes` returnと複数function call ABI、array、memory組み込みを進める。
+compiler sourceの出現順にassignment算術式の途中にあるfunction callを追加する。その後は`bytes` returnと
+複数function call ABI、array、memory組み込みを進める。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
 ## 次セッションの開始地点
 
-直近の完了commitは`d412030`（`feat(matra-seed): call引数内のstruct field参照を実装`）である。
-次に扱うsourceは[`examples/compiler.md`](examples/compiler.md)の次の条件である。
+直近の完了commitは`53613a0`（`feat(matra-seed): while右辺のstruct field算術を実装`）である。
+次に扱うsourceは[`examples/compiler.md`](examples/compiler.md)の次のassignmentである。
 
 ```matra
-if byte_at(source, value.start + 1) != 111 {
+result = result * 10 + byte_at(source, position) - 48
 ```
 
-最初に検証する仮説は、call argumentのfield access後に算術operandを読む処理がないため、`+`をcall argumentの
-separatorとして扱って停止する、というものである。最小testは
-[`tests/wasm.test.mjs`](tests/wasm.test.mjs)の`structConditionalSource`を、たとえば
-`read(value.left + 1)`を実行する形へ拡張する。memory上の隣接fieldに異なる値を置き、正しいoffsetの値だけが
-返ることを確認するとwriterの誤りも判別できる。
+最初に検証する仮説は、assignmentの式処理が先頭operandのcallか通常の算術列のどちらかしか扱わず、算術operand
+として現れる`byte_at`の直後に`(`を読む経路がないため停止する、というものである。最小testはloop bodyの
+assignmentを`result = result + identity(position) - 1`のようにし、途中のcall resultと後続算術の両方が
+反映されることを確認する。
 
-実装では次の3経路でtoken cursorを同じ順序に保つ。
+主な確認箇所は次のとおりである。
 
-- `parse_local_return_conditional`: field token後にarithmetic operatorと右operandを受理する
-- `local_return_conditional_length`: pointer operand、`i32.load`、右operand、arithmetic opcodeの長さを加える
-- `write_local_return_conditional`: field load後に右operandとarithmetic opcodeをemitする
+- `expression_end`: arithmetic operand後のcall argument列とcall close後の算術を読む
+- `parse_while_statement`: loop body assignmentのtoken cursorを式終端まで進める
+- `while_statement_length`: call arguments、call opcode/index、後続算術の長さを加える
+- `write_while_statement`: 算術operand位置のcallをemitしてから後続opcodeをemitする
 
-body先頭のcall-result conditionalは`parse_conditional_body`、`conditional_body_length`、
-`write_conditional_body`から上記local conditional経路へdispatchされる。struct field indexは
-`local_struct_field_index`、Wasm operandは`operand_length`と`write_operand`を再利用する。field loadは
-`i32.load`（opcode `40`）、alignment immediate `2`、offset `field_index * 4`である。
+loop bodyにはlocal declarationと通常assignmentの両方があるため、既存のcall initializerを壊さず、callが
+算術列の途中にある場合だけ追加処理する。Matraの式は現時点で左から右へemitしているため、call resultも通常の
+operandと同じstack位置に置いてから直前のarithmetic opcodeをemitする。
 
 Matraのlocal名はfunction全体で重複できないため、追加する一時名は同じfunction内で一意にする。source編集時は
 block階層ごとに2 spaces、tabなしを維持する。機械検査に加えて、変更blockの深さを目視する。
@@ -229,7 +239,7 @@ pnpm run lint
 git diff --check
 ```
 
-stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、停止位置が現在の145行目より後へ進むことを
+stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、停止位置が現在の423行目より後へ進むことを
 確認する。各実装単位はtest、lint、bootstrap停止位置、indentationを確認してから独立commitにする。
 
 ## Stage-3進捗
@@ -268,7 +278,10 @@ stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、�
 - [x] struct型parameterを実装する
 - [x] conditional左辺のstruct field accessを実装する
 - [x] conditional call argument内のstruct field accessを実装する
-- [ ] conditional call argument内のstruct field accessに続く算術を実装する
+- [x] conditional call argument内のstruct field accessに続く算術を実装する
+- [x] local initializerのstruct field accessを実装する
+- [x] while右辺のstruct field accessと算術を実装する
+- [ ] assignment算術式の途中にあるfunction callを実装する
 - [ ] arrayと組み込みmemory操作を実装する
 - [ ] stage-1からstage-2を生成する
 - [ ] stage-2からstage-3を生成する
