@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの142行目で停止 |
+| stage-2 | stage-1 | compiler sourceの145行目で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,9 +21,9 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:142:13: parse error: expected integer
-   if byte_at(source, value.start) != 109 {
-                  ^
+examples/compiler.md:145:34: parse error: expected integer
+   if byte_at(source, value.start + 1) != 111 {
+                                                 ^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
@@ -35,8 +35,8 @@ conditionalの`else`もcompileできる。function bodyではwhile後のconditio
 call-result conditional、そのbodyのassignmentと`while`、call argument内nested callもcompileできる。
 constructor return argument内の算術、local initializer callのliteral argumentを含む複数argument、
 functionごとの複数parameter call ABIもcompileできる。local bodyの最終returnにある算術式を
-含むlocal struct field access、struct型parameter、conditional左辺のstruct field accessもcompileできる。
-現在はconditional call argument内のstruct field accessを受理しないため停止する。
+含むlocal struct field access、struct型parameter、conditional左辺とcall argument内のstruct field accessも
+compileできる。現在はconditional call argument内のstruct field accessに続く算術を受理しないため停止する。
 compiler sourceは`bytes` return、array、nested loop body、
 `break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
 
@@ -174,9 +174,13 @@ struct pointerを受け取って返す実行testが成功し、最初のdiagnost
 local-bodyとbody先頭のconditional左辺にstruct field accessを追加し、任意parameterのlowered slot indexから
 `i32.load`するようにした。bytes parameter後のstruct fieldを比較する実行testが成功し、diagnosticは142行目へ進んだ。
 
+body先頭のcall-result conditionalをlocal conditional実装へdispatchし、そのcall argument内のstruct field
+accessをpointer loadとしてparse・length計算・emitするようにした。field値をcallへ渡す実行testが成功し、
+diagnosticは145行目へ進んだ。
+
 ## 次の実装単位
 
-compiler sourceの出現順にconditional call argument内のstruct field accessを追加する。
+compiler sourceの出現順にconditional call argument内のstruct field accessに続く算術を追加する。
 その後は`bytes` returnと複数function call ABI、array、memory組み込みを進める。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
@@ -215,7 +219,8 @@ stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検�
 - [x] local bodyのlocal struct field accessと最終return算術を実装する
 - [x] struct型parameterを実装する
 - [x] conditional左辺のstruct field accessを実装する
-- [ ] conditional call argument内のstruct field accessを実装する
+- [x] conditional call argument内のstruct field accessを実装する
+- [ ] conditional call argument内のstruct field accessに続く算術を実装する
 - [ ] arrayと組み込みmemory操作を実装する
 - [ ] stage-1からstage-2を生成する
 - [ ] stage-2からstage-3を生成する
