@@ -1209,6 +1209,13 @@ fn parse_local_return_conditional(source: bytes, offset: i32) -> function_defini
         }
       }
       let separator = next_token(source, argument.start + argument.length)
+      if is_symbol(source, separator, 46) == 1 {
+        let argument_field = next_token(source, separator.start + separator.length)
+        if argument_field.kind != 1 {
+          return function_definition(0, 0, 0, 0, offset, argument_field.start, 2)
+        }
+        separator = next_token(source, argument_field.start + argument_field.length)
+      }
       while is_arithmetic_operator(source, separator) == 1 {
         let return_arithmetic_operand = next_token(source, separator.start + separator.length)
         if return_arithmetic_operand.kind != 1 {
@@ -1217,6 +1224,13 @@ fn parse_local_return_conditional(source: bytes, offset: i32) -> function_defini
           }
         }
         separator = next_token(source, return_arithmetic_operand.start + return_arithmetic_operand.length)
+        if is_symbol(source, separator, 46) == 1 {
+          let return_arithmetic_field = next_token(source, separator.start + separator.length)
+          if return_arithmetic_field.kind != 1 {
+            return function_definition(0, 0, 0, 0, offset, return_arithmetic_field.start, 2)
+          }
+          separator = next_token(source, return_arithmetic_field.start + return_arithmetic_field.length)
+        }
       }
       if is_symbol(source, separator, 44) == 1 {
         argument = next_token(source, separator.start + separator.length)
@@ -3149,16 +3163,35 @@ fn local_return_conditional_length(source: bytes, table: [i32], function: functi
     let argument = next_token(source, after_value.start + after_value.length)
     let constructor_offset = 0
     while is_symbol(source, argument, 41) == 0 {
-      if struct_field_count(source, value) >= 0 {
-        length = length + 4 + operand_length(source, function, argument) + u32_leb_length(constructor_offset)
-      } else {
-        length = length + operand_length(source, function, argument)
-      }
       let separator = next_token(source, argument.start + argument.length)
+      if is_symbol(source, separator, 46) == 1 {
+        let argument_field = next_token(source, separator.start + separator.length)
+        let argument_field_index = local_struct_field_index(source, table, function, argument, argument_field)
+        if struct_field_count(source, value) >= 0 {
+          length = length + 4 + operand_length(source, function, argument) + 2 + u32_leb_length(argument_field_index * 4) + u32_leb_length(constructor_offset)
+        } else {
+          length = length + operand_length(source, function, argument) + 2 + u32_leb_length(argument_field_index * 4)
+        }
+        separator = next_token(source, argument_field.start + argument_field.length)
+      } else {
+        if struct_field_count(source, value) >= 0 {
+          length = length + 4 + operand_length(source, function, argument) + u32_leb_length(constructor_offset)
+        } else {
+          length = length + operand_length(source, function, argument)
+        }
+      }
       while is_arithmetic_operator(source, separator) == 1 {
         let return_arithmetic_operand = next_token(source, separator.start + separator.length)
         length = length + operand_length(source, function, return_arithmetic_operand) + 1
-        separator = next_token(source, return_arithmetic_operand.start + return_arithmetic_operand.length)
+        let return_after_operand = next_token(source, return_arithmetic_operand.start + return_arithmetic_operand.length)
+        if is_symbol(source, return_after_operand, 46) == 1 {
+          let return_arithmetic_field = next_token(source, return_after_operand.start + return_after_operand.length)
+          let return_arithmetic_field_index = local_struct_field_index(source, table, function, return_arithmetic_operand, return_arithmetic_field)
+          length = length + 2 + u32_leb_length(return_arithmetic_field_index * 4)
+          separator = next_token(source, return_arithmetic_field.start + return_arithmetic_field.length)
+        } else {
+          separator = return_after_operand
+        }
       }
       if is_symbol(source, separator, 44) == 1 {
         argument = next_token(source, separator.start + separator.length)
@@ -3934,15 +3967,39 @@ fn write_local_return_conditional(buffer: bytes, index: i32, source: bytes, tabl
         byte_set(buffer, position + 1, 0)
         position = position + 2
       }
-      position = write_operand(buffer, position, source, function, argument)
       let separator = next_token(source, argument.start + argument.length)
+      if is_symbol(source, separator, 46) == 1 {
+        position = write_operand(buffer, position, source, function, argument)
+        let argument_field = next_token(source, separator.start + separator.length)
+        let argument_field_index = local_struct_field_index(source, table, function, argument, argument_field)
+        byte_set(buffer, position, 40)
+        byte_set(buffer, position + 1, 2)
+        position = position + 2
+        let argument_field_offset_written = write_u32_leb(buffer, position, argument_field_index * 4)
+        position = position + u32_leb_length(argument_field_index * 4)
+        separator = next_token(source, argument_field.start + argument_field.length)
+      } else {
+        position = write_operand(buffer, position, source, function, argument)
+      }
       while is_arithmetic_operator(source, separator) == 1 {
         let return_arithmetic = separator
         let return_arithmetic_operand = next_token(source, return_arithmetic.start + return_arithmetic.length)
         position = write_operand(buffer, position, source, function, return_arithmetic_operand)
+        let return_after_operand = next_token(source, return_arithmetic_operand.start + return_arithmetic_operand.length)
+        if is_symbol(source, return_after_operand, 46) == 1 {
+          let return_arithmetic_field = next_token(source, return_after_operand.start + return_after_operand.length)
+          let return_arithmetic_field_index = local_struct_field_index(source, table, function, return_arithmetic_operand, return_arithmetic_field)
+          byte_set(buffer, position, 40)
+          byte_set(buffer, position + 1, 2)
+          position = position + 2
+          let return_arithmetic_field_offset_written = write_u32_leb(buffer, position, return_arithmetic_field_index * 4)
+          position = position + u32_leb_length(return_arithmetic_field_index * 4)
+          separator = next_token(source, return_arithmetic_field.start + return_arithmetic_field.length)
+        } else {
+          separator = return_after_operand
+        }
         byte_set(buffer, position, arithmetic_opcode(source, return_arithmetic))
         position = position + 1
-        separator = next_token(source, return_arithmetic_operand.start + return_arithmetic_operand.length)
       }
       if struct_field_count(source, value) >= 0 {
         byte_set(buffer, position, 54)
