@@ -1422,6 +1422,93 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
     }
     current = next_token(source, final_conditional.position)
   }
+  while is_let_keyword(source, current) == 1 {
+    let post_conditional_local_name = next_token(source, current.start + current.length)
+    if post_conditional_local_name.kind != 1 {
+      return function_definition(0, 0, 0, 0, offset, post_conditional_local_name.start, 2)
+    }
+    let post_conditional_equals = next_token(source, post_conditional_local_name.start + post_conditional_local_name.length)
+    if is_symbol(source, post_conditional_equals, 61) == 0 {
+      return function_definition(0, 0, 0, 0, offset, post_conditional_equals.start, 13)
+    }
+    let post_conditional_operand = next_token(source, post_conditional_equals.start + post_conditional_equals.length)
+    if post_conditional_operand.kind != 1 {
+      if post_conditional_operand.kind != 2 {
+        return function_definition(0, 0, 0, 0, offset, post_conditional_operand.start, 13)
+      }
+    }
+    current = next_token(source, post_conditional_operand.start + post_conditional_operand.length)
+    if is_symbol(source, current, 46) == 1 {
+      let post_conditional_field = next_token(source, current.start + current.length)
+      if post_conditional_field.kind != 1 {
+        return function_definition(0, 0, 0, 0, offset, post_conditional_field.start, 2)
+      }
+      current = next_token(source, post_conditional_field.start + post_conditional_field.length)
+    }
+    if is_symbol(source, current, 40) == 1 {
+      let post_conditional_argument = next_token(source, current.start + current.length)
+      while is_symbol(source, post_conditional_argument, 41) == 0 {
+        if post_conditional_argument.kind != 1 {
+          if post_conditional_argument.kind != 2 {
+            return function_definition(0, 0, 0, 0, offset, post_conditional_argument.start, 13)
+          }
+        }
+        let post_conditional_separator = next_token(source, post_conditional_argument.start + post_conditional_argument.length)
+        if is_symbol(source, post_conditional_separator, 46) == 1 {
+          let post_conditional_argument_field = next_token(source, post_conditional_separator.start + post_conditional_separator.length)
+          if post_conditional_argument_field.kind != 1 {
+            return function_definition(0, 0, 0, 0, offset, post_conditional_argument_field.start, 2)
+          }
+          post_conditional_separator = next_token(source, post_conditional_argument_field.start + post_conditional_argument_field.length)
+        }
+        while is_arithmetic_operator(source, post_conditional_separator) == 1 {
+          let post_conditional_argument_operand = next_token(source, post_conditional_separator.start + post_conditional_separator.length)
+          if post_conditional_argument_operand.kind != 1 {
+            if post_conditional_argument_operand.kind != 2 {
+              return function_definition(0, 0, 0, 0, offset, post_conditional_argument_operand.start, 13)
+            }
+          }
+          post_conditional_separator = next_token(source, post_conditional_argument_operand.start + post_conditional_argument_operand.length)
+          if is_symbol(source, post_conditional_separator, 46) == 1 {
+            let post_conditional_argument_next_field = next_token(source, post_conditional_separator.start + post_conditional_separator.length)
+            if post_conditional_argument_next_field.kind != 1 {
+              return function_definition(0, 0, 0, 0, offset, post_conditional_argument_next_field.start, 2)
+            }
+            post_conditional_separator = next_token(source, post_conditional_argument_next_field.start + post_conditional_argument_next_field.length)
+          }
+        }
+        if is_symbol(source, post_conditional_separator, 44) == 1 {
+          post_conditional_argument = next_token(source, post_conditional_separator.start + post_conditional_separator.length)
+        } else {
+          post_conditional_argument = post_conditional_separator
+        }
+      }
+      current = next_token(source, post_conditional_argument.start + post_conditional_argument.length)
+    }
+    while is_arithmetic_operator(source, current) == 1 {
+      let post_conditional_next_operand = next_token(source, current.start + current.length)
+      if post_conditional_next_operand.kind != 1 {
+        if post_conditional_next_operand.kind != 2 {
+          return function_definition(0, 0, 0, 0, offset, post_conditional_next_operand.start, 13)
+        }
+      }
+      current = next_token(source, post_conditional_next_operand.start + post_conditional_next_operand.length)
+    }
+  }
+  if is_while_keyword(source, current) == 1 {
+    let post_conditional_while = parse_while_statement(source, current.start)
+    if post_conditional_while.status == 0 {
+      return post_conditional_while
+    }
+    current = next_token(source, post_conditional_while.position)
+  }
+  while is_if_keyword(source, current) == 1 {
+    let post_conditional_if = parse_local_return_conditional(source, current.start)
+    if post_conditional_if.status == 0 {
+      return post_conditional_if
+    }
+    current = next_token(source, post_conditional_if.position)
+  }
   if is_return_keyword(source, current) == 0 {
     return function_definition(0, 0, 0, 0, offset, current.start, 11)
   }
@@ -1943,6 +2030,58 @@ fn local_count_of(source: bytes, function: function_definition) -> i32 {
     count = count + 1
   }
   if is_while_keyword(source, current) == 1 {
+    let post_conditional_left = next_token(source, current.start + current.length)
+    let post_conditional_operator = next_token(source, post_conditional_left.start + post_conditional_left.length)
+    let post_conditional_right = next_token(source, post_conditional_operator.start + post_conditional_operator.length)
+    let post_conditional_open = expression_end(source, post_conditional_right)
+    current = next_token(source, post_conditional_open.start + post_conditional_open.length)
+    while is_symbol(source, current, 125) == 0 {
+      if is_if_keyword(source, current) == 1 {
+        let post_conditional_loop_left = next_token(source, current.start + current.length)
+        let post_conditional_loop_open = next_token(source, post_conditional_loop_left.start + post_conditional_loop_left.length)
+        let post_conditional_loop_statement = function_definition(0, 0, 0, 0, current.start, 0, 0)
+        if is_symbol(source, post_conditional_loop_open, 40) == 1 {
+          post_conditional_loop_statement = parse_loop_conditional(source, current.start)
+        } else {
+          post_conditional_loop_statement = parse_loop_local_conditional(source, current.start)
+        }
+        current = next_token(source, post_conditional_loop_statement.position)
+      } else {
+        let post_conditional_target = current
+        if is_let_keyword(source, current) == 1 {
+          post_conditional_target = next_token(source, current.start + current.length)
+          count = count + 1
+        }
+        let post_conditional_loop_equals = next_token(source, post_conditional_target.start + post_conditional_target.length)
+        let post_conditional_loop_operand = next_token(source, post_conditional_loop_equals.start + post_conditional_loop_equals.length)
+        current = expression_end(source, post_conditional_loop_operand)
+      }
+    }
+    current = next_token(source, current.start + current.length)
+  }
+  while is_if_keyword(source, current) == 1 {
+    let trailing_conditional = parse_local_return_conditional(source, current.start)
+    current = next_token(source, trailing_conditional.position)
+  }
+  while is_let_keyword(source, current) == 1 {
+    let trailing_name = next_token(source, current.start + current.length)
+    let trailing_equals = next_token(source, trailing_name.start + trailing_name.length)
+    let trailing_operand = next_token(source, trailing_equals.start + trailing_equals.length)
+    current = expression_end(source, trailing_operand)
+    count = count + 1
+  }
+  while is_if_keyword(source, current) == 1 {
+    let post_local_conditional = parse_local_return_conditional(source, current.start)
+    current = next_token(source, post_local_conditional.position)
+  }
+  while is_let_keyword(source, current) == 1 {
+    let post_conditional_name = next_token(source, current.start + current.length)
+    let post_conditional_equals = next_token(source, post_conditional_name.start + post_conditional_name.length)
+    let post_conditional_operand = next_token(source, post_conditional_equals.start + post_conditional_equals.length)
+    current = expression_end(source, post_conditional_operand)
+    count = count + 1
+  }
+  if is_while_keyword(source, current) == 1 {
     let left = next_token(source, current.start + current.length)
     let operator = next_token(source, left.start + left.length)
     let right = next_token(source, operator.start + operator.length)
@@ -1973,19 +2112,8 @@ fn local_count_of(source: bytes, function: function_definition) -> i32 {
     current = next_token(source, current.start + current.length)
   }
   while is_if_keyword(source, current) == 1 {
-    let trailing_conditional = parse_local_return_conditional(source, current.start)
-    current = next_token(source, trailing_conditional.position)
-  }
-  while is_let_keyword(source, current) == 1 {
-    let trailing_name = next_token(source, current.start + current.length)
-    let trailing_equals = next_token(source, trailing_name.start + trailing_name.length)
-    let trailing_operand = next_token(source, trailing_equals.start + trailing_equals.length)
-    current = expression_end(source, trailing_operand)
-    count = count + 1
-  }
-  while is_if_keyword(source, current) == 1 {
-    let post_local_conditional = parse_local_return_conditional(source, current.start)
-    current = next_token(source, post_local_conditional.position)
+    let post_conditional_if = parse_local_return_conditional(source, current.start)
+    current = next_token(source, post_conditional_if.position)
   }
   return count
 }
@@ -2033,6 +2161,67 @@ fn variable_index(source: bytes, function: function_definition, target: token) -
     index = index + 1
   }
   if is_while_keyword(source, current) == 1 {
+    let post_conditional_left = next_token(source, current.start + current.length)
+    let post_conditional_operator = next_token(source, post_conditional_left.start + post_conditional_left.length)
+    let post_conditional_right = next_token(source, post_conditional_operator.start + post_conditional_operator.length)
+    let post_conditional_open = expression_end(source, post_conditional_right)
+    current = next_token(source, post_conditional_open.start + post_conditional_open.length)
+    while is_symbol(source, current, 125) == 0 {
+      if is_if_keyword(source, current) == 1 {
+        let post_conditional_loop_left = next_token(source, current.start + current.length)
+        let post_conditional_loop_open = next_token(source, post_conditional_loop_left.start + post_conditional_loop_left.length)
+        let post_conditional_loop_statement = function_definition(0, 0, 0, 0, current.start, 0, 0)
+        if is_symbol(source, post_conditional_loop_open, 40) == 1 {
+          post_conditional_loop_statement = parse_loop_conditional(source, current.start)
+        } else {
+          post_conditional_loop_statement = parse_loop_local_conditional(source, current.start)
+        }
+        current = next_token(source, post_conditional_loop_statement.position)
+      } else {
+        let post_conditional_target_name = current
+        if is_let_keyword(source, current) == 1 {
+          post_conditional_target_name = next_token(source, current.start + current.length)
+          if same_token(source, post_conditional_target_name, target) == 1 {
+            return index
+          }
+          index = index + 1
+        }
+        let post_conditional_loop_equals = next_token(source, post_conditional_target_name.start + post_conditional_target_name.length)
+        let post_conditional_loop_operand = next_token(source, post_conditional_loop_equals.start + post_conditional_loop_equals.length)
+        current = expression_end(source, post_conditional_loop_operand)
+      }
+    }
+    current = next_token(source, current.start + current.length)
+  }
+  while is_if_keyword(source, current) == 1 {
+    let trailing_conditional = parse_local_return_conditional(source, current.start)
+    current = next_token(source, trailing_conditional.position)
+  }
+  while is_let_keyword(source, current) == 1 {
+    let trailing_name = next_token(source, current.start + current.length)
+    if same_token(source, trailing_name, target) == 1 {
+      return index
+    }
+    let trailing_equals = next_token(source, trailing_name.start + trailing_name.length)
+    let trailing_operand = next_token(source, trailing_equals.start + trailing_equals.length)
+    current = expression_end(source, trailing_operand)
+    index = index + 1
+  }
+  while is_if_keyword(source, current) == 1 {
+    let post_local_conditional = parse_local_return_conditional(source, current.start)
+    current = next_token(source, post_local_conditional.position)
+  }
+  while is_let_keyword(source, current) == 1 {
+    let post_conditional_name = next_token(source, current.start + current.length)
+    if same_token(source, post_conditional_name, target) == 1 {
+      return index
+    }
+    let post_conditional_equals = next_token(source, post_conditional_name.start + post_conditional_name.length)
+    let post_conditional_operand = next_token(source, post_conditional_equals.start + post_conditional_equals.length)
+    current = expression_end(source, post_conditional_operand)
+    index = index + 1
+  }
+  if is_while_keyword(source, current) == 1 {
     let left = next_token(source, current.start + current.length)
     let operator = next_token(source, left.start + left.length)
     let right = next_token(source, operator.start + operator.length)
@@ -2066,22 +2255,8 @@ fn variable_index(source: bytes, function: function_definition, target: token) -
     current = next_token(source, current.start + current.length)
   }
   while is_if_keyword(source, current) == 1 {
-    let trailing_conditional = parse_local_return_conditional(source, current.start)
-    current = next_token(source, trailing_conditional.position)
-  }
-  while is_let_keyword(source, current) == 1 {
-    let trailing_name = next_token(source, current.start + current.length)
-    if same_token(source, trailing_name, target) == 1 {
-      return index
-    }
-    let trailing_equals = next_token(source, trailing_name.start + trailing_name.length)
-    let trailing_operand = next_token(source, trailing_equals.start + trailing_equals.length)
-    current = expression_end(source, trailing_operand)
-    index = index + 1
-  }
-  while is_if_keyword(source, current) == 1 {
-    let post_local_conditional = parse_local_return_conditional(source, current.start)
-    current = next_token(source, post_local_conditional.position)
+    let post_conditional_if = parse_local_return_conditional(source, current.start)
+    current = next_token(source, post_conditional_if.position)
   }
   return -1
 }
@@ -3346,6 +3521,70 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     let post_local_conditional = parse_local_return_conditional(source, current.start)
     current = next_token(source, post_local_conditional.position)
   }
+  while is_let_keyword(source, current) == 1 {
+    let post_conditional_name = next_token(source, current.start + current.length)
+    let post_conditional_equals = next_token(source, post_conditional_name.start + post_conditional_name.length)
+    let post_conditional_operand = next_token(source, post_conditional_equals.start + post_conditional_equals.length)
+    current = next_token(source, post_conditional_operand.start + post_conditional_operand.length)
+    if is_symbol(source, current, 46) == 1 {
+      let post_conditional_field = next_token(source, current.start + current.length)
+      let post_conditional_field_index = local_struct_field_index(source, table, function, post_conditional_operand, post_conditional_field)
+      length = length + operand_length(source, function, post_conditional_operand) + 2 + u32_leb_length(post_conditional_field_index * 4)
+      current = next_token(source, post_conditional_field.start + post_conditional_field.length)
+    } else {
+      if is_symbol(source, current, 40) == 1 {
+        let post_conditional_argument = next_token(source, current.start + current.length)
+        while is_symbol(source, post_conditional_argument, 41) == 0 {
+          let post_conditional_separator = next_token(source, post_conditional_argument.start + post_conditional_argument.length)
+          if is_symbol(source, post_conditional_separator, 46) == 1 {
+            let post_conditional_argument_field = next_token(source, post_conditional_separator.start + post_conditional_separator.length)
+            let post_conditional_argument_field_index = local_struct_field_index(source, table, function, post_conditional_argument, post_conditional_argument_field)
+            length = length + operand_length(source, function, post_conditional_argument) + 2 + u32_leb_length(post_conditional_argument_field_index * 4)
+            post_conditional_separator = next_token(source, post_conditional_argument_field.start + post_conditional_argument_field.length)
+          } else {
+            length = length + operand_length(source, function, post_conditional_argument)
+          }
+          while is_arithmetic_operator(source, post_conditional_separator) == 1 {
+            let post_conditional_argument_operand = next_token(source, post_conditional_separator.start + post_conditional_separator.length)
+            length = length + operand_length(source, function, post_conditional_argument_operand) + 1
+            post_conditional_separator = next_token(source, post_conditional_argument_operand.start + post_conditional_argument_operand.length)
+            if is_symbol(source, post_conditional_separator, 46) == 1 {
+              let post_conditional_argument_next_field = next_token(source, post_conditional_separator.start + post_conditional_separator.length)
+              let post_conditional_argument_next_field_index = local_struct_field_index(source, table, function, post_conditional_argument_operand, post_conditional_argument_next_field)
+              length = length + 2 + u32_leb_length(post_conditional_argument_next_field_index * 4)
+              post_conditional_separator = next_token(source, post_conditional_argument_next_field.start + post_conditional_argument_next_field.length)
+            }
+          }
+          if is_symbol(source, post_conditional_separator, 44) == 1 {
+            post_conditional_argument = next_token(source, post_conditional_separator.start + post_conditional_separator.length)
+          } else {
+            post_conditional_argument = post_conditional_separator
+          }
+        }
+        length = length + 1 + u32_leb_length(function_index_in_table(source, table, post_conditional_operand))
+        current = next_token(source, post_conditional_argument.start + post_conditional_argument.length)
+      } else {
+        length = length + operand_length(source, function, post_conditional_operand)
+      }
+    }
+    while is_arithmetic_operator(source, current) == 1 {
+      let post_conditional_next_operand = next_token(source, current.start + current.length)
+      length = length + operand_length(source, function, post_conditional_next_operand) + 1
+      current = next_token(source, post_conditional_next_operand.start + post_conditional_next_operand.length)
+    }
+    length = length + 1 + u32_leb_length(local_index)
+    local_index = local_index + 1
+  }
+  if is_while_keyword(source, current) == 1 {
+    length = length + while_statement_length(source, table, function, current)
+    let post_conditional_while = parse_while_statement(source, current.start)
+    current = next_token(source, post_conditional_while.position)
+  }
+  while is_if_keyword(source, current) == 1 {
+    length = length + local_return_conditional_length(source, table, function, current)
+    let post_conditional_if = parse_local_return_conditional(source, current.start)
+    current = next_token(source, post_conditional_if.position)
+  }
   let returned = next_token(source, current.start + current.length)
   let return_open = next_token(source, returned.start + returned.length)
   if is_symbol(source, return_open, 40) == 1 {
@@ -4235,6 +4474,99 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     position = write_local_return_conditional(buffer, position, source, table, function, current)
     let post_local_conditional = parse_local_return_conditional(source, current.start)
     current = next_token(source, post_local_conditional.position)
+  }
+  while is_let_keyword(source, current) == 1 {
+    let post_conditional_name = next_token(source, current.start + current.length)
+    let post_conditional_equals = next_token(source, post_conditional_name.start + post_conditional_name.length)
+    let post_conditional_operand = next_token(source, post_conditional_equals.start + post_conditional_equals.length)
+    current = next_token(source, post_conditional_operand.start + post_conditional_operand.length)
+    if is_symbol(source, current, 46) == 1 {
+      position = write_operand(buffer, position, source, function, post_conditional_operand)
+      let post_conditional_field = next_token(source, current.start + current.length)
+      let post_conditional_field_index = local_struct_field_index(source, table, function, post_conditional_operand, post_conditional_field)
+      byte_set(buffer, position, 40)
+      byte_set(buffer, position + 1, 2)
+      position = position + 2
+      let post_conditional_field_offset_written = write_u32_leb(buffer, position, post_conditional_field_index * 4)
+      position = position + u32_leb_length(post_conditional_field_index * 4)
+      current = next_token(source, post_conditional_field.start + post_conditional_field.length)
+    } else {
+      if is_symbol(source, current, 40) == 1 {
+        let post_conditional_argument = next_token(source, current.start + current.length)
+        while is_symbol(source, post_conditional_argument, 41) == 0 {
+          let post_conditional_separator = next_token(source, post_conditional_argument.start + post_conditional_argument.length)
+          if is_symbol(source, post_conditional_separator, 46) == 1 {
+            position = write_operand(buffer, position, source, function, post_conditional_argument)
+            let post_conditional_argument_field = next_token(source, post_conditional_separator.start + post_conditional_separator.length)
+            let post_conditional_argument_field_index = local_struct_field_index(source, table, function, post_conditional_argument, post_conditional_argument_field)
+            byte_set(buffer, position, 40)
+            byte_set(buffer, position + 1, 2)
+            position = position + 2
+            let post_conditional_argument_field_offset_written = write_u32_leb(buffer, position, post_conditional_argument_field_index * 4)
+            position = position + u32_leb_length(post_conditional_argument_field_index * 4)
+            post_conditional_separator = next_token(source, post_conditional_argument_field.start + post_conditional_argument_field.length)
+          } else {
+            position = write_operand(buffer, position, source, function, post_conditional_argument)
+          }
+          while is_arithmetic_operator(source, post_conditional_separator) == 1 {
+            let post_conditional_argument_arithmetic = post_conditional_separator
+            let post_conditional_argument_operand = next_token(source, post_conditional_argument_arithmetic.start + post_conditional_argument_arithmetic.length)
+            position = write_operand(buffer, position, source, function, post_conditional_argument_operand)
+            let post_conditional_after_operand = next_token(source, post_conditional_argument_operand.start + post_conditional_argument_operand.length)
+            if is_symbol(source, post_conditional_after_operand, 46) == 1 {
+              let post_conditional_argument_next_field = next_token(source, post_conditional_after_operand.start + post_conditional_after_operand.length)
+              let post_conditional_argument_next_field_index = local_struct_field_index(source, table, function, post_conditional_argument_operand, post_conditional_argument_next_field)
+              byte_set(buffer, position, 40)
+              byte_set(buffer, position + 1, 2)
+              position = position + 2
+              let post_conditional_argument_next_field_offset_written = write_u32_leb(buffer, position, post_conditional_argument_next_field_index * 4)
+              position = position + u32_leb_length(post_conditional_argument_next_field_index * 4)
+              post_conditional_separator = next_token(source, post_conditional_argument_next_field.start + post_conditional_argument_next_field.length)
+            } else {
+              post_conditional_separator = post_conditional_after_operand
+            }
+            byte_set(buffer, position, arithmetic_opcode(source, post_conditional_argument_arithmetic))
+            position = position + 1
+          }
+          if is_symbol(source, post_conditional_separator, 44) == 1 {
+            post_conditional_argument = next_token(source, post_conditional_separator.start + post_conditional_separator.length)
+          } else {
+            post_conditional_argument = post_conditional_separator
+          }
+        }
+        byte_set(buffer, position, 16)
+        position = position + 1
+        let post_conditional_called_index = function_index_in_table(source, table, post_conditional_operand)
+        let post_conditional_call_written = write_u32_leb(buffer, position, post_conditional_called_index)
+        position = position + u32_leb_length(post_conditional_called_index)
+        current = next_token(source, post_conditional_argument.start + post_conditional_argument.length)
+      } else {
+        position = write_operand(buffer, position, source, function, post_conditional_operand)
+      }
+    }
+    while is_arithmetic_operator(source, current) == 1 {
+      let post_conditional_operator = current
+      let post_conditional_next_operand = next_token(source, post_conditional_operator.start + post_conditional_operator.length)
+      position = write_operand(buffer, position, source, function, post_conditional_next_operand)
+      byte_set(buffer, position, arithmetic_opcode(source, post_conditional_operator))
+      position = position + 1
+      current = next_token(source, post_conditional_next_operand.start + post_conditional_next_operand.length)
+    }
+    byte_set(buffer, position, 33)
+    position = position + 1
+    let post_conditional_local_written = write_u32_leb(buffer, position, local_index)
+    position = position + u32_leb_length(local_index)
+    local_index = local_index + 1
+  }
+  if is_while_keyword(source, current) == 1 {
+    position = write_while_statement(buffer, position, source, table, function, current)
+    let post_conditional_while = parse_while_statement(source, current.start)
+    current = next_token(source, post_conditional_while.position)
+  }
+  while is_if_keyword(source, current) == 1 {
+    position = write_local_return_conditional(buffer, position, source, table, function, current)
+    let post_conditional_if = parse_local_return_conditional(source, current.start)
+    current = next_token(source, post_conditional_if.position)
   }
   let returned = next_token(source, current.start + current.length)
   let return_open = next_token(source, returned.start + returned.length)

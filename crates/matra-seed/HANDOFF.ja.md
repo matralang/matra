@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの453行3列で停止 |
+| stage-2 | stage-1 | compiler sourceの454行25列で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,9 +21,9 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:453:3: parse error: expected return
-   let field = next_token(source, open.start + open.length)
-   ^^^
+examples/compiler.md:454:25: parse error: expected {
+  while is_symbol(source, field, 125) == 0 {
+                        ^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
@@ -231,25 +231,30 @@ local return conditional bodyのreturn call argumentにfield accessと後続算�
 同じtoken列を処理するようにした。`return function_definition(..., name.start, ...)`を通るself-host検証で
 diagnosticは453行3列へ進んだ。
 
+conditional後のlocal declaration列を処理したあと、再び出現する`if`と`let`、後続`while`をlocal body経路で
+順に再dispatchできるようにした。`local_count_of`と`variable_index`の追加走査で一時local名が重複しないように
+接頭辞を分離した。`let -> if -> let -> if -> let -> return`を通る実行testが成功し、diagnosticは454行25列へ
+進んだ。
+
 ## 次の実装単位
 
-compiler sourceの出現順に、conditional後のlocal declaration列を処理した後の後続local declarationを受理する。
-その後は`bytes` returnと
+compiler sourceの出現順に、`parse_struct`内でfield列を走査する`while is_symbol(source, field, 125) == 0`に到達する
+直前のtoken更新を実装し、`expected {`で停止している箇所を解消する。その後は`bytes` returnと
 複数function call ABI、array、memory組み込みを進める。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
 ## 次セッションの開始地点
 
-直近の基準commitは`a8296ec`（`feat(matra-seed): local初期化call引数のfield算術を実装`）である。
-次に扱うsourceは[`examples/compiler.md`](examples/compiler.md)の`parse_struct`にある次のlocal declarationである。
+直近の基準commitは`004af8d`（`feat(matra-seed): local return call引数のfieldアクセスを実装`）である。
+次に扱うsourceは[`examples/compiler.md`](examples/compiler.md)の`parse_struct`にある次の行である。
 
 ```matra
-let field = next_token(source, open.start + open.length)
+while is_symbol(source, field, 125) == 0 {
 ```
 
-最初に検証する仮説は、`parse_local_body`がtrailing local declarationを1回処理したあと、`if`を経由して再び現れる
-`let`を受理せず最終returnを要求する、というものである。最小testは`let -> if -> let -> return`の並びを持つ関数を
-compileし、conditional真偽の両経路を確認する。
+最初に検証する仮説は、`parse_struct`が`let field = ...`でtoken cursorを進めた直後の`while`開始条件で、
+block開始記号の期待位置をずらしている、というものである。最小testはself-host停止位置を454行のまま固定し、
+field列走査へ進む手前のcursor整合を確認する。
 
 主な確認箇所は次のとおりである。
 
