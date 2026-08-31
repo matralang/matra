@@ -675,22 +675,30 @@ fn parse_loop_conditional(source: bytes, offset: i32) -> function_definition {
       }
     }
     let separator = next_token(source, argument.start + argument.length)
-    if is_symbol(source, separator, 40) == 1 {
-      let nested_argument_operand = next_token(source, separator.start + separator.length)
-      while is_symbol(source, nested_argument_operand, 41) == 0 {
-        if nested_argument_operand.kind != 1 {
-          if nested_argument_operand.kind != 2 {
-            return function_definition(0, 0, 0, 0, offset, nested_argument_operand.start, 13)
+    if is_symbol(source, separator, 46) == 1 {
+      let argument_field = next_token(source, separator.start + separator.length)
+      if argument_field.kind != 1 {
+        return function_definition(0, 0, 0, 0, offset, argument_field.start, 2)
+      }
+      separator = next_token(source, argument_field.start + argument_field.length)
+    } else {
+      if is_symbol(source, separator, 40) == 1 {
+        let nested_argument_operand = next_token(source, separator.start + separator.length)
+        while is_symbol(source, nested_argument_operand, 41) == 0 {
+          if nested_argument_operand.kind != 1 {
+            if nested_argument_operand.kind != 2 {
+              return function_definition(0, 0, 0, 0, offset, nested_argument_operand.start, 13)
+            }
+          }
+          let nested_argument_separator = next_token(source, nested_argument_operand.start + nested_argument_operand.length)
+          if is_symbol(source, nested_argument_separator, 44) == 1 {
+            nested_argument_operand = next_token(source, nested_argument_separator.start + nested_argument_separator.length)
+          } else {
+            nested_argument_operand = nested_argument_separator
           }
         }
-        let nested_argument_separator = next_token(source, nested_argument_operand.start + nested_argument_operand.length)
-        if is_symbol(source, nested_argument_separator, 44) == 1 {
-          nested_argument_operand = next_token(source, nested_argument_separator.start + nested_argument_separator.length)
-        } else {
-          nested_argument_operand = nested_argument_separator
-        }
+        separator = next_token(source, nested_argument_operand.start + nested_argument_operand.length)
       }
-      separator = next_token(source, nested_argument_operand.start + nested_argument_operand.length)
     }
     while is_arithmetic_operator(source, separator) == 1 {
       let next_argument_operand = next_token(source, separator.start + separator.length)
@@ -2715,21 +2723,28 @@ fn loop_conditional_length(source: bytes, table: [i32], function: function_defin
   let length = 5 + u32_leb_length(function_index_in_table(source, table, called))
   while is_symbol(source, argument, 41) == 0 {
     let separator = next_token(source, argument.start + argument.length)
-    if is_symbol(source, separator, 40) == 1 {
-      let nested_argument_operand = next_token(source, separator.start + separator.length)
-      while is_symbol(source, nested_argument_operand, 41) == 0 {
-        length = length + operand_length(source, function, nested_argument_operand)
-        let nested_argument_separator = next_token(source, nested_argument_operand.start + nested_argument_operand.length)
-        if is_symbol(source, nested_argument_separator, 44) == 1 {
-          nested_argument_operand = next_token(source, nested_argument_separator.start + nested_argument_separator.length)
-        } else {
-          nested_argument_operand = nested_argument_separator
-        }
-      }
-      length = length + 1 + u32_leb_length(function_index_in_table(source, table, argument))
-      separator = next_token(source, nested_argument_operand.start + nested_argument_operand.length)
+    if is_symbol(source, separator, 46) == 1 {
+      let argument_field = next_token(source, separator.start + separator.length)
+      let argument_field_index = local_struct_field_index(source, table, function, argument, argument_field)
+      length = length + operand_length(source, function, argument) + 2 + u32_leb_length(argument_field_index * 4)
+      separator = next_token(source, argument_field.start + argument_field.length)
     } else {
-      length = length + operand_length(source, function, argument)
+      if is_symbol(source, separator, 40) == 1 {
+        let nested_argument_operand = next_token(source, separator.start + separator.length)
+        while is_symbol(source, nested_argument_operand, 41) == 0 {
+          length = length + operand_length(source, function, nested_argument_operand)
+          let nested_argument_separator = next_token(source, nested_argument_operand.start + nested_argument_operand.length)
+          if is_symbol(source, nested_argument_separator, 44) == 1 {
+            nested_argument_operand = next_token(source, nested_argument_separator.start + nested_argument_separator.length)
+          } else {
+            nested_argument_operand = nested_argument_separator
+          }
+        }
+        length = length + 1 + u32_leb_length(function_index_in_table(source, table, argument))
+        separator = next_token(source, nested_argument_operand.start + nested_argument_operand.length)
+      } else {
+        length = length + operand_length(source, function, argument)
+      }
     }
     while is_arithmetic_operator(source, separator) == 1 {
       let arithmetic_operand = next_token(source, separator.start + separator.length)
@@ -3311,25 +3326,37 @@ fn write_loop_conditional(buffer: bytes, index: i32, source: bytes, table: [i32]
   let argument = next_token(source, call_open.start + call_open.length)
   while is_symbol(source, argument, 41) == 0 {
     let separator = next_token(source, argument.start + argument.length)
-    if is_symbol(source, separator, 40) == 1 {
-      let nested_argument_operand = next_token(source, separator.start + separator.length)
-      while is_symbol(source, nested_argument_operand, 41) == 0 {
-        position = write_operand(buffer, position, source, function, nested_argument_operand)
-        let nested_argument_separator = next_token(source, nested_argument_operand.start + nested_argument_operand.length)
-        if is_symbol(source, nested_argument_separator, 44) == 1 {
-          nested_argument_operand = next_token(source, nested_argument_separator.start + nested_argument_separator.length)
-        } else {
-          nested_argument_operand = nested_argument_separator
-        }
-      }
-      byte_set(buffer, position, 16)
-      position = position + 1
-      let nested_argument_called_index = function_index_in_table(source, table, argument)
-      let nested_argument_call_written = write_u32_leb(buffer, position, nested_argument_called_index)
-      position = position + u32_leb_length(nested_argument_called_index)
-      separator = next_token(source, nested_argument_operand.start + nested_argument_operand.length)
-    } else {
+    if is_symbol(source, separator, 46) == 1 {
       position = write_operand(buffer, position, source, function, argument)
+      let argument_field = next_token(source, separator.start + separator.length)
+      let argument_field_index = local_struct_field_index(source, table, function, argument, argument_field)
+      byte_set(buffer, position, 40)
+      byte_set(buffer, position + 1, 2)
+      position = position + 2
+      let argument_field_offset_written = write_u32_leb(buffer, position, argument_field_index * 4)
+      position = position + u32_leb_length(argument_field_index * 4)
+      separator = next_token(source, argument_field.start + argument_field.length)
+    } else {
+      if is_symbol(source, separator, 40) == 1 {
+        let nested_argument_operand = next_token(source, separator.start + separator.length)
+        while is_symbol(source, nested_argument_operand, 41) == 0 {
+          position = write_operand(buffer, position, source, function, nested_argument_operand)
+          let nested_argument_separator = next_token(source, nested_argument_operand.start + nested_argument_operand.length)
+          if is_symbol(source, nested_argument_separator, 44) == 1 {
+            nested_argument_operand = next_token(source, nested_argument_separator.start + nested_argument_separator.length)
+          } else {
+            nested_argument_operand = nested_argument_separator
+          }
+        }
+        byte_set(buffer, position, 16)
+        position = position + 1
+        let nested_argument_called_index = function_index_in_table(source, table, argument)
+        let nested_argument_call_written = write_u32_leb(buffer, position, nested_argument_called_index)
+        position = position + u32_leb_length(nested_argument_called_index)
+        separator = next_token(source, nested_argument_operand.start + nested_argument_operand.length)
+      } else {
+        position = write_operand(buffer, position, source, function, argument)
+      }
     }
     while is_arithmetic_operator(source, separator) == 1 {
       let argument_arithmetic = separator
