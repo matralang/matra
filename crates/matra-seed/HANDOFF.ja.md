@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの454行25列で停止 |
+| stage-2 | stage-1 | compiler sourceの468行37列で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,9 +21,9 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:454:25: parse error: expected {
-  while is_symbol(source, field, 125) == 0 {
-                        ^
+examples/compiler.md:468:37: parse error: expected integer
+   return function_definition(1, name.start, name.length, 0, field.start + field.length, 0, 0)
+                                                      ^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
@@ -236,25 +236,31 @@ conditional後のlocal declaration列を処理したあと、再び出現する`
 接頭辞を分離した。`let -> if -> let -> if -> let -> return`を通る実行testが成功し、diagnosticは454行25列へ
 進んだ。
 
+`while`条件の左辺でfunction call comparisonを受理し、`==`の2個目の`=`、call argument内のfield accessと
+後続算術をparse・length計算・emitへ追加した。併せてloop local conditional左辺のfield accessと、
+loop conditional / loop local conditional bodyの`return function_call(...)`を受理するようにした。
+self-host検証のdiagnosticは468行37列へ進んだ。
+
 ## 次の実装単位
 
-compiler sourceの出現順に、`parse_struct`内でfield列を走査する`while is_symbol(source, field, 125) == 0`に到達する
-直前のtoken更新を実装し、`expected {`で停止している箇所を解消する。その後は`bytes` returnと
+compiler sourceの出現順に、`parse_struct`末尾の
+`return function_definition(1, name.start, name.length, 0, field.start + field.length, 0, 0)`で停止している
+call argument解析（`name.start`や`field.start + field.length`）を解消する。その後は`bytes` returnと
 複数function call ABI、array、memory組み込みを進める。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
 ## 次セッションの開始地点
 
-直近の基準commitは`004af8d`（`feat(matra-seed): local return call引数のfieldアクセスを実装`）である。
+直近の基準commitは`aabb178`（`feat(matra-seed): conditional後のlocal再dispatchを追加`）である。
 次に扱うsourceは[`examples/compiler.md`](examples/compiler.md)の`parse_struct`にある次の行である。
 
 ```matra
-while is_symbol(source, field, 125) == 0 {
+return function_definition(1, name.start, name.length, 0, field.start + field.length, 0, 0)
 ```
 
-最初に検証する仮説は、`parse_struct`が`let field = ...`でtoken cursorを進めた直後の`while`開始条件で、
-block開始記号の期待位置をずらしている、というものである。最小testはself-host停止位置を454行のまま固定し、
-field列走査へ進む手前のcursor整合を確認する。
+最初に検証する仮説は、`parse_struct`末尾のreturn call argument列を、現在のreturn式parserが
+`identifier`/`integer`の単純token列としてしか解釈できていない、というものである。最小testはself-host停止位置を
+468行37列に固定し、`name.start`と`field.start + field.length`を含むargument列のcursor整合を確認する。
 
 主な確認箇所は次のとおりである。
 
