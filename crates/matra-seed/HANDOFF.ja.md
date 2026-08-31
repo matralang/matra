@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの436行14列で停止 |
+| stage-2 | stage-1 | compiler sourceの447行56列で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,9 +21,9 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:436:14: parse error: expected integer
-     return 0
-          ^
+examples/compiler.md:447:56: parse error: expected integer
+    return function_definition(0, 0, 0, 0, offset, name.start, 2)
+                                 ^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
@@ -40,8 +40,8 @@ field accessに続く算術、local initializerのfield access、while右辺のf
 assignment算術式の途中にあるfunction call、conditional右辺のstruct field access、先頭conditional後の
 local declaration、先頭conditional列後のinteger literal return、local conditional内nested `if`もcompileできる。
 conditional後local declarationに続く`while`もcompileできる。現在はloop conditionalのcall argumentで
-field accessに続く算術とcomparison右辺のcallもcompileできる。現在はloop call conditional bodyの`return`を
-受理しないため停止する。
+field accessに続く算術とcomparison右辺のcall、loop call conditional bodyの`return`もcompileできる。現在は
+local return conditional bodyのcall argumentにあるfield accessを受理しないため停止する。
 compiler sourceは`bytes` return、array、nested loop body、
 `break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
 
@@ -219,33 +219,41 @@ loop conditionalのcomparison右辺にfunction callを追加し、field access�
 parse・length計算・emitするようにした。左右のcall結果が等しい場合と異なる場合の実行testが成功し、diagnosticは
 436行14列へ進んだ。
 
+loop call conditional bodyでinteger literalまたはidentifierの`return`をparse・length計算・emitするようにした。
+loop bodyの条件成立時にearly returnし、不成立時は既存のassignmentを通る実行testが成功し、diagnosticは445行へ進んだ。
+
+local initializer call argumentにfield accessと後続算術を追加し、local countとvariable indexのcursor追跡も
+同じcall終端規則へ揃えた。2引数callに`value.start + delta`と`value.length + 1`を渡す実行testが成功し、
+diagnosticは447行56列へ進んだ。
+
 ## 次の実装単位
 
-compiler sourceの出現順に、loop call conditional bodyの`return`を受理する。その後は`bytes` returnと
+compiler sourceの出現順に、local return conditional bodyのcall argumentでfield accessを受理する。
+その後は`bytes` returnと
 複数function call ABI、array、memory組み込みを進める。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
 ## 次セッションの開始地点
 
-直近の基準commitは`81b0846`（`feat(matra-seed): loop call引数のfield算術を実装`）である。
-次に扱うsourceは[`examples/compiler.md`](examples/compiler.md)の`same_token`にある次のreturnである。
+直近の基準commitは`1864599`（`feat(matra-seed): loop比較右辺のcallを実装`）である。
+次に扱うsourceは[`examples/compiler.md`](examples/compiler.md)の`parse_struct`にある次のreturnである。
 
 ```matra
-return 0
+return function_definition(0, 0, 0, 0, offset, name.start, 2)
 ```
 
-最初に検証する仮説は、`parse_loop_conditional`がbody statementを`break`、nested control flow、assignmentの
-いずれかとして扱い、`return`をassignmentとしてparseするため閉じ括弧をoperandとして拒否する、というものである。
-最小testはloop内のcall-result conditionalからinteger literalをearly returnし、条件の真・偽を確認する。
+最初に検証する仮説は、`parse_local_return_conditional`のbody return call parserがargumentをidentifierかinteger
+literalの単一operandとして扱い、field token `.` を受理しないため拒否する、というものである。最小testは
+`return function_definition(..., token.start, ...)`を持つconditional functionをcompileし、成功とdiagnostic位置を確認する。
 
 主な確認箇所は次のとおりである。
 
-- `parse_loop_conditional`: bodyのreturn keywordと値を処理する
-- `loop_conditional_length`: return operandと`return` opcodeのlengthを加算する
-- `write_loop_conditional`: return operandと`return` opcodeをemitする
+- `parse_local_return_conditional`: body return call argumentでfield tokenを処理する
+- `local_return_conditional_length`: 同じargument位置でfield loadと算術のlengthを加算する
+- `write_local_return_conditional`: 同じargument位置でfield loadと算術をemitする
 
-parser・length・emitterのbody statement dispatch順を揃える。既存のassignment、`break`、nested control flowも
-回帰testで維持する。
+parser・length・emitterのargument cursor更新を同じtoken列に揃える。既存のliteral/identifier argument、算術argument、
+nested call argumentも回帰testで維持する。
 
 Matraのlocal名はfunction全体で重複できないため、追加する一時名は同じfunction内で一意にする。source編集時は
 block階層ごとに2 spaces、tabなしを維持する。機械検査に加えて、変更blockの深さを目視する。
@@ -266,7 +274,7 @@ pnpm run lint
 git diff --check
 ```
 
-stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、停止位置が現在の436行14列より後へ進むことを
+stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、停止位置が現在の447行56列より後へ進むことを
 確認する。各実装単位はtest、lint、bootstrap停止位置、indentationを確認してから独立commitにする。
 
 ## Stage-3進捗
@@ -316,6 +324,8 @@ stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、�
 - [x] conditional後local declarationに続く`while`を実装する
 - [x] loop conditional call argumentのfield accessと算術を実装する
 - [x] loop conditionalのcomparison右辺callを実装する
+- [x] loop call conditional bodyの`return`を実装する
+- [x] local initializer call argumentのfield accessと算術を実装する
 - [ ] arrayと組み込みmemory操作を実装する
 - [ ] stage-1からstage-2を生成する
 - [ ] stage-2からstage-3を生成する
