@@ -1622,6 +1622,13 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
         }
       }
       let constructor_separator = next_token(source, constructor_argument.start + constructor_argument.length)
+      if is_symbol(source, constructor_separator, 46) == 1 {
+        let constructor_field = next_token(source, constructor_separator.start + constructor_separator.length)
+        if constructor_field.kind != 1 {
+          return function_definition(0, 0, 0, 0, offset, constructor_field.start, 2)
+        }
+        constructor_separator = next_token(source, constructor_field.start + constructor_field.length)
+      }
       while is_arithmetic_operator(source, constructor_separator) == 1 {
         let constructor_arithmetic_operand = next_token(source, constructor_separator.start + constructor_separator.length)
         if constructor_arithmetic_operand.kind != 1 {
@@ -1630,6 +1637,13 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
           }
         }
         constructor_separator = next_token(source, constructor_arithmetic_operand.start + constructor_arithmetic_operand.length)
+        if is_symbol(source, constructor_separator, 46) == 1 {
+          let constructor_arithmetic_field = next_token(source, constructor_separator.start + constructor_separator.length)
+          if constructor_arithmetic_field.kind != 1 {
+            return function_definition(0, 0, 0, 0, offset, constructor_arithmetic_field.start, 2)
+          }
+          constructor_separator = next_token(source, constructor_arithmetic_field.start + constructor_arithmetic_field.length)
+        }
       }
       if is_symbol(source, constructor_separator, 44) == 1 {
         constructor_argument = next_token(source, constructor_separator.start + constructor_separator.length)
