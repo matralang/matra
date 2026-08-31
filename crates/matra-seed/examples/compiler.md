@@ -1297,6 +1297,13 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
       current = next_token(source, trailing_next_operand.start + trailing_next_operand.length)
     }
   }
+  if is_while_keyword(source, current) == 1 {
+    let trailing_while = parse_while_statement(source, current.start)
+    if trailing_while.status == 0 {
+      return trailing_while
+    }
+    current = next_token(source, trailing_while.position)
+  }
   while is_if_keyword(source, current) == 1 {
     let final_conditional = parse_local_return_conditional(source, current.start)
     if final_conditional.status == 0 {
@@ -3099,6 +3106,11 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     length = length + 1 + u32_leb_length(local_index)
     local_index = local_index + 1
   }
+  if is_while_keyword(source, current) == 1 {
+    length = length + while_statement_length(source, table, function, current)
+    let trailing_while = parse_while_statement(source, current.start)
+    current = next_token(source, trailing_while.position)
+  }
   while is_if_keyword(source, current) == 1 {
     length = length + local_return_conditional_length(source, table, function, current)
     let post_local_conditional = parse_local_return_conditional(source, current.start)
@@ -3836,6 +3848,11 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     let trailing_local_written = write_u32_leb(buffer, position, local_index)
     position = position + u32_leb_length(local_index)
     local_index = local_index + 1
+  }
+  if is_while_keyword(source, current) == 1 {
+    position = write_while_statement(buffer, position, source, table, function, current)
+    let trailing_while = parse_while_statement(source, current.start)
+    current = next_token(source, trailing_while.position)
   }
   while is_if_keyword(source, current) == 1 {
     position = write_local_return_conditional(buffer, position, source, table, function, current)
