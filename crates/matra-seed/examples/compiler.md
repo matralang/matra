@@ -1152,24 +1152,18 @@ fn parse_loop_local_conditional(source: bytes, offset: i32) -> function_definiti
   let current = next_token(source, open.start + open.length)
   while is_symbol(source, current, 125) == 0 {
     if is_break_keyword(source, current) == 1 {
-      current = next_token(source, current.start + current.length)
+      let break_result = parse_loop_conditional_break(source, current)
+      current = next_token(source, break_result.position)
     } else {
       if is_if_keyword(source, current) == 1 {
-        let nested_left = next_token(source, current.start + current.length)
-        let nested_open = next_token(source, nested_left.start + nested_left.length)
-        let nested = function_definition(0, 0, 0, 0, current.start, 0, 0)
-        if is_symbol(source, nested_open, 40) == 1 {
-          nested = parse_loop_conditional(source, current.start)
-        } else {
-          nested = parse_loop_local_conditional(source, current.start)
-        }
+        let nested = parse_loop_conditional_if(source, current)
         if nested.status == 0 {
           return nested
         }
         current = next_token(source, nested.position)
       } else {
         if is_while_keyword(source, current) == 1 {
-          let nested_while = parse_while_statement(source, current.start)
+          let nested_while = parse_loop_conditional_while(source, current)
           if nested_while.status == 0 {
             return nested_while
           }

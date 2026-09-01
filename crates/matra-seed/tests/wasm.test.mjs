@@ -408,7 +408,7 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     assert.equal(selfHostResult.status, 1)
     assert.match(selfHostResult.stdout, /Using cached bootstrap compiler\.\nStage 1: ready \([0-9a-f]{64}\)\n/)
     assert.match(selfHostResult.stderr, /Stage 2: blocked/)
-    assert.match(selfHostResult.stderr, /examples\/compiler\.md:1387:3: parse error: expected return/)
+    assert.match(selfHostResult.stderr, /examples\/compiler\.md:1381:3: parse error: expected return/)
     assert.match(selfHostResult.stderr, /  let current = next_token\(source, open\.start \+ open\.length\)\n  \^\^\^/)
 
     await writeFile(hostInput, "module demo\nfn answer() -> i32 { return value }")
