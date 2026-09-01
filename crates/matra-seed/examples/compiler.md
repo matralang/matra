@@ -1060,21 +1060,14 @@ fn parse_loop_conditional(source: bytes, offset: i32) -> function_definition {
         else_statement = next_token(source, else_statement.start + else_statement.length)
       } else {
         if is_if_keyword(source, else_statement) == 1 {
-          let else_nested_left = next_token(source, else_statement.start + else_statement.length)
-          let else_nested_open = next_token(source, else_nested_left.start + else_nested_left.length)
-          let else_nested = function_definition(0, 0, 0, 0, else_statement.start, 0, 0)
-          if is_symbol(source, else_nested_open, 40) == 1 {
-            else_nested = parse_loop_conditional(source, else_statement.start)
-          } else {
-            else_nested = parse_loop_local_conditional(source, else_statement.start)
-          }
+          let else_nested = parse_loop_conditional_if(source, else_statement)
           if else_nested.status == 0 {
             return else_nested
           }
           else_statement = next_token(source, else_nested.position)
         } else {
           if is_while_keyword(source, else_statement) == 1 {
-            let else_nested_while = parse_while_statement(source, else_statement.start)
+            let else_nested_while = parse_loop_conditional_while(source, else_statement)
             if else_nested_while.status == 0 {
               return else_nested_while
             }
