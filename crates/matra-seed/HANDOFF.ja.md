@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの989行27列で停止 |
+| stage-2 | stage-1 | compiler sourceの994行27列で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,7 +21,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:989:27: parse error: expected return
+examples/compiler.md:994:27: parse error: expected return
   let current = next_token(source, open.start + open.length)
                           ^
 ```
@@ -279,7 +279,7 @@ return helperの再試行より先に、stage-2のreturn解析が扱える関数
 
 ## 次の実装単位
 
-`examples/compiler.md:989:27`は`parse_loop_conditional`関数のbody loop開始位置である。現行の
+`examples/compiler.md:994:27`は`parse_loop_conditional`関数のbody loop開始位置である。現行の
 `parse_loop_conditional`は、then/else bodyそれぞれに`break`、nested conditional、nested
 `while`、`return`、assignment/`let`の深いdispatchを持つ。stage-2 compilerはこのloopの脱出を
 十分に推論できず、loop直前の`let current = ...`に対して`expected return`を報告している。
@@ -323,14 +323,14 @@ pnpm run lint
 git diff --check
 ```
 
-`bootstrap:verify`で停止位置が`989:27`より後へ進み、focused test・test・lintが成功したら、
+`bootstrap:verify`で停止位置が`994:27`より後へ進み、focused test・test・lintが成功したら、
 then側helper化を独立commitする。その後にelse側を同じhelperへ置き換え、同じ検証順で記録する。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
 ## 次セッションの開始地点
 
 直近の基準commitは`a42a145`（loop conditionalのbreak parser helper分離）で、作業ツリーはcleanである。
-次に扱うのは`examples/compiler.md:989:27`の`parse_loop_conditional`関数内の`expected return`
+次に扱うのは`examples/compiler.md:994:27`の`parse_loop_conditional`関数内の`expected return`
 エラーである。まず上記の`parse_loop_conditional_statement`を追加し、then bodyだけを置換する。
 詳細な調査ログと仮説は`/memories/repo/matra-seed-notes.md`の
 「真の原因判明とnested while実装」「固定段数patternの限界と一般化」セクションを参照する。

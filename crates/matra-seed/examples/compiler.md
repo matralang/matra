@@ -887,6 +887,11 @@ fn parse_loop_conditional_if(source: bytes, statement: token) -> function_defini
   return nested
 }
 
+fn parse_loop_conditional_while(source: bytes, statement: token) -> function_definition {
+  let while_result = parse_while_statement(source, statement.start)
+  return while_result
+}
+
 fn parse_loop_conditional(source: bytes, offset: i32) -> function_definition {
   let keyword = next_token(source, offset)
   let called = next_token(source, keyword.start + keyword.length)
@@ -1003,7 +1008,7 @@ fn parse_loop_conditional(source: bytes, offset: i32) -> function_definition {
         current = next_token(source, nested_result.position)
       } else {
         if is_while_keyword(source, current) == 1 {
-          let nested_while = parse_while_statement(source, current.start)
+          let nested_while = parse_loop_conditional_while(source, current)
           if nested_while.status == 0 {
             return nested_while
           }
