@@ -286,6 +286,11 @@ stage-2の`expected return`は一時的に通過したが、続くcompileで`mem
 発生したため撤回した。parserのreturn-pathだけを変更する方針は採用せず、Wasm byte数を決める
 length/write側との同時修正が必要であることを再確認した。
 
+`loop_local_conditional`の右辺field accessについて、length側がfield load byteを数えず、writer側も
+body開始位置をfield後へ進めていない不一致を修正した。`right_end`をlength/writeの共通のbody開始
+cursorとして扱い、field loadを両方へ追加した。focused test 4件、`pnpm run test:seed`、check、
+lint/Markdownlintが成功したが、self-hostの停止位置は`994:27`のままである。commitは`61bcc71`である。
+
 同じ方法で`return`分岐をhelper化する試行も行ったが、stage-2がhelper内のreturn pathを
 `expected return`として誤判定した。else-chainへ整理しても解消せず、変更は撤回した。次回は
 return helperの再試行より先に、stage-2のreturn解析が扱える関数body形を既存の成功例と比較する。
