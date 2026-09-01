@@ -87,6 +87,18 @@ compiler sourceは`bytes` return、array、nested loop body、
 
 5. 関連testとlintが成功した単位で独立commitする。
 
+## 次の実装判断（2026-09-01）
+
+ここまでのprobeで、assignmentの固定byte数や比較opcodeに確実な不一致は見つからなかった。
+一方、parserのbody loopだけをhelper化または制御フロー変更すると、focused testは通ってもstage-2 compileで
+OOBとなる。次は同じstatement形について、`parse_loop_conditional`・`loop_conditional_length`・
+`write_loop_conditional`の三関数がそれぞれどのsource tokenを消費し、何byteを返すかを表にしてから実装する。
+
+最初の対象は`while x != 0 { if x == 1 { x = 9 } }`のnested local conditionalとする。parserのposition、
+lengthの加算、writerのposition更新を1 statementずつ照合し、差分が確定した場合のみ三経路を同じ変更単位で
+実装する。差分がない場合は、長いparser関数を分割する前に、stage-2のOOB発生時のWasm functionとbuffer位置を
+計測できる診断用の最小変更を追加する。
+
 ## 完了した実装単位
 
 top-level `struct` declarationをstage-1 parserへ追加し、literal constructorのfield readをfunction tableの
