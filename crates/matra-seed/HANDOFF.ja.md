@@ -500,6 +500,69 @@ stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、�
 - [ ] stage-2からstage-3を生成する
 - [ ] stage-2とstage-3のbyte一致を検証する
 
+## 次の実装準備
+
+### 現在の基準
+
+- branchは`develop`で、作業ツリーはcleanである
+- stage-1はRust seedから再現可能に生成できる
+- `pnpm bootstrap:verify`の現在の結果は、stage-1 ready、stage-2 blockedである
+- stage-2の停止位置は`examples/compiler.md:994:27`、`parse_loop_conditional`のbody loop先頭である
+- stage-3はstage-2未生成のため未到達である
+- 最小の対象構文は次の形である
+
+```matra
+export fn probe(source: bytes, offset: i32) -> i32 {
+  let value = offset
+  while value != 0 {
+    if value == 1 {
+      value = 9
+    }
+  }
+  return value
+}
+```
+
+### 実装前に作る対応表
+
+この対象構文について、次の3経路を1 statementずつ表にする。source cursorは「次に読むtoken」、
+Wasm cursorは「次に書くbyte」の位置として記録する。
+
+| 経路 | 対象 | 確認する戻り値・更新 |
+| --- | --- | --- |
+| parser | `parse_loop_conditional` / `parse_loop_local_conditional` | nested `if`後の`position`と親loopの`current` |
+| length | `loop_conditional_length` / `loop_local_conditional_length` | condition、assignment、`end`ごとの加算 |
+| writer | `write_loop_conditional` / `write_loop_local_conditional` | comparison、assignment、block終端ごとの`position` |
+
+特に、nested `if`のassignmentが1文で直後に`}`が来る場合に、parserが返す閉じ波括弧の位置と、
+length/writeが消費するassignment後の位置を比較する。`let`の有無、RHS field accessの有無を分けて
+確認し、1 byteの推測修正は行わない。
+
+### 診断用の最小変更
+
+対応表で不一致が見つからない場合だけ、次の順で診断する。
+
+1. `loop_local_conditional_length`の返却値を一時的に確認できるfocused probeを作る。
+2. 同じsourceを`write_loop_local_conditional`へ渡した直後のbuffer位置を確認する。
+3. `while_statement_length`と`write_while_statement`について、outer local conditionの前後で同じ値を確認する。
+4. 診断用の出力は検証後に削除し、恒久化する変更と混ぜない。
+
+### 実装と検証の順序
+
+parser・length・writerの三経路でstatement境界を同時に変更する場合の順序は次のとおりとする。
+
+1. 最小構文のfocused testを追加または既存testを拡張する。
+2. 三経路を同じstatement形で変更する。
+3. `node --test --test-name-pattern='loop local conditional' crates/matra-seed/tests/wasm.test.mjs`
+4. `pnpm run test:seed`
+5. `pnpm bootstrap:verify`
+6. `pnpm run lint`、Markdownlint、`git diff --check`
+7. stage-2の停止位置が前進した場合だけ実装commitを作る。
+8. 失敗時は同じ実装単位を撤回し、失敗理由をこの文書へ追記する。
+
+focused testが成功しても、`bootstrap:verify`がOOBになる変更は採用しない。stage-2がreadyになったら、
+同じcommandでstage-3生成とstage-2/stage-3のSHA-256 byte一致まで確認する。
+
 ## 運用上の判断
 
 - 現在の成熟度は`experimental`であり、本番compilerとしてreleaseしない
