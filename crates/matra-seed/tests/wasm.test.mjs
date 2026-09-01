@@ -76,6 +76,49 @@ test("bootstrap compiler accepts a call comparison in a conditional condition", 
   }
 })
 
+test("bootstrap compiler accepts a call guard before a local and while", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "matra-seed-call-guard-"))
+  const input = join(directory, "call-guard.md")
+  const output = join(directory, "call-guard.wasm")
+  await writeFile(input, [
+    "# Call guard before local and while",
+    "",
+    "```compiler.matra.program",
+    "module demo",
+    "",
+    "fn is_zero(source: bytes, value: i32) -> i32 {",
+    "  if value == 0 {",
+    "    return 1",
+    "  }",
+    "  return 0",
+    "}",
+    "",
+    "export fn answer(source: bytes, value: i32) -> i32 {",
+    "  if is_zero(source, value) == 0 {",
+    "    return 1",
+    "  }",
+    "  let current = value",
+    "  while current != 0 {",
+    "    current = 0",
+    "  }",
+    "  return current",
+    "}",
+    "```",
+    "",
+  ].join("\n"))
+
+  try {
+    const result = spawnSync(
+      "cargo",
+      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"],
+      { cwd: root, encoding: "utf8" },
+    )
+    assert.equal(result.status, 0, result.stderr)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test("bootstrap compiler accepts multiple statements inside a loop-nested conditional", async () => {
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-loop-conditional-"))
   const input = join(directory, "loop-conditional.md")
