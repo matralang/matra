@@ -578,6 +578,11 @@ parserだけでなく`local_body_length`と`write_local_body`、local index計�
 `RuntimeError: memory access out of bounds`で失敗したため、変更は撤回した。停止位置を前進させるだけでなく、
 `let current`のinitializerについてlengthとwriterのbyte cursorを個別に照合してから再実装する必要がある。
 
+writerの返値ABIを変更せずにlength不足を検出する場合は、`multiple_function_module`のbody予定終端に
+一時的なsentinel byteを置き、`write_local_body`実行後にそのbyteが上書きされたかを確認する。予定終端が
+上書きされていれば、writerの実出力が`local_body_length`を超えているため、initializerまたは後続statementの
+length計算を先に修正する。sentinel probeは診断専用とし、原因確定後に削除する。
+
 ### 実装と検証の順序
 
 parser・length・writerの三経路でstatement境界を同時に変更する場合の順序は次のとおりとする。
