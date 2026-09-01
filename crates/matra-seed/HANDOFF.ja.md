@@ -583,6 +583,11 @@ writerの返値ABIを変更せずにlength不足を検出する場合は、`mult
 上書きされていれば、writerの実出力が`local_body_length`を超えているため、initializerまたは後続statementの
 length計算を先に修正する。sentinel probeは診断専用とし、原因確定後に削除する。
 
+このsentinel probeを実装して`pnpm bootstrap:verify`を実行したが、stage-2は依然として
+`994:27 expected return`で停止した。parser段階でcompileが終わるためwriterには到達せず、probeからlengthの
+過少計算は判定できなかった。probeは撤回済みであり、まずparserの固定段数をlength/writeと整合する形で
+追加してstage-2をemitterまで進める必要がある。
+
 ### 実装と検証の順序
 
 parser・length・writerの三経路でstatement境界を同時に変更する場合の順序は次のとおりとする。
