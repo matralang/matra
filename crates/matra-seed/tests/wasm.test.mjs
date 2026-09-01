@@ -112,6 +112,50 @@ test("bootstrap compiler accepts multiple statements inside a loop-nested condit
   }
 })
 
+test("bootstrap compiler accepts a nested while as a sibling statement inside another while", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "matra-seed-nested-while-"))
+  const input = join(directory, "nested-while.md")
+  const output = join(directory, "nested-while.wasm")
+  await writeFile(input, [
+    "# Nested while as a sibling statement",
+    "",
+    "```compiler.matra.program",
+    "module demo",
+    "",
+    "fn is_symbol(source: bytes, value: i32, target: i32) -> i32 {",
+    "  return 0",
+    "}",
+    "",
+    "export fn answer(source: bytes, call_argument: i32) -> i32 {",
+    "  let call_separator = call_argument",
+    "  while is_symbol(source, call_argument, 41) == 0 {",
+    "    if is_symbol(source, call_separator, 46) == 1 {",
+    "      let call_field = call_separator",
+    "      call_separator = call_field",
+    "    }",
+    "    while is_symbol(source, call_separator, 43) == 1 {",
+    "      call_separator = call_argument",
+    "    }",
+    "    call_argument = call_separator",
+    "  }",
+    "  return call_separator",
+    "}",
+    "```",
+    "",
+  ].join("\n"))
+
+  try {
+    const result = spawnSync(
+      "cargo",
+      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"],
+      { cwd: root, encoding: "utf8" },
+    )
+    assert.equal(result.status, 0, result.stderr)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test("matra-seed compiles a Markdown code block to an executable Wasm module", async () => {
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-"))
   const input = join(directory, "example.md")
@@ -285,8 +329,8 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     assert.equal(selfHostResult.status, 1)
     assert.match(selfHostResult.stdout, /Using cached bootstrap compiler\.\nStage 1: ready \([0-9a-f]{64}\)\n/)
     assert.match(selfHostResult.stderr, /Stage 2: blocked/)
-    assert.match(selfHostResult.stderr, /examples\/compiler\.md:533:15: parse error: expected integer/)
-    assert.match(selfHostResult.stderr, /        while is_arithmetic_operator\(source, call_separator\) == 1 {\n              \^+/)
+    assert.match(selfHostResult.stderr, /examples\/compiler\.md:641:5: parse error: expected return/)
+    assert.match(selfHostResult.stderr, /    while is_arithmetic_operator\(source, right_end\) == 1 {\n    \^+/)
 
     await writeFile(hostInput, "module demo\nfn answer() -> i32 { return value }")
     const hostDiagnostic = spawnSync("node", ["crates/matra-seed/host/compile.mjs", output, hostInput, hostOutput], { cwd: root, encoding: "utf8" })
