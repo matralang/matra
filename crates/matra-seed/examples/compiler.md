@@ -784,6 +784,30 @@ fn parse_conditional_body(source: bytes, offset: i32, name: token, parameter: to
     }
     current = next_token(source, statement.position)
   }
+  if is_while_keyword(source, current) == 1 {
+    let while_statement = parse_while_statement(source, current.start)
+    if while_statement.status == 0 {
+      return while_statement
+    }
+    current = next_token(source, while_statement.position)
+  }
+  while is_let_keyword(source, current) == 1 {
+    let local_name = next_token(source, current.start + current.length)
+    if local_name.kind != 1 {
+      return function_definition(0, 0, 0, 0, offset, local_name.start, 2)
+    }
+    let equals = next_token(source, local_name.start + local_name.length)
+    if is_symbol(source, equals, 61) == 0 {
+      return function_definition(0, 0, 0, 0, offset, equals.start, 13)
+    }
+    let operand = next_token(source, equals.start + equals.length)
+    if operand.kind != 1 {
+      if operand.kind != 2 {
+        return function_definition(0, 0, 0, 0, offset, operand.start, 13)
+      }
+    }
+    current = expression_end(source, operand)
+  }
   if is_return_keyword(source, current) == 0 {
     return function_definition(0, 0, 0, 0, offset, current.start, 11)
   }
