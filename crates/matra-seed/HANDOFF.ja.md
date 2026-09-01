@@ -380,6 +380,10 @@ stage-2を通過している`parse_local_return_conditional`は、body loop内�
 body parserを分割する際の比較対象とする。単純なassignment helper追加では`expected integer`またはOOBになったため、
 次は同じ「loop内でstatementを消費し、終了条件を親関数が保持する」形をparser・length・writerへ同時に適用する。
 
+正常bodyを`if is_symbol(source, open, 123) == 1`で明示的に包むparser-only probeも行ったが、stage-1生成後の
+stage-2 compile中に`memory access out of bounds`となった。`else` wrappingと同様に、制御フローだけを変更する
+方法ではlength/writeとの契約を保てない。probeは撤回し、baselineの`994:27 expected return`へ戻した。
+
 調査中に提案された`write_loop_local_conditional`の比較命令を3 byteから4 byteへ変更する案は採用しなかった。
 同関数のlength初期値`operand_length(left) + 4`は、比較命令3 byteと`end` 1 byteに対応しており、
 `while_statement_length`の初期値`12`もheader・条件終端・loop終端の合計として説明できるため、現時点で
