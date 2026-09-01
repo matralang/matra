@@ -1588,7 +1588,7 @@ fn parse_local_return_conditional(source: bytes, offset: i32) -> function_defini
   let open = right_end
   if is_symbol(source, open, 123) == 0 {
     return function_definition(0, 0, 0, 0, offset, open.start, 10)
-  }
+  } else {
   let body_statement = next_token(source, open.start + open.length)
   while is_return_keyword(source, body_statement) == 0 {
     if is_symbol(source, body_statement, 125) == 1 {
@@ -1743,6 +1743,8 @@ fn parse_local_return_conditional(source: bytes, offset: i32) -> function_defini
     return function_definition(1, 0, 0, 0, local_else_statement.start + local_else_statement.length, 0, 0)
   }
   return function_definition(1, 0, 0, 0, close.start + close.length, 0, 0)
+  }
+  return function_definition(0, 0, 0, 0, offset, open.start, 10)
 }
 
 fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definition {
