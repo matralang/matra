@@ -4327,7 +4327,14 @@ fn loop_local_conditional_length(source: bytes, table: [i32], function: function
     right = next_token(source, right.start + right.length)
   }
   length = length + operand_length(source, function, right)
-  let open = next_token(source, right.start + right.length)
+  let right_end = next_token(source, right.start + right.length)
+  if is_symbol(source, right_end, 46) == 1 {
+    let right_field = next_token(source, right_end.start + right_end.length)
+    let right_field_index = local_struct_field_index(source, table, function, right, right_field)
+    length = length + 2 + u32_leb_length(right_field_index * 4)
+    right_end = next_token(source, right_field.start + right_field.length)
+  }
+  let open = right_end
   let current = next_token(source, open.start + open.length)
   while is_symbol(source, current, 125) == 0 {
     if is_break_keyword(source, current) == 1 {
@@ -5520,11 +5527,22 @@ fn write_loop_local_conditional(buffer: bytes, index: i32, source: bytes, table:
     right = next_token(source, right.start + right.length)
   }
   position = write_operand(buffer, position, source, function, right)
+  let right_end = next_token(source, right.start + right.length)
+  if is_symbol(source, right_end, 46) == 1 {
+    let right_field = next_token(source, right_end.start + right_end.length)
+    let right_field_index = local_struct_field_index(source, table, function, right, right_field)
+    byte_set(buffer, position, 40)
+    byte_set(buffer, position + 1, 2)
+    position = position + 2
+    let right_field_offset_written = write_u32_leb(buffer, position, right_field_index * 4)
+    position = position + u32_leb_length(right_field_index * 4)
+    right_end = next_token(source, right_field.start + right_field.length)
+  }
   byte_set(buffer, position, comparison_opcode(source, operator))
   byte_set(buffer, position + 1, 4)
   byte_set(buffer, position + 2, 64)
   position = position + 3
-  let open = next_token(source, right.start + right.length)
+  let open = right_end
   let current = next_token(source, open.start + open.length)
   while is_symbol(source, current, 125) == 0 {
     if is_break_keyword(source, current) == 1 {
