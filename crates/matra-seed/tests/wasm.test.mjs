@@ -199,6 +199,42 @@ test("bootstrap compiler accepts a nested while as a sibling statement inside an
   }
 })
 
+test("bootstrap compiler accepts a loop local conditional with a struct field RHS", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "matra-seed-loop-local-field-"))
+  const input = join(directory, "loop-local-field.md")
+  const output = join(directory, "loop-local-field.wasm")
+  await writeFile(input, [
+    "# Loop local conditional with a struct field RHS",
+    "",
+    "```compiler.matra.program",
+    "module demo",
+    "",
+    "struct pair { left: i32 right: i32 }",
+    "",
+    "export fn answer(value: i32, record: pair) -> i32 {",
+    "  while value != 0 {",
+    "    if value < record.right {",
+    "      value = 0",
+    "    }",
+    "  }",
+    "  return value",
+    "}",
+    "```",
+    "",
+  ].join("\n"))
+
+  try {
+    const result = spawnSync(
+      "cargo",
+      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"],
+      { cwd: root, encoding: "utf8" },
+    )
+    assert.equal(result.status, 0, result.stderr)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test("matra-seed compiles a Markdown code block to an executable Wasm module", async () => {
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-"))
   const input = join(directory, "example.md")
