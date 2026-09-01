@@ -2070,6 +2070,13 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
     }
     current = next_token(source, post_conditional_if.position)
   }
+  if is_while_keyword(source, current) == 1 {
+    let post_if_while = parse_while_statement(source, current.start)
+    if post_if_while.status == 0 {
+      return post_if_while
+    }
+    current = next_token(source, post_if_while.position)
+  }
   while is_let_keyword(source, current) == 1 {
     let continuation_name = next_token(source, current.start + current.length)
     if continuation_name.kind != 1 {
