@@ -570,6 +570,10 @@ return function_definition(...)
 position、lengthが加算するbyte数、writerが更新するpositionを一致させる。特に`let current`は
 compiler source上ではcall引数を持つlocal initializerであり、単純な`operand_length`だけでは扱わない。
 
+parser段だけに同列を追加するprobeも実行したが、stage-2の停止位置は`994:27`から前進しなかった。
+probeは撤回済みである。この結果から、stage-1が生成するparser bodyのbyte layoutを保ったまま進めるには、
+parserだけでなく`local_body_length`と`write_local_body`、local index計算も同じ段で追加する必要がある。
+
 ### 実装と検証の順序
 
 parser・length・writerの三経路でstatement境界を同時に変更する場合の順序は次のとおりとする。
