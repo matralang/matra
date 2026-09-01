@@ -870,6 +870,11 @@ fn expression_end(source: bytes, operand: token) -> token {
   return current
 }
 
+fn parse_loop_conditional_break(source: bytes, statement: token) -> function_definition {
+  let next = next_token(source, statement.start + statement.length)
+  return function_definition(1, 0, 0, 0, next.start, 0, 0)
+}
+
 fn parse_loop_conditional(source: bytes, offset: i32) -> function_definition {
   let keyword = next_token(source, offset)
   let called = next_token(source, keyword.start + keyword.length)
@@ -975,7 +980,8 @@ fn parse_loop_conditional(source: bytes, offset: i32) -> function_definition {
   let current = next_token(source, open.start + open.length)
   while is_symbol(source, current, 125) == 0 {
     if is_break_keyword(source, current) == 1 {
-      current = next_token(source, current.start + current.length)
+      let break_result = parse_loop_conditional_break(source, current)
+      current = next_token(source, break_result.position)
     } else {
       if is_if_keyword(source, current) == 1 {
         let nested_left = next_token(source, current.start + current.length)
