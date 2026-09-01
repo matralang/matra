@@ -370,6 +370,16 @@ parserだけがstatement境界を変え、length/writeが従来の境界を使�
 baselineは`994:27 expected return`である。既存helperの成功パターンはparserを単純に委譲する形に限られるため、
 次の実装ではassignmentのtoken解析・length加算・writer出力を同一のstatement形として同時に追加する必要がある。
 
+その後、`write_loop_local_conditional`の比較命令を4 byteへ変更する案を再確認したが、これは誤りだった。
+local conditionalの`comparison_opcode`後の`4,64`は`if`とempty block typeで3 byte、`69,13,1`はwhile側の
+`i32.eq`・`br_if`・depthで4 byteであり、用途が異なる。lengthの`+4`は比較3 byteと末尾`end` 1 byteに対応するため、
+この箇所には修正を加えていない。
+
+stage-2を通過している`parse_local_return_conditional`は、body loop内でnested conditional/whileとassignmentを
+直接処理し、return statementを検出した時点でbody loopを終了する構造である。この関数を、loop conditionalの
+body parserを分割する際の比較対象とする。単純なassignment helper追加では`expected integer`またはOOBになったため、
+次は同じ「loop内でstatementを消費し、終了条件を親関数が保持する」形をparser・length・writerへ同時に適用する。
+
 調査中に提案された`write_loop_local_conditional`の比較命令を3 byteから4 byteへ変更する案は採用しなかった。
 同関数のlength初期値`operand_length(left) + 4`は、比較命令3 byteと`end` 1 byteに対応しており、
 `while_statement_length`の初期値`12`もheader・条件終端・loop終端の合計として説明できるため、現時点で
