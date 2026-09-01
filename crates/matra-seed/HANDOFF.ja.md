@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの574行5列で停止 |
+| stage-2 | stage-1 | compiler sourceの744行13列で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,9 +21,9 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:574:5: parse error: expected return
-   if is_symbol(source, open, 123) == 0 {
-   ^^
+examples/compiler.md:744:13: parse error: expected integer
+   while is_arithmetic_operator(source, call_separator) == 1 {
+      ^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
@@ -244,7 +244,7 @@ self-host検証のdiagnosticは468行37列へ進んだ。
 
 local bodyの最終`return function_call(...)`にあるcall argumentで、field accessとその後続算術を
 parseできるようにした。続けて一般 conditionalの左辺call、identifier RHS、call returnをparseし、
-self-hostのdiagnosticは574行5列へ進んだ。
+self-hostのdiagnosticは744行13列へ進んだ。
 
 ## 次の実装単位
 
@@ -264,7 +264,7 @@ stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検�
 ```
 
 最初に検証する仮説は、一般 conditionalのcall条件で`==`のtoken進行と`else`境界がずれている、というものである。
-最小testはself-host停止位置を574行5列に固定し、call条件内のcomparisonとconditional bodyの継続受理を確認する。
+最小testはself-host停止位置を744行13列に固定し、nested whileの条件とconditional bodyの継続受理を確認する。
 
 主な確認箇所は次のとおりである。
 
@@ -294,7 +294,7 @@ pnpm run lint
 git diff --check
 ```
 
-stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、停止位置が現在の574行5列より後へ進むことを
+stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、停止位置が現在の744行13列より後へ進むことを
 確認する。各実装単位はtest、lint、bootstrap停止位置、indentationを確認してから独立commitにする。
 
 ## Stage-3進捗
