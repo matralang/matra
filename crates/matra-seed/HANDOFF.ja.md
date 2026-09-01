@@ -281,6 +281,11 @@ stage-2の直接call return解析を避けるため、local経由で結果を返
 続けてelse bodyの`if`、`while`、`break` dispatchを同じhelperへ統一した。statement境界を維持した
 まま、focused test 4件と`pnpm run test:seed`が成功した。commitは`0764a78`と`8a445f6`である。
 
+`parse_loop_conditional`の開き波括弧検証を明示的な`else` blockへ包むprobeを行った。この変更で
+stage-2の`expected return`は一時的に通過したが、続くcompileで`memory access out of bounds`が
+発生したため撤回した。parserのreturn-pathだけを変更する方針は採用せず、Wasm byte数を決める
+length/write側との同時修正が必要であることを再確認した。
+
 同じ方法で`return`分岐をhelper化する試行も行ったが、stage-2がhelper内のreturn pathを
 `expected return`として誤判定した。else-chainへ整理しても解消せず、変更は撤回した。次回は
 return helperの再試行より先に、stage-2のreturn解析が扱える関数body形を既存の成功例と比較する。
@@ -293,8 +298,9 @@ return helperの再試行より先に、stage-2のreturn解析が扱える関数
 十分に推論できず、loop直前の`let current = ...`に対して`expected return`を報告している。
 
 固定段数をさらに複製するのではなく、parser・length計算・Wasm writerのstatement境界を
-同時に扱える単位へ分解する。parserだけをassignment helperへ切り出す試行ではstage-2が
-`memory access out of bounds`になったため、次は3経路の対応を確認してから進める。
+同時に扱える単位へ分解する。parserだけをassignment helperへ切り出す試行と、parserの
+return-pathだけを明示化する試行では、いずれもstage-2が`memory access out of bounds`に
+なったため、次は3経路の対応を確認してから進める。
 
 ```matra
 fn parse_loop_conditional_statement(
