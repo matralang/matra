@@ -1382,7 +1382,12 @@ fn parse_while_statement(source: bytes, offset: i32) -> function_definition {
         let conditional_open = next_token(source, conditional_left.start + conditional_left.length)
         let conditional = function_definition(0, 0, 0, 0, current.start, 0, 0)
         if is_symbol(source, conditional_open, 40) == 1 {
-          conditional = parse_loop_conditional(source, current.start)
+          let loop_conditional_first = next_token(source, conditional_open.start + conditional_open.length)
+          if is_return_keyword(source, loop_conditional_first) == 1 {
+            conditional = parse_local_return_conditional(source, current.start)
+          } else {
+            conditional = parse_loop_conditional(source, current.start)
+          }
         } else {
           conditional = parse_loop_local_conditional(source, current.start)
         }
@@ -1819,7 +1824,13 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
     let conditional_operator = next_token(source, conditional_left.start + conditional_left.length)
     let conditional = function_definition(0, 0, 0, 0, current.start, 0, 0)
     if is_symbol(source, conditional_operator, 40) == 1 {
-      conditional = parse_local_return_conditional(source, current.start)
+      let call_conditional_open = next_token(source, conditional_operator.start + conditional_operator.length)
+      let call_conditional_first = next_token(source, call_conditional_open.start + call_conditional_open.length)
+      if is_return_keyword(source, call_conditional_first) == 1 {
+        conditional = parse_local_return_conditional(source, current.start)
+      } else {
+        conditional = parse_loop_conditional(source, current.start)
+      }
     } else {
       if is_symbol(source, conditional_operator, 46) == 1 {
         let conditional_field = next_token(source, conditional_operator.start + conditional_operator.length)
@@ -2808,7 +2819,12 @@ fn local_count_of(source: bytes, function: function_definition) -> i32 {
         let conditional_open = next_token(source, conditional_left.start + conditional_left.length)
         let conditional = function_definition(0, 0, 0, 0, current.start, 0, 0)
         if is_symbol(source, conditional_open, 40) == 1 {
-          conditional = parse_loop_conditional(source, current.start)
+          let loop_conditional_first = next_token(source, conditional_open.start + conditional_open.length)
+          if is_return_keyword(source, loop_conditional_first) == 1 {
+            conditional = parse_local_return_conditional(source, current.start)
+          } else {
+            conditional = parse_loop_conditional(source, current.start)
+          }
         } else {
           conditional = parse_loop_local_conditional(source, current.start)
         }
@@ -4653,8 +4669,23 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     current = next_token(source, statement.position)
   }
   while is_if_keyword(source, current) == 1 {
-    length = length + local_return_conditional_length(source, table, function, current)
-    let conditional = parse_local_return_conditional(source, current.start)
+    let conditional_left = next_token(source, current.start + current.length)
+    let conditional_operator = next_token(source, conditional_left.start + conditional_left.length)
+    let conditional = function_definition(0, 0, 0, 0, current.start, 0, 0)
+    if is_symbol(source, conditional_operator, 40) == 1 {
+      let call_conditional_open = next_token(source, conditional_operator.start + conditional_operator.length)
+      let call_conditional_first = next_token(source, call_conditional_open.start + call_conditional_open.length)
+      if is_return_keyword(source, call_conditional_first) == 1 {
+        length = length + local_return_conditional_length(source, table, function, current)
+        conditional = parse_local_return_conditional(source, current.start)
+      } else {
+        length = length + loop_conditional_length(source, table, function, current)
+        conditional = parse_loop_conditional(source, current.start)
+      }
+    } else {
+      length = length + local_return_conditional_length(source, table, function, current)
+      conditional = parse_local_return_conditional(source, current.start)
+    }
     current = next_token(source, conditional.position)
   }
   while is_let_keyword(source, current) == 1 {
