@@ -37,6 +37,81 @@ test("host highlights UTF-8 source ranges with tabs", () => {
   })
 })
 
+test("bootstrap compiler accepts a call comparison in a conditional condition", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "matra-seed-conditional-"))
+  const input = join(directory, "conditional.md")
+  const output = join(directory, "conditional.wasm")
+  await writeFile(input, [
+    "# Conditional call comparison",
+    "",
+    "```compiler.matra.program",
+    "module demo",
+    "",
+    "fn is_arithmetic_operator(source: bytes, value: i32) -> i32 {",
+    "  if value == 43 {",
+    "    return 1",
+    "  }",
+    "  return 0",
+    "}",
+    "",
+    "export fn answer(source: bytes, call_separator: i32) -> i32 {",
+    "  while is_arithmetic_operator(source, call_separator) == 1 {",
+    "    return 42",
+    "  }",
+    "  return 0",
+    "}",
+    "```",
+    "",
+  ].join("\n"))
+
+  try {
+    const result = spawnSync(
+      "cargo",
+      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"],
+      { cwd: root, encoding: "utf8" },
+    )
+    assert.equal(result.status, 0, result.stderr)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test("bootstrap compiler accepts multiple statements inside a loop-nested conditional", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "matra-seed-loop-conditional-"))
+  const input = join(directory, "loop-conditional.md")
+  const output = join(directory, "loop-conditional.wasm")
+  await writeFile(input, [
+    "# Multi-statement loop-nested conditional",
+    "",
+    "```compiler.matra.program",
+    "module demo",
+    "",
+    "export fn answer(source: bytes, offset: i32) -> i32 {",
+    "  let call_argument = offset",
+    "  while call_argument != 0 {",
+    "    if call_argument == 1 {",
+    "      let call_field = 2",
+    "      call_argument = call_field",
+    "    }",
+    "  }",
+    "  return call_argument",
+    "}",
+    "```",
+    "",
+  ].join("\n"))
+
+  try {
+    const result = spawnSync(
+      "cargo",
+      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"],
+      { cwd: root, encoding: "utf8" },
+    )
+    assert.equal(result.status, 0, result.stderr)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test("matra-seed compiles a Markdown code block to an executable Wasm module", async () => {
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-"))
   const input = join(directory, "example.md")
@@ -210,8 +285,8 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     assert.equal(selfHostResult.status, 1)
     assert.match(selfHostResult.stdout, /Using cached bootstrap compiler\.\nStage 1: ready \([0-9a-f]{64}\)\n/)
     assert.match(selfHostResult.stderr, /Stage 2: blocked/)
-    assert.match(selfHostResult.stderr, /examples\/compiler\.md:744:13: parse error: expected integer/)
-    assert.match(selfHostResult.stderr, /      while is_arithmetic_operator\(source, call_separator\) == 1 {\n            \^+/)
+    assert.match(selfHostResult.stderr, /examples\/compiler\.md:533:15: parse error: expected integer/)
+    assert.match(selfHostResult.stderr, /        while is_arithmetic_operator\(source, call_separator\) == 1 {\n              \^+/)
 
     await writeFile(hostInput, "module demo\nfn answer() -> i32 { return value }")
     const hostDiagnostic = spawnSync("node", ["crates/matra-seed/host/compile.mjs", output, hostInput, hostOutput], { cwd: root, encoding: "utf8" })
