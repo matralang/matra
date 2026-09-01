@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの1381行3列で停止 |
+| stage-2 | stage-1 | compiler sourceの1499行1列で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,9 +21,9 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:1381:3: parse error: expected return
-  let current = next_token(source, open.start + open.length)
-  ^^^
+examples/compiler.md:1499:1: parse error: expected return
+}
+^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
@@ -92,13 +92,14 @@ compiler sourceは`bytes` return、array、nested loop body、
 
 ここまでのprobeで、assignmentの固定byte数や比較opcodeに確実な不一致は見つからなかった。`parse_loop_local_conditional`の
 `open`成功側とbody後の通常経路を既存の`parse_loop_conditional`と同じ`else`構造へ整理した後、local bodyの`break`、nested `if`、
-`while` dispatchも既存helperへ統一した。その結果、stage-2の停止位置は`1387:3`から`1381:3`へ移り、現在は
-`parse_while_statement`のbody開始処理で停止している。focused testと`bootstrap:verify`で同じ位置を再現できた。
+`while` dispatchも既存helperへ統一した。その結果、stage-2の停止位置は`1387:3`から`1381:3`へ移った。
+さらに`parse_while_statement`のopen判定成功側を`else`へ包み、stage-2の停止位置は`1499:1`へ前進した。
+現在は同関数の終端で停止しており、focused testと`bootstrap:verify`で同じ位置を再現できた。
 一方、parserのbody loopだけをhelper化または制御フロー変更すると、focused testは通ってもstage-2 compileで
 OOBとなる。次は同じstatement形について、`parse_loop_conditional`・`loop_conditional_length`・
 `write_loop_conditional`の三関数がそれぞれどのsource tokenを消費し、何byteを返すかを表にしてから実装する。
 
-今回の次の対象は`parse_while_statement`のbody開始処理とする。parserのposition、
+今回の次の対象は`parse_while_statement`の終端return経路とする。parserのposition、
 lengthの加算、writerのposition更新を1 statementずつ照合し、差分が確定した場合のみ三経路を同じ変更単位で
 実装する。差分がない場合は、長いparser関数を分割する前に、stage-2のOOB発生時のWasm functionとbuffer位置を
 計測できる診断用の最小変更を追加する。

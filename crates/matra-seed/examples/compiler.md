@@ -1380,7 +1380,7 @@ fn parse_while_statement(source: bytes, offset: i32) -> function_definition {
   let open = right_end
   if is_symbol(source, open, 123) == 0 {
     return function_definition(0, 0, 0, 0, offset, open.start, 10)
-  }
+  } else {
   let current = next_token(source, open.start + open.length)
   while is_symbol(source, current, 125) == 0 {
     if is_while_keyword(source, current) == 1 {
@@ -1498,6 +1498,7 @@ fn parse_while_statement(source: bytes, offset: i32) -> function_definition {
     }
   }
   return function_definition(1, 0, 0, 0, current.start + current.length, 0, 0)
+  }
 }
 
 fn parse_local_return_conditional(source: bytes, offset: i32) -> function_definition {
