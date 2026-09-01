@@ -7,7 +7,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 
 ## 現在の到達点
 
-2026-08-31時点の状態は次のとおりである。
+2026-09-01時点の状態は次のとおりである。
 
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
@@ -271,7 +271,15 @@ self-host停止位置が972行27列へ前進した。
 `parse_loop_conditional`のthen bodyにある`break`分岐だけを
 `parse_loop_conditional_break`へ切り出した。既存のcursor契約を維持し、focused test 4件、
 `pnpm run test:seed`、lintが成功した。helper追加による行番号変更をtest期待値と本書へ反映し、
-self-hostの停止位置は`977:27`である。commitは`a42a145`である。
+self-hostの停止位置は`994:27`である。commitは`a42a145`である。
+
+`parse_loop_conditional`のthen bodyからnested `if`とnested `while`のdispatchをそれぞれ
+`parse_loop_conditional_if`と`parse_loop_conditional_while`へ切り出した。nested `while`のhelperは
+stage-2の直接call return解析を避けるため、local経由で結果を返す。focused test 4件、
+`pnpm run test:seed`、check、lint/Markdownlintが成功した。commitは`286ce11`と`014c8ce`である。
+
+続けてelse bodyの`if`、`while`、`break` dispatchを同じhelperへ統一した。statement境界を維持した
+まま、focused test 4件と`pnpm run test:seed`が成功した。commitは`0764a78`と`8a445f6`である。
 
 同じ方法で`return`分岐をhelper化する試行も行ったが、stage-2がhelper内のreturn pathを
 `expected return`として誤判定した。else-chainへ整理しても解消せず、変更は撤回した。次回は
@@ -281,11 +289,12 @@ return helperの再試行より先に、stage-2のreturn解析が扱える関数
 
 `examples/compiler.md:994:27`は`parse_loop_conditional`関数のbody loop開始位置である。現行の
 `parse_loop_conditional`は、then/else bodyそれぞれに`break`、nested conditional、nested
-`while`、`return`、assignment/`let`の深いdispatchを持つ。stage-2 compilerはこのloopの脱出を
+`while`、`return`、assignment/`let`のdispatchを持つ。stage-2 compilerはこのloopの脱出を
 十分に推論できず、loop直前の`let current = ...`に対して`expected return`を報告している。
 
-固定段数をさらに複製するのではなく、まず parser の1 statement分のdispatchを次のhelperへ
-切り出す。最初はthen bodyだけを対象にし、実装と検証を小さく分ける。
+固定段数をさらに複製するのではなく、parser・length計算・Wasm writerのstatement境界を
+同時に扱える単位へ分解する。parserだけをassignment helperへ切り出す試行ではstage-2が
+`memory access out of bounds`になったため、次は3経路の対応を確認してから進める。
 
 ```matra
 fn parse_loop_conditional_statement(
@@ -329,17 +338,18 @@ stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検�
 
 ## 次セッションの開始地点
 
-直近の基準commitは`a42a145`（loop conditionalのbreak parser helper分離）で、作業ツリーはcleanである。
+直近の基準commitは`8a445f6`（else側のbreak dispatch helper化）で、作業ツリーはcleanである。
 次に扱うのは`examples/compiler.md:994:27`の`parse_loop_conditional`関数内の`expected return`
-エラーである。まず上記の`parse_loop_conditional_statement`を追加し、then bodyだけを置換する。
+エラーである。assignment/`let` dispatchを parser・length・writerで同じstatement形として扱える
+最小単位を特定する。
 詳細な調査ログと仮説は`/memories/repo/matra-seed-notes.md`の
 「真の原因判明とnested while実装」「固定段数patternの限界と一般化」セクションを参照する。
 
 主な確認箇所は次のとおりである。
 
-- `parse_loop_conditional`のthen body dispatchを`parse_loop_conditional_statement`へ切り出す
-- focused testでstage-1が追加helperをcompileできることを確認し、`bootstrap:verify`で停止位置を比較する
-- then側の成功後にelse bodyも同じhelperへ置き換え、parserの両bodyのstatement境界を揃える
+- assignment/`let`のparser・length・writerのstatement境界を突き合わせる
+- focused testでstage-1が変更をcompileできることを確認し、`bootstrap:verify`で停止位置を比較する
+- parserだけのhelper化でOOBになった場合は変更を戻し、3経路を同時に扱う小さい実装へ分割する
 - helper化だけで停止位置が進まない場合に限り、`loop_conditional_length`/`write_loop_conditional`の
   同じstatement形を突き合わせる。固定段数の追加は最後の手段とする
 
