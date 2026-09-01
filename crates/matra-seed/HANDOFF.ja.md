@@ -351,6 +351,19 @@ git diff --check
 then側helper化を独立commitする。その後にelse側を同じhelperへ置き換え、同じ検証順で記録する。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
+## parser return-path probeの結果（2026-09-01）
+
+`parse_loop_conditional`の開き波括弧チェックを`else`へ包むprobeでは、stage-2の停止位置が
+`parse_loop_local_conditional`の`expected return`まで進んだ。さらに同関数も同じ形へ包むと、
+stage-1は生成できたがstage-2 compile中に`RuntimeError: memory access out of bounds`となった。
+parser-onlyの変更はlength/writeとのbyte契約を壊すため、probeはbaselineへ戻した。
+
+調査中に提案された`write_loop_local_conditional`の比較命令を3 byteから4 byteへ変更する案は採用しなかった。
+同関数のlength初期値`operand_length(left) + 4`は、比較命令3 byteと`end` 1 byteに対応しており、
+`while_statement_length`の初期値`12`もheader・条件終端・loop終端の合計として説明できるため、現時点で
+確実な不一致とはいえない。次はparser・length・writerのstatement境界を同時に扱うhelper化を、then側の
+最小単位から再検討する。
+
 ## 次セッションの開始地点
 
 直近の基準commitは`8a445f6`（else側のbreak dispatch helper化）で、作業ツリーはcleanである。
