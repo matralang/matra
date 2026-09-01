@@ -442,6 +442,19 @@ git diff --check
 stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、停止位置が現在の744行13列より後へ進むことを
 確認する。各実装単位はtest、lint、bootstrap停止位置、indentationを確認してから独立commitにする。
 
+## 2026-09-01 追加調査
+
+`parse_local_body`の固定段を末尾へ追加するprobeを2種類実施した。`while`後の`let -> if`段を追加した場合、
+stage-2の停止位置は一時的に`1048:3`から`1382:3`へ進んだが、次の`while`段を追加しても進展しなかった。
+いずれもparserだけの変更であり、length/writeとのbyte契約を揃えていないため撤回した。
+
+この結果から、`1048:3`の直接原因を`parse_local_body`末尾の単純な段数不足と断定しない。次回は
+`parse_local_body`が`parse_loop_conditional`をdispatchする直前のtoken列を、`parse_local_return_conditional`の
+成功例と比較し、どの固定段で最初に`let after_then`を取りこぼすかを確認する。修正する場合はparser・
+`local_count_of`・`variable_index`・`local_body_length`・`write_local_body`を同じstatement列で同時に更新する。
+
+focused loop testはprobe中も成功した。baselineへ戻した後のself-host停止位置は`1048:3 expected return`である。
+
 ## Stage-3進捗
 
 - [x] Rust seedから再現可能なstage-1を生成する
