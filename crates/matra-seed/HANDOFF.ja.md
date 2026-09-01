@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの744行13列で停止 |
+| stage-2 | stage-1 | compiler sourceの972行27列で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,9 +21,9 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:744:13: parse error: expected integer
-   while is_arithmetic_operator(source, call_separator) == 1 {
-      ^
+examples/compiler.md:972:27: parse error: expected return
+  let current = next_token(source, open.start + open.length)
+                          ^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
@@ -256,49 +256,45 @@ compile中にWasm `RuntimeError: memory access out of bounds`が発生する既�
 参照する。self-host停止位置は744行13列から533行15列へ後退したが、これは複数statement対応で
 compiler.mdの構文がより複雑になったことによる現状追認であり、実装の後退ではない。
 
+`parse_while_statement`/`while_statement_length`/`write_while_statement`のbody dispatchに
+`is_while_keyword`の分岐を追加し、whileの中にsiblingとして別のwhileが出現するケースを
+parse・length計算・emitできるようにした。従来はif/assignmentしか対応しておらず、
+while同士が並ぶと後続のwhileの呼び出し名をassignment targetと誤認していた。これが
+533行15列の停止の真の原因であり、修正によりself-host停止位置が641行5列へ前進した。
+
+`local_count_of`/`variable_index`/`local_body_length`/`write_local_body`/`parse_local_body`の
+5関数が持つ`[lets]*, [optional-while], [ifs]*`固定4段patternに、5段目（while→ifs）と
+6段目（lets→while→ifs）を機械的に複製して追加した。`parse_conditional_statement`のbodyが
+4段を超える複雑さを持つため、641行5列の`expected return`エラーが発生していた。追加により
+self-host停止位置が972行27列へ前進した。
+
 ## 次の実装単位
 
-`while_statement_length`/`write_while_statement`のlocal条件分岐(call条件でない方)と
-`loop_conditional_length`/`write_loop_conditional`のassignment分岐を、上記で発見した
-「nested ifのbodyがassignment/let 1文だけで直後に`}`」というケースについてbyte単位で
-再検証し、length計算とemit結果を一致させる。その後、compiler sourceの出現順に、
-`parse_conditional_statement`内の3重以上のnest構造（`if`の中に`while`、その中に`if`と
-`while`が並ぶ形）を解消する。stage-2が生成できた時点でstage-3生成とbyte一致が自動的に
-検証される。
+`examples/compiler.md:972:27`は`parse_loop_conditional`関数内で、`local_count_of`/
+`variable_index`/`local_body_length`/`write_local_body`/`parse_local_body`と同種の
+固定段数patternが再び上限に達している可能性が高い（`parse_loop_conditional`自身の
+body-dispatch構造を確認すること）。段数を1つ追加して前進を確認する、または
+段数を可変にする一般化を検討する。5関数はセットで更新しないとlength計算とwrite/parseが
+不一致になりWasm実行時にOOBを起こすため注意する。stage-2が生成できた時点でstage-3生成と
+byte一致が自動的に検証される。
 
 ## 次セッションの開始地点
 
-直近の基準commitは`23da8c9`（`feat(matra-seed): loop内local conditionalの複数statementを実装する`）
-である。次に扱うのは、`/tmp/probe.mjs`相当の最小ハーネスで再現した以下のバグの原因特定である
-（`/tmp`配下のファイルは消えている可能性があるため、必要なら`/memories/repo/matra-seed-notes.md`の
-再現手順を参照して再作成する）。
-
-```matra
-export fn probe(source: bytes, offset: i32) -> i32 {
-  let call_argument = offset
-  while call_argument != 0 {
-    if call_argument == 1 {
-      call_argument = 9
-    }
-  }
-  return call_argument
-}
-```
-
-最初に検証する仮説は、`while_statement_length`/`write_while_statement`のlocal条件分岐(else側)が、
-call条件分岐と比べてfixed byte数の計算が1箇所ずれている、というものである。call条件+nested if
-assignment(probe14相当)は正常に動くため、call条件分岐側は正しいことが分かっている。
+直近の基準commitは`a52bda8`（`feat(matra-seed): local bodyのwhile/if/let繰り返し段数を追加する`）
+である。次に扱うのは`examples/compiler.md:972:27`の`parse_loop_conditional`関数内の
+`expected return`エラーである。詳細な調査ログと仮説は`/memories/repo/matra-seed-notes.md`の
+「真の原因判明とnested while実装」「固定段数patternの限界と一般化」セクションを参照する。
 
 主な確認箇所は次のとおりである。
 
-- `while_statement_length`/`write_while_statement`: local条件分岐のfixed byte数をcall条件分岐と
-  1byte単位で突き合わせる
-- `loop_conditional_length`/`write_loop_conditional`: assignment分岐(`byte_set(buffer, position, 33)`
-  前後)で、if body 1文がassignmentで直後に`}`という組み合わせのみ壊れる理由を特定する
-- 一度直ったら`examples/compiler.md:533:15`のself-host停止位置が前進するか確認する
-
-parser・length・emitterのdispatch順を同じtoken列に揃える。既存のpost-local conditional、trailing while、
-final returnも回帰testで維持する。
+- `parse_loop_conditional`/`loop_conditional_length`/`write_loop_conditional`のbody構造が
+  `local_count_of`等と同じ`[lets]*, [optional-while], [ifs]*`の固定段数patternを
+  持っているか確認する
+- 持っている場合は段数を1つ追加する（`local_count_of`/`variable_index`/
+  `local_body_length`/`write_local_body`/`parse_local_body`に加えた`second_`/`third_`
+  接頭辞のstageと同じ要領で複製する）
+- 時間が取れる場合は、固定段数ではなく`while (is_let_keyword||is_while_keyword||is_if_keyword)`
+  形式の可変loopへ一般化することを検討する（whack-a-moleの根本解消）
 
 Matraのlocal名はfunction全体で重複できないため、追加する一時名は同じfunction内で一意にする。source編集時は
 block階層ごとに2 spaces、tabなしを維持する。機械検査に加えて、変更blockの深さを目視する。
@@ -372,6 +368,10 @@ stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、�
 - [x] loop call conditional bodyの`return`を実装する
 - [x] local initializer call argumentのfield accessと算術を実装する
 - [x] local return conditional bodyのcall argument field accessを実装する
+- [x] loop内local conditional bodyの複数statement(break/if/while/return/assignment)を実装する
+- [x] while body内でsiblingとして出現するnested whileを実装する
+- [x] local body系5関数（local_count_of/variable_index/local_body_length/
+      write_local_body/parse_local_body）の固定段数patternに5段目・6段目を追加する
 - [ ] arrayと組み込みmemory操作を実装する
 - [ ] stage-1からstage-2を生成する
 - [ ] stage-2からstage-3を生成する
