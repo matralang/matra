@@ -449,6 +449,7 @@ stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、�
 `1384:3`まで前進した。call-condition pathのfocused test 3件は成功した。
 
 `parse_loop_local_conditional`にも同型の変更を試したが、`1387:3`のbody開始で停止したため撤回した。
+開き波括弧の正常経路だけを包む簡略版も試したが、`1386:3`の`let current`で停止したため撤回した。
 したがって現行の実装差分はcall-condition parser側だけであり、length/write側は未変更である。次はlocal-condition
 parserのreturn-pathを、call-condition側と同じ形にするだけでなく、stage-2が受理できるbody構造へ分解する。
 
