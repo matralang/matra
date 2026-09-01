@@ -364,6 +364,12 @@ then/else bodyのassignment dispatchだけを`parse_loop_conditional_assignment`
 撤回してbaselineへ戻した。次は既存の`parse_loop_conditional_break`/`_if`/`_while` helperと同じ戻り値契約を
 利用し、parser・length・writerのstatement dispatchを一度に変更する方針へ切り替える。
 
+その後、assignment helperの`target`/`equals`/`expression_end`を既存のinline処理と同じ形に整理して再試行した。
+focused testは成功したが、`pnpm bootstrap:verify`ではstage-2 compile中に`memory access out of bounds`となった。
+parserだけがstatement境界を変え、length/writeが従来の境界を使い続けたためである。probeは撤回し、現在の
+baselineは`994:27 expected return`である。既存helperの成功パターンはparserを単純に委譲する形に限られるため、
+次の実装ではassignmentのtoken解析・length加算・writer出力を同一のstatement形として同時に追加する必要がある。
+
 調査中に提案された`write_loop_local_conditional`の比較命令を3 byteから4 byteへ変更する案は採用しなかった。
 同関数のlength初期値`operand_length(left) + 4`は、比較命令3 byteと`end` 1 byteに対応しており、
 `while_statement_length`の初期値`12`もheader・条件終端・loop終端の合計として説明できるため、現時点で
