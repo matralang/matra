@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの474行49列で停止 |
+| stage-2 | stage-1 | compiler sourceの574行5列で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,9 +21,9 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:474:49: parse error: expected return
-   let position = module_name.start + module_name.length
-                                                                        ^
+examples/compiler.md:574:5: parse error: expected return
+   if is_symbol(source, open, 123) == 0 {
+   ^^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
@@ -39,7 +39,8 @@ functionごとの複数parameter call ABIもcompileできる。local bodyの最�
 field accessに続く算術、local initializerのfield access、while右辺のfield accessと算術もcompileできる。
 assignment算術式の途中にあるfunction call、conditional右辺のstruct field access、先頭conditional後の
 local declaration、先頭conditional列後のinteger literal return、local conditional内nested `if`もcompileできる。
-conditional後local declarationに続く`while`もcompileできる。現在はloop conditionalのcall argumentで
+conditional後local declarationに続く`while`もcompileできる。一般 conditionalの左辺call、identifier RHS、
+call returnをparseできる。現在はloop conditionalのcall argumentで
 field accessに続く算術とcomparison右辺のcall、loop call conditional bodyの`return`、local return conditional
 bodyのcall argumentにあるfield accessもcompileできる。現在はconditional後のlocal declaration列を処理したあとに
 後続local declarationを再び受理できず停止する。
@@ -242,35 +243,34 @@ loop conditional / loop local conditional bodyの`return function_call(...)`を�
 self-host検証のdiagnosticは468行37列へ進んだ。
 
 local bodyの最終`return function_call(...)`にあるcall argumentで、field accessとその後続算術を
-parseできるようにした。`return function_definition(1, name.start, name.length, 0, field.start + field.length, 0, 0)`を
-通過して、diagnosticは474行49列へ進んだ。
+parseできるようにした。続けて一般 conditionalの左辺call、identifier RHS、call returnをparseし、
+self-hostのdiagnosticは574行5列へ進んだ。
 
 ## 次の実装単位
 
-compiler sourceの出現順に、`struct_field_count`内の
-`let position = module_name.start + module_name.length`で停止している
-while-body終端からのlocal継続受理（最終`return`要求の解除）を解消する。その後は`bytes` returnと
+compiler sourceの出現順に、一般 conditionalのcall条件と比較token処理で発生している
+`else` 周辺のparser停止を解消する。その後は`bytes` returnと
 複数function call ABI、array、memory組み込みを進める。
 stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
 ## 次セッションの開始地点
 
 直近の基準commitは`fcc745a`（`feat(matra-seed): while条件call比較とloop return callを実装`）である。
-次に扱うsourceは[`examples/compiler.md`](examples/compiler.md)の`parse_struct`にある次の行である。
+次に扱うsourceは[`examples/compiler.md`](examples/compiler.md)の`parse_conditional_statement`にある
+`if is_symbol(source, operator, 61) == 1` 周辺である。
 
 ```matra
-let position = module_name.start + module_name.length
+} else {
 ```
 
-最初に検証する仮説は、`struct_field_count`で先頭local declarationを処理した後、
-whileやconditionalの後続tokenを受理する前に最終`return`を要求している、というものである。最小testは
-self-host停止位置を474行49列に固定し、`let -> while/if -> let`の継続受理を確認する。
+最初に検証する仮説は、一般 conditionalのcall条件で`==`のtoken進行と`else`境界がずれている、というものである。
+最小testはself-host停止位置を574行5列に固定し、call条件内のcomparisonとconditional bodyの継続受理を確認する。
 
 主な確認箇所は次のとおりである。
 
-- `parse_local_body`: post-local conditional後にもtrailing local declarationを再度dispatchする
-- `local_body_length`: 同じ位置でlocal初期化式のlengthを加算する
-- `write_local_body`: 同じ位置でlocal初期化式をemitし、local indexを進める
+- `parse_conditional_statement`: call条件のcomparisonと`else`のtoken終端を揃える
+- `conditional_body_length`: parserと同じ条件形状のlengthを計算する
+- `write_conditional_statement`: parserと同じ条件形状のWasmをemitする
 
 parser・length・emitterのdispatch順を同じtoken列に揃える。既存のpost-local conditional、trailing while、
 final returnも回帰testで維持する。
@@ -294,7 +294,7 @@ pnpm run lint
 git diff --check
 ```
 
-stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、停止位置が現在の453行3列より後へ進むことを
+stage-2完成前の`pnpm bootstrap:verify`はexit code `1`が正常であり、停止位置が現在の574行5列より後へ進むことを
 確認する。各実装単位はtest、lint、bootstrap停止位置、indentationを確認してから独立commitにする。
 
 ## Stage-3進捗
