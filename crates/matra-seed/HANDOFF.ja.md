@@ -358,6 +358,12 @@ stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検�
 stage-1は生成できたがstage-2 compile中に`RuntimeError: memory access out of bounds`となった。
 parser-onlyの変更はlength/writeとのbyte契約を壊すため、probeはbaselineへ戻した。
 
+then/else bodyのassignment dispatchだけを`parse_loop_conditional_assignment`へ切り出すprobeも実施したが、
+`994:27`を越えず、stage-2が先に`compiler.md:478:11`の`expected integer`で停止した。helperの追加と
+呼び出し側でのtoken境界変換が、現行stage-2の名前解決または戻り値解析に適合しなかったため、このprobeも
+撤回してbaselineへ戻した。次は既存の`parse_loop_conditional_break`/`_if`/`_while` helperと同じ戻り値契約を
+利用し、parser・length・writerのstatement dispatchを一度に変更する方針へ切り替える。
+
 調査中に提案された`write_loop_local_conditional`の比較命令を3 byteから4 byteへ変更する案は採用しなかった。
 同関数のlength初期値`operand_length(left) + 4`は、比較命令3 byteと`end` 1 byteに対応しており、
 `while_statement_length`の初期値`12`もheader・条件終端・loop終端の合計として説明できるため、現時点で
