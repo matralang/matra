@@ -291,6 +291,10 @@ body開始位置をfield後へ進めていない不一致を修正した。`righ
 cursorとして扱い、field loadを両方へ追加した。focused test 4件、`pnpm run test:seed`、check、
 lint/Markdownlintが成功したが、self-hostの停止位置は`994:27`のままである。commitは`61bcc71`である。
 
+上記の修正を保護するため、`while`のlocal条件、nested local `if`、RHSのstruct field access、
+assignmentを組み合わせた最小回帰testを追加した。seed testはRust 8件とNode 9件が成功し、全checkと
+lintも成功した。commitは`15ebf03`である。
+
 同じ方法で`return`分岐をhelper化する試行も行ったが、stage-2がhelper内のreturn pathを
 `expected return`として誤判定した。else-chainへ整理しても解消せず、変更は撤回した。次回は
 return helperの再試行より先に、stage-2のreturn解析が扱える関数body形を既存の成功例と比較する。
