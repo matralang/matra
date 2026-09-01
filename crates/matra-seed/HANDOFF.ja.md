@@ -246,31 +246,56 @@ local bodyの最終`return function_call(...)`にあるcall argumentで、field 
 parseできるようにした。続けて一般 conditionalの左辺call、identifier RHS、call returnをparseし、
 self-hostのdiagnosticは744行13列へ進んだ。
 
+loop内local conditional（`while <local条件> { if <local条件> { ... } }`のnested if部分）のbodyを、
+従来のbreak/return/if 1文限定から、`parse_loop_conditional`と同じbreak/if/while/return/assignment
+(let可)の複数statementへ拡張した。`local_count_of`/`variable_index`にもnested if内の新規`let`宣言を
+数える走査を追加した。この変更の過程で、`while <local条件> { if <条件> { <assignment 1文> } }`という
+形（nested ifのbodyがassignmentまたはlet 1文だけで終わる形）をstage-1でcompileすると、parseは通るが
+compile中にWasm `RuntimeError: memory access out of bounds`が発生する既存バグ（今回の変更以前から
+存在し、テストされていなかった潜在バグ）を発見した。詳細は`/memories/repo/matra-seed-notes.md`を
+参照する。self-host停止位置は744行13列から533行15列へ後退したが、これは複数statement対応で
+compiler.mdの構文がより複雑になったことによる現状追認であり、実装の後退ではない。
+
 ## 次の実装単位
 
-compiler sourceの出現順に、一般 conditionalのcall条件と比較token処理で発生している
-`else` 周辺のparser停止を解消する。その後は`bytes` returnと
-複数function call ABI、array、memory組み込みを進める。
-stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
+`while_statement_length`/`write_while_statement`のlocal条件分岐(call条件でない方)と
+`loop_conditional_length`/`write_loop_conditional`のassignment分岐を、上記で発見した
+「nested ifのbodyがassignment/let 1文だけで直後に`}`」というケースについてbyte単位で
+再検証し、length計算とemit結果を一致させる。その後、compiler sourceの出現順に、
+`parse_conditional_statement`内の3重以上のnest構造（`if`の中に`while`、その中に`if`と
+`while`が並ぶ形）を解消する。stage-2が生成できた時点でstage-3生成とbyte一致が自動的に
+検証される。
 
 ## 次セッションの開始地点
 
-直近の基準commitは`fcc745a`（`feat(matra-seed): while条件call比較とloop return callを実装`）である。
-次に扱うsourceは[`examples/compiler.md`](examples/compiler.md)の`parse_conditional_statement`にある
-`if is_symbol(source, operator, 61) == 1` 周辺である。
+直近の基準commitは`23da8c9`（`feat(matra-seed): loop内local conditionalの複数statementを実装する`）
+である。次に扱うのは、`/tmp/probe.mjs`相当の最小ハーネスで再現した以下のバグの原因特定である
+（`/tmp`配下のファイルは消えている可能性があるため、必要なら`/memories/repo/matra-seed-notes.md`の
+再現手順を参照して再作成する）。
 
 ```matra
-} else {
+export fn probe(source: bytes, offset: i32) -> i32 {
+  let call_argument = offset
+  while call_argument != 0 {
+    if call_argument == 1 {
+      call_argument = 9
+    }
+  }
+  return call_argument
+}
 ```
 
-最初に検証する仮説は、一般 conditionalのcall条件で`==`のtoken進行と`else`境界がずれている、というものである。
-最小testはself-host停止位置を744行13列に固定し、nested whileの条件とconditional bodyの継続受理を確認する。
+最初に検証する仮説は、`while_statement_length`/`write_while_statement`のlocal条件分岐(else側)が、
+call条件分岐と比べてfixed byte数の計算が1箇所ずれている、というものである。call条件+nested if
+assignment(probe14相当)は正常に動くため、call条件分岐側は正しいことが分かっている。
 
 主な確認箇所は次のとおりである。
 
-- `parse_conditional_statement`: call条件のcomparisonと`else`のtoken終端を揃える
-- `conditional_body_length`: parserと同じ条件形状のlengthを計算する
-- `write_conditional_statement`: parserと同じ条件形状のWasmをemitする
+- `while_statement_length`/`write_while_statement`: local条件分岐のfixed byte数をcall条件分岐と
+  1byte単位で突き合わせる
+- `loop_conditional_length`/`write_loop_conditional`: assignment分岐(`byte_set(buffer, position, 33)`
+  前後)で、if body 1文がassignmentで直後に`}`という組み合わせのみ壊れる理由を特定する
+- 一度直ったら`examples/compiler.md:533:15`のself-host停止位置が前進するか確認する
 
 parser・length・emitterのdispatch順を同じtoken列に揃える。既存のpost-local conditional、trailing while、
 final returnも回帰testで維持する。
