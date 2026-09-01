@@ -875,6 +875,18 @@ fn parse_loop_conditional_break(source: bytes, statement: token) -> function_def
   return function_definition(1, 0, 0, 0, next.start, 0, 0)
 }
 
+fn parse_loop_conditional_if(source: bytes, statement: token) -> function_definition {
+  let nested_left = next_token(source, statement.start + statement.length)
+  let nested_open = next_token(source, nested_left.start + nested_left.length)
+  let nested = function_definition(0, 0, 0, 0, statement.start, 0, 0)
+  if is_symbol(source, nested_open, 40) == 1 {
+    nested = parse_loop_conditional(source, statement.start)
+  } else {
+    nested = parse_loop_local_conditional(source, statement.start)
+  }
+  return nested
+}
+
 fn parse_loop_conditional(source: bytes, offset: i32) -> function_definition {
   let keyword = next_token(source, offset)
   let called = next_token(source, keyword.start + keyword.length)
@@ -984,18 +996,11 @@ fn parse_loop_conditional(source: bytes, offset: i32) -> function_definition {
       current = next_token(source, break_result.position)
     } else {
       if is_if_keyword(source, current) == 1 {
-        let nested_left = next_token(source, current.start + current.length)
-        let nested_open = next_token(source, nested_left.start + nested_left.length)
-        let nested = function_definition(0, 0, 0, 0, current.start, 0, 0)
-        if is_symbol(source, nested_open, 40) == 1 {
-          nested = parse_loop_conditional(source, current.start)
-        } else {
-          nested = parse_loop_local_conditional(source, current.start)
+        let nested_result = parse_loop_conditional_if(source, current)
+        if nested_result.status == 0 {
+          return nested_result
         }
-        if nested.status == 0 {
-          return nested
-        }
-        current = next_token(source, nested.position)
+        current = next_token(source, nested_result.position)
       } else {
         if is_while_keyword(source, current) == 1 {
           let nested_while = parse_while_statement(source, current.start)
