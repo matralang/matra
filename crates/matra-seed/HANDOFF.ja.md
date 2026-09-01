@@ -270,31 +270,69 @@ self-host停止位置が972行27列へ前進した。
 
 ## 次の実装単位
 
-`examples/compiler.md:972:27`は`parse_loop_conditional`関数内で、`local_count_of`/
-`variable_index`/`local_body_length`/`write_local_body`/`parse_local_body`と同種の
-固定段数patternが再び上限に達している可能性が高い（`parse_loop_conditional`自身の
-body-dispatch構造を確認すること）。段数を1つ追加して前進を確認する、または
-段数を可変にする一般化を検討する。5関数はセットで更新しないとlength計算とwrite/parseが
-不一致になりWasm実行時にOOBを起こすため注意する。stage-2が生成できた時点でstage-3生成と
-byte一致が自動的に検証される。
+`examples/compiler.md:972:27`は`parse_loop_conditional`関数のbody loop開始位置である。現行の
+`parse_loop_conditional`は、then/else bodyそれぞれに`break`、nested conditional、nested
+`while`、`return`、assignment/`let`の深いdispatchを持つ。stage-2 compilerはこのloopの脱出を
+十分に推論できず、loop直前の`let current = ...`に対して`expected return`を報告している。
+
+固定段数をさらに複製するのではなく、まず parser の1 statement分のdispatchを次のhelperへ
+切り出す。最初はthen bodyだけを対象にし、実装と検証を小さく分ける。
+
+```matra
+fn parse_loop_conditional_statement(
+  source: bytes,
+  offset: i32,
+  statement: token
+) -> function_definition
+```
+
+実装準備:
+
+- 成功値は`function_definition(1, 0, 0, 0, statement_end, 0, 0)`とし、呼び出し側は
+  `current = next_token(source, parsed.position)`で次のstatementへ進める。
+- `break`は次のtoken、nested `if`/`while`は既存parserの戻り値、`return`は
+  `expression_end`、assignment/`let`は`=`後のoperandから`expression_end`までを
+  `statement_end`とする。
+- nested parserまたはtoken検証が失敗した場合は、既存parserと同じ
+  `function_definition(0, 0, 0, 0, offset, error_offset, error_expected)`を返す。
+- helper追加後、`parse_loop_conditional`のthen body loopだけをhelper呼び出しへ置き換える。
+  else bodyは次の独立した実装単位として、then側の効果を先に確認する。
+- `loop_conditional_length`と`write_loop_conditional`は最初のhelper化では変更しない。ただし
+  parserだけが先へ進んだ場合は、3関数のstatement境界が一致しているかを最優先で確認する。
+  length/writeを変更する場合は同じstatement形を同時に扱い、Wasm OOBを避ける。
+- helper自身をstage-1がcompileできない場合は、まず失敗した構文位置と全return pathを確認する。
+  その後に必要なら`parse_loop_return_statement`などへ追加分割する。
+
+最初の実装後は、focused testから順に検証する。focused testが失敗した場合は同じparser sliceだけを
+修正し、同じtestを再実行してからbootstrapへ進む。
+
+```text
+node --test --test-name-pattern='bootstrap compiler maps|call guard before a local and while|multiple statements inside a loop-nested conditional|nested while as a sibling' crates/matra-seed/tests/wasm.test.mjs
+pnpm bootstrap:verify
+pnpm run test:seed
+pnpm run lint
+git diff --check
+```
+
+`bootstrap:verify`で停止位置が`972:27`より後へ進み、focused test・test・lintが成功したら、
+then側helper化を独立commitする。その後にelse側を同じhelperへ置き換え、同じ検証順で記録する。
+stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検証される。
 
 ## 次セッションの開始地点
 
-直近の基準commitは`a52bda8`（`feat(matra-seed): local bodyのwhile/if/let繰り返し段数を追加する`）
-である。次に扱うのは`examples/compiler.md:972:27`の`parse_loop_conditional`関数内の
-`expected return`エラーである。詳細な調査ログと仮説は`/memories/repo/matra-seed-notes.md`の
+直近の基準commitは`3ef75f5`（loop内local/while形の回帰test追加）で、作業ツリーはcleanである。
+次に扱うのは`examples/compiler.md:972:27`の`parse_loop_conditional`関数内の`expected return`
+エラーである。まず上記の`parse_loop_conditional_statement`を追加し、then bodyだけを置換する。
+詳細な調査ログと仮説は`/memories/repo/matra-seed-notes.md`の
 「真の原因判明とnested while実装」「固定段数patternの限界と一般化」セクションを参照する。
 
 主な確認箇所は次のとおりである。
 
-- `parse_loop_conditional`/`loop_conditional_length`/`write_loop_conditional`のbody構造が
-  `local_count_of`等と同じ`[lets]*, [optional-while], [ifs]*`の固定段数patternを
-  持っているか確認する
-- 持っている場合は段数を1つ追加する（`local_count_of`/`variable_index`/
-  `local_body_length`/`write_local_body`/`parse_local_body`に加えた`second_`/`third_`
-  接頭辞のstageと同じ要領で複製する）
-- 時間が取れる場合は、固定段数ではなく`while (is_let_keyword||is_while_keyword||is_if_keyword)`
-  形式の可変loopへ一般化することを検討する（whack-a-moleの根本解消）
+- `parse_loop_conditional`のthen body dispatchを`parse_loop_conditional_statement`へ切り出す
+- focused testでstage-1が追加helperをcompileできることを確認し、`bootstrap:verify`で停止位置を比較する
+- then側の成功後にelse bodyも同じhelperへ置き換え、parserの両bodyのstatement境界を揃える
+- helper化だけで停止位置が進まない場合に限り、`loop_conditional_length`/`write_loop_conditional`の
+  同じstatement形を突き合わせる。固定段数の追加は最後の手段とする
 
 Matraのlocal名はfunction全体で重複できないため、追加する一時名は同じfunction内で一意にする。source編集時は
 block階層ごとに2 spaces、tabなしを維持する。機械検査に加えて、変更blockの深さを目視する。
