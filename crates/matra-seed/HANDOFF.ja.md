@@ -574,6 +574,10 @@ parser段だけに同列を追加するprobeも実行したが、stage-2の停�
 probeは撤回済みである。この結果から、stage-1が生成するparser bodyのbyte layoutを保ったまま進めるには、
 parserだけでなく`local_body_length`と`write_local_body`、local index計算も同じ段で追加する必要がある。
 
+5関数へ同じ`if -> let -> while -> let -> if`列を追加する実装も試したが、stage-2は
+`RuntimeError: memory access out of bounds`で失敗したため、変更は撤回した。停止位置を前進させるだけでなく、
+`let current`のinitializerについてlengthとwriterのbyte cursorを個別に照合してから再実装する必要がある。
+
 ### 実装と検証の順序
 
 parser・length・writerの三経路でstatement境界を同時に変更する場合の順序は次のとおりとする。
