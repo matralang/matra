@@ -268,6 +268,15 @@ while同士が並ぶと後続のwhileの呼び出し名をassignment targetと�
 4段を超える複雑さを持つため、641行5列の`expected return`エラーが発生していた。追加により
 self-host停止位置が972行27列へ前進した。
 
+`parse_loop_conditional`のthen bodyにある`break`分岐だけを
+`parse_loop_conditional_break`へ切り出した。既存のcursor契約を維持し、focused test 4件、
+`pnpm run test:seed`、lintが成功した。helper追加による行番号変更をtest期待値と本書へ反映し、
+self-hostの停止位置は`977:27`である。commitは`a42a145`である。
+
+同じ方法で`return`分岐をhelper化する試行も行ったが、stage-2がhelper内のreturn pathを
+`expected return`として誤判定した。else-chainへ整理しても解消せず、変更は撤回した。次回は
+return helperの再試行より先に、stage-2のreturn解析が扱える関数body形を既存の成功例と比較する。
+
 ## 次の実装単位
 
 `examples/compiler.md:977:27`は`parse_loop_conditional`関数のbody loop開始位置である。現行の
@@ -320,7 +329,7 @@ stage-2が生成できた時点でstage-3生成とbyte一致が自動的に検�
 
 ## 次セッションの開始地点
 
-直近の基準commitは`3ef75f5`（loop内local/while形の回帰test追加）で、作業ツリーはcleanである。
+直近の基準commitは`a42a145`（loop conditionalのbreak parser helper分離）で、作業ツリーはcleanである。
 次に扱うのは`examples/compiler.md:977:27`の`parse_loop_conditional`関数内の`expected return`
 エラーである。まず上記の`parse_loop_conditional_statement`を追加し、then bodyだけを置換する。
 詳細な調査ログと仮説は`/memories/repo/matra-seed-notes.md`の
