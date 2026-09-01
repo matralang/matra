@@ -547,6 +547,29 @@ length/writeが消費するassignment後の位置を比較する。`let`の有�
 3. `while_statement_length`と`write_while_statement`について、outer local conditionの前後で同じ値を確認する。
 4. 診断用の出力は検証後に削除し、恒久化する変更と混ぜない。
 
+### 追加調査で確定したこと
+
+`pnpm bootstrap:verify`の`994:27`は、`parse_loop_conditional`自身のloop body parserが返した診断ではない。
+stage-1がcompiler sourceの`parse_loop_conditional`関数を読む際、`parse_function`から呼ばれた
+`parse_local_body`の固定段数が尽き、次のトップレベル`if`をreturn文として扱った結果である。
+したがって、local数やcomparison byteを先に変更しても、この停止位置は解消しない。
+
+停止位置から見た不足列は次のとおりである。
+
+```text
+if is_symbol(source, open, 123) == 0 { ... }
+let current = next_token(...)
+while is_symbol(source, current, 125) == 0 { ... }
+let after_then = next_token(...)
+if is_else_keyword(source, after_then) == 1 { ... }
+return function_definition(...)
+```
+
+次の実装では、この列を`parse_local_body`へ追加するだけでは不十分である。同じstatement列を
+`local_body_length`、`write_local_body`、`local_count_of`、`variable_index`にも追加し、parserが返す
+position、lengthが加算するbyte数、writerが更新するpositionを一致させる。特に`let current`は
+compiler source上ではcall引数を持つlocal initializerであり、単純な`operand_length`だけでは扱わない。
+
 ### 実装と検証の順序
 
 parser・length・writerの三経路でstatement境界を同時に変更する場合の順序は次のとおりとする。
