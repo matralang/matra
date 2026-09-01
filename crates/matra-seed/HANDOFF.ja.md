@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの994行27列で停止 |
+| stage-2 | stage-1 | compiler sourceの1048行3列で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,9 +21,9 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:994:27: parse error: expected return
-  let current = next_token(source, open.start + open.length)
-                          ^
+examples/compiler.md:1048:3: parse error: expected return
+  let after_then = next_token(source, current.start + current.length)
+  ^^^
 ```
 
 stage-1 parserはtop-level `struct` declarationを受理し、literal constructorのfield readをcompileできる。
@@ -43,7 +43,8 @@ conditional後local declarationに続く`while`もcompileできる。一般 cond
 call returnをparseできる。現在はloop conditionalのcall argumentで
 field accessに続く算術とcomparison右辺のcall、loop call conditional bodyの`return`、local return conditional
 bodyのcall argumentにあるfield accessもcompileできる。現在はconditional後のlocal declaration列を処理したあとに
-後続local declarationを再び受理できず停止する。
+call initializerを持つ後続local declarationを受理できる。現在はその後のwhileを抜けたあとのlocal declarationで
+停止する。
 compiler sourceは`bytes` return、array、nested loop body、
 `break`、組み込みmemory操作を使用しており、parserとemitterの両方に順次実装する必要がある。
 

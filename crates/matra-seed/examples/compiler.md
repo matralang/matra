@@ -2166,6 +2166,46 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
       }
       current = next_token(source, third_field.start + third_field.length)
     }
+    if is_symbol(source, current, 40) == 1 {
+      let third_argument = next_token(source, current.start + current.length)
+      while is_symbol(source, third_argument, 41) == 0 {
+        if third_argument.kind != 1 {
+          if third_argument.kind != 2 {
+            return function_definition(0, 0, 0, 0, offset, third_argument.start, 13)
+          }
+        }
+        let third_separator = next_token(source, third_argument.start + third_argument.length)
+        if is_symbol(source, third_separator, 46) == 1 {
+          let third_argument_field = next_token(source, third_separator.start + third_separator.length)
+          if third_argument_field.kind != 1 {
+            return function_definition(0, 0, 0, 0, offset, third_argument_field.start, 2)
+          }
+          third_separator = next_token(source, third_argument_field.start + third_argument_field.length)
+        }
+        while is_arithmetic_operator(source, third_separator) == 1 {
+          let third_argument_operand = next_token(source, third_separator.start + third_separator.length)
+          if third_argument_operand.kind != 1 {
+            if third_argument_operand.kind != 2 {
+              return function_definition(0, 0, 0, 0, offset, third_argument_operand.start, 13)
+            }
+          }
+          third_separator = next_token(source, third_argument_operand.start + third_argument_operand.length)
+          if is_symbol(source, third_separator, 46) == 1 {
+            let third_argument_next_field = next_token(source, third_separator.start + third_separator.length)
+            if third_argument_next_field.kind != 1 {
+              return function_definition(0, 0, 0, 0, offset, third_argument_next_field.start, 2)
+            }
+            third_separator = next_token(source, third_argument_next_field.start + third_argument_next_field.length)
+          }
+        }
+        if is_symbol(source, third_separator, 44) == 1 {
+          third_argument = next_token(source, third_separator.start + third_separator.length)
+        } else {
+          third_argument = third_separator
+        }
+      }
+      current = next_token(source, third_argument.start + third_argument.length)
+    }
     while is_arithmetic_operator(source, current) == 1 {
       let third_next_operand = next_token(source, current.start + current.length)
       if third_next_operand.kind != 1 {
@@ -4916,6 +4956,37 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     let third_continuation_operand = next_token(source, third_continuation_equals.start + third_continuation_equals.length)
     length = length + operand_length(source, function, third_continuation_operand)
     current = next_token(source, third_continuation_operand.start + third_continuation_operand.length)
+    if is_symbol(source, current, 40) == 1 {
+      let third_continuation_argument = next_token(source, current.start + current.length)
+      while is_symbol(source, third_continuation_argument, 41) == 0 {
+        length = length + operand_length(source, function, third_continuation_argument)
+        let third_continuation_separator = next_token(source, third_continuation_argument.start + third_continuation_argument.length)
+        if is_symbol(source, third_continuation_separator, 46) == 1 {
+          let third_continuation_argument_field = next_token(source, third_continuation_separator.start + third_continuation_separator.length)
+          let third_continuation_argument_field_index = local_struct_field_index(source, table, function, third_continuation_argument, third_continuation_argument_field)
+          length = length + 2 + u32_leb_length(third_continuation_argument_field_index * 4)
+          third_continuation_separator = next_token(source, third_continuation_argument_field.start + third_continuation_argument_field.length)
+        }
+        while is_arithmetic_operator(source, third_continuation_separator) == 1 {
+          let third_continuation_argument_operand = next_token(source, third_continuation_separator.start + third_continuation_separator.length)
+          length = length + operand_length(source, function, third_continuation_argument_operand) + 1
+          third_continuation_separator = next_token(source, third_continuation_argument_operand.start + third_continuation_argument_operand.length)
+          if is_symbol(source, third_continuation_separator, 46) == 1 {
+            let third_continuation_argument_next_field = next_token(source, third_continuation_separator.start + third_continuation_separator.length)
+            let third_continuation_argument_next_field_index = local_struct_field_index(source, table, function, third_continuation_argument_operand, third_continuation_argument_next_field)
+            length = length + 2 + u32_leb_length(third_continuation_argument_next_field_index * 4)
+            third_continuation_separator = next_token(source, third_continuation_argument_next_field.start + third_continuation_argument_next_field.length)
+          }
+        }
+        if is_symbol(source, third_continuation_separator, 44) == 1 {
+          third_continuation_argument = next_token(source, third_continuation_separator.start + third_continuation_separator.length)
+        } else {
+          third_continuation_argument = third_continuation_separator
+        }
+      }
+      length = length + 1 + u32_leb_length(function_index_in_table(source, table, third_continuation_operand))
+      current = next_token(source, third_continuation_argument.start + third_continuation_argument.length)
+    }
     while is_arithmetic_operator(source, current) == 1 {
       let third_continuation_next_operand = next_token(source, current.start + current.length)
       length = length + operand_length(source, function, third_continuation_next_operand) + 1
@@ -6331,6 +6402,52 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     let third_continuation_operand = next_token(source, third_continuation_equals.start + third_continuation_equals.length)
     position = write_operand(buffer, position, source, function, third_continuation_operand)
     current = next_token(source, third_continuation_operand.start + third_continuation_operand.length)
+    if is_symbol(source, current, 40) == 1 {
+      let third_continuation_argument = next_token(source, current.start + current.length)
+      while is_symbol(source, third_continuation_argument, 41) == 0 {
+        position = write_operand(buffer, position, source, function, third_continuation_argument)
+        let third_continuation_separator = next_token(source, third_continuation_argument.start + third_continuation_argument.length)
+        if is_symbol(source, third_continuation_separator, 46) == 1 {
+          let third_continuation_argument_field = next_token(source, third_continuation_separator.start + third_continuation_separator.length)
+          let third_continuation_argument_field_index = local_struct_field_index(source, table, function, third_continuation_argument, third_continuation_argument_field)
+          byte_set(buffer, position, 40)
+          byte_set(buffer, position + 1, 2)
+          position = position + 2
+          let third_continuation_argument_field_written = write_u32_leb(buffer, position, third_continuation_argument_field_index * 4)
+          position = position + u32_leb_length(third_continuation_argument_field_index * 4)
+          third_continuation_separator = next_token(source, third_continuation_argument_field.start + third_continuation_argument_field.length)
+        }
+        while is_arithmetic_operator(source, third_continuation_separator) == 1 {
+          let third_continuation_argument_arithmetic = third_continuation_separator
+          let third_continuation_argument_operand = next_token(source, third_continuation_argument_arithmetic.start + third_continuation_argument_arithmetic.length)
+          position = write_operand(buffer, position, source, function, third_continuation_argument_operand)
+          third_continuation_separator = next_token(source, third_continuation_argument_operand.start + third_continuation_argument_operand.length)
+          if is_symbol(source, third_continuation_separator, 46) == 1 {
+            let third_continuation_argument_next_field = next_token(source, third_continuation_separator.start + third_continuation_separator.length)
+            let third_continuation_argument_next_field_index = local_struct_field_index(source, table, function, third_continuation_argument_operand, third_continuation_argument_next_field)
+            byte_set(buffer, position, 40)
+            byte_set(buffer, position + 1, 2)
+            position = position + 2
+            let third_continuation_argument_next_field_written = write_u32_leb(buffer, position, third_continuation_argument_next_field_index * 4)
+            position = position + u32_leb_length(third_continuation_argument_next_field_index * 4)
+            third_continuation_separator = next_token(source, third_continuation_argument_next_field.start + third_continuation_argument_next_field.length)
+          }
+          byte_set(buffer, position, arithmetic_opcode(source, third_continuation_argument_arithmetic))
+          position = position + 1
+        }
+        if is_symbol(source, third_continuation_separator, 44) == 1 {
+          third_continuation_argument = next_token(source, third_continuation_separator.start + third_continuation_separator.length)
+        } else {
+          third_continuation_argument = third_continuation_separator
+        }
+      }
+      byte_set(buffer, position, 16)
+      position = position + 1
+      let third_continuation_called_index = function_index_in_table(source, table, third_continuation_operand)
+      let third_continuation_call_written = write_u32_leb(buffer, position, third_continuation_called_index)
+      position = position + u32_leb_length(third_continuation_called_index)
+      current = next_token(source, third_continuation_argument.start + third_continuation_argument.length)
+    }
     while is_arithmetic_operator(source, current) == 1 {
       let third_continuation_arithmetic = current
       let third_continuation_next_operand = next_token(source, third_continuation_arithmetic.start + third_continuation_arithmetic.length)
