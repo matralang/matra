@@ -1499,6 +1499,7 @@ fn parse_while_statement(source: bytes, offset: i32) -> function_definition {
   }
   return function_definition(1, 0, 0, 0, current.start + current.length, 0, 0)
   }
+  return function_definition(0, 0, 0, 0, offset, open.start, 10)
 }
 
 fn parse_local_return_conditional(source: bytes, offset: i32) -> function_definition {
