@@ -1148,7 +1148,7 @@ fn parse_loop_local_conditional(source: bytes, offset: i32) -> function_definiti
   let open = next_token(source, right.start + right.length)
   if is_symbol(source, open, 123) == 0 {
     return function_definition(0, 0, 0, 0, offset, open.start, 10)
-  }
+  } else {
   let current = next_token(source, open.start + open.length)
   while is_symbol(source, current, 125) == 0 {
     if is_break_keyword(source, current) == 1 {
@@ -1276,8 +1276,11 @@ fn parse_loop_local_conditional(source: bytes, offset: i32) -> function_definiti
       }
     }
     return function_definition(1, 0, 0, 0, else_statement.start + else_statement.length, 0, 0)
+  } else {
+    return function_definition(1, 0, 0, 0, current.start + current.length, 0, 0)
   }
-  return function_definition(1, 0, 0, 0, current.start + current.length, 0, 0)
+  }
+  return function_definition(0, 0, 0, 0, offset, open.start, 10)
 }
 
 fn parse_while_statement(source: bytes, offset: i32) -> function_definition {

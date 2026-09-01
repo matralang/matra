@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 | Stage | 生成元 | 状態 |
 | --- | --- | --- |
 | stage-1 | Rust seed | 生成・実行・byte再現性を検証済み |
-| stage-2 | stage-1 | compiler sourceの1048行3列で停止 |
+| stage-2 | stage-1 | compiler sourceの1387行3列で停止 |
 | stage-3 | stage-2 | stage-2未生成のため未到達 |
 
 `pnpm bootstrap:verify`は実際に各stageを生成し、成功時にはSHA-256を表示する。stage-2とstage-3が生成
@@ -21,8 +21,8 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:1048:3: parse error: expected return
-  let after_then = next_token(source, current.start + current.length)
+examples/compiler.md:1387:3: parse error: expected return
+  let current = next_token(source, open.start + open.length)
   ^^^
 ```
 
@@ -90,7 +90,9 @@ compiler sourceは`bytes` return、array、nested loop body、
 
 ## 次の実装判断（2026-09-01）
 
-ここまでのprobeで、assignmentの固定byte数や比較opcodeに確実な不一致は見つからなかった。
+ここまでのprobeで、assignmentの固定byte数や比較opcodeに確実な不一致は見つからなかった。`parse_loop_local_conditional`の
+`open`成功側とbody後の通常経路を既存の`parse_loop_conditional`と同じ`else`構造へ整理したところ、stage-2の停止位置が
+`1384:3`から`1387:3`へ前進した。focused testは成功している。
 一方、parserのbody loopだけをhelper化または制御フロー変更すると、focused testは通ってもstage-2 compileで
 OOBとなる。次は同じstatement形について、`parse_loop_conditional`・`loop_conditional_length`・
 `write_loop_conditional`の三関数がそれぞれどのsource tokenを消費し、何byteを返すかを表にしてから実装する。
