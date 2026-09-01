@@ -1057,7 +1057,11 @@ fn parse_loop_conditional(source: bytes, offset: i32) -> function_definition {
     let else_statement = next_token(source, else_open.start + else_open.length)
     while is_symbol(source, else_statement, 125) == 0 {
       if is_break_keyword(source, else_statement) == 1 {
-        else_statement = next_token(source, else_statement.start + else_statement.length)
+        let else_break = parse_loop_conditional_break(source, else_statement)
+        if else_break.status == 0 {
+          return else_break
+        }
+        else_statement = next_token(source, else_break.position)
       } else {
         if is_if_keyword(source, else_statement) == 1 {
           let else_nested = parse_loop_conditional_if(source, else_statement)
