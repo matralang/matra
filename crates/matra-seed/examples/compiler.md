@@ -2004,7 +2004,20 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
     current = next_token(source, post_conditional_while.position)
   }
   while is_if_keyword(source, current) == 1 {
-    let post_conditional_if = parse_local_return_conditional(source, current.start)
+    let post_conditional_left = next_token(source, current.start + current.length)
+    let post_conditional_operator = next_token(source, post_conditional_left.start + post_conditional_left.length)
+    let post_conditional_if = function_definition(0, 0, 0, 0, current.start, 0, 0)
+    if is_symbol(source, post_conditional_operator, 40) == 1 {
+      let post_conditional_open = next_token(source, post_conditional_operator.start + post_conditional_operator.length)
+      let post_conditional_first = next_token(source, post_conditional_open.start + post_conditional_open.length)
+      if is_return_keyword(source, post_conditional_first) == 1 {
+        post_conditional_if = parse_local_return_conditional(source, current.start)
+      } else {
+        post_conditional_if = parse_loop_conditional(source, current.start)
+      }
+    } else {
+      post_conditional_if = parse_local_return_conditional(source, current.start)
+    }
     if post_conditional_if.status == 0 {
       return post_conditional_if
     }

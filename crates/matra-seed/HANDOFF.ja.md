@@ -12,7 +12,7 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:2111:37: parse error: expected }
+examples/compiler.md:2124:37: parse error: expected }
   if is_if_keyword(source, current) == 1 {
                                     ^
 ```
@@ -25,6 +25,10 @@ return処理へ返る。`658:5`の停止は解消した。
 現在の停止は、同じ`parse_local_body`の前方にある`while is_if_keyword(...)`段をstage-2が読む際の
 `expected }`である。次はこのwhileのbodyを読むparserと、対応するlength計算・writerが同じbraceを
 消費しているかを、最小の診断用Programで確認する。
+
+その後、`parse_local_body`のwhile後conditional列でcall conditionalを`parse_loop_conditional`へ
+dispatchする修正を追加した。停止位置は`2111:37`から`2124:37`へ前進したが、stage-2はまだ同じ
+conditional列のclosing brace境界で停止している。対応するlength/write側の同一段も確認が必要である。
 
 ## 現在の到達点
 
