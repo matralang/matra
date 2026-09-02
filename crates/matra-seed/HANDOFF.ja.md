@@ -5,6 +5,30 @@
 Rust seed compilerからMatra製compiler Wasmを生成し、そのcompiler自身で同じsourceを再compileする
 bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3のbyte一致とする。
 
+## 2026-09-02 現在の状態
+
+直近の実測では、stage-1は生成できるが、stage-2は次の位置で停止している。
+
+```text
+Stage 1: ready (<sha256>)
+Stage 2: blocked
+examples/compiler.md:658:5: parse error: expected return
+  if is_symbol(source, open, 123) == 0 {
+  ^^
+```
+
+現在のHEADは`a891c87`で、作業ツリーはcleanである。`c09b7ae`で
+`parse_function`の先頭conditionalを`parse_conditional_statement`へ直接渡す変更を試した結果、
+stage-2はこの`expected return`を越えたが、関数本体のclosing braceを親parserへ返せず
+`Reserved word cannot be an identifier: fn`へ進んだ。空sourceの既存Node testも失敗したため、
+`a891c87`でdirect解析と括弧変更を戻し、診断期待値を`658:5`へ更新した。
+
+現在詰まっているのは、`parse_conditional_statement`内のopen判定そのものではなく、
+この関数を`parse_function`が関数本体として読む際のstatement境界である。条件分岐のbodyを
+前進させるだけでは、`parse_local_body`、length計算、writerのcursor契約を壊してOOBになる。
+次は`parse_function`、`parse_local_body`、`parse_conditional_statement`が同じclosing braceを
+どの位置で消費するかを、最小の診断用Programで確認してから修正する。
+
 ## 現在の到達点
 
 2026-09-01時点の状態は次のとおりである。
