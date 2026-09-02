@@ -44,6 +44,10 @@ stage-2の停止位置は`2140:37`のままであり、残る課題はparserが�
 同じく単発`if`へ揃え、次段の`while`とterminal conditionalを過剰消費しないようにした。stage-1生成、
 全test、lintは成功し、stage-2の停止位置は変わらない。
 
+third continuation後のconditional列もparserはterminal conditionalを1件だけ処理するが、lengthとwriterは
+複数のlocal return conditionalとして処理していた。lengthとwriterを単発`if`へ揃え、terminal returnを
+conditional列へ誤って含めないようにした。stage-1生成は成功し、stage-2停止位置は変わらない。
+
 現在の停止は、同じ`parse_local_body`の前方にある`while is_if_keyword(...)`段をstage-2が読む際の
 `expected }`である。次はこのwhileのbodyを読むparserと、対応するlength計算・writerが同じbraceを
 消費しているかを、最小の診断用Programで確認する。

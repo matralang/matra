@@ -5063,7 +5063,7 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     let third_continuation_while = parse_while_statement(source, current.start)
     current = next_token(source, third_continuation_while.position)
   }
-  while is_if_keyword(source, current) == 1 {
+  if is_if_keyword(source, current) == 1 {
     length = length + local_return_conditional_length(source, table, function, current)
     let third_continuation_conditional = parse_local_return_conditional(source, current.start)
     current = next_token(source, third_continuation_conditional.position)
@@ -6575,7 +6575,7 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     let third_continuation_while = parse_while_statement(source, current.start)
     current = next_token(source, third_continuation_while.position)
   }
-  while is_if_keyword(source, current) == 1 {
+  if is_if_keyword(source, current) == 1 {
     position = write_local_return_conditional(buffer, position, source, table, function, current)
     let third_continuation_conditional = parse_local_return_conditional(source, current.start)
     current = next_token(source, third_continuation_conditional.position)
