@@ -1793,7 +1793,7 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
       }
     }
   }
-  if is_while_keyword(source, current) == 1 {
+  while is_while_keyword(source, current) == 1 {
     let statement = parse_while_statement(source, current.start)
     if statement.status == 0 {
       return statement
