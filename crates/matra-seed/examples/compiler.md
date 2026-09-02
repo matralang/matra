@@ -760,6 +760,7 @@ fn parse_conditional_statement(source: bytes, offset: i32, parameter: token) -> 
       return function_definition(1, 0, 0, 0, else_current.start + else_current.length, 0, 0)
     }
       return function_definition(1, 0, 0, 0, current.start + current.length, 0, 0)
+    }
     return function_definition(0, 0, 0, 0, offset, open.start, 10)
 }
 
@@ -2364,7 +2365,7 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
     return parse_local_body(source, returned.start, name)
   }
   if is_if_keyword(source, returned) == 1 {
-    return parse_conditional_statement(source, returned.start, name)
+    return parse_local_body(source, returned.start, name)
   }
   if is_return_keyword(source, returned) == 0 {
     return function_definition(0, 0, 0, 0, offset, returned.start, 11)
