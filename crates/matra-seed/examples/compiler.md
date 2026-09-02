@@ -2788,6 +2788,11 @@ fn let_offset_in_range(source: bytes, start: i32, end: i32, target: token) -> i3
 }
 
 fn local_count_of(source: bytes, function: function_definition) -> i32 {
+  let first = function_body_first_token(source, function)
+  return count_let_tokens_in_range(source, first.start, function.position)
+}
+
+fn fixed_local_count_of(source: bytes, function: function_definition) -> i32 {
   let current = function_body_first_token(source, function)
   let count = 0
   while is_let_keyword(source, current) == 1 {
@@ -2972,6 +2977,19 @@ fn local_count_of(source: bytes, function: function_definition) -> i32 {
 }
 
 fn variable_index(source: bytes, function: function_definition, target: token) -> i32 {
+  let parameter_index = returned_parameter_index(source, function, target)
+  if parameter_index >= 0 {
+    return parameter_index
+  }
+  let first = function_body_first_token(source, function)
+  let local_offset = let_offset_in_range(source, first.start, function.position, target)
+  if local_offset >= 0 {
+    return function_parameter_count_of(source, function) + local_offset
+  }
+  return -1
+}
+
+fn fixed_variable_index(source: bytes, function: function_definition, target: token) -> i32 {
   let parameter_index = returned_parameter_index(source, function, target)
   if parameter_index >= 0 {
     return parameter_index

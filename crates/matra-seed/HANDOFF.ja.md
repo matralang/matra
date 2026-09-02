@@ -22,6 +22,18 @@ examples/compiler.md:2140:37: parse error: expected }
 conditional自身のclosing braceはconditional parserが消費し、親functionのclosing braceは既存の
 return処理へ返る。`658:5`の停止は解消した。
 
+`2140:37`のsingleton `if is_if_keyword(...)`を後段と同じ`while`へ置換するprobeは、
+focused test 3件を通過したが、stage-2の停止は同じ行の`2140:40 expected }`となっただけであった。
+このため採用せず撤回した。outer statementを`while`へ変えるだけでは、そのbodyのnested conditionalを
+stage-2が消費できない。
+
+現行の`local_count_of`と`variable_index`は`third_post_conditional_if`で固定走査を終了する一方、
+`parse_local_body`、`local_body_length`、`write_local_body`はその後のcontinuation段まで持つ。
+既存の`count_let_tokens_in_range`と`let_offset_in_range`はfunction body全域をtoken単位で走査できるため、
+`local_count_of`と`variable_index`をこの2 helperへ一般化した。旧実装は比較用に`fixed_*`として残し、
+呼び出し先を一般化している。stage-1生成とfocused testは成功し、固定段数の同期対象を3経路まで
+減らした。stage-2のparser停止位置は変わらないため、次はparser・length・writerを同じstatement列で扱う。
+
 現在の停止は、同じ`parse_local_body`の前方にある`while is_if_keyword(...)`段をstage-2が読む際の
 `expected }`である。次はこのwhileのbodyを読むparserと、対応するlength計算・writerが同じbraceを
 消費しているかを、最小の診断用Programで確認する。
