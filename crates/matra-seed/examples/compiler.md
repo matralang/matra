@@ -6075,8 +6075,23 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     current = next_token(source, statement.position)
   }
   while is_if_keyword(source, current) == 1 {
-    position = write_local_return_conditional(buffer, position, source, table, function, current)
-    let conditional = parse_local_return_conditional(source, current.start)
+    let conditional_left = next_token(source, current.start + current.length)
+    let conditional_operator = next_token(source, conditional_left.start + conditional_left.length)
+    let conditional = function_definition(0, 0, 0, 0, current.start, 0, 0)
+    if is_symbol(source, conditional_operator, 40) == 1 {
+      let call_conditional_open = next_token(source, conditional_operator.start + conditional_operator.length)
+      let call_conditional_first = next_token(source, call_conditional_open.start + call_conditional_open.length)
+      if is_return_keyword(source, call_conditional_first) == 1 {
+        position = write_local_return_conditional(buffer, position, source, table, function, current)
+        conditional = parse_local_return_conditional(source, current.start)
+      } else {
+        position = write_loop_conditional(buffer, position, source, table, function, current, 1)
+        conditional = parse_loop_conditional(source, current.start)
+      }
+    } else {
+      position = write_local_return_conditional(buffer, position, source, table, function, current)
+      conditional = parse_local_return_conditional(source, current.start)
+    }
     current = next_token(source, conditional.position)
   }
   while is_let_keyword(source, current) == 1 {
