@@ -2205,13 +2205,6 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
     }
     current = next_token(source, third_continuation_while.position)
   }
-  while is_if_keyword(source, current) == 1 {
-    let third_continuation_if = parse_local_return_conditional(source, current.start)
-    if third_continuation_if.status == 0 {
-      return third_continuation_if
-    }
-    current = next_token(source, third_continuation_if.position)
-  }
   if is_return_keyword(source, current) == 0 {
     return function_definition(0, 0, 0, 0, offset, current.start, 11)
   }
