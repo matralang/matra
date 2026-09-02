@@ -4993,7 +4993,7 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     let second_continuation_while = parse_while_statement(source, current.start)
     current = next_token(source, second_continuation_while.position)
   }
-  while is_if_keyword(source, current) == 1 {
+  if is_if_keyword(source, current) == 1 {
     let second_continuation_length_left = next_token(source, current.start + current.length)
     let second_continuation_length_operator = next_token(source, second_continuation_length_left.start + second_continuation_length_left.length)
     let second_continuation_length_conditional = function_definition(0, 0, 0, 0, current.start, 0, 0)
@@ -6484,7 +6484,7 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     let second_continuation_while = parse_while_statement(source, current.start)
     current = next_token(source, second_continuation_while.position)
   }
-  while is_if_keyword(source, current) == 1 {
+  if is_if_keyword(source, current) == 1 {
     let second_continuation_write_left = next_token(source, current.start + current.length)
     let second_continuation_write_operator = next_token(source, second_continuation_write_left.start + second_continuation_write_left.length)
     let second_continuation_write_conditional = function_definition(0, 0, 0, 0, current.start, 0, 0)

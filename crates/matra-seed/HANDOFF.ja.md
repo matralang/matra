@@ -34,6 +34,12 @@ stage-2が消費できない。
 呼び出し先を一般化している。stage-1生成とfocused testは成功し、固定段数の同期対象を3経路まで
 減らした。stage-2のparser停止位置は変わらないため、次はparser・length・writerを同じstatement列で扱う。
 
+second continuationのconditionalはparserでは単発`if`だが、lengthとwriterが`while`で後続の
+`if is_let_keyword(...)`段まで同じconditional列として消費し得た。lengthとwriterを単発`if`へ揃え、
+parser・local数・index・length・writerの消費範囲を一致させた。stage-1生成と全test/lintは成功した。
+stage-2の停止位置は`2140:37`のままであり、残る課題はparserがこの位置に到達することではなく、
+生成済みstage-2が同位置のconditionalを受理するためのstatement段を持たないことである。
+
 現在の停止は、同じ`parse_local_body`の前方にある`while is_if_keyword(...)`段をstage-2が読む際の
 `expected }`である。次はこのwhileのbodyを読むparserと、対応するlength計算・writerが同じbraceを
 消費しているかを、最小の診断用Programで確認する。
