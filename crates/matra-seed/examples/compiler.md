@@ -2111,7 +2111,20 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
     current = next_token(source, continuation_while.position)
   }
   while is_if_keyword(source, current) == 1 {
-    let continuation_if = parse_local_return_conditional(source, current.start)
+    let continuation_left = next_token(source, current.start + current.length)
+    let continuation_operator = next_token(source, continuation_left.start + continuation_left.length)
+    let continuation_if = function_definition(0, 0, 0, 0, current.start, 0, 0)
+    if is_symbol(source, continuation_operator, 40) == 1 {
+      let continuation_open = next_token(source, continuation_operator.start + continuation_operator.length)
+      let continuation_first = next_token(source, continuation_open.start + continuation_open.length)
+      if is_return_keyword(source, continuation_first) == 1 {
+        continuation_if = parse_local_return_conditional(source, current.start)
+      } else {
+        continuation_if = parse_loop_conditional(source, current.start)
+      }
+    } else {
+      continuation_if = parse_local_return_conditional(source, current.start)
+    }
     if continuation_if.status == 0 {
       return continuation_if
     }
@@ -2125,7 +2138,20 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
     current = next_token(source, second_continuation_while.position)
   }
   if is_if_keyword(source, current) == 1 {
-    let second_continuation_if = parse_local_return_conditional(source, current.start)
+    let second_continuation_left = next_token(source, current.start + current.length)
+    let second_continuation_operator = next_token(source, second_continuation_left.start + second_continuation_left.length)
+    let second_continuation_if = function_definition(0, 0, 0, 0, current.start, 0, 0)
+    if is_symbol(source, second_continuation_operator, 40) == 1 {
+      let second_continuation_open = next_token(source, second_continuation_operator.start + second_continuation_operator.length)
+      let second_continuation_first = next_token(source, second_continuation_open.start + second_continuation_open.length)
+      if is_return_keyword(source, second_continuation_first) == 1 {
+        second_continuation_if = parse_local_return_conditional(source, current.start)
+      } else {
+        second_continuation_if = parse_loop_conditional(source, current.start)
+      }
+    } else {
+      second_continuation_if = parse_local_return_conditional(source, current.start)
+    }
     if second_continuation_if.status == 0 {
       return second_continuation_if
     }
@@ -4921,9 +4947,24 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     current = next_token(source, continuation_while.position)
   }
   while is_if_keyword(source, current) == 1 {
-    length = length + local_return_conditional_length(source, table, function, current)
-    let continuation_conditional = parse_local_return_conditional(source, current.start)
-    current = next_token(source, continuation_conditional.position)
+    let continuation_length_left = next_token(source, current.start + current.length)
+    let continuation_length_operator = next_token(source, continuation_length_left.start + continuation_length_left.length)
+    let continuation_length_conditional = function_definition(0, 0, 0, 0, current.start, 0, 0)
+    if is_symbol(source, continuation_length_operator, 40) == 1 {
+      let continuation_length_open = next_token(source, continuation_length_operator.start + continuation_length_operator.length)
+      let continuation_length_first = next_token(source, continuation_length_open.start + continuation_length_open.length)
+      if is_return_keyword(source, continuation_length_first) == 1 {
+        length = length + local_return_conditional_length(source, table, function, current)
+        continuation_length_conditional = parse_local_return_conditional(source, current.start)
+      } else {
+        length = length + loop_conditional_length(source, table, function, current)
+        continuation_length_conditional = parse_loop_conditional(source, current.start)
+      }
+    } else {
+      length = length + local_return_conditional_length(source, table, function, current)
+      continuation_length_conditional = parse_local_return_conditional(source, current.start)
+    }
+    current = next_token(source, continuation_length_conditional.position)
   }
   if is_while_keyword(source, current) == 1 {
     length = length + while_statement_length(source, table, function, current)
@@ -4931,9 +4972,24 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     current = next_token(source, second_continuation_while.position)
   }
   while is_if_keyword(source, current) == 1 {
-    length = length + local_return_conditional_length(source, table, function, current)
-    let second_continuation_conditional = parse_local_return_conditional(source, current.start)
-    current = next_token(source, second_continuation_conditional.position)
+    let second_continuation_length_left = next_token(source, current.start + current.length)
+    let second_continuation_length_operator = next_token(source, second_continuation_length_left.start + second_continuation_length_left.length)
+    let second_continuation_length_conditional = function_definition(0, 0, 0, 0, current.start, 0, 0)
+    if is_symbol(source, second_continuation_length_operator, 40) == 1 {
+      let second_continuation_length_open = next_token(source, second_continuation_length_operator.start + second_continuation_length_operator.length)
+      let second_continuation_length_first = next_token(source, second_continuation_length_open.start + second_continuation_length_open.length)
+      if is_return_keyword(source, second_continuation_length_first) == 1 {
+        length = length + local_return_conditional_length(source, table, function, current)
+        second_continuation_length_conditional = parse_local_return_conditional(source, current.start)
+      } else {
+        length = length + loop_conditional_length(source, table, function, current)
+        second_continuation_length_conditional = parse_loop_conditional(source, current.start)
+      }
+    } else {
+      length = length + local_return_conditional_length(source, table, function, current)
+      second_continuation_length_conditional = parse_local_return_conditional(source, current.start)
+    }
+    current = next_token(source, second_continuation_length_conditional.position)
   }
   while is_let_keyword(source, current) == 1 {
     let third_continuation_name = next_token(source, current.start + current.length)
@@ -6382,9 +6438,24 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     current = next_token(source, continuation_while.position)
   }
   while is_if_keyword(source, current) == 1 {
-    position = write_local_return_conditional(buffer, position, source, table, function, current)
-    let continuation_conditional = parse_local_return_conditional(source, current.start)
-    current = next_token(source, continuation_conditional.position)
+    let continuation_write_left = next_token(source, current.start + current.length)
+    let continuation_write_operator = next_token(source, continuation_write_left.start + continuation_write_left.length)
+    let continuation_write_conditional = function_definition(0, 0, 0, 0, current.start, 0, 0)
+    if is_symbol(source, continuation_write_operator, 40) == 1 {
+      let continuation_write_open = next_token(source, continuation_write_operator.start + continuation_write_operator.length)
+      let continuation_write_first = next_token(source, continuation_write_open.start + continuation_write_open.length)
+      if is_return_keyword(source, continuation_write_first) == 1 {
+        position = write_local_return_conditional(buffer, position, source, table, function, current)
+        continuation_write_conditional = parse_local_return_conditional(source, current.start)
+      } else {
+        position = write_loop_conditional(buffer, position, source, table, function, current, 1)
+        continuation_write_conditional = parse_loop_conditional(source, current.start)
+      }
+    } else {
+      position = write_local_return_conditional(buffer, position, source, table, function, current)
+      continuation_write_conditional = parse_local_return_conditional(source, current.start)
+    }
+    current = next_token(source, continuation_write_conditional.position)
   }
   if is_while_keyword(source, current) == 1 {
     position = write_while_statement(buffer, position, source, table, function, current)
@@ -6392,9 +6463,24 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     current = next_token(source, second_continuation_while.position)
   }
   while is_if_keyword(source, current) == 1 {
-    position = write_local_return_conditional(buffer, position, source, table, function, current)
-    let second_continuation_conditional = parse_local_return_conditional(source, current.start)
-    current = next_token(source, second_continuation_conditional.position)
+    let second_continuation_write_left = next_token(source, current.start + current.length)
+    let second_continuation_write_operator = next_token(source, second_continuation_write_left.start + second_continuation_write_left.length)
+    let second_continuation_write_conditional = function_definition(0, 0, 0, 0, current.start, 0, 0)
+    if is_symbol(source, second_continuation_write_operator, 40) == 1 {
+      let second_continuation_write_open = next_token(source, second_continuation_write_operator.start + second_continuation_write_operator.length)
+      let second_continuation_write_first = next_token(source, second_continuation_write_open.start + second_continuation_write_open.length)
+      if is_return_keyword(source, second_continuation_write_first) == 1 {
+        position = write_local_return_conditional(buffer, position, source, table, function, current)
+        second_continuation_write_conditional = parse_local_return_conditional(source, current.start)
+      } else {
+        position = write_loop_conditional(buffer, position, source, table, function, current, 1)
+        second_continuation_write_conditional = parse_loop_conditional(source, current.start)
+      }
+    } else {
+      position = write_local_return_conditional(buffer, position, source, table, function, current)
+      second_continuation_write_conditional = parse_local_return_conditional(source, current.start)
+    }
+    current = next_token(source, second_continuation_write_conditional.position)
   }
   while is_let_keyword(source, current) == 1 {
     let third_continuation_name = next_token(source, current.start + current.length)
