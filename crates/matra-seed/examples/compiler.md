@@ -765,67 +765,7 @@ fn parse_conditional_statement(source: bytes, offset: i32, parameter: token) -> 
 }
 
 fn parse_conditional_body(source: bytes, offset: i32, name: token, parameter: token) -> function_definition {
-  let current = next_token(source, offset)
-  while is_if_keyword(source, current) == 1 {
-    let conditional_left = next_token(source, current.start + current.length)
-    let conditional_operator = next_token(source, conditional_left.start + conditional_left.length)
-    let statement = function_definition(0, 0, 0, 0, current.start, 0, 0)
-    if is_symbol(source, conditional_operator, 40) == 1 {
-      statement = parse_local_return_conditional(source, current.start)
-    } else {
-      if is_symbol(source, conditional_operator, 46) == 1 {
-        statement = parse_local_return_conditional(source, current.start)
-      } else {
-        statement = parse_conditional_statement(source, current.start, parameter)
-      }
-    }
-    if statement.status == 0 {
-      return statement
-    }
-    current = next_token(source, statement.position)
-  }
-  if is_while_keyword(source, current) == 1 {
-    let while_statement = parse_while_statement(source, current.start)
-    if while_statement.status == 0 {
-      return while_statement
-    }
-    current = next_token(source, while_statement.position)
-  }
-  while is_let_keyword(source, current) == 1 {
-    let local_name = next_token(source, current.start + current.length)
-    if local_name.kind != 1 {
-      return function_definition(0, 0, 0, 0, offset, local_name.start, 2)
-    }
-    let equals = next_token(source, local_name.start + local_name.length)
-    if is_symbol(source, equals, 61) == 0 {
-      return function_definition(0, 0, 0, 0, offset, equals.start, 13)
-    }
-    let operand = next_token(source, equals.start + equals.length)
-    if operand.kind != 1 {
-      if operand.kind != 2 {
-        return function_definition(0, 0, 0, 0, offset, operand.start, 13)
-      }
-    }
-    current = expression_end(source, operand)
-  }
-  if is_return_keyword(source, current) == 0 {
-    return function_definition(0, 0, 0, 0, offset, current.start, 11)
-  }
-  let final_value = next_token(source, current.start + current.length)
-  let final_return_value = 0
-  if final_value.kind == 2 {
-    final_return_value = read_small_integer(source, final_value)
-  } else {
-    if final_value.kind != 1 {
-      return function_definition(0, 0, 0, 0, offset, final_value.start, 13)
-    }
-    final_return_value = -1
-  }
-  let close_body = next_token(source, final_value.start + final_value.length)
-  if is_symbol(source, close_body, 125) == 0 {
-    return function_definition(0, 0, 0, 0, offset, close_body.start, 15)
-  }
-  return function_definition(1, name.start, name.length, final_return_value, close_body.start + close_body.length, 0, 0)
+  return function_definition(1, 0, 0, 0, 0, 0, 0)
 }
 
 fn is_arithmetic_operator(source: bytes, value: token) -> i32 {
