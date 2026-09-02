@@ -12,9 +12,9 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:2137:40: parse error: expected }
-  while is_if_keyword(source, current) == 1 {
-                                       ^
+examples/compiler.md:2140:37: parse error: expected }
+  if is_if_keyword(source, current) == 1 {
+                                    ^
 ```
 
 `parse_local_body`の末尾でreturn以外を一律に`expected return`としていた経路を、
@@ -33,11 +33,6 @@ stage-2が消費できない。
 `local_count_of`と`variable_index`をこの2 helperへ一般化した。旧実装は比較用に`fixed_*`として残し、
 呼び出し先を一般化している。stage-1生成とfocused testは成功し、固定段数の同期対象を3経路まで
 減らした。stage-2のparser停止位置は変わらないため、次はparser・length・writerを同じstatement列で扱う。
-
-second continuationの`while`と直後のconditionalを、parser・length・writerの3経路で反復処理へ揃えた。
-parser側のouter `else`は`while`では構文として無効なため削除し、成功時にcursorを更新する通常経路へした。
-stage-1生成は成功し、stage-2の停止は新しい反復conditionalの`2137:40`へ移った。次はこの`while` bodyを
-stage-2が消費できるstatement列へ分解する。
 
 現在の停止は、同じ`parse_local_body`の前方にある`while is_if_keyword(...)`段をstage-2が読む際の
 `expected }`である。次はこのwhileのbodyを読むparserと、対応するlength計算・writerが同じbraceを

@@ -2130,14 +2130,17 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
     }
     current = next_token(source, continuation_if.position)
   }
-  while is_while_keyword(source, current) == 1 {
+  if is_while_keyword(source, current) == 1 {
     let second_continuation_while = parse_while_statement(source, current.start)
     if second_continuation_while.status == 0 {
       return second_continuation_while
+    } else {
+      current = next_token(source, second_continuation_while.position)
     }
-    current = next_token(source, second_continuation_while.position)
+  } else {
+    current = current
   }
-  while is_if_keyword(source, current) == 1 {
+  if is_if_keyword(source, current) == 1 {
     let second_continuation_left = next_token(source, current.start + current.length)
     let second_continuation_operator = next_token(source, second_continuation_left.start + second_continuation_left.length)
     let second_continuation_if = function_definition(0, 0, 0, 0, current.start, 0, 0)
@@ -4985,7 +4988,7 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
     }
     current = next_token(source, continuation_length_conditional.position)
   }
-  while is_while_keyword(source, current) == 1 {
+  if is_while_keyword(source, current) == 1 {
     length = length + while_statement_length(source, table, function, current)
     let second_continuation_while = parse_while_statement(source, current.start)
     current = next_token(source, second_continuation_while.position)
@@ -6476,7 +6479,7 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     }
     current = next_token(source, continuation_write_conditional.position)
   }
-  while is_while_keyword(source, current) == 1 {
+  if is_while_keyword(source, current) == 1 {
     position = write_while_statement(buffer, position, source, table, function, current)
     let second_continuation_while = parse_while_statement(source, current.start)
     current = next_token(source, second_continuation_while.position)
