@@ -12,22 +12,19 @@ bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3の
 ```text
 Stage 1: ready (<sha256>)
 Stage 2: blocked
-examples/compiler.md:658:5: parse error: expected return
-  if is_symbol(source, open, 123) == 0 {
-  ^^
+examples/compiler.md:2111:37: parse error: expected }
+  if is_if_keyword(source, current) == 1 {
+                                    ^
 ```
 
-現在のHEADは`a891c87`で、作業ツリーはcleanである。`c09b7ae`で
-`parse_function`の先頭conditionalを`parse_conditional_statement`へ直接渡す変更を試した結果、
-stage-2はこの`expected return`を越えたが、関数本体のclosing braceを親parserへ返せず
-`Reserved word cannot be an identifier: fn`へ進んだ。空sourceの既存Node testも失敗したため、
-`a891c87`でdirect解析と括弧変更を戻し、診断期待値を`658:5`へ更新した。
+`parse_local_body`の末尾でreturn以外を一律に`expected return`としていた経路を、
+`parse_conditional_statement`へ渡してから既存のreturn処理へ戻すよう変更した。これにより、
+conditional自身のclosing braceはconditional parserが消費し、親functionのclosing braceは既存の
+return処理へ返る。`658:5`の停止は解消した。
 
-現在詰まっているのは、`parse_conditional_statement`内のopen判定そのものではなく、
-この関数を`parse_function`が関数本体として読む際のstatement境界である。条件分岐のbodyを
-前進させるだけでは、`parse_local_body`、length計算、writerのcursor契約を壊してOOBになる。
-次は`parse_function`、`parse_local_body`、`parse_conditional_statement`が同じclosing braceを
-どの位置で消費するかを、最小の診断用Programで確認してから修正する。
+現在の停止は、同じ`parse_local_body`の前方にある`while is_if_keyword(...)`段をstage-2が読む際の
+`expected }`である。次はこのwhileのbodyを読むparserと、対応するlength計算・writerが同じbraceを
+消費しているかを、最小の診断用Programで確認する。
 
 ## 現在の到達点
 

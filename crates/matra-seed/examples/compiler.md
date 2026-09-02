@@ -2206,7 +2206,11 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
     current = next_token(source, third_continuation_while.position)
   }
   if is_return_keyword(source, current) == 0 {
-    return function_definition(0, 0, 0, 0, offset, current.start, 11)
+    let terminal_conditional = parse_conditional_statement(source, current.start, name)
+    if terminal_conditional.status == 0 {
+      return terminal_conditional
+    }
+    current = next_token(source, terminal_conditional.position)
   }
   let returned = next_token(source, current.start + current.length)
   if is_symbol(source, returned, 45) == 1 {
