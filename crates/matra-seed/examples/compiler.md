@@ -2134,8 +2134,11 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
     let second_continuation_while = parse_while_statement(source, current.start)
     if second_continuation_while.status == 0 {
       return second_continuation_while
+    } else {
+      current = next_token(source, second_continuation_while.position)
     }
-    current = next_token(source, second_continuation_while.position)
+  } else {
+    current = current
   }
   if is_if_keyword(source, current) == 1 {
     let second_continuation_left = next_token(source, current.start + current.length)
@@ -2154,8 +2157,9 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
     }
     if second_continuation_if.status == 0 {
       return second_continuation_if
+    } else {
+      current = next_token(source, second_continuation_if.position)
     }
-    current = next_token(source, second_continuation_if.position)
   }
   if is_let_keyword(source, current) == 1 {
     let third_local_name = next_token(source, current.start + current.length)

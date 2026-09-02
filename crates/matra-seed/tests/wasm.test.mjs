@@ -408,7 +408,7 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     assert.equal(selfHostResult.status, 1)
     assert.match(selfHostResult.stdout, /Using cached bootstrap compiler\.\nStage 1: ready \([0-9a-f]{64}\)\n/)
     assert.match(selfHostResult.stderr, /Stage 2: blocked/)
-    assert.match(selfHostResult.stderr, /examples\/compiler\.md:2137:37: parse error: expected \}/)
+    assert.match(selfHostResult.stderr, /examples\/compiler\.md:2140:37: parse error: expected \}/)
     assert.match(selfHostResult.stderr, /if is_if_keyword\(source, current\) == 1 \{\n\s+\^$/m)
 
     await writeFile(hostInput, "module demo\nfn answer() -> i32 { return value }")
