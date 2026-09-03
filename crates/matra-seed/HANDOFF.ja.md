@@ -57,6 +57,34 @@ dispatchする修正を追加した。停止位置は`2124:37`から`2137:37`へ
 status分岐と外側`while`分岐を明示的な`else`へ整理し、停止位置は`2140:37`へ前進した。stage-2はまだ同じ
 conditional列のclosing brace境界で停止している。対応するlength/write側の同一段も確認が必要である。
 
+## 2026-09-03 追加切り分け
+
+`2140`の外側conditionalの本体を段階的に復元して確認した。次のlocal initializer、nested conditional、
+外側`else`まではstage-2が次の`while is_if_keyword(...)`へ進む。最後の
+`if second_continuation_if.status == 0 { ... } else { ... }`を加えた時点で、停止位置は再び
+`2140:37 expected }`へ戻る。return文の有無ではなく、このfield comparison conditionalの`else`が
+再現条件である。
+
+このnested conditionalは`parse_loop_conditional_if`から`parse_loop_local_conditional`へdispatchされる。
+`parse_loop_local_conditional`のbodyを波括弧深さだけで走査するprobeでは`2140`を通過したが、生成された
+stage-2 compilerはsourceの`91:14`で`expected integer`となった。nested conditionalのdispatchを
+`parse_local_return_conditional`へ変えるprobeも`2140`を通過したが、stage-2 compilerはsourceの`76:25`で
+`expected {`となった。いずれもstage-1は生成できる一方、stage-2 artifactのtoken cursorまたはWasm byte
+cursorが不整合になるため撤回した。
+
+この結果、`parse_loop_local_conditional`またはdispatchだけを変える実装は採用できない。次の実装単位では、
+次の三経路を同じconditional body/elseのtoken列で同時に扱う必要がある。
+
+| 経路 | 対象 |
+| --- | --- |
+| parser | `parse_loop_local_conditional`と`parse_loop_conditional_if` |
+| length | `loop_local_conditional_length`と親`loop_conditional_length` |
+| writer | `write_loop_local_conditional`と親`write_loop_conditional` |
+
+その際は、`then`のreturnと`else`のcall assignmentを含む最小Programを追加し、各経路が返すsource positionと
+Wasm byte positionを照合する。parserだけの変更や、body scannerの置換を先に恒久化しない。作業ツリーはcleanで、
+基準の`pnpm bootstrap:verify`は引き続き`2140:37`で停止する。
+
 ## 現在の到達点
 
 2026-09-01時点の状態は次のとおりである。
