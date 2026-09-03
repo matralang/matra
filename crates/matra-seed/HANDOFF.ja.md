@@ -85,6 +85,14 @@ cursorが不整合になるため撤回した。
 Wasm byte positionを照合する。parserだけの変更や、body scannerの置換を先に恒久化しない。作業ツリーはcleanで、
 基準の`pnpm bootstrap:verify`は引き続き`2140:37`で停止する。
 
+同三経路を照合した結果、具体的な不一致も確定した。`parse_loop_local_conditional`のassignmentは
+`expression_end`を用いるため、`current = next_token(source, second_continuation_if.position)`のcall全体を
+消費する。一方、`loop_local_conditional_length`と`write_loop_local_conditional`のassignmentはRHSの先頭token
+だけを扱い、直後の`(`を次statementとして処理する。これによりelse bodyのsource cursorとWasm byte cursorが
+ずれる。実装ではthen/elseの両方について、既存の`while_statement_length`と`write_while_statement`にある
+call assignment処理（argument、field access、算術、call opcode、終端tokenの更新）を同じ形で移植すること。
+親の`loop_conditional_length`と`write_loop_conditional`にも同じ欠落があるため、同一commitで4関数を揃える。
+
 ## 現在の到達点
 
 2026-09-01時点の状態は次のとおりである。
