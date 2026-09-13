@@ -235,6 +235,45 @@ test("bootstrap compiler accepts a loop local conditional with a struct field RH
   }
 })
 
+test("bootstrap compiler executes call assignments in both loop conditional branches", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "matra-seed-conditional-assignment-"))
+  const input = join(directory, "input.matra")
+  const output = join(directory, "output.wasm")
+  try {
+    for (const condition of ["value == 1", "identity(value) == 1"]) {
+      for (const earlyReturn of [false, true]) {
+        await writeFile(input, `module demo
+struct pair { left: i32 right: i32 }
+fn make_pair() -> pair { return pair(20, 20) }
+fn identity(value: i32) -> i32 { return value }
+fn add(left: i32, right: i32) -> i32 { let sum = left + right return sum }
+export fn answer(value: i32, record: pair) -> i32 {
+  let result = 0
+  while result == 0 {
+    if ${condition} {
+      ${earlyReturn ? "return 42" : "result = add(record.left + 1, 1 + record.right)"}
+    } else {
+      result = add(record.left + 2, 2 + record.right)
+    }
+  }
+  return result
+}
+`)
+        const result = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", input, output], {
+          cwd: root, encoding: "utf8", timeout: 30000,
+        })
+        assert.equal(result.status, 0, result.stderr)
+        const { instance } = await WebAssembly.instantiate(await readFile(output))
+        new Int32Array(instance.exports.memory.buffer, 1024, 2).set([20, 20])
+        assert.equal(instance.exports.answer(1, 1024), 42)
+        assert.equal(instance.exports.answer(2, 1024), 44)
+      }
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test("matra-seed compiles a Markdown code block to an executable Wasm module", async () => {
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-"))
   const input = join(directory, "example.md")

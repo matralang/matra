@@ -4293,17 +4293,70 @@ fn loop_conditional_length(source: bytes, table: [i32], function: function_defin
               current = return_end
             }
           } else {
-            let equals = next_token(source, current.start + current.length)
-            let operand = next_token(source, equals.start + equals.length)
-            length = length + operand_length(source, function, operand)
-            let after_operand = next_token(source, operand.start + operand.length)
-            while is_arithmetic_operator(source, after_operand) == 1 {
-              let next_operand = next_token(source, after_operand.start + after_operand.length)
-              length = length + operand_length(source, function, next_operand) + 1
-              after_operand = next_token(source, next_operand.start + next_operand.length)
+            let then_assignment_target = current
+            if is_let_keyword(source, current) == 1 {
+              then_assignment_target = next_token(source, current.start + current.length)
             }
-            length = length + 1 + u32_leb_length(variable_index(source, function, current))
-            current = after_operand
+            let then_assignment_equals = next_token(source, then_assignment_target.start + then_assignment_target.length)
+            let then_assignment_operand = next_token(source, then_assignment_equals.start + then_assignment_equals.length)
+            let then_assignment_after_operand = next_token(source, then_assignment_operand.start + then_assignment_operand.length)
+            if is_symbol(source, then_assignment_after_operand, 40) == 1 {
+              let then_assignment_argument = next_token(source, then_assignment_after_operand.start + then_assignment_after_operand.length)
+              while is_symbol(source, then_assignment_argument, 41) == 0 {
+                let then_assignment_separator = next_token(source, then_assignment_argument.start + then_assignment_argument.length)
+                if is_symbol(source, then_assignment_separator, 46) == 1 {
+                  let then_assignment_argument_field = next_token(source, then_assignment_separator.start + then_assignment_separator.length)
+                  let then_assignment_argument_field_index = local_struct_field_index(source, table, function, then_assignment_argument, then_assignment_argument_field)
+                  length = length + operand_length(source, function, then_assignment_argument) + 2 + u32_leb_length(then_assignment_argument_field_index * 4)
+                  then_assignment_separator = next_token(source, then_assignment_argument_field.start + then_assignment_argument_field.length)
+                } else {
+                  length = length + operand_length(source, function, then_assignment_argument)
+                }
+                while is_arithmetic_operator(source, then_assignment_separator) == 1 {
+                  let then_assignment_argument_arithmetic_operand = next_token(source, then_assignment_separator.start + then_assignment_separator.length)
+                  length = length + operand_length(source, function, then_assignment_argument_arithmetic_operand) + 1
+                  then_assignment_separator = next_token(source, then_assignment_argument_arithmetic_operand.start + then_assignment_argument_arithmetic_operand.length)
+                  if is_symbol(source, then_assignment_separator, 46) == 1 {
+                    let then_assignment_argument_arithmetic_field = next_token(source, then_assignment_separator.start + then_assignment_separator.length)
+                    let then_assignment_argument_arithmetic_field_index = local_struct_field_index(source, table, function, then_assignment_argument_arithmetic_operand, then_assignment_argument_arithmetic_field)
+                    length = length + 2 + u32_leb_length(then_assignment_argument_arithmetic_field_index * 4)
+                    then_assignment_separator = next_token(source, then_assignment_argument_arithmetic_field.start + then_assignment_argument_arithmetic_field.length)
+                  }
+                }
+                if is_symbol(source, then_assignment_separator, 44) == 1 {
+                  then_assignment_argument = next_token(source, then_assignment_separator.start + then_assignment_separator.length)
+                } else {
+                  then_assignment_argument = then_assignment_separator
+                }
+              }
+              length = length + 1 + u32_leb_length(function_index_in_table(source, table, then_assignment_operand))
+              then_assignment_after_operand = next_token(source, then_assignment_argument.start + then_assignment_argument.length)
+            } else {
+              length = length + operand_length(source, function, then_assignment_operand)
+              while is_arithmetic_operator(source, then_assignment_after_operand) == 1 {
+                let then_assignment_next_operand = next_token(source, then_assignment_after_operand.start + then_assignment_after_operand.length)
+                then_assignment_after_operand = next_token(source, then_assignment_next_operand.start + then_assignment_next_operand.length)
+                if is_symbol(source, then_assignment_after_operand, 40) == 1 {
+                  let then_assignment_arithmetic_argument = next_token(source, then_assignment_after_operand.start + then_assignment_after_operand.length)
+                  while is_symbol(source, then_assignment_arithmetic_argument, 41) == 0 {
+                    length = length + operand_length(source, function, then_assignment_arithmetic_argument)
+                    let then_assignment_arithmetic_separator = next_token(source, then_assignment_arithmetic_argument.start + then_assignment_arithmetic_argument.length)
+                    if is_symbol(source, then_assignment_arithmetic_separator, 44) == 1 {
+                      then_assignment_arithmetic_argument = next_token(source, then_assignment_arithmetic_separator.start + then_assignment_arithmetic_separator.length)
+                    } else {
+                      then_assignment_arithmetic_argument = then_assignment_arithmetic_separator
+                    }
+                  }
+                  length = length + 1 + u32_leb_length(function_index_in_table(source, table, then_assignment_next_operand))
+                  then_assignment_after_operand = next_token(source, then_assignment_arithmetic_argument.start + then_assignment_arithmetic_argument.length)
+                } else {
+                  length = length + operand_length(source, function, then_assignment_next_operand)
+                }
+                length = length + 1
+              }
+            }
+            length = length + 1 + u32_leb_length(variable_index(source, function, then_assignment_target))
+            current = then_assignment_after_operand
           }
         }
       }
@@ -4358,17 +4411,70 @@ fn loop_conditional_length(source: bytes, table: [i32], function: function_defin
                 else_statement = else_return_end
               }
             } else {
-            let else_equals = next_token(source, else_statement.start + else_statement.length)
-            let else_operand = next_token(source, else_equals.start + else_equals.length)
-            length = length + operand_length(source, function, else_operand)
-            let else_after_operand = next_token(source, else_operand.start + else_operand.length)
-            while is_arithmetic_operator(source, else_after_operand) == 1 {
-              let else_next_operand = next_token(source, else_after_operand.start + else_after_operand.length)
-              length = length + operand_length(source, function, else_next_operand) + 1
-              else_after_operand = next_token(source, else_next_operand.start + else_next_operand.length)
-            }
-            length = length + 1 + u32_leb_length(variable_index(source, function, else_statement))
-            else_statement = else_after_operand
+              let else_assignment_target = else_statement
+              if is_let_keyword(source, else_statement) == 1 {
+                else_assignment_target = next_token(source, else_statement.start + else_statement.length)
+              }
+              let else_assignment_equals = next_token(source, else_assignment_target.start + else_assignment_target.length)
+              let else_assignment_operand = next_token(source, else_assignment_equals.start + else_assignment_equals.length)
+              let else_assignment_after_operand = next_token(source, else_assignment_operand.start + else_assignment_operand.length)
+              if is_symbol(source, else_assignment_after_operand, 40) == 1 {
+                let else_assignment_argument = next_token(source, else_assignment_after_operand.start + else_assignment_after_operand.length)
+                while is_symbol(source, else_assignment_argument, 41) == 0 {
+                  let else_assignment_separator = next_token(source, else_assignment_argument.start + else_assignment_argument.length)
+                  if is_symbol(source, else_assignment_separator, 46) == 1 {
+                    let else_assignment_argument_field = next_token(source, else_assignment_separator.start + else_assignment_separator.length)
+                    let else_assignment_argument_field_index = local_struct_field_index(source, table, function, else_assignment_argument, else_assignment_argument_field)
+                    length = length + operand_length(source, function, else_assignment_argument) + 2 + u32_leb_length(else_assignment_argument_field_index * 4)
+                    else_assignment_separator = next_token(source, else_assignment_argument_field.start + else_assignment_argument_field.length)
+                  } else {
+                    length = length + operand_length(source, function, else_assignment_argument)
+                  }
+                  while is_arithmetic_operator(source, else_assignment_separator) == 1 {
+                    let else_assignment_argument_arithmetic_operand = next_token(source, else_assignment_separator.start + else_assignment_separator.length)
+                    length = length + operand_length(source, function, else_assignment_argument_arithmetic_operand) + 1
+                    else_assignment_separator = next_token(source, else_assignment_argument_arithmetic_operand.start + else_assignment_argument_arithmetic_operand.length)
+                    if is_symbol(source, else_assignment_separator, 46) == 1 {
+                      let else_assignment_argument_arithmetic_field = next_token(source, else_assignment_separator.start + else_assignment_separator.length)
+                      let else_assignment_argument_arithmetic_field_index = local_struct_field_index(source, table, function, else_assignment_argument_arithmetic_operand, else_assignment_argument_arithmetic_field)
+                      length = length + 2 + u32_leb_length(else_assignment_argument_arithmetic_field_index * 4)
+                      else_assignment_separator = next_token(source, else_assignment_argument_arithmetic_field.start + else_assignment_argument_arithmetic_field.length)
+                    }
+                  }
+                  if is_symbol(source, else_assignment_separator, 44) == 1 {
+                    else_assignment_argument = next_token(source, else_assignment_separator.start + else_assignment_separator.length)
+                  } else {
+                    else_assignment_argument = else_assignment_separator
+                  }
+                }
+                length = length + 1 + u32_leb_length(function_index_in_table(source, table, else_assignment_operand))
+                else_assignment_after_operand = next_token(source, else_assignment_argument.start + else_assignment_argument.length)
+              } else {
+                length = length + operand_length(source, function, else_assignment_operand)
+                while is_arithmetic_operator(source, else_assignment_after_operand) == 1 {
+                  let else_assignment_next_operand = next_token(source, else_assignment_after_operand.start + else_assignment_after_operand.length)
+                  else_assignment_after_operand = next_token(source, else_assignment_next_operand.start + else_assignment_next_operand.length)
+                  if is_symbol(source, else_assignment_after_operand, 40) == 1 {
+                    let else_assignment_arithmetic_argument = next_token(source, else_assignment_after_operand.start + else_assignment_after_operand.length)
+                    while is_symbol(source, else_assignment_arithmetic_argument, 41) == 0 {
+                      length = length + operand_length(source, function, else_assignment_arithmetic_argument)
+                      let else_assignment_arithmetic_separator = next_token(source, else_assignment_arithmetic_argument.start + else_assignment_arithmetic_argument.length)
+                      if is_symbol(source, else_assignment_arithmetic_separator, 44) == 1 {
+                        else_assignment_arithmetic_argument = next_token(source, else_assignment_arithmetic_separator.start + else_assignment_arithmetic_separator.length)
+                      } else {
+                        else_assignment_arithmetic_argument = else_assignment_arithmetic_separator
+                      }
+                    }
+                    length = length + 1 + u32_leb_length(function_index_in_table(source, table, else_assignment_next_operand))
+                    else_assignment_after_operand = next_token(source, else_assignment_arithmetic_argument.start + else_assignment_arithmetic_argument.length)
+                  } else {
+                    length = length + operand_length(source, function, else_assignment_next_operand)
+                  }
+                  length = length + 1
+                }
+              }
+              length = length + 1 + u32_leb_length(variable_index(source, function, else_assignment_target))
+              else_statement = else_assignment_after_operand
           }
           }
         }
@@ -4453,17 +4559,70 @@ fn loop_local_conditional_length(source: bytes, table: [i32], function: function
               current = return_end
             }
           } else {
-            let equals = next_token(source, current.start + current.length)
-            let operand = next_token(source, equals.start + equals.length)
-            length = length + operand_length(source, function, operand)
-            let after_operand = next_token(source, operand.start + operand.length)
-            while is_arithmetic_operator(source, after_operand) == 1 {
-              let next_operand = next_token(source, after_operand.start + after_operand.length)
-              length = length + operand_length(source, function, next_operand) + 1
-              after_operand = next_token(source, next_operand.start + next_operand.length)
+            let then_assignment_target = current
+            if is_let_keyword(source, current) == 1 {
+              then_assignment_target = next_token(source, current.start + current.length)
             }
-            length = length + 1 + u32_leb_length(variable_index(source, function, current))
-            current = after_operand
+            let then_assignment_equals = next_token(source, then_assignment_target.start + then_assignment_target.length)
+            let then_assignment_operand = next_token(source, then_assignment_equals.start + then_assignment_equals.length)
+            let then_assignment_after_operand = next_token(source, then_assignment_operand.start + then_assignment_operand.length)
+            if is_symbol(source, then_assignment_after_operand, 40) == 1 {
+              let then_assignment_argument = next_token(source, then_assignment_after_operand.start + then_assignment_after_operand.length)
+              while is_symbol(source, then_assignment_argument, 41) == 0 {
+                let then_assignment_separator = next_token(source, then_assignment_argument.start + then_assignment_argument.length)
+                if is_symbol(source, then_assignment_separator, 46) == 1 {
+                  let then_assignment_argument_field = next_token(source, then_assignment_separator.start + then_assignment_separator.length)
+                  let then_assignment_argument_field_index = local_struct_field_index(source, table, function, then_assignment_argument, then_assignment_argument_field)
+                  length = length + operand_length(source, function, then_assignment_argument) + 2 + u32_leb_length(then_assignment_argument_field_index * 4)
+                  then_assignment_separator = next_token(source, then_assignment_argument_field.start + then_assignment_argument_field.length)
+                } else {
+                  length = length + operand_length(source, function, then_assignment_argument)
+                }
+                while is_arithmetic_operator(source, then_assignment_separator) == 1 {
+                  let then_assignment_argument_arithmetic_operand = next_token(source, then_assignment_separator.start + then_assignment_separator.length)
+                  length = length + operand_length(source, function, then_assignment_argument_arithmetic_operand) + 1
+                  then_assignment_separator = next_token(source, then_assignment_argument_arithmetic_operand.start + then_assignment_argument_arithmetic_operand.length)
+                  if is_symbol(source, then_assignment_separator, 46) == 1 {
+                    let then_assignment_argument_arithmetic_field = next_token(source, then_assignment_separator.start + then_assignment_separator.length)
+                    let then_assignment_argument_arithmetic_field_index = local_struct_field_index(source, table, function, then_assignment_argument_arithmetic_operand, then_assignment_argument_arithmetic_field)
+                    length = length + 2 + u32_leb_length(then_assignment_argument_arithmetic_field_index * 4)
+                    then_assignment_separator = next_token(source, then_assignment_argument_arithmetic_field.start + then_assignment_argument_arithmetic_field.length)
+                  }
+                }
+                if is_symbol(source, then_assignment_separator, 44) == 1 {
+                  then_assignment_argument = next_token(source, then_assignment_separator.start + then_assignment_separator.length)
+                } else {
+                  then_assignment_argument = then_assignment_separator
+                }
+              }
+              length = length + 1 + u32_leb_length(function_index_in_table(source, table, then_assignment_operand))
+              then_assignment_after_operand = next_token(source, then_assignment_argument.start + then_assignment_argument.length)
+            } else {
+              length = length + operand_length(source, function, then_assignment_operand)
+              while is_arithmetic_operator(source, then_assignment_after_operand) == 1 {
+                let then_assignment_next_operand = next_token(source, then_assignment_after_operand.start + then_assignment_after_operand.length)
+                then_assignment_after_operand = next_token(source, then_assignment_next_operand.start + then_assignment_next_operand.length)
+                if is_symbol(source, then_assignment_after_operand, 40) == 1 {
+                  let then_assignment_arithmetic_argument = next_token(source, then_assignment_after_operand.start + then_assignment_after_operand.length)
+                  while is_symbol(source, then_assignment_arithmetic_argument, 41) == 0 {
+                    length = length + operand_length(source, function, then_assignment_arithmetic_argument)
+                    let then_assignment_arithmetic_separator = next_token(source, then_assignment_arithmetic_argument.start + then_assignment_arithmetic_argument.length)
+                    if is_symbol(source, then_assignment_arithmetic_separator, 44) == 1 {
+                      then_assignment_arithmetic_argument = next_token(source, then_assignment_arithmetic_separator.start + then_assignment_arithmetic_separator.length)
+                    } else {
+                      then_assignment_arithmetic_argument = then_assignment_arithmetic_separator
+                    }
+                  }
+                  length = length + 1 + u32_leb_length(function_index_in_table(source, table, then_assignment_next_operand))
+                  then_assignment_after_operand = next_token(source, then_assignment_arithmetic_argument.start + then_assignment_arithmetic_argument.length)
+                } else {
+                  length = length + operand_length(source, function, then_assignment_next_operand)
+                }
+                length = length + 1
+              }
+            }
+            length = length + 1 + u32_leb_length(variable_index(source, function, then_assignment_target))
+            current = then_assignment_after_operand
           }
         }
       }
@@ -4518,17 +4677,70 @@ fn loop_local_conditional_length(source: bytes, table: [i32], function: function
                 else_statement = else_return_end
               }
             } else {
-            let else_equals = next_token(source, else_statement.start + else_statement.length)
-            let else_operand = next_token(source, else_equals.start + else_equals.length)
-            length = length + operand_length(source, function, else_operand)
-            let else_after_operand = next_token(source, else_operand.start + else_operand.length)
-            while is_arithmetic_operator(source, else_after_operand) == 1 {
-              let else_next_operand = next_token(source, else_after_operand.start + else_after_operand.length)
-              length = length + operand_length(source, function, else_next_operand) + 1
-              else_after_operand = next_token(source, else_next_operand.start + else_next_operand.length)
-            }
-            length = length + 1 + u32_leb_length(variable_index(source, function, else_statement))
-            else_statement = else_after_operand
+              let else_assignment_target = else_statement
+              if is_let_keyword(source, else_statement) == 1 {
+                else_assignment_target = next_token(source, else_statement.start + else_statement.length)
+              }
+              let else_assignment_equals = next_token(source, else_assignment_target.start + else_assignment_target.length)
+              let else_assignment_operand = next_token(source, else_assignment_equals.start + else_assignment_equals.length)
+              let else_assignment_after_operand = next_token(source, else_assignment_operand.start + else_assignment_operand.length)
+              if is_symbol(source, else_assignment_after_operand, 40) == 1 {
+                let else_assignment_argument = next_token(source, else_assignment_after_operand.start + else_assignment_after_operand.length)
+                while is_symbol(source, else_assignment_argument, 41) == 0 {
+                  let else_assignment_separator = next_token(source, else_assignment_argument.start + else_assignment_argument.length)
+                  if is_symbol(source, else_assignment_separator, 46) == 1 {
+                    let else_assignment_argument_field = next_token(source, else_assignment_separator.start + else_assignment_separator.length)
+                    let else_assignment_argument_field_index = local_struct_field_index(source, table, function, else_assignment_argument, else_assignment_argument_field)
+                    length = length + operand_length(source, function, else_assignment_argument) + 2 + u32_leb_length(else_assignment_argument_field_index * 4)
+                    else_assignment_separator = next_token(source, else_assignment_argument_field.start + else_assignment_argument_field.length)
+                  } else {
+                    length = length + operand_length(source, function, else_assignment_argument)
+                  }
+                  while is_arithmetic_operator(source, else_assignment_separator) == 1 {
+                    let else_assignment_argument_arithmetic_operand = next_token(source, else_assignment_separator.start + else_assignment_separator.length)
+                    length = length + operand_length(source, function, else_assignment_argument_arithmetic_operand) + 1
+                    else_assignment_separator = next_token(source, else_assignment_argument_arithmetic_operand.start + else_assignment_argument_arithmetic_operand.length)
+                    if is_symbol(source, else_assignment_separator, 46) == 1 {
+                      let else_assignment_argument_arithmetic_field = next_token(source, else_assignment_separator.start + else_assignment_separator.length)
+                      let else_assignment_argument_arithmetic_field_index = local_struct_field_index(source, table, function, else_assignment_argument_arithmetic_operand, else_assignment_argument_arithmetic_field)
+                      length = length + 2 + u32_leb_length(else_assignment_argument_arithmetic_field_index * 4)
+                      else_assignment_separator = next_token(source, else_assignment_argument_arithmetic_field.start + else_assignment_argument_arithmetic_field.length)
+                    }
+                  }
+                  if is_symbol(source, else_assignment_separator, 44) == 1 {
+                    else_assignment_argument = next_token(source, else_assignment_separator.start + else_assignment_separator.length)
+                  } else {
+                    else_assignment_argument = else_assignment_separator
+                  }
+                }
+                length = length + 1 + u32_leb_length(function_index_in_table(source, table, else_assignment_operand))
+                else_assignment_after_operand = next_token(source, else_assignment_argument.start + else_assignment_argument.length)
+              } else {
+                length = length + operand_length(source, function, else_assignment_operand)
+                while is_arithmetic_operator(source, else_assignment_after_operand) == 1 {
+                  let else_assignment_next_operand = next_token(source, else_assignment_after_operand.start + else_assignment_after_operand.length)
+                  else_assignment_after_operand = next_token(source, else_assignment_next_operand.start + else_assignment_next_operand.length)
+                  if is_symbol(source, else_assignment_after_operand, 40) == 1 {
+                    let else_assignment_arithmetic_argument = next_token(source, else_assignment_after_operand.start + else_assignment_after_operand.length)
+                    while is_symbol(source, else_assignment_arithmetic_argument, 41) == 0 {
+                      length = length + operand_length(source, function, else_assignment_arithmetic_argument)
+                      let else_assignment_arithmetic_separator = next_token(source, else_assignment_arithmetic_argument.start + else_assignment_arithmetic_argument.length)
+                      if is_symbol(source, else_assignment_arithmetic_separator, 44) == 1 {
+                        else_assignment_arithmetic_argument = next_token(source, else_assignment_arithmetic_separator.start + else_assignment_arithmetic_separator.length)
+                      } else {
+                        else_assignment_arithmetic_argument = else_assignment_arithmetic_separator
+                      }
+                    }
+                    length = length + 1 + u32_leb_length(function_index_in_table(source, table, else_assignment_next_operand))
+                    else_assignment_after_operand = next_token(source, else_assignment_arithmetic_argument.start + else_assignment_arithmetic_argument.length)
+                  } else {
+                    length = length + operand_length(source, function, else_assignment_next_operand)
+                  }
+                  length = length + 1
+                }
+              }
+              length = length + 1 + u32_leb_length(variable_index(source, function, else_assignment_target))
+              else_statement = else_assignment_after_operand
           }
           }
         }
@@ -5523,24 +5735,95 @@ fn write_loop_conditional(buffer: bytes, index: i32, source: bytes, table: [i32]
             byte_set(buffer, position, 15)
             position = position + 1
           } else {
-            let target = current
-            let equals = next_token(source, target.start + target.length)
-            let operand = next_token(source, equals.start + equals.length)
-            position = write_operand(buffer, position, source, function, operand)
-            current = next_token(source, operand.start + operand.length)
-            while is_arithmetic_operator(source, current) == 1 {
-              let arithmetic = current
-              let next_operand = next_token(source, arithmetic.start + arithmetic.length)
-              position = write_operand(buffer, position, source, function, next_operand)
-              byte_set(buffer, position, arithmetic_opcode(source, arithmetic))
+            let then_assignment_target = current
+            if is_let_keyword(source, current) == 1 {
+              then_assignment_target = next_token(source, current.start + current.length)
+            }
+            let then_assignment_equals = next_token(source, then_assignment_target.start + then_assignment_target.length)
+            let then_assignment_operand = next_token(source, then_assignment_equals.start + then_assignment_equals.length)
+            current = next_token(source, then_assignment_operand.start + then_assignment_operand.length)
+            if is_symbol(source, current, 40) == 1 {
+              let then_assignment_argument = next_token(source, current.start + current.length)
+              while is_symbol(source, then_assignment_argument, 41) == 0 {
+                let then_assignment_separator = next_token(source, then_assignment_argument.start + then_assignment_argument.length)
+                if is_symbol(source, then_assignment_separator, 46) == 1 {
+                  position = write_operand(buffer, position, source, function, then_assignment_argument)
+                  let then_assignment_argument_field = next_token(source, then_assignment_separator.start + then_assignment_separator.length)
+                  let then_assignment_argument_field_index = local_struct_field_index(source, table, function, then_assignment_argument, then_assignment_argument_field)
+                  byte_set(buffer, position, 40)
+                  byte_set(buffer, position + 1, 2)
+                  position = position + 2
+                  let then_assignment_argument_field_offset_written = write_u32_leb(buffer, position, then_assignment_argument_field_index * 4)
+                  position = position + u32_leb_length(then_assignment_argument_field_index * 4)
+                  then_assignment_separator = next_token(source, then_assignment_argument_field.start + then_assignment_argument_field.length)
+                } else {
+                  position = write_operand(buffer, position, source, function, then_assignment_argument)
+                }
+                while is_arithmetic_operator(source, then_assignment_separator) == 1 {
+                  let then_assignment_argument_arithmetic = then_assignment_separator
+                  let then_assignment_argument_arithmetic_operand = next_token(source, then_assignment_argument_arithmetic.start + then_assignment_argument_arithmetic.length)
+                  position = write_operand(buffer, position, source, function, then_assignment_argument_arithmetic_operand)
+                  then_assignment_separator = next_token(source, then_assignment_argument_arithmetic_operand.start + then_assignment_argument_arithmetic_operand.length)
+                  if is_symbol(source, then_assignment_separator, 46) == 1 {
+                    let then_assignment_argument_arithmetic_field = next_token(source, then_assignment_separator.start + then_assignment_separator.length)
+                    let then_assignment_argument_arithmetic_field_index = local_struct_field_index(source, table, function, then_assignment_argument_arithmetic_operand, then_assignment_argument_arithmetic_field)
+                    byte_set(buffer, position, 40)
+                    byte_set(buffer, position + 1, 2)
+                    position = position + 2
+                    let then_assignment_argument_arithmetic_field_offset_written = write_u32_leb(buffer, position, then_assignment_argument_arithmetic_field_index * 4)
+                    position = position + u32_leb_length(then_assignment_argument_arithmetic_field_index * 4)
+                    then_assignment_separator = next_token(source, then_assignment_argument_arithmetic_field.start + then_assignment_argument_arithmetic_field.length)
+                  }
+                  byte_set(buffer, position, arithmetic_opcode(source, then_assignment_argument_arithmetic))
+                  position = position + 1
+                }
+                if is_symbol(source, then_assignment_separator, 44) == 1 {
+                  then_assignment_argument = next_token(source, then_assignment_separator.start + then_assignment_separator.length)
+                } else {
+                  then_assignment_argument = then_assignment_separator
+                }
+              }
+              byte_set(buffer, position, 16)
               position = position + 1
-              current = next_token(source, next_operand.start + next_operand.length)
+              let then_assignment_called_index = function_index_in_table(source, table, then_assignment_operand)
+              let then_assignment_call_written = write_u32_leb(buffer, position, then_assignment_called_index)
+              position = position + u32_leb_length(then_assignment_called_index)
+              current = next_token(source, then_assignment_argument.start + then_assignment_argument.length)
+            } else {
+              position = write_operand(buffer, position, source, function, then_assignment_operand)
+              while is_arithmetic_operator(source, current) == 1 {
+                let then_assignment_arithmetic = current
+                let then_assignment_next_operand = next_token(source, then_assignment_arithmetic.start + then_assignment_arithmetic.length)
+                current = next_token(source, then_assignment_next_operand.start + then_assignment_next_operand.length)
+                if is_symbol(source, current, 40) == 1 {
+                  let then_assignment_arithmetic_argument = next_token(source, current.start + current.length)
+                  while is_symbol(source, then_assignment_arithmetic_argument, 41) == 0 {
+                    position = write_operand(buffer, position, source, function, then_assignment_arithmetic_argument)
+                    let then_assignment_arithmetic_separator = next_token(source, then_assignment_arithmetic_argument.start + then_assignment_arithmetic_argument.length)
+                    if is_symbol(source, then_assignment_arithmetic_separator, 44) == 1 {
+                      then_assignment_arithmetic_argument = next_token(source, then_assignment_arithmetic_separator.start + then_assignment_arithmetic_separator.length)
+                    } else {
+                      then_assignment_arithmetic_argument = then_assignment_arithmetic_separator
+                    }
+                  }
+                  byte_set(buffer, position, 16)
+                  position = position + 1
+                  let then_assignment_arithmetic_called_index = function_index_in_table(source, table, then_assignment_next_operand)
+                  let then_assignment_arithmetic_call_written = write_u32_leb(buffer, position, then_assignment_arithmetic_called_index)
+                  position = position + u32_leb_length(then_assignment_arithmetic_called_index)
+                  current = next_token(source, then_assignment_arithmetic_argument.start + then_assignment_arithmetic_argument.length)
+                } else {
+                  position = write_operand(buffer, position, source, function, then_assignment_next_operand)
+                }
+                byte_set(buffer, position, arithmetic_opcode(source, then_assignment_arithmetic))
+                position = position + 1
+              }
             }
             byte_set(buffer, position, 33)
             position = position + 1
-            let target_index = variable_index(source, function, target)
-            let target_written = write_u32_leb(buffer, position, target_index)
-            position = position + u32_leb_length(target_index)
+            let then_assignment_target_index = variable_index(source, function, then_assignment_target)
+            let then_assignment_target_written = write_u32_leb(buffer, position, then_assignment_target_index)
+            position = position + u32_leb_length(then_assignment_target_index)
           }
         }
       }
@@ -5604,24 +5887,95 @@ fn write_loop_conditional(buffer: bytes, index: i32, source: bytes, table: [i32]
               byte_set(buffer, position, 15)
               position = position + 1
             } else {
-            let else_target = else_statement
-            let else_equals = next_token(source, else_target.start + else_target.length)
-            let else_operand = next_token(source, else_equals.start + else_equals.length)
-            position = write_operand(buffer, position, source, function, else_operand)
-            else_statement = next_token(source, else_operand.start + else_operand.length)
-            while is_arithmetic_operator(source, else_statement) == 1 {
-              let else_arithmetic = else_statement
-              let else_next_operand = next_token(source, else_arithmetic.start + else_arithmetic.length)
-              position = write_operand(buffer, position, source, function, else_next_operand)
-              byte_set(buffer, position, arithmetic_opcode(source, else_arithmetic))
+              let else_assignment_target = else_statement
+              if is_let_keyword(source, else_statement) == 1 {
+                else_assignment_target = next_token(source, else_statement.start + else_statement.length)
+              }
+              let else_assignment_equals = next_token(source, else_assignment_target.start + else_assignment_target.length)
+              let else_assignment_operand = next_token(source, else_assignment_equals.start + else_assignment_equals.length)
+              else_statement = next_token(source, else_assignment_operand.start + else_assignment_operand.length)
+              if is_symbol(source, else_statement, 40) == 1 {
+                let else_assignment_argument = next_token(source, else_statement.start + else_statement.length)
+                while is_symbol(source, else_assignment_argument, 41) == 0 {
+                  let else_assignment_separator = next_token(source, else_assignment_argument.start + else_assignment_argument.length)
+                  if is_symbol(source, else_assignment_separator, 46) == 1 {
+                    position = write_operand(buffer, position, source, function, else_assignment_argument)
+                    let else_assignment_argument_field = next_token(source, else_assignment_separator.start + else_assignment_separator.length)
+                    let else_assignment_argument_field_index = local_struct_field_index(source, table, function, else_assignment_argument, else_assignment_argument_field)
+                    byte_set(buffer, position, 40)
+                    byte_set(buffer, position + 1, 2)
+                    position = position + 2
+                    let else_assignment_argument_field_offset_written = write_u32_leb(buffer, position, else_assignment_argument_field_index * 4)
+                    position = position + u32_leb_length(else_assignment_argument_field_index * 4)
+                    else_assignment_separator = next_token(source, else_assignment_argument_field.start + else_assignment_argument_field.length)
+                  } else {
+                    position = write_operand(buffer, position, source, function, else_assignment_argument)
+                  }
+                  while is_arithmetic_operator(source, else_assignment_separator) == 1 {
+                    let else_assignment_argument_arithmetic = else_assignment_separator
+                    let else_assignment_argument_arithmetic_operand = next_token(source, else_assignment_argument_arithmetic.start + else_assignment_argument_arithmetic.length)
+                    position = write_operand(buffer, position, source, function, else_assignment_argument_arithmetic_operand)
+                    else_assignment_separator = next_token(source, else_assignment_argument_arithmetic_operand.start + else_assignment_argument_arithmetic_operand.length)
+                    if is_symbol(source, else_assignment_separator, 46) == 1 {
+                      let else_assignment_argument_arithmetic_field = next_token(source, else_assignment_separator.start + else_assignment_separator.length)
+                      let else_assignment_argument_arithmetic_field_index = local_struct_field_index(source, table, function, else_assignment_argument_arithmetic_operand, else_assignment_argument_arithmetic_field)
+                      byte_set(buffer, position, 40)
+                      byte_set(buffer, position + 1, 2)
+                      position = position + 2
+                      let else_assignment_argument_arithmetic_field_offset_written = write_u32_leb(buffer, position, else_assignment_argument_arithmetic_field_index * 4)
+                      position = position + u32_leb_length(else_assignment_argument_arithmetic_field_index * 4)
+                      else_assignment_separator = next_token(source, else_assignment_argument_arithmetic_field.start + else_assignment_argument_arithmetic_field.length)
+                    }
+                    byte_set(buffer, position, arithmetic_opcode(source, else_assignment_argument_arithmetic))
+                    position = position + 1
+                  }
+                  if is_symbol(source, else_assignment_separator, 44) == 1 {
+                    else_assignment_argument = next_token(source, else_assignment_separator.start + else_assignment_separator.length)
+                  } else {
+                    else_assignment_argument = else_assignment_separator
+                  }
+                }
+                byte_set(buffer, position, 16)
+                position = position + 1
+                let else_assignment_called_index = function_index_in_table(source, table, else_assignment_operand)
+                let else_assignment_call_written = write_u32_leb(buffer, position, else_assignment_called_index)
+                position = position + u32_leb_length(else_assignment_called_index)
+                else_statement = next_token(source, else_assignment_argument.start + else_assignment_argument.length)
+              } else {
+                position = write_operand(buffer, position, source, function, else_assignment_operand)
+                while is_arithmetic_operator(source, else_statement) == 1 {
+                  let else_assignment_arithmetic = else_statement
+                  let else_assignment_next_operand = next_token(source, else_assignment_arithmetic.start + else_assignment_arithmetic.length)
+                  else_statement = next_token(source, else_assignment_next_operand.start + else_assignment_next_operand.length)
+                  if is_symbol(source, else_statement, 40) == 1 {
+                    let else_assignment_arithmetic_argument = next_token(source, else_statement.start + else_statement.length)
+                    while is_symbol(source, else_assignment_arithmetic_argument, 41) == 0 {
+                      position = write_operand(buffer, position, source, function, else_assignment_arithmetic_argument)
+                      let else_assignment_arithmetic_separator = next_token(source, else_assignment_arithmetic_argument.start + else_assignment_arithmetic_argument.length)
+                      if is_symbol(source, else_assignment_arithmetic_separator, 44) == 1 {
+                        else_assignment_arithmetic_argument = next_token(source, else_assignment_arithmetic_separator.start + else_assignment_arithmetic_separator.length)
+                      } else {
+                        else_assignment_arithmetic_argument = else_assignment_arithmetic_separator
+                      }
+                    }
+                    byte_set(buffer, position, 16)
+                    position = position + 1
+                    let else_assignment_arithmetic_called_index = function_index_in_table(source, table, else_assignment_next_operand)
+                    let else_assignment_arithmetic_call_written = write_u32_leb(buffer, position, else_assignment_arithmetic_called_index)
+                    position = position + u32_leb_length(else_assignment_arithmetic_called_index)
+                    else_statement = next_token(source, else_assignment_arithmetic_argument.start + else_assignment_arithmetic_argument.length)
+                  } else {
+                    position = write_operand(buffer, position, source, function, else_assignment_next_operand)
+                  }
+                  byte_set(buffer, position, arithmetic_opcode(source, else_assignment_arithmetic))
+                  position = position + 1
+                }
+              }
+              byte_set(buffer, position, 33)
               position = position + 1
-              else_statement = next_token(source, else_next_operand.start + else_next_operand.length)
-            }
-            byte_set(buffer, position, 33)
-            position = position + 1
-            let else_target_index = variable_index(source, function, else_target)
-            let else_target_written = write_u32_leb(buffer, position, else_target_index)
-            position = position + u32_leb_length(else_target_index)
+              let else_assignment_target_index = variable_index(source, function, else_assignment_target)
+              let else_assignment_target_written = write_u32_leb(buffer, position, else_assignment_target_index)
+              position = position + u32_leb_length(else_assignment_target_index)
           }
           }
         }
@@ -5730,24 +6084,95 @@ fn write_loop_local_conditional(buffer: bytes, index: i32, source: bytes, table:
             byte_set(buffer, position, 15)
             position = position + 1
           } else {
-            let target = current
-            let equals = next_token(source, target.start + target.length)
-            let operand = next_token(source, equals.start + equals.length)
-            position = write_operand(buffer, position, source, function, operand)
-            current = next_token(source, operand.start + operand.length)
-            while is_arithmetic_operator(source, current) == 1 {
-              let arithmetic = current
-              let next_operand = next_token(source, arithmetic.start + arithmetic.length)
-              position = write_operand(buffer, position, source, function, next_operand)
-              byte_set(buffer, position, arithmetic_opcode(source, arithmetic))
+            let then_assignment_target = current
+            if is_let_keyword(source, current) == 1 {
+              then_assignment_target = next_token(source, current.start + current.length)
+            }
+            let then_assignment_equals = next_token(source, then_assignment_target.start + then_assignment_target.length)
+            let then_assignment_operand = next_token(source, then_assignment_equals.start + then_assignment_equals.length)
+            current = next_token(source, then_assignment_operand.start + then_assignment_operand.length)
+            if is_symbol(source, current, 40) == 1 {
+              let then_assignment_argument = next_token(source, current.start + current.length)
+              while is_symbol(source, then_assignment_argument, 41) == 0 {
+                let then_assignment_separator = next_token(source, then_assignment_argument.start + then_assignment_argument.length)
+                if is_symbol(source, then_assignment_separator, 46) == 1 {
+                  position = write_operand(buffer, position, source, function, then_assignment_argument)
+                  let then_assignment_argument_field = next_token(source, then_assignment_separator.start + then_assignment_separator.length)
+                  let then_assignment_argument_field_index = local_struct_field_index(source, table, function, then_assignment_argument, then_assignment_argument_field)
+                  byte_set(buffer, position, 40)
+                  byte_set(buffer, position + 1, 2)
+                  position = position + 2
+                  let then_assignment_argument_field_offset_written = write_u32_leb(buffer, position, then_assignment_argument_field_index * 4)
+                  position = position + u32_leb_length(then_assignment_argument_field_index * 4)
+                  then_assignment_separator = next_token(source, then_assignment_argument_field.start + then_assignment_argument_field.length)
+                } else {
+                  position = write_operand(buffer, position, source, function, then_assignment_argument)
+                }
+                while is_arithmetic_operator(source, then_assignment_separator) == 1 {
+                  let then_assignment_argument_arithmetic = then_assignment_separator
+                  let then_assignment_argument_arithmetic_operand = next_token(source, then_assignment_argument_arithmetic.start + then_assignment_argument_arithmetic.length)
+                  position = write_operand(buffer, position, source, function, then_assignment_argument_arithmetic_operand)
+                  then_assignment_separator = next_token(source, then_assignment_argument_arithmetic_operand.start + then_assignment_argument_arithmetic_operand.length)
+                  if is_symbol(source, then_assignment_separator, 46) == 1 {
+                    let then_assignment_argument_arithmetic_field = next_token(source, then_assignment_separator.start + then_assignment_separator.length)
+                    let then_assignment_argument_arithmetic_field_index = local_struct_field_index(source, table, function, then_assignment_argument_arithmetic_operand, then_assignment_argument_arithmetic_field)
+                    byte_set(buffer, position, 40)
+                    byte_set(buffer, position + 1, 2)
+                    position = position + 2
+                    let then_assignment_argument_arithmetic_field_offset_written = write_u32_leb(buffer, position, then_assignment_argument_arithmetic_field_index * 4)
+                    position = position + u32_leb_length(then_assignment_argument_arithmetic_field_index * 4)
+                    then_assignment_separator = next_token(source, then_assignment_argument_arithmetic_field.start + then_assignment_argument_arithmetic_field.length)
+                  }
+                  byte_set(buffer, position, arithmetic_opcode(source, then_assignment_argument_arithmetic))
+                  position = position + 1
+                }
+                if is_symbol(source, then_assignment_separator, 44) == 1 {
+                  then_assignment_argument = next_token(source, then_assignment_separator.start + then_assignment_separator.length)
+                } else {
+                  then_assignment_argument = then_assignment_separator
+                }
+              }
+              byte_set(buffer, position, 16)
               position = position + 1
-              current = next_token(source, next_operand.start + next_operand.length)
+              let then_assignment_called_index = function_index_in_table(source, table, then_assignment_operand)
+              let then_assignment_call_written = write_u32_leb(buffer, position, then_assignment_called_index)
+              position = position + u32_leb_length(then_assignment_called_index)
+              current = next_token(source, then_assignment_argument.start + then_assignment_argument.length)
+            } else {
+              position = write_operand(buffer, position, source, function, then_assignment_operand)
+              while is_arithmetic_operator(source, current) == 1 {
+                let then_assignment_arithmetic = current
+                let then_assignment_next_operand = next_token(source, then_assignment_arithmetic.start + then_assignment_arithmetic.length)
+                current = next_token(source, then_assignment_next_operand.start + then_assignment_next_operand.length)
+                if is_symbol(source, current, 40) == 1 {
+                  let then_assignment_arithmetic_argument = next_token(source, current.start + current.length)
+                  while is_symbol(source, then_assignment_arithmetic_argument, 41) == 0 {
+                    position = write_operand(buffer, position, source, function, then_assignment_arithmetic_argument)
+                    let then_assignment_arithmetic_separator = next_token(source, then_assignment_arithmetic_argument.start + then_assignment_arithmetic_argument.length)
+                    if is_symbol(source, then_assignment_arithmetic_separator, 44) == 1 {
+                      then_assignment_arithmetic_argument = next_token(source, then_assignment_arithmetic_separator.start + then_assignment_arithmetic_separator.length)
+                    } else {
+                      then_assignment_arithmetic_argument = then_assignment_arithmetic_separator
+                    }
+                  }
+                  byte_set(buffer, position, 16)
+                  position = position + 1
+                  let then_assignment_arithmetic_called_index = function_index_in_table(source, table, then_assignment_next_operand)
+                  let then_assignment_arithmetic_call_written = write_u32_leb(buffer, position, then_assignment_arithmetic_called_index)
+                  position = position + u32_leb_length(then_assignment_arithmetic_called_index)
+                  current = next_token(source, then_assignment_arithmetic_argument.start + then_assignment_arithmetic_argument.length)
+                } else {
+                  position = write_operand(buffer, position, source, function, then_assignment_next_operand)
+                }
+                byte_set(buffer, position, arithmetic_opcode(source, then_assignment_arithmetic))
+                position = position + 1
+              }
             }
             byte_set(buffer, position, 33)
             position = position + 1
-            let target_index = variable_index(source, function, target)
-            let target_written = write_u32_leb(buffer, position, target_index)
-            position = position + u32_leb_length(target_index)
+            let then_assignment_target_index = variable_index(source, function, then_assignment_target)
+            let then_assignment_target_written = write_u32_leb(buffer, position, then_assignment_target_index)
+            position = position + u32_leb_length(then_assignment_target_index)
           }
         }
       }
@@ -5811,24 +6236,95 @@ fn write_loop_local_conditional(buffer: bytes, index: i32, source: bytes, table:
               byte_set(buffer, position, 15)
               position = position + 1
             } else {
-            let else_target = else_statement
-            let else_equals = next_token(source, else_target.start + else_target.length)
-            let else_operand = next_token(source, else_equals.start + else_equals.length)
-            position = write_operand(buffer, position, source, function, else_operand)
-            else_statement = next_token(source, else_operand.start + else_operand.length)
-            while is_arithmetic_operator(source, else_statement) == 1 {
-              let else_arithmetic = else_statement
-              let else_next_operand = next_token(source, else_arithmetic.start + else_arithmetic.length)
-              position = write_operand(buffer, position, source, function, else_next_operand)
-              byte_set(buffer, position, arithmetic_opcode(source, else_arithmetic))
+              let else_assignment_target = else_statement
+              if is_let_keyword(source, else_statement) == 1 {
+                else_assignment_target = next_token(source, else_statement.start + else_statement.length)
+              }
+              let else_assignment_equals = next_token(source, else_assignment_target.start + else_assignment_target.length)
+              let else_assignment_operand = next_token(source, else_assignment_equals.start + else_assignment_equals.length)
+              else_statement = next_token(source, else_assignment_operand.start + else_assignment_operand.length)
+              if is_symbol(source, else_statement, 40) == 1 {
+                let else_assignment_argument = next_token(source, else_statement.start + else_statement.length)
+                while is_symbol(source, else_assignment_argument, 41) == 0 {
+                  let else_assignment_separator = next_token(source, else_assignment_argument.start + else_assignment_argument.length)
+                  if is_symbol(source, else_assignment_separator, 46) == 1 {
+                    position = write_operand(buffer, position, source, function, else_assignment_argument)
+                    let else_assignment_argument_field = next_token(source, else_assignment_separator.start + else_assignment_separator.length)
+                    let else_assignment_argument_field_index = local_struct_field_index(source, table, function, else_assignment_argument, else_assignment_argument_field)
+                    byte_set(buffer, position, 40)
+                    byte_set(buffer, position + 1, 2)
+                    position = position + 2
+                    let else_assignment_argument_field_offset_written = write_u32_leb(buffer, position, else_assignment_argument_field_index * 4)
+                    position = position + u32_leb_length(else_assignment_argument_field_index * 4)
+                    else_assignment_separator = next_token(source, else_assignment_argument_field.start + else_assignment_argument_field.length)
+                  } else {
+                    position = write_operand(buffer, position, source, function, else_assignment_argument)
+                  }
+                  while is_arithmetic_operator(source, else_assignment_separator) == 1 {
+                    let else_assignment_argument_arithmetic = else_assignment_separator
+                    let else_assignment_argument_arithmetic_operand = next_token(source, else_assignment_argument_arithmetic.start + else_assignment_argument_arithmetic.length)
+                    position = write_operand(buffer, position, source, function, else_assignment_argument_arithmetic_operand)
+                    else_assignment_separator = next_token(source, else_assignment_argument_arithmetic_operand.start + else_assignment_argument_arithmetic_operand.length)
+                    if is_symbol(source, else_assignment_separator, 46) == 1 {
+                      let else_assignment_argument_arithmetic_field = next_token(source, else_assignment_separator.start + else_assignment_separator.length)
+                      let else_assignment_argument_arithmetic_field_index = local_struct_field_index(source, table, function, else_assignment_argument_arithmetic_operand, else_assignment_argument_arithmetic_field)
+                      byte_set(buffer, position, 40)
+                      byte_set(buffer, position + 1, 2)
+                      position = position + 2
+                      let else_assignment_argument_arithmetic_field_offset_written = write_u32_leb(buffer, position, else_assignment_argument_arithmetic_field_index * 4)
+                      position = position + u32_leb_length(else_assignment_argument_arithmetic_field_index * 4)
+                      else_assignment_separator = next_token(source, else_assignment_argument_arithmetic_field.start + else_assignment_argument_arithmetic_field.length)
+                    }
+                    byte_set(buffer, position, arithmetic_opcode(source, else_assignment_argument_arithmetic))
+                    position = position + 1
+                  }
+                  if is_symbol(source, else_assignment_separator, 44) == 1 {
+                    else_assignment_argument = next_token(source, else_assignment_separator.start + else_assignment_separator.length)
+                  } else {
+                    else_assignment_argument = else_assignment_separator
+                  }
+                }
+                byte_set(buffer, position, 16)
+                position = position + 1
+                let else_assignment_called_index = function_index_in_table(source, table, else_assignment_operand)
+                let else_assignment_call_written = write_u32_leb(buffer, position, else_assignment_called_index)
+                position = position + u32_leb_length(else_assignment_called_index)
+                else_statement = next_token(source, else_assignment_argument.start + else_assignment_argument.length)
+              } else {
+                position = write_operand(buffer, position, source, function, else_assignment_operand)
+                while is_arithmetic_operator(source, else_statement) == 1 {
+                  let else_assignment_arithmetic = else_statement
+                  let else_assignment_next_operand = next_token(source, else_assignment_arithmetic.start + else_assignment_arithmetic.length)
+                  else_statement = next_token(source, else_assignment_next_operand.start + else_assignment_next_operand.length)
+                  if is_symbol(source, else_statement, 40) == 1 {
+                    let else_assignment_arithmetic_argument = next_token(source, else_statement.start + else_statement.length)
+                    while is_symbol(source, else_assignment_arithmetic_argument, 41) == 0 {
+                      position = write_operand(buffer, position, source, function, else_assignment_arithmetic_argument)
+                      let else_assignment_arithmetic_separator = next_token(source, else_assignment_arithmetic_argument.start + else_assignment_arithmetic_argument.length)
+                      if is_symbol(source, else_assignment_arithmetic_separator, 44) == 1 {
+                        else_assignment_arithmetic_argument = next_token(source, else_assignment_arithmetic_separator.start + else_assignment_arithmetic_separator.length)
+                      } else {
+                        else_assignment_arithmetic_argument = else_assignment_arithmetic_separator
+                      }
+                    }
+                    byte_set(buffer, position, 16)
+                    position = position + 1
+                    let else_assignment_arithmetic_called_index = function_index_in_table(source, table, else_assignment_next_operand)
+                    let else_assignment_arithmetic_call_written = write_u32_leb(buffer, position, else_assignment_arithmetic_called_index)
+                    position = position + u32_leb_length(else_assignment_arithmetic_called_index)
+                    else_statement = next_token(source, else_assignment_arithmetic_argument.start + else_assignment_arithmetic_argument.length)
+                  } else {
+                    position = write_operand(buffer, position, source, function, else_assignment_next_operand)
+                  }
+                  byte_set(buffer, position, arithmetic_opcode(source, else_assignment_arithmetic))
+                  position = position + 1
+                }
+              }
+              byte_set(buffer, position, 33)
               position = position + 1
-              else_statement = next_token(source, else_next_operand.start + else_next_operand.length)
-            }
-            byte_set(buffer, position, 33)
-            position = position + 1
-            let else_target_index = variable_index(source, function, else_target)
-            let else_target_written = write_u32_leb(buffer, position, else_target_index)
-            position = position + u32_leb_length(else_target_index)
+              let else_assignment_target_index = variable_index(source, function, else_assignment_target)
+              let else_assignment_target_written = write_u32_leb(buffer, position, else_assignment_target_index)
+              position = position + u32_leb_length(else_assignment_target_index)
           }
           }
         }

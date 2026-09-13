@@ -5,6 +5,28 @@
 Rust seed compilerからMatra製compiler Wasmを生成し、そのcompiler自身で同じsourceを再compileする
 bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3のbyte一致とする。
 
+## 2026-09-14 代入の出力不整合を修正
+
+`loop_conditional_length`、`loop_local_conditional_length`、`write_loop_conditional`、
+`write_loop_local_conditional`のthen/else代入を、既存のwhile内代入と同じ処理へ揃えた。
+call argumentのfield access、算術、複数argument、call opcode、localへの格納と次tokenの更新を含む。
+parserの`expression_end`は変更していない。
+
+`wasm.test.mjs`にstage-1経由でcompile・実行する回帰testを追加した。local条件とcall条件それぞれについて、
+then/elseのcall assignment、thenのearly returnとelseのcall assignmentを検証する。
+修正前は`invalid local index: 4351`でWasmのinstantiateに失敗し、修正後は全経路で期待値を返した。
+
+ただし、self-hostは未成立である。`bootstrap:verify`は引き続きstage-2の`2140:37 expected }`で停止する。
+診断用にparserをexportして確認したところ、対象の外側call conditionalと内側field conditionalは単体では
+closing braceまで正常に解析できた。一方、`parse_local_body`の最終return処理直前の`current`は、
+returnではなく問題の`if is_if_keyword(...)`を指していた。従って、この停止は代入のwriterだけでは解消せず、
+親function bodyの固定statement列を一般化する必要がある。
+
+末尾conditionalをparser/length/writerで反復するprobeは`2248:40`まで進んだが、追加したwhile自身で停止した。
+根本解決にならず、一般conditionalとlocal-return conditionalの契約も未統一のため、このprobeは撤回した。
+次はparser・length・writerのfunction bodyを同じstatement列として扱い、最終return前のtokenも検証する。
+診断用exportや一時returnはsourceに残していない。
+
 ## 2026-09-02 現在の状態
 
 直近の実測では、stage-1は生成できるが、stage-2は次の位置で停止している。
