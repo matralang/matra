@@ -6931,11 +6931,15 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
   }
   let memory_section_length = 0
   let export_count = 1
-  let export_payload_length = u32_leb_length(export_count) + u32_leb_length(last_name_length) + last_name_length + 1 + u32_leb_length(count - 1)
+  let export_count_length = u32_leb_length(export_count)
+  let last_name_length_length = u32_leb_length(last_name_length)
+  let function_index_length = u32_leb_length(count - 1)
+  let export_payload_length = export_count_length + last_name_length_length + last_name_length + 1 + function_index_length
   if memory_required == 1 {
     memory_section_length = 5
     export_count = 2
-    export_payload_length = u32_leb_length(export_count) + u32_leb_length(last_name_length) + last_name_length + 1 + u32_leb_length(count - 1) + 9
+    export_count_length = u32_leb_length(export_count)
+    export_payload_length = export_count_length + last_name_length_length + last_name_length + 1 + function_index_length + 9
   }
   let output_length = 8 + 1 + u32_leb_length(type_payload_length) + type_payload_length + 1 + u32_leb_length(function_payload_length) + function_payload_length + memory_section_length + 1 + u32_leb_length(export_payload_length) + export_payload_length + 1 + u32_leb_length(code_payload_length) + code_payload_length
   let output = allocate_bytes(output_length)
@@ -7047,10 +7051,14 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
       let emitted_target_length = u32_leb_length(body_value)
       emitted_body_length = 3 + emitted_target_length
       if emitted_argument_kind == 1 {
-        emitted_body_length = 4 + i32_leb_length(array_get(table, index * 7 + 7)) + emitted_target_length
+        let emitted_signed_argument = array_get(table, index * 7 + 7)
+        let emitted_signed_argument_length = i32_leb_length(emitted_signed_argument)
+        emitted_body_length = 4 + emitted_signed_argument_length + emitted_target_length
       }
       if emitted_argument_kind == 2 {
-        emitted_body_length = 4 + u32_leb_length(array_get(table, index * 7 + 7)) + emitted_target_length
+        let emitted_unsigned_argument = array_get(table, index * 7 + 7)
+        let emitted_unsigned_argument_length = u32_leb_length(emitted_unsigned_argument)
+        emitted_body_length = 4 + emitted_unsigned_argument_length + emitted_target_length
       }
     }
     if body_kind == 4 {
@@ -7193,8 +7201,10 @@ export fn alloc(size: i32) -> i32 {
 fn success_record(output: bytes) -> i32 {
   let record = allocate_bytes(36)
   let status = write_i32(record, 0, 0)
-  let output_pointer = write_i32(status, 4, byte_pointer(output))
-  let output_length = write_i32(output_pointer, 8, byte_length(output))
+  let output_address = byte_pointer(output)
+  let output_pointer = write_i32(status, 4, output_address)
+  let output_size = byte_length(output)
+  let output_length = write_i32(output_pointer, 8, output_size)
   let diagnostic_pointer = write_i32(output_length, 12, 0)
   let diagnostic_length = write_i32(diagnostic_pointer, 16, 0)
   let diagnostic_code = write_i32(diagnostic_length, 20, 0)
@@ -7311,13 +7321,16 @@ fn diagnostic_record(source: bytes, kind: i32, offset: i32, expected: i32) -> i3
   let status = write_i32(record, 0, 1)
   let output_pointer = write_i32(status, 4, 0)
   let output_length = write_i32(output_pointer, 8, 0)
-  let diagnostic_pointer = write_i32(output_length, 12, byte_pointer(diagnostic_written))
-  let diagnostic_length = write_i32(diagnostic_pointer, 16, byte_length(diagnostic_written))
+  let diagnostic_address = byte_pointer(diagnostic_written)
+  let diagnostic_pointer = write_i32(output_length, 12, diagnostic_address)
+  let diagnostic_size = byte_length(diagnostic_written)
+  let diagnostic_length = write_i32(diagnostic_pointer, 16, diagnostic_size)
   let diagnostic_code = write_i32(diagnostic_length, 20, kind)
   let diagnostic_offset = write_i32(diagnostic_code, 24, offset)
   let diagnostic_source_length = write_i32(diagnostic_offset, 28, diagnostic_token.length)
   let diagnostic_expected = write_i32(diagnostic_source_length, 32, expected)
-  return byte_pointer(diagnostic_expected)
+  let diagnostic_address_result = byte_pointer(diagnostic_expected)
+  return diagnostic_address_result
 }
 
 export fn compile(source: bytes) -> i32 {
