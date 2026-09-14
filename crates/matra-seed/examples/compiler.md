@@ -1263,6 +1263,13 @@ fn parse_while_statement(source: bytes, offset: i32) -> function_definition {
     return function_definition(0, 0, 0, 0, offset, left.start, 13)
   }
   let operator = next_token(source, left.start + left.length)
+  if is_symbol(source, operator, 46) == 1 {
+    let left_field = next_token(source, operator.start + operator.length)
+    if left_field.kind != 1 {
+      return function_definition(0, 0, 0, 0, offset, left_field.start, 2)
+    }
+    operator = next_token(source, left_field.start + left_field.length)
+  }
   if is_symbol(source, operator, 40) == 1 {
     let condition_argument = next_token(source, operator.start + operator.length)
     while is_symbol(source, condition_argument, 41) == 0 {
@@ -1886,6 +1893,18 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
   }
   let close = next_token(source, returned.start + returned.length)
   if is_symbol(source, close, 40) == 1 {
+    if struct_field_count(source, returned) < 0 {
+      let call_argument = next_token(source, close.start + close.length)
+      while is_symbol(source, call_argument, 41) == 0 {
+        let call_separator = next_token(source, call_argument.start + call_argument.length)
+        if is_symbol(source, call_separator, 44) == 1 {
+          call_argument = next_token(source, call_separator.start + call_separator.length)
+        } else {
+          call_argument = call_separator
+        }
+      }
+      close = next_token(source, call_argument.start + call_argument.length)
+    } else {
     let constructor_argument = next_token(source, close.start + close.length)
     while is_symbol(source, constructor_argument, 41) == 0 {
       if constructor_argument.kind != 1 {
@@ -1894,6 +1913,22 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
         }
       }
       let constructor_separator = next_token(source, constructor_argument.start + constructor_argument.length)
+      if is_symbol(source, constructor_separator, 40) == 1 {
+        let constructor_call_argument = next_token(source, constructor_separator.start + constructor_separator.length)
+        if is_symbol(source, constructor_call_argument, 41) == 0 {
+          if constructor_call_argument.kind != 1 {
+            if constructor_call_argument.kind != 2 {
+              return function_definition(0, 0, 0, 0, offset, constructor_call_argument.start, 13)
+            }
+          }
+          constructor_call_argument = next_token(source, constructor_call_argument.start + constructor_call_argument.length)
+          if is_symbol(source, constructor_call_argument, 44) == 1 {
+            constructor_call_argument = next_token(source, constructor_call_argument.start + constructor_call_argument.length)
+            constructor_call_argument = next_token(source, constructor_call_argument.start + constructor_call_argument.length)
+          }
+        }
+        constructor_separator = next_token(source, constructor_call_argument.start + constructor_call_argument.length)
+      }
       if is_symbol(source, constructor_separator, 46) == 1 {
         let constructor_field = next_token(source, constructor_separator.start + constructor_separator.length)
         if constructor_field.kind != 1 {
@@ -1924,6 +1959,7 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
       }
     }
     close = next_token(source, constructor_argument.start + constructor_argument.length)
+    }
   } else {
     if is_symbol(source, close, 46) == 1 {
       let return_field = next_token(source, close.start + close.length)
@@ -2070,13 +2106,6 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
                 nested_close = next_token(source, nested_close.start + nested_close.length)
               }
               argument_value = nested_close
-            } else {
-              if is_symbol(source, parameter, 41) == 1 {
-                return function_definition(0, 0, 0, 0, offset, argument.start, 12)
-              }
-              if same_token(source, parameter, argument) == 0 {
-                return function_definition(0, 0, 0, 0, offset, argument.start, 12)
-              }
             }
           } else {
             if argument.kind != 2 {
@@ -2087,10 +2116,27 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
         call_close = next_token(source, argument_value.start + argument_value.length)
         while is_symbol(source, call_close, 44) == 1 {
           let next_argument = next_token(source, call_close.start + call_close.length)
-          if next_argument.kind != 2 {
-            return function_definition(0, 0, 0, 0, offset, next_argument.start, 13)
+          let next_argument_value = next_argument
+          if next_argument.kind == 1 {
+            let next_nested_open = next_token(source, next_argument.start + next_argument.length)
+            if is_symbol(source, next_nested_open, 40) == 1 {
+              let next_nested_argument = next_token(source, next_nested_open.start + next_nested_open.length)
+              let next_nested_close = next_nested_argument
+              while is_symbol(source, next_nested_close, 41) == 0 {
+                next_nested_close = next_token(source, next_nested_close.start + next_nested_close.length)
+              }
+              next_argument_value = next_nested_close
+            } else {
+              if next_argument.kind != 2 {
+                return function_definition(0, 0, 0, 0, offset, next_argument.start, 13)
+              }
+            }
+          } else {
+            if next_argument.kind != 2 {
+              return function_definition(0, 0, 0, 0, offset, next_argument.start, 13)
+            }
           }
-          call_close = next_token(source, next_argument.start + next_argument.length)
+          call_close = next_token(source, next_argument_value.start + next_argument_value.length)
         }
       }
       if is_symbol(source, call_close, 41) == 0 {
@@ -3661,6 +3707,12 @@ fn while_statement_length(source: bytes, table: [i32], function: function_defini
   let left = next_token(source, statement.start + statement.length)
   let operator = next_token(source, left.start + left.length)
   let length = 12
+  if is_symbol(source, operator, 46) == 1 {
+    let left_field = next_token(source, operator.start + operator.length)
+    let left_field_index = local_struct_field_index(source, table, function, left, left_field)
+    length = length + 2 + u32_leb_length(left_field_index * 4)
+    operator = next_token(source, left_field.start + left_field.length)
+  }
   if is_symbol(source, operator, 40) == 1 {
     let condition_argument = next_token(source, operator.start + operator.length)
     while is_symbol(source, condition_argument, 41) == 0 {
@@ -4660,9 +4712,26 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
   if is_symbol(source, return_open, 40) == 1 {
     let constructor_argument = next_token(source, return_open.start + return_open.length)
     let constructor_offset = 0
+    if struct_field_count(source, returned) >= 0 {
     while is_symbol(source, constructor_argument, 41) == 0 {
-      length = length + 4 + operand_length(source, function, constructor_argument) + u32_leb_length(constructor_offset)
       let constructor_separator = next_token(source, constructor_argument.start + constructor_argument.length)
+      let constructor_value_length = operand_length(source, function, constructor_argument)
+      if is_symbol(source, constructor_separator, 40) == 1 {
+        let constructor_call_argument = next_token(source, constructor_separator.start + constructor_separator.length)
+        constructor_value_length = 0
+        while is_symbol(source, constructor_call_argument, 41) == 0 {
+          constructor_value_length = constructor_value_length + operand_length(source, function, constructor_call_argument)
+          let constructor_call_separator = next_token(source, constructor_call_argument.start + constructor_call_argument.length)
+          if is_symbol(source, constructor_call_separator, 44) == 1 {
+            constructor_call_argument = next_token(source, constructor_call_separator.start + constructor_call_separator.length)
+          } else {
+            constructor_call_argument = constructor_call_separator
+          }
+        }
+        constructor_value_length = constructor_value_length + 1 + u32_leb_length(function_index_in_table(source, table, constructor_argument))
+        constructor_separator = next_token(source, constructor_call_argument.start + constructor_call_argument.length)
+      }
+      length = length + 4 + constructor_value_length + u32_leb_length(constructor_offset)
       while is_arithmetic_operator(source, constructor_separator) == 1 {
         let constructor_arithmetic_operand = next_token(source, constructor_separator.start + constructor_separator.length)
         length = length + operand_length(source, function, constructor_arithmetic_operand) + 1
@@ -4676,6 +4745,19 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
       constructor_offset = constructor_offset + 4
     }
     return length + 3
+    } else {
+      let return_call_argument = constructor_argument
+      while is_symbol(source, return_call_argument, 41) == 0 {
+        length = length + operand_length(source, function, return_call_argument)
+        let return_call_separator = next_token(source, return_call_argument.start + return_call_argument.length)
+        if is_symbol(source, return_call_separator, 44) == 1 {
+          return_call_argument = next_token(source, return_call_separator.start + return_call_separator.length)
+        } else {
+          return_call_argument = return_call_separator
+        }
+      }
+      return length + 1 + u32_leb_length(function_index_in_table(source, table, returned)) + 2
+    }
   }
   length = length + operand_length(source, function, returned)
   let return_current = return_open
@@ -4730,6 +4812,18 @@ fn write_while_statement(buffer: bytes, index: i32, source: bytes, table: [i32],
   byte_set(buffer, position + 2, 3)
   byte_set(buffer, position + 3, 64)
   position = position + 4
+  let left_has_field = is_symbol(source, operator, 46)
+  if is_symbol(source, operator, 46) == 1 {
+    position = write_operand(buffer, position, source, function, left)
+    let left_field = next_token(source, operator.start + operator.length)
+    let left_field_index = local_struct_field_index(source, table, function, left, left_field)
+    byte_set(buffer, position, 40)
+    byte_set(buffer, position + 1, 2)
+    position = position + 2
+    let left_field_offset_written = write_u32_leb(buffer, position, left_field_index * 4)
+    position = position + u32_leb_length(left_field_index * 4)
+    operator = next_token(source, left_field.start + left_field.length)
+  }
   if is_symbol(source, operator, 40) == 1 {
     let condition_argument = next_token(source, operator.start + operator.length)
     while is_symbol(source, condition_argument, 41) == 0 {
@@ -4778,7 +4872,11 @@ fn write_while_statement(buffer: bytes, index: i32, source: bytes, table: [i32],
     position = position + u32_leb_length(condition_called_index)
     operator = next_token(source, condition_argument.start + condition_argument.length)
   } else {
-    position = write_operand(buffer, position, source, function, left)
+    if left_has_field == 0 {
+      position = write_operand(buffer, position, source, function, left)
+    } else {
+      position = position
+    }
   }
   let right = next_token(source, operator.start + operator.length)
   if is_symbol(source, right, 61) == 1 {
@@ -6081,12 +6179,32 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
   if is_symbol(source, return_open, 40) == 1 {
     let constructor_argument = next_token(source, return_open.start + return_open.length)
     let constructor_offset = 0
+    if struct_field_count(source, returned) >= 0 {
     while is_symbol(source, constructor_argument, 41) == 0 {
       byte_set(buffer, position, 65)
       byte_set(buffer, position + 1, 0)
       position = position + 2
-      position = write_operand(buffer, position, source, function, constructor_argument)
       let constructor_separator = next_token(source, constructor_argument.start + constructor_argument.length)
+      if is_symbol(source, constructor_separator, 40) == 1 {
+        let constructor_call_argument = next_token(source, constructor_separator.start + constructor_separator.length)
+        while is_symbol(source, constructor_call_argument, 41) == 0 {
+          position = write_operand(buffer, position, source, function, constructor_call_argument)
+          let constructor_call_separator = next_token(source, constructor_call_argument.start + constructor_call_argument.length)
+          if is_symbol(source, constructor_call_separator, 44) == 1 {
+            constructor_call_argument = next_token(source, constructor_call_separator.start + constructor_call_separator.length)
+          } else {
+            constructor_call_argument = constructor_call_separator
+          }
+        }
+        byte_set(buffer, position, 16)
+        position = position + 1
+        let constructor_called_index = function_index_in_table(source, table, constructor_argument)
+        let constructor_called_written = write_u32_leb(buffer, position, constructor_called_index)
+        position = position + u32_leb_length(constructor_called_index)
+        constructor_separator = next_token(source, constructor_call_argument.start + constructor_call_argument.length)
+      } else {
+        position = write_operand(buffer, position, source, function, constructor_argument)
+      }
       while is_arithmetic_operator(source, constructor_separator) == 1 {
         let constructor_arithmetic = constructor_separator
         let constructor_arithmetic_operand = next_token(source, constructor_arithmetic.start + constructor_arithmetic.length)
@@ -6111,6 +6229,26 @@ fn write_local_body(buffer: bytes, index: i32, source: bytes, table: [i32], func
     byte_set(buffer, position + 1, 0)
     byte_set(buffer, position + 2, 11)
     return buffer
+    } else {
+      let return_call_argument = constructor_argument
+      while is_symbol(source, return_call_argument, 41) == 0 {
+        position = write_operand(buffer, position, source, function, return_call_argument)
+        let return_call_separator = next_token(source, return_call_argument.start + return_call_argument.length)
+        if is_symbol(source, return_call_separator, 44) == 1 {
+          return_call_argument = next_token(source, return_call_separator.start + return_call_separator.length)
+        } else {
+          return_call_argument = return_call_separator
+        }
+      }
+      byte_set(buffer, position, 16)
+      position = position + 1
+      let return_called_index = function_index_in_table(source, table, returned)
+      let return_called_written = write_u32_leb(buffer, position, return_called_index)
+      position = position + u32_leb_length(return_called_index)
+      byte_set(buffer, position, 15)
+      byte_set(buffer, position + 1, 11)
+      return buffer
+    }
   }
   position = write_operand(buffer, position, source, function, returned)
   let return_current = return_open

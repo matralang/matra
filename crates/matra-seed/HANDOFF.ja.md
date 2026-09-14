@@ -1,5 +1,28 @@
 # Matra bootstrap引き継ぎ
 
+## 2026-09-14 追加修正: nested call と while field access
+
+`compile_diagnostic(1, byte_length(source), 3)` を越えるため、parser の return call / local body
+constructor 引数で nested call の括弧を走査し、`local_body_length` と `write_local_body` でも
+通常 function call と struct constructor を分離した。`while current.start < end` のような条件に
+対応するため、`parse_while_statement`、`while_statement_length`、`write_while_statement` の
+左辺 field access も揃えた。self-host 検証時の memory OOB は作業領域不足だったため、
+`verify-self-host.mjs` の確保量を増やした。
+
+現在の fresh stage-2 停止地点は次のとおり。
+
+```text
+Stage 1: ready
+Stage 2: blocked
+compiler.md:2655:58: parse error: expected identifier
+return function_parameter_count_of(source, function) + local_offset
+```
+
+`pnpm run test:seed`（Rust 8件・Node 11件）と `pnpm run lint` は成功している。
+stage-3 の生成と stage-2/stage-3 byte 一致は未検証。次は return call の引数 token 走査と
+`parse_function` / `parse_local_body` の function parameter 列処理を、生成 Wasm の cursor
+不一致を起こさない形で整理する。
+
 ## 2026-09-14 修正: unary minus の parser/length/writer を統一
 
 `return_value = -return_value` を含む local-return conditional の assignment について、
