@@ -1,5 +1,40 @@
 # Matra bootstrap引き継ぎ
 
+## 2026-09-14 修正: function bodyの再代入を共通処理へ統合
+
+貼付された調査ログに対応する未コミット変更から再開し、`3726:3 expected return`を再現した。
+この節を最新の到達点とする。開始時点の変更（array型、mutationの読み飛ばし、LEB writerなど）は保持している。
+
+`parse_local_body`に局所追加されていた前後2組のassignment走査を削除し、
+`is_local_assignment`で`let`とidentifierへの再代入を判別する形へ変更した。
+parser・`local_body_length`・`write_local_body`は同じ判別を使い、既存のinitializer処理と
+`variable_index`による格納を再利用する。関数本体の先頭判定も同じhelperへ揃え、
+parameterへの再代入から始まるfunctionを受理する。単項minusのoperandも検証する。
+`return`は先読み前に除外し、終了判定と不要なtoken allocationの両方を保つ。
+
+回帰testはfunction先頭のparameter再代入、while後のcall assignmentと単項minus、
+conditional後の算術assignmentを含む12回のstatement列をstage-1でcompile・実行する。
+then/elseそれぞれの実行結果は58と70。既存のreturn欠落や不正tokenのtestも維持した。
+
+現在のself-host結果は次のとおり。元のassignment停止は解消したが、stage-2は未生成である。
+
+```text
+Stage 1: ready (97ae1048937c1181b87130c78c834d584ea4f8df483eec2ab63569a3359e012e)
+Stage 2: blocked
+examples/compiler.md:3763:15: parse error: expected integer
+      byte_set(buffer, position, 33)
+```
+
+次はnested conditionalのelse側を含むmutation statementの対応が必要になる。
+開始時点の変更には`byte_set`/`array_set`を`expression_end`で読み飛ばす経路があるが、
+対応するlength加算やstore命令の出力がない。parserだけで次へ進めても、生成compilerが
+bufferやfunction tableを更新できないため、これを実装済みのmutation対応として扱わない。
+then/elseのparser・length・writerを揃え、生成Wasmが実際にmemoryを更新するtestが必要である。
+
+検証済み: `pnpm run test:seed`（Rust 8件・Node 11件）、`pnpm run lint`、`git diff --check`。
+bootstrap failure assertionは現在の停止対象へ更新した。self-hostの成功を示すtestにはしていない。
+stage-3およびstage-2/stage-3 byte一致は未到達。今回の変更は未コミットである。
+
 ## 2026-09-14 追加修正: nested call と while field access
 
 `compile_diagnostic(1, byte_length(source), 3)` を越えるため、parser の return call / local body

@@ -285,6 +285,10 @@ test("bootstrap compiler executes repeated local, while and conditional statemen
   while value${index} < ${index + 1} {
     value${index} = value${index} + 1
   }
+  result = identity(result)
+  result = -result
+  result = -result
+  result = result + 1
   if identity(value${index}) == ${index + 1} {
     let nested${index} = 1
     if flag == 1 {
@@ -293,10 +297,12 @@ test("bootstrap compiler executes repeated local, while and conditional statemen
       result = result + 2
     }
   }
+  result = result + 2
 `).join("")
     await writeFile(input, `module demo
 fn identity(value: i32) -> i32 { return value }
 export fn answer(flag: i32) -> i32 {
+  flag = flag + 0
   let result = 0
 ${statements}
   let final_value = result + 10
@@ -314,8 +320,8 @@ ${statements}
     assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(source, memory, recordPointer))
     const bytes = new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
     const { instance } = await WebAssembly.instantiate(bytes)
-    assert.equal(instance.exports.answer(1), 22)
-    assert.equal(instance.exports.answer(0), 34)
+    assert.equal(instance.exports.answer(1), 58)
+    assert.equal(instance.exports.answer(0), 70)
 
     for (const ending of ["}", "", "123 return value }", "let other = 2 }"]) {
       await writeFile(input, `module demo\nfn answer() -> i32 { let value = 1 ${ending}`)
@@ -503,8 +509,8 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     assert.equal(selfHostResult.status, 1)
     assert.match(selfHostResult.stdout, /Using cached bootstrap compiler\.\nStage 1: ready \([0-9a-f]{64}\)\n/)
     assert.match(selfHostResult.stderr, /Stage 2: blocked/)
-    assert.match(selfHostResult.stderr, /examples\/compiler\.md:\d+:58: parse error: expected identifier/)
-    assert.match(selfHostResult.stderr, /return function_parameter_count_of\(source, function\) \+ local_offset\n\s+\^+$/m)
+    assert.match(selfHostResult.stderr, /examples\/compiler\.md:\d+:15: parse error: expected integer/)
+    assert.match(selfHostResult.stderr, /byte_set\(buffer, position, 33\)\n\s+\^+$/m)
 
     await writeFile(hostInput, "module demo\nfn answer() -> i32 { return value }")
     const hostDiagnostic = spawnSync("node", ["crates/matra-seed/host/compile.mjs", output, hostInput, hostOutput], { cwd: root, encoding: "utf8" })
