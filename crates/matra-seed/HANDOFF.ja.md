@@ -1,5 +1,41 @@
 # Matra bootstrap引き継ぎ
 
+## 2026-09-14 修正: function bodyの固定段数を撤廃
+
+この節を最新の到達点とする。以下の過去ログにある`2140:37 expected }`は解消した。
+`parse_local_body`、`local_body_length`、`write_local_body`の固定continuation列を削除し、
+`let`・`while`・`if`の列を最終`return`まで反復して処理する形へ揃えた。
+local declarationの格納先は連番の加算ではなく`variable_index`で求める。これにより、
+先行するconditional/while内のlocal declarationも含むfunction全体のindexと一致する。
+parserは処理できるstatementがない場合に`expected return`を返し、EOFや閉じ波括弧で停止する。
+
+回帰testは`let -> while -> if`を12回繰り返し、nested local、then/elseのassignment、
+後続localとreturnを含むProgramをstage-1でcompileして実行する。
+修正前は6回目の`let value5 = identity(5)`で`expected }`となり、修正後は両分岐で期待値を返す。
+return欠落、EOF、予期しないtokenもtimeout付きで検証する。
+このtestには繰り返すtoken走査のallocation用に64 pagesを追加している。
+既存の多数のcompileを同一instanceで行うtestも、累積allocationに合わせて追加memoryを8から16 pagesへ増やした。
+hostのmemory見積もりやallocator自体は変更しておらず、大きなProgramのmemory管理は別の課題として残る。
+
+現在の`pnpm bootstrap:verify`は次の結果であり、self-hostはまだ成立していない。
+固定列の削除で行番号が減ったが、停止対象は従来の`parse_local_body`より後の`parse_function`へ進んでいる。
+
+```text
+Stage 1: ready (347fc0d0d74cc6ef7cab7837a4253a4e9c3fec30192161ca32826137dd2e9dfa)
+Stage 2: blocked
+examples/compiler.md:2018:22: parse error: expected integer
+      return_value = -return_value
+```
+
+検証は`pnpm run test:seed`（Rust 8件・Node 11件）、`pnpm run lint`、
+`git diff --check`を実行した。
+
+次はassignmentの単項minusをparser・length・writerで一組として扱う。
+診断用に`0 - return_value`へ書き換えると、その先の
+`return compile_diagnostic(1, byte_length(source), 3)`のnested callまで進んだが、
+この書き換えは撤回し、元の単項minusを保持した。
+stage-2/stage-3生成とbyte一致は引き続き未検証である。
+
 ## 2026-09-14 追加調査: second continuation の dispatch probe
 
 `parse_local_body` の `second_continuation` 段について、parser・`local_body_length`・

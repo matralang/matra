@@ -6,6 +6,7 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
 import { test } from "node:test"
+import { cachedCompiler } from "../host/bootstrap-compiler.mjs"
 import { formatCompilerDiagnostic, sourceExcerpt, sourcePosition } from "../host/compiler-host.mjs"
 
 const root = new URL("../../..", import.meta.url)
@@ -274,6 +275,61 @@ export fn answer(value: i32, record: pair) -> i32 {
   }
 })
 
+test("bootstrap compiler executes repeated local, while and conditional statements", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "matra-seed-statement-sequence-"))
+  const input = join(directory, "input.matra")
+  const output = join(directory, "output.wasm")
+  try {
+    const statements = Array.from({ length: 12 }, (_, index) => `
+  let value${index} = identity(${index})
+  while value${index} < ${index + 1} {
+    value${index} = value${index} + 1
+  }
+  if identity(value${index}) == ${index + 1} {
+    let nested${index} = 1
+    if flag == 1 {
+      result = result + nested${index}
+    } else {
+      result = result + 2
+    }
+  }
+`).join("")
+    await writeFile(input, `module demo
+fn identity(value: i32) -> i32 { return value }
+export fn answer(flag: i32) -> i32 {
+  let result = 0
+${statements}
+  let final_value = result + 10
+  return final_value
+}
+`)
+    const compiler = await WebAssembly.instantiate(await readFile(await cachedCompiler()))
+    const { alloc, compile, memory } = compiler.instance.exports
+    memory.grow(64)
+    const source = await readFile(input)
+    const pointer = alloc(source.length)
+    new Uint8Array(memory.buffer, pointer, source.length).set(source)
+    const recordPointer = compile(pointer, source.length)
+    const record = new DataView(memory.buffer, recordPointer, 36)
+    assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(source, memory, recordPointer))
+    const bytes = new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
+    const { instance } = await WebAssembly.instantiate(bytes)
+    assert.equal(instance.exports.answer(1), 22)
+    assert.equal(instance.exports.answer(0), 34)
+
+    for (const ending of ["}", "", "123 return value }", "let other = 2 }"]) {
+      await writeFile(input, `module demo\nfn answer() -> i32 { let value = 1 ${ending}`)
+      const invalid = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", input, output], {
+        cwd: root, encoding: "utf8", timeout: 30000,
+      })
+      assert.equal(invalid.status, 1, invalid.stderr)
+      assert.match(invalid.stderr, /parse error: expected return/)
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test("matra-seed compiles a Markdown code block to an executable Wasm module", async () => {
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-"))
   const input = join(directory, "example.md")
@@ -396,7 +452,7 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     assert.equal(result.status, 0, result.stderr)
 
     const module = await WebAssembly.instantiate(await readFile(output))
-    module.instance.exports.memory.grow(8)
+    module.instance.exports.memory.grow(16)
 
     const hostInput = join(directory, "host-input.matra")
     const hostOutput = join(directory, "host-output.wasm")
@@ -447,8 +503,8 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     assert.equal(selfHostResult.status, 1)
     assert.match(selfHostResult.stdout, /Using cached bootstrap compiler\.\nStage 1: ready \([0-9a-f]{64}\)\n/)
     assert.match(selfHostResult.stderr, /Stage 2: blocked/)
-    assert.match(selfHostResult.stderr, /examples\/compiler\.md:2140:37: parse error: expected \}/)
-    assert.match(selfHostResult.stderr, /if is_if_keyword\(source, current\) == 1 \{\n\s+\^$/m)
+    assert.match(selfHostResult.stderr, /examples\/compiler\.md:\d+:22: parse error: expected integer/)
+    assert.match(selfHostResult.stderr, /return_value = -return_value\n\s+\^$/m)
 
     await writeFile(hostInput, "module demo\nfn answer() -> i32 { return value }")
     const hostDiagnostic = spawnSync("node", ["crates/matra-seed/host/compile.mjs", output, hostInput, hostOutput], { cwd: root, encoding: "utf8" })
