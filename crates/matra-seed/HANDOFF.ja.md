@@ -5,6 +5,32 @@
 Rust seed compilerからMatra製compiler Wasmを生成し、そのcompiler自身で同じsourceを再compileする
 bootstrapを成立させる。最終的なself-host判定はstage-2とstage-3のbyte一致とする。
 
+## 2026-09-14 追加調査: `parse_local_body` の固定段停止
+
+直近の基準commit `006accd` で作業ツリーはclean。`pnpm bootstrap:verify`の実測結果は次のとおり。
+
+```text
+Stage 1: ready
+Stage 2: blocked
+examples/compiler.md:2140:37: parse error: expected }
+  if is_if_keyword(source, current) == 1 {
+```
+
+`parse_local_body`の`second_continuation_while`直後にある単発`if`へ、条件不成立時の
+`else { current = current }`を追加するprobeを行ったが、停止位置は変わらなかったため撤回した。
+直前の`second_continuation_while`自身にある同型のno-op `else`を除くprobeは、停止位置を`2137:37`へ
+後退させたため撤回した。従って、このno-op `else`の有無だけでは原因を解消できない。
+
+parserは同じcontinuation列をlength/write側より細かい固定段で処理している。特にparserには
+`second_continuation_while`後の単発conditionalがある一方、length/write側も同じstatementを処理するが、
+制御フローと失敗経路の形が一致していない。parserだけを変更すると過去のprobeと同様に、stage-2の
+停止位置を進めてもlength/writeのbyte cursorがずれてWasm OOBになる可能性が高い。次回はこの段を
+parser・`local_body_length`・`write_local_body`・local数/index走査の同時変更単位として、最小の
+`while -> if -> let -> return`列で対応表を作る。固定段数の機械的な追加やparserだけの反復化は採用しない。
+
+今回の復元後に`cargo test --manifest-path crates/matra-seed/Cargo.toml`と
+`node --test crates/matra-seed/tests/*.test.mjs`を実行し、Rust 8件・Node 10件が成功した。
+
 ## 2026-09-14 代入の出力不整合を修正
 
 `loop_conditional_length`、`loop_local_conditional_length`、`write_loop_conditional`、
