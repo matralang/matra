@@ -1,5 +1,31 @@
 # Matra bootstrap引き継ぎ
 
+## 2026-09-14 修正: unary minus の parser/length/writer を統一
+
+`return_value = -return_value` を含む local-return conditional の assignment について、
+parser が `-` の次の operand を検証して `expression_end` まで進むようにした。
+length/write は共通の `operand_length`、`write_operand` を使い、`-x` を
+`i32.const 0; x; i32.sub` へ lower する。local body の通常 RHS cursor は既存の
+field/call 処理を壊さないよう維持し、unary RHS だけ次 operand 直後へ進める。
+
+この修正で `pnpm bootstrap:verify` は unary 停止を越え、次の nested call まで進んだ。
+現在の停止は次のとおり。
+
+```text
+Stage 1: ready
+Stage 2: blocked
+examples/compiler.md:2220:43: parse error: expected integer
+  return compile_diagnostic(1, byte_length(source), 3)
+```
+
+`compile_diagnostic` は struct constructor であり、第2引数の `byte_length(source)` を
+constructor argument の length/write がまだ通常 operand として扱っている。nested call 対応を
+追加する probe は Wasm memory OOB と既存回帰を起こしたため撤回した。次はこの constructor
+argument の nested call を、既存の call assignment 実装と同じ byte 列・source cursor 契約で
+最小変更として実装する。
+
+検証済み: Rust 8件、Node 10件、`pnpm run lint`、`git diff --check`。
+
 ## 2026-09-14 修正: function bodyの固定段数を撤廃
 
 この節を最新の到達点とする。以下の過去ログにある`2140:37 expected }`は解消した。
