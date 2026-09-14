@@ -1,5 +1,27 @@
 # Matra bootstrap引き継ぎ
 
+## 2026-09-14 追加調査: second continuation の dispatch probe
+
+`parse_local_body` の `second_continuation` 段について、parser・`local_body_length`・
+`write_local_body` の field comparison dispatch を一時的に同じ判定へ揃えた。
+parser の既存判定は `operator == '.'` の場合に右辺と本体先頭を確認し、一般 conditional と
+local-return conditional を選ぶ。一方、length/write 側の同じ段は dot 形式でも常に
+local-return conditional へ送っていたため、source cursor の不一致候補として検証した。
+
+検証結果は次のとおり。
+
+- ローカル変数名の重複と引数契約を修正すると Stage 1 は生成できた
+- Stage 2 は従来どおり `compiler.md:2140:37 expected }` で停止した
+- `pnpm run test:seed` は Rust 8件・Node 10件すべて成功した
+- 停止位置が変わらなかったため、probe は撤回し作業ツリーを clean に戻した
+
+従って、現在の blocker は `second_continuation` の top-level dispatch だけではない。次は
+`parse_loop_conditional_if`、`loop_local_conditional_length`、`write_loop_local_conditional` の
+nested conditional body と `else` 後の token 消費を1 statement単位で照合する。特に
+field comparison の nested `if` が `parse_loop_local_conditional` へ送られた後、parser が返す
+`position`、length が加算する終端 byte、writer が更新する終端 byte が同じ closing braceを
+指すかを確認する。固定段数の追加や parser 単独の変更は、今回の結果から採用しない。
+
 ## 目的
 
 Rust seed compilerからMatra製compiler Wasmを生成し、そのcompiler自身で同じsourceを再compileする
