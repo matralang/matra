@@ -3965,7 +3965,7 @@ fn while_statement_length(source: bytes, table: [i32], function: function_defini
   if is_symbol(source, operator, 46) == 1 {
     let left_field = next_token(source, operator.start + operator.length)
     let left_field_index = local_struct_field_index(source, table, function, left, left_field)
-    length = length + 2 + u32_leb_length(left_field_index * 4)
+    length = length + operand_length(source, function, left) + 2 + u32_leb_length(left_field_index * 4)
     operator = next_token(source, left_field.start + left_field.length)
   }
   if is_symbol(source, operator, 40) == 1 {
