@@ -4141,7 +4141,7 @@ fn loop_conditional_length(source: bytes, table: [i32], function: function_defin
   let called = next_token(source, statement.start + statement.length)
   let call_open = next_token(source, called.start + called.length)
   let argument = next_token(source, call_open.start + call_open.length)
-  let length = 5 + u32_leb_length(function_index_in_table(source, table, called))
+  let length = 5 + function_index_length(source, table, called)
   while is_symbol(source, argument, 41) == 0 {
     let separator = next_token(source, argument.start + argument.length)
     if is_symbol(source, separator, 46) == 1 {
@@ -4700,7 +4700,7 @@ fn loop_local_conditional_length(source: bytes, table: [i32], function: function
                     else_assignment_argument = else_assignment_separator
                   }
                 }
-                length = length + 1 + u32_leb_length(function_index_in_table(source, table, else_assignment_operand))
+                length = length + 1 + function_index_length(source, table, else_assignment_operand)
                 else_assignment_after_operand = next_token(source, else_assignment_argument.start + else_assignment_argument.length)
               } else {
                 length = length + operand_length(source, function, else_assignment_operand)
@@ -4718,7 +4718,7 @@ fn loop_local_conditional_length(source: bytes, table: [i32], function: function
                         else_assignment_arithmetic_argument = else_assignment_arithmetic_separator
                       }
                     }
-                    length = length + 1 + u32_leb_length(function_index_in_table(source, table, else_assignment_next_operand))
+                    length = length + 1 + function_index_length(source, table, else_assignment_next_operand)
                     else_assignment_after_operand = next_token(source, else_assignment_arithmetic_argument.start + else_assignment_arithmetic_argument.length)
                   } else {
                     length = length + operand_length(source, function, else_assignment_next_operand)
@@ -4726,7 +4726,7 @@ fn loop_local_conditional_length(source: bytes, table: [i32], function: function
                   length = length + 1
                 }
               }
-              length = length + 1 + u32_leb_length(variable_index(source, function, else_assignment_target))
+              length = length + 1 + variable_index_length(source, function, else_assignment_target)
               else_statement = else_assignment_after_operand
           }
           }
@@ -4774,7 +4774,7 @@ fn local_return_conditional_length(source: bytes, table: [i32], function: functi
                 nested_condition_argument = nested_condition_separator
               }
             }
-            length = length + 1 + u32_leb_length(function_index_in_table(source, table, condition_argument))
+            length = length + 1 + function_index_length(source, table, condition_argument)
             condition_separator = next_token(source, nested_condition_argument.start + nested_condition_argument.length)
           } else {
             length = length + operand_length(source, function, condition_argument)
@@ -4786,7 +4786,7 @@ fn local_return_conditional_length(source: bytes, table: [i32], function: functi
           condition_argument = condition_separator
         }
       }
-      length = length + 1 + u32_leb_length(function_index_in_table(source, table, left))
+      length = length + 1 + function_index_length(source, table, left)
       operator = next_token(source, condition_argument.start + condition_argument.length)
     } else {
       length = length + operand_length(source, function, left)
@@ -4839,7 +4839,7 @@ fn local_return_conditional_length(source: bytes, table: [i32], function: functi
           length = length + operand_length(source, function, body_next_operand) + 1
           body_after_operand = next_token(source, body_next_operand.start + body_next_operand.length)
         }
-        length = length + 1 + u32_leb_length(variable_index(source, function, body_statement))
+        length = length + 1 + variable_index_length(source, function, body_statement)
         body_statement = body_after_operand
       }
     }
@@ -4890,13 +4890,15 @@ fn local_return_conditional_length(source: bytes, table: [i32], function: functi
       constructor_offset = constructor_offset + 4
     }
     if struct_field_count(source, value) < 0 {
-      length = length + 1 + u32_leb_length(function_index_in_table(source, table, value))
+      length = length + 1 + function_index_length(source, table, value)
     } else {
       length = length + 2
     }
     return length
   }
-  return length + operand_length(source, function, value)
+  let value_length = operand_length(source, function, value)
+  let result = length + value_length
+  return result
 }
 
 fn local_body_length(source: bytes, table: [i32], function: function_definition) -> i32 {
@@ -4955,7 +4957,7 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
               argument = argument_separator
             }
           }
-          length = length + 1 + u32_leb_length(function_index_in_table(source, table, operand))
+          length = length + 1 + function_index_length(source, table, operand)
           current = next_token(source, argument.start + argument.length)
         } else {
           length = length + operand_length(source, function, operand)
@@ -5026,7 +5028,7 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
             constructor_call_argument = constructor_call_separator
           }
         }
-        constructor_value_length = constructor_value_length + 1 + u32_leb_length(function_index_in_table(source, table, constructor_argument))
+        constructor_value_length = constructor_value_length + 1 + function_index_length(source, table, constructor_argument)
         constructor_separator = next_token(source, constructor_call_argument.start + constructor_call_argument.length)
       }
       length = length + 4 + constructor_value_length + u32_leb_length(constructor_offset)
@@ -5054,7 +5056,7 @@ fn local_body_length(source: bytes, table: [i32], function: function_definition)
           return_call_argument = return_call_separator
         }
       }
-      return length + 1 + u32_leb_length(function_index_in_table(source, table, returned)) + 2
+      return length + 1 + function_index_length(source, table, returned) + 2
     }
   }
   length = length + operand_length(source, function, returned)
@@ -5093,12 +5095,16 @@ fn write_operand(buffer: bytes, index: i32, source: bytes, function: function_de
     byte_set(buffer, index, 65)
     let value = read_small_integer(source, operand)
     let integer_written = write_i32_leb(buffer, index + 1, value)
-    return index + 1 + i32_leb_length(value)
+    let integer_length = i32_leb_length(value)
+    let result = index + 1 + integer_length
+    return result
   }
   byte_set(buffer, index, 32)
   let variable = variable_index(source, function, operand)
   let variable_written = write_u32_leb(buffer, index + 1, variable)
-  return index + 1 + u32_leb_length(variable)
+  let variable_length = u32_leb_length(variable)
+  let variable_result = index + 1 + variable_length
+  return variable_result
 }
 
 fn mutation_expression_length(source: bytes, function: function_definition, operand: token) -> i32 {
@@ -6853,23 +6859,34 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
     let sized_body_kind = array_get(table, index * 7 + 4)
     let body_length = 4
     if sized_body_kind == 0 {
-      body_length = 3 + i32_leb_length(array_get(table, index * 7 + 5))
+      let integer_body_value = array_get(table, index * 7 + 5)
+      let integer_body_value_length = i32_leb_length(integer_body_value)
+      body_length = 3 + integer_body_value_length
     }
     if sized_body_kind == 3 {
-      body_length = 3 + i32_leb_length(array_get(table, index * 7 + 5))
+      let signed_body_value = array_get(table, index * 7 + 5)
+      let signed_body_value_length = i32_leb_length(signed_body_value)
+      body_length = 3 + signed_body_value_length
     }
     if sized_body_kind == 1 {
-      body_length = 3 + u32_leb_length(array_get(table, index * 7 + 5))
+      let unsigned_body_value = array_get(table, index * 7 + 5)
+      let unsigned_body_value_length = u32_leb_length(unsigned_body_value)
+      body_length = 3 + unsigned_body_value_length
     }
     if sized_body_kind == 2 {
       let sized_argument_kind = array_get(table, index * 7 + 6)
-      let sized_target_length = u32_leb_length(array_get(table, index * 7 + 5))
+      let sized_target = array_get(table, index * 7 + 5)
+      let sized_target_length = u32_leb_length(sized_target)
       body_length = 3 + sized_target_length
       if sized_argument_kind == 1 {
-        body_length = 4 + i32_leb_length(array_get(table, index * 7 + 7)) + sized_target_length
+        let signed_argument = array_get(table, index * 7 + 7)
+        let signed_argument_length = i32_leb_length(signed_argument)
+        body_length = 4 + signed_argument_length + sized_target_length
       }
       if sized_argument_kind == 2 {
-        body_length = 4 + u32_leb_length(array_get(table, index * 7 + 7)) + sized_target_length
+        let unsigned_argument = array_get(table, index * 7 + 7)
+        let unsigned_argument_length = u32_leb_length(unsigned_argument)
+        body_length = 4 + unsigned_argument_length + sized_target_length
       }
     }
     if sized_body_kind == 4 {
@@ -6884,8 +6901,12 @@ fn multiple_function_module(source: bytes, table: [i32]) -> bytes {
     code_payload_length = code_payload_length + u32_leb_length(body_length) + body_length
     index = index + 1
   }
-  let last_name_start = array_get(table, (count - 1) * 7 + 1)
-  let last_name_length = array_get(table, (count - 1) * 7 + 2)
+  let last_index = count - 1
+  let last_table_offset = last_index * 7
+  let last_name_start_index = last_table_offset + 1
+  let last_name_length_index = last_table_offset + 2
+  let last_name_start = array_get(table, last_name_start_index)
+  let last_name_length = array_get(table, last_name_length_index)
   let type_payload_length = u32_leb_length(count)
   let function_payload_length = u32_leb_length(count)
   index = 0
