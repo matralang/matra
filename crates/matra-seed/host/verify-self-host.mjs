@@ -56,7 +56,7 @@ function programSource(markdown, fenceName) {
 async function compile(compilerBytes, source) {
   const compiler = await WebAssembly.instantiate(compilerBytes)
   const { alloc, compile: compileSource, memory } = compiler.instance.exports
-  memory.grow(Math.ceil((source.length * 4) / 65536) + 16)
+  memory.grow(Math.ceil((source.length * 4) / 65536) + 128)
   const sourcePointer = alloc(source.length)
   new Uint8Array(memory.buffer, sourcePointer, source.length).set(source)
   const recordPointer = compileSource(sourcePointer, source.length)

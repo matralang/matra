@@ -2516,7 +2516,11 @@ fn function_parameter_count_of(source: bytes, function: function_definition) -> 
     if is_bytes_type(source, parameter_type) == 1 {
       count = count + 2
     } else {
+    if is_symbol(source, parameter_type, 91) == 1 {
+      count = count + 2
+    } else {
       count = count + 1
+    }
     }
     let parameter_type_end = type_end(source, parameter_type)
     current = next_token(source, parameter_type_end.start + parameter_type_end.length)
@@ -2541,7 +2545,11 @@ fn returned_parameter_index(source: bytes, function: function_definition, return
     if is_bytes_type(source, parameter_type) == 1 {
       index = index + 2
     } else {
+    if is_symbol(source, parameter_type, 91) == 1 {
+      index = index + 2
+    } else {
       index = index + 1
+    }
     }
     let parameter_type_end = type_end(source, parameter_type)
     current = next_token(source, parameter_type_end.start + parameter_type_end.length)
@@ -7158,30 +7166,10 @@ fn multiple_function_diagnostic(source: bytes, table: [i32]) -> compile_diagnost
   while index < count {
     let parameter_count = array_get(table, index * 7 + 3)
     let body_kind = array_get(table, index * 7 + 4)
-    if body_kind == 1 {
-      if parameter_count != 1 {
-        return compile_diagnostic(3, current_function.name_start, 0)
-      }
-    }
     if body_kind == 2 {
       let called_index = array_get(table, index * 7 + 5)
-      let called_token = returned_value_token(source, current_function)
-      let argument_token = call_argument_token(source, current_function)
       if called_index < 0 {
-        return compile_diagnostic(2, called_token.start, 0)
-      }
-      let argument_kind = array_get(table, index * 7 + 6)
-      let argument_count = 0
-      if argument_kind != 0 {
-        argument_count = 1
-      }
-      if array_get(table, called_index * 7 + 3) != argument_count {
-        return compile_diagnostic(3, argument_token.start, 0)
-      }
-      if argument_kind == 2 {
-        if parameter_count != 1 {
-          return compile_diagnostic(3, argument_token.start, 0)
-        }
+        return compile_diagnostic(2, current_function.name_start, 0)
       }
     }
     index = index + 1
