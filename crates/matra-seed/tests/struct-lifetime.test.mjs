@@ -53,6 +53,37 @@ export fn probe() -> i32 {
     assert.equal(generated.probe(), 42)
   })
 
+  test(`${name} materializes flat metadata after scalar extraction`, async () => {
+    const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
+    const program = markdown.split("```compiler.matra.program\n")[1]
+    const source = program.slice(0, program.indexOf("// A temporary execution probe")) + `
+fn metadata(source: bytes, offset: i32) -> [i32] {
+  let value = next_token(source, offset)
+  let kind = value.kind
+  let start = value.start
+  let length = value.length
+  let record = allocate_i32_array(3)
+  array_set(record, 0, kind)
+  array_set(record, 1, start)
+  array_set(record, 2, length)
+  return record
+}
+export fn probe(source: bytes) -> i32 {
+  let record = metadata(source, 7)
+  let kind = array_get(record, 0)
+  let start = array_get(record, 1)
+  let length = array_get(record, 2)
+  let result = kind + start
+  result = result + length
+  return result
+}
+`
+    const { instance: { exports: generated } } = await WebAssembly.instantiate(await compile(source))
+    const bytes = new TextEncoder().encode("module compiler\n\nstruct")
+    new Uint8Array(generated.memory.buffer, 4096, bytes.length).set(bytes)
+    assert.equal(generated.probe(4096, bytes.length), 16)
+  })
+
   test(`${name} preserves consecutive lexer results and aliases`, async () => {
     const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
     const program = markdown.split("```compiler.matra.program\n")[1]

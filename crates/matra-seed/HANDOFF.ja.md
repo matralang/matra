@@ -79,6 +79,10 @@ seed/bootstrap回帰で試したが、現行のarray local/return ABIが期待�
 期待値42を確認した。struct lifetime suiteは8件すべて成功した。これにより、次のflat metadata実装は
 temporary structではなく、既存のarray pointer+length 2-slot ABI上へ段階的に載せられる。
 
+続けて`next_token()`の結果から`kind/start/length`をscalar localへ先に抽出し、その後に`[i32]` recordを
+allocateして保存するflat metadata回帰を追加した。seed/bootstrapの両方で成功し、struct lifetime suiteは
+10件すべて通過した。重要な契約は、temporary struct pointerをarray allocationより後まで保持しないことである。
+
 ### 制約と検証
 
 - sidecar cacheの構築中に`function_definition` pointerを保持しない。各loop iterationでposition scalarだけを保持する。
