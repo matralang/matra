@@ -87,6 +87,11 @@ allocateして保存するflat metadata回帰を追加した。seed/bootstrapの
 scalar fieldからflat `[i32]` recordをmaterializeする最小形へ整理した。この独立ABIテストはseed/bootstrap両方で
 成功している。次の実装ではparse結果から必要fieldをscalar化した後、このrecordへ格納する。
 
+`record_function`へこの契約を最小適用し、`name_start/name_length`をarray write前にscalarへ抽出してから
+既存7-field tableへ保存する変更を追加した。struct/array lifetime suiteは12件すべて成功したが、Stage 2は
+30秒timeoutのままで性能短縮は確認できなかった。これは性能改善ではなく、metadata materialization時の
+temporary struct参照を減らすABI安定化単位として扱う。
+
 ### 制約と検証
 
 - sidecar cacheの構築中に`function_definition` pointerを保持しない。各loop iterationでposition scalarだけを保持する。

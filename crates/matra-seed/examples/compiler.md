@@ -3660,9 +3660,11 @@ fn mark_invalid(table: [i32]) -> [i32] {
 
 fn record_function(table: [i32], count: i32, function: function_definition, parameter_count: i32, body_kind: i32, body_value: i32) -> [i32] {
   let ignored = 0
+  let name_start = function.name_start
+  let name_length = function.name_length
   let base = count * 7
-  array_set(table, base + 1, function.name_start)
-  array_set(table, base + 2, function.name_length)
+  array_set(table, base + 1, name_start)
+  array_set(table, base + 2, name_length)
   array_set(table, base + 3, parameter_count)
   array_set(table, base + 4, body_kind)
   array_set(table, base + 5, body_value)
