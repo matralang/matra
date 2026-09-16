@@ -109,6 +109,20 @@ seed subsetでは`allocate_bytes(size)`がbump allocatorから`bytes` valueを�
 `byte_pointer(bytes)`は`bytes` valueの先頭pointerを返します。これらは自己ホストcompilerの
 binary emitterとABI record向けの暫定intrinsicです。
 
+## 現在のsubsetにおけるstructの領域管理
+
+constructorの引数は左から右へ一度ずつ評価し、その後に結果の領域を確保する。引数内のnested callが
+別の領域を確保しても、各fieldの格納先は変わらない。struct localとaliasは、後続のstruct-return callを
+またいでも有効である。
+
+bytes・arrayの確保、pointerの取り出し、memoryの変更を行わないcall graphでは、関数のreturn時に
+一時領域を回収できる。scalar returnはその呼び出しの一時領域を全回収し、新規struct returnは返すfieldだけを
+残す。呼び出し前から存在したstructを返す場合は、元のpointerを維持する。領域の確保やmemoryの変更を行う
+call graphはこの最適化から除外し、外へ返した領域を保持する。
+
+これは関数呼び出し単位の回収であり、汎用garbage collectorではない。長時間returnしない関数内での確保は、
+hostが用意したmemoryを使い切る可能性がある。
+
 ## Compiler ABI draft
 
 compiler moduleは`memory`、`alloc(size: i32) -> i32`、

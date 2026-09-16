@@ -1,31 +1,34 @@
 import { createHash } from "node:crypto"
 import { readFile } from "node:fs/promises"
+import { Worker } from "node:worker_threads"
 import { fileURLToPath } from "node:url"
 import { cachedCompiler, CommandError } from "./bootstrap-compiler.mjs"
-import { formatCompilerDiagnostic } from "./compiler-host.mjs"
 
 const compilerSourcePath = fileURLToPath(new URL("../examples/compiler.md", import.meta.url))
 
 try {
   const markdown = await readFile(compilerSourcePath, "utf8")
   const source = new TextEncoder().encode(programSource(markdown, "compiler.matra.program"))
+  const verificationStarted = performance.now()
   const stage1 = await readFile(await cachedCompiler())
-  console.log(`Stage 1: ready (${checksum(stage1)})`)
+  console.log(`Stage 1: ready (${checksum(stage1)}; ${elapsedSeconds(verificationStarted)}s)`)
 
+  const stage2Started = performance.now()
   const stage2 = await compile(stage1, source)
   if (!stage2.output) {
     console.error("Stage 2: blocked")
-    console.error(stage2.diagnostic)
+    console.error(`${stage2.diagnostic} (${elapsedSeconds(stage2Started)}s)`)
     process.exitCode = 1
   } else {
-    console.log(`Stage 2: ready (${checksum(stage2.output)})`)
+    console.log(`Stage 2: ready (${checksum(stage2.output)}; ${elapsedSeconds(stage2Started)}s)`)
+    const stage3Started = performance.now()
     const stage3 = await compile(stage2.output, source)
     if (!stage3.output) {
       console.error("Stage 3: blocked")
-      console.error(stage3.diagnostic)
+      console.error(`${stage3.diagnostic} (${elapsedSeconds(stage3Started)}s)`)
       process.exitCode = 1
     } else {
-      console.log(`Stage 3: ready (${checksum(stage3.output)})`)
+      console.log(`Stage 3: ready (${checksum(stage3.output)}; ${elapsedSeconds(stage3Started)}s)`)
       if (Buffer.compare(stage2.output, stage3.output) === 0) {
         console.log("Self-host verification: stage 2 and stage 3 are byte-identical.")
       } else {
@@ -54,21 +57,36 @@ function programSource(markdown, fenceName) {
 }
 
 async function compile(compilerBytes, source) {
-  const compiler = await WebAssembly.instantiate(compilerBytes)
-  const { alloc, compile: compileSource, memory } = compiler.instance.exports
-  memory.grow(Math.ceil((source.length * 4) / 65536) + 128)
-  const sourcePointer = alloc(source.length)
-  new Uint8Array(memory.buffer, sourcePointer, source.length).set(source)
-  const recordPointer = compileSource(sourcePointer, source.length)
-  const record = new DataView(memory.buffer, recordPointer, 36)
-  if (record.getInt32(0, true) !== 0) {
-    return { diagnostic: formatCompilerDiagnostic(source, memory, recordPointer, compilerSourcePath) }
-  }
-  const outputPointer = record.getInt32(4, true)
-  const outputLength = record.getInt32(8, true)
-  return { output: Buffer.from(new Uint8Array(memory.buffer, outputPointer, outputLength)) }
+  const timeout = Number(process.env.MATRA_SELF_HOST_TIMEOUT_MS ?? 180000)
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL("./compile-worker.mjs", import.meta.url), {
+      workerData: {
+        compilerBytes,
+        source,
+        compilerSourcePath,
+      },
+    })
+    const timer = setTimeout(() => {
+      worker.terminate()
+      resolve({ diagnostic: `Self-host compile exceeded ${timeout} ms and was terminated.` })
+    }, timeout)
+    worker.once("message", result => {
+      clearTimeout(timer)
+      worker.terminate()
+      resolve({ output: result.output ? Buffer.from(result.output) : undefined, diagnostic: result.diagnostic })
+    })
+    worker.once("error", error => {
+      clearTimeout(timer)
+      worker.terminate()
+      reject(error)
+    })
+  })
 }
 
 function checksum(bytes) {
   return createHash("sha256").update(bytes).digest("hex")
+}
+
+function elapsedSeconds(started) {
+  return ((performance.now() - started) / 1000).toFixed(1)
 }

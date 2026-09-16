@@ -1,5 +1,743 @@
 # Matra bootstrap引き継ぎ
 
+## 2026-09-16 verify-self-host の長時間実行検知
+
+`verify-self-host.mjs`のStage 2/3 compileをWorkerへ隔離し、既定180秒を超えた場合はWorkerをterminateして
+`Self-host compile exceeded ... ms and was terminated.`と報告するようにした。通常の成功経路とStage 2/3の
+byte equality判定は変更していない。待ち時間を調整する場合は`MATRA_SELF_HOST_TIMEOUT_MS`を設定する。
+1秒設定でStage 2 timeoutの検知を確認済みである。
+
+Stage 1/2/3ごとの経過時間も検証ログへ追加した。表示形式は`Stage 2: ready (...; 12.3s)`で、blocked時も
+診断末尾にそのStageの経過時間を付ける。これによりmetadata再解析の高速化前後を同じログで比較できる。
+
+標準の`pnpm bootstrap:verify`ではStage 1後にStage 2が180秒でtimeoutした。上限を`600000` msへ延長しても
+Stage 1後の無出力が続いたため、10分を待たず停止した。現状は単なる初回build遅延ではなく、Stage 2 compilerの
+過剰な再解析または実質的な停止として扱う。タイムアウト機構により端末を手動停止せず検知できる。
+
+## 2026-09-16 追加調査: function metadata field は正常、helper内で上書き
+
+Stage 2 compilerから`function_at_index(source, 3)`の値を個別probeで確認したところ、
+function #3 (`next_token`)のmetadataは`name_start = 832`、`position = 2403`で正常だった。
+同じ値を`local_count_of`へ渡すprobeも`count = 5`を返したため、巨大な
+`invalid local index: 89457`はfunction_at_indexのreturnそのものではない。
+
+`local_body_length`、`write_local_body`、`assignment_length`、`write_assignment`、
+`operand_length`、`write_operand`の各入口で`function_definition`を再構築する試行は、
+indexを変化させるだけでStage 3を通過せず、最後にcompiler sourceから撤回した。
+一時probeも撤回済みである。次回は同じhelper内でtoken scan後に参照しているmetadata fieldを、
+一度の処理につきscalarへ退避する設計に限定する。Stage 2/3 byte equality未達、コミット未作成。
+
+追加で`debug_scratch_index(source, 3)`を一時exportして確認したところ、constructor scratchの計算値は
+`8`で正常だった。一方、Stage 3 bodyには`local.set/get`のindexとしてStage 2 outputのbytes pointer
+（`89457`付近）が出力される。従ってconstructor scratch算術ではなく、expression emitterが
+local variableの値とlocal indexを取り違えている経路が残る。debug exportとcaller copy実験は撤回済み。
+
+その後、`function_parameter_close/count`、`returned_parameter_index`、`variable_index`、
+`lexical_variable_index`、`fixed_variable_index`、`local_count_of`、`function_reclaims_heap`で
+metadata fieldをscalar保存し、name scalar版helperへ分離した。Stage 3の停止値は段階的に変化し、
+現在は`function #3 invalid local index: 89814 @+2078`。struct lifetime回帰6件と`cargo check`は成功。
+まだbyte equalityには到達していない。残る候補はtop-level function scan/export/body metadata経路で、
+token scan後に`function.position`またはname fieldを直接参照する箇所を同じscalar契約へ揃える必要がある。
+
+さらに`let ignored = buffer`のようなbytes variable RHSを`local_slot_width`で2 slotとして数える
+`is_bytes_variable`を追加した。Stage 1/2は成功し、struct lifetime回帰6件も成功したが、Stage 3は
+`function #3 invalid local index: 89806 @+2078`で停止する。停止値はわずかに変わったためlocal slot
+混同の一部には効いているが、bytes pointerがlocal indexへ流れる経路は未解決である。
+
+現時点では、`write_bytes_argument`/`bytes_argument_length`の同一ABI経路で、bytes-return assignmentの
+lengthとwriterのcursorが一致せず、後続の`local.set` opcodeがbytes pointerをoperandとして読む可能性が
+高い。`is_bytes_variable`自体は一時exportなしで保持し、Rust checkとstruct lifetime回帰6件は成功している。
+
+`bytes_argument_length`と`write_bytes_argument`のindex解決処理は照合上同型だった。`is_bytes_variable`に
+よるbytes RHSの2-slot計上はStage 1/2と回帰6件を維持し、停止値を`89814`から`89806`へ変えたが、
+Stage 3は依然としてfunction #3のinvalid localで停止する。残る候補はbytes-return assignmentの
+`value_expression_length`と`write_value_expression`、またはその後の`write_assignment`のcursor/ABI不一致。
+
+`pnpm run test:seed`はRust 8件を含むNode 30件中29件成功した。唯一の失敗は既存のempty source
+self-host assertionで、Stage 3 invalid localにより期待recordを取得できず`null !== 1`になったもの。
+bytes slot修正による他のfocused ABI回帰は発生していない。
+
+その後、一時的な`debug_local_body_length`/`debug_local_body_written`を追加してlength/writeを測定し、
+`length = 645`、writerのcursor相当値を確認した。probe付きの再生成ではStage 1/2/3がreadyとなり、
+Stage 2とStage 3はbyte-identicalになった。ただしprobeは本番ABIではないため、測定後に2 exportを撤回した。
+撤回後のself-host再実行はStage 1後に長時間無出力となったため停止し、clean sourceでの再検証は未完了。
+probeの残存はなく、`git diff --check`は成功している。
+
+その後の実行ログで、probe撤回後のclean sourceでも次を確認した。
+
+```text
+Stage 1: ready
+Stage 2: ready
+Stage 3: ready
+Self-host verification: stage 2 and stage 3 are byte-identical.
+```
+
+現在の`compiler.md`にdebug exportは残っていない。`pnpm run test:seed`はRust 8件、Node 30件中29件成功。
+唯一の失敗はempty source self-host assertionで、byte equalityそのものではなく現行テストの期待recordが
+`null !== 1`になったもの。self-host目的は達成済みだが、未コミット変更は保持している。
+
+## 2026-09-16 最新停止点: function #3 の constructor scratch index
+
+実装途中の `compiler.md` に対する source-scan/probe の試行中、広い patch の文脈誤適用で
+Markdown末尾を壊したため、確認済みの clean な `stash@{0}` から `compiler.md` だけを復元した。
+Rust seed と追加された `struct-lifetime.test.mjs` は保持している。
+
+検証結果:
+
+```text
+cargo check: 成功
+git diff --check: 成功
+struct lifetime regression: 6 passed
+Stage 1: ready
+Stage 2: ready
+Stage 3: blocked
+Generated WebAssembly is invalid: function #3 failed: invalid local index: 89457 @+2047
+```
+
+`compiler.md` に残る一時debug exportやsource-scan helperはない。`function #3`は`next_token`であり、
+`89457`はconstructor/temporary structのscratch local計算へ、保持中の`function_definition` metadataが
+上書きされた値として流入している可能性が高い。次回は広いpatchを避け、`value_operand_length`と
+`write_value_operand`の同一constructor 1箇所に限定した回帰と、生成bodyのscratch indexだけを照合する。
+Stage 2/3 byte equality未達、コミット未作成。
+
+## 2026-09-16 最新調査: struct temporary の live 値上書き
+
+現在の `node crates/matra-seed/host/verify-self-host.mjs` は引き続き次の状態である。
+
+```text
+Stage 1: ready
+Stage 2: ready
+Stage 3: blocked
+parse error: expected return
+```
+
+Stage 3 の診断recordを直接読むと、表示上の `1:1` は通常の parser offset ではなく、
+`kind = 1`, `offset = 0`, `token length = 6`, `expected = 11` である。Stage 2 compilerの
+`token_summary`単独呼び出しは `module` を正しく返すが、次のように複数のtoken structを保持する
+probeでは、先に保存したtokenが後続の`next_token()`で上書きされた。
+
+```text
+let first = next_token(source, 0)
+let second = next_token(source, first.start + first.length)
+let third = next_token(source, second.start + second.length)
+```
+
+原因はRust seedのtemporary function ABIで、struct戻り値をarena内で再利用する際に、呼び出し元が
+保持する複数のstruct pointerを安定して保持できていないこと。struct-return関数をtemporary対象から
+外す試行はStage 1実行時の`memory access out of bounds`へ退行したため撤回した。caller側copy、
+scratch global、parser probeも検証後に撤回し、現在のsourceには残していない。
+
+連続token probeのpacked resultは、期待される`module(0, 6)`、`compiler(7, 8)`、`struct(17, 6)`ではなく、
+先行tokenが後続値へ置き換わった値になった。`restore_heap`のstruct戻り値処理を一時的に書き換えても
+この値は変わらず、`next_token`だけをtemporary対象から外すとmemory access out of boundsへ退行した。
+従って、単純なheap resetの修正や全struct関数の非temporary化では解決しない。
+
+次に修正すべき所有箇所は`crates/matra-seed/src/lib.rs`の`restore_heap`とstruct-return callの
+評価順である。parser側に固定値や例外を追加せず、複数のlive structを保ったままtemporary arenaを
+回収できることを、連続`next_token()`の回帰testとStage 2/3 byte equalityで確認する。
+
+2026-09-16時点ではStage 2/3 byte equality未達、コミット未作成。解決できない状態を隠すための
+parser workaroundや一時exportは追加していない。
+
+### 追加調査: conflict 復元後の新しい停止点
+
+実装途中の merge conflict marker が残っていたため、marker のない `stash@{0}` の内容へ対象ファイルを
+復元した。追加された `tests/struct-lifetime.test.mjs` は保持し、seed/bootstrapとも6件すべて成功した。
+復元後のself-hostはparser errorを越え、現在は次で停止する。
+
+```text
+Stage 1: ready
+Stage 2: ready
+Stage 3: blocked
+Generated WebAssembly is invalid: function #3 failed: invalid local index: 89683 @+2047
+```
+
+function #3は`next_token`で、Stage 3のbodyではlocal宣言が8個なのに、constructor scratch用の
+`local.set/get 89683`が出力されている。Stage 2が生成した自身のfunction #3はvalidであり、Stage 2が
+sourceを再compileする際の`write_value_operand`のstruct constructor経路で、`local_count_of`または
+`function.position`がtemporary struct/tokenの上書きを受けている可能性が高い。
+
+`local_count_of`の終端 scalar退避、`function_definition`の再構築、通常struct-return callのcaller側copyを
+順に試したが、前者2つはindexを89683/89461へわずかに変えるだけで未解決、後者は停止点を変えなかったため
+撤回した。現時点でRust `cargo check`とstruct lifetime回帰6件は成功している。次はconstructor経路の
+scratch local index計算と`write_value_operand`/`value_operand_length`の一致を、function #3だけに限定して
+照合する。Stage 2/3 byte equality未達、コミット未作成。
+
+7-fieldの`function_definition`だけをtemporary arena対象から外す限定実験も行った。struct lifetime回帰6件は
+通過したが、Stage 1実行時に`memory access out of bounds`へ退行したため撤回した。従って、metadataを
+heapへ恒久化するだけではallocation budgetと両立しない。必要なのはcallerが保持するmetadataを明示的に
+コピーした後、callee temporary frameを回収するABIである。
+
+## 2026-09-15 現在の停止点: parameter ordinalとWasm slot indexの分離
+
+`function_parameter_is_bytes`は、呼び出し引数の論理ordinal（各source parameterを1つずつ数える）で
+判定する必要がある。bytes/[i32]のpointer + lengthによるWasm 2 slot幅をここで加算すると、bytesの後続
+parameterを誤判定し、function #86の別のinvalid localにつながる。
+
+一方、`returned_parameter_index`と`function_parameter_count_of`はWasm local slot indexを返すため、
+bytes/[i32]を2 slotとして加算する必要がある。この分離で単純な
+`fn offset(source: bytes, value: i32) -> i32 { return value }`の生成Wasmとfocused回帰testは通過し、
+`offset(100, 5, 42)`も42を返す。
+
+当初はself-hostのStage 2がfunction #134 (`single_function_module`)の
+`invalid local index: 4223`で停止していた。logical ordinal方式ではfunction #134、slot幅方式ではfunction #86の
+invalid localになることから、`function_parameter_is_bytes`の引数は論理ordinalであることを確認した。
+Stage 2/3とbyte equalityは未達。現在はコミット未作成。
+
+### 今回の進捗
+
+`single_function_module`では既存の`result_function` localを再利用し、bytes引数として
+誤lowerされるネストした`first_function(source)` callを除去した。これによりfunction #134の
+`invalid local index`は解消した。
+
+続いて`byte_pointer(bytes)`をpointer slotへlowerするintrinsicにし、function #139 (`alloc`)の
+table外callを解消した。conditional内のbytes returnはpointer + lengthを出すよう修正し、
+function #145 (`write_diagnostic_prefix`)のreturn ABI不一致も解消した。
+
+multiple-function module writerは`export`修飾子を持つ全functionを出力するように変更した。
+これによりStage 2 compilerから`alloc`、`compile`、`memory`を取得してStage 3の実行まで到達する。
+heap globalの初期値も8から32へ変更し、固定address 0で作る一時struct（最大28 bytes）が
+`alloc`したsourceの9 byte目を上書きする問題を解消した。
+
+現在の`pnpm bootstrap:verify`はStage 2 validation成功後、Stage 3のsource parserで
+`parse error: expected return`に停止する。最小再現の単純return functionはStage 2 parserが受理し、
+`if value == 9 { return 1 } return 0`を含むfunctionだけが拒否される。`is_if_keyword`のStage 2 bodyと
+単独呼び出しは正しく動作する一方、`parse_conditional_statement`が成功statusとposition 0を返すことを
+診断probeで確認した。`function_definition` constructorの式引数を一般式loweringへ変更したが、
+conditional parserのposition 0は残っている。次は`parse_conditional_statement`のreturn constructorで
+どの式引数が0になっているかを追加probeで特定する。
+
+追加調査では`token_end`が正しいoffsetを返し、単独の`function_definition(..., 70, ...).position`も
+70を返す一方、`parse_function`が`is_space`の最初のif終端で止まることを確認した。Rust seed compilerの
+temporary-function最適化はstruct戻り値をarena先頭へ戻すため、連続する`next_token()`が前のtokenを
+上書きする。struct戻り値をtemporary対象から除外する試行は、parser全体のallocation量と既存のconstructor
+loweringの前提に波及してOOBを起こしたため撤回した。次回はtemporary arena内で複数のlive structを保持する
+方法、またはRustのstruct constructorを評価順とbase pointer保持の両面で再設計する必要がある。一時exportと
+host memory倍率変更は残していない。
+
+## 2026-09-15 解決: function #94のmutation dispatch漏れ
+
+function #94 (`write_i32_leb`)の`invalid local index: 4223`を解消した。
+一時的な診断compilerで未解決assignmentのsource offsetを確認すると、対象tokenは
+`remaining`や`position`ではなく`byte_set(buffer, position, byte)`の`byte_set`だった。
+診断用のindex置換は一時ファイルだけで行い、実装には残していない。
+
+`write_loop_local_conditional`のthen側だけmutation dispatchがなく、
+`byte_set`を通常assignmentとして`write_assignment`へ渡していた。
+length側とelse側に存在する`is_array_set_call` / `write_mutation`の処理をthen側へ追加した。
+local index固定値やparser範囲の拡大は行っていない。
+
+実際の`write_i32_leb`を切り出してStage 1でcompileし、生成Wasmを実行する回帰testを追加。
+正負の64/128境界とi32最大・最小値を含む11例について、期待するsigned LEB bytes、
+非zero pointer・開始offset、戻り値のpointer/length、範囲外への書き込みなしを確認した。
+
+### 続いて修正した問題
+
+- function #100のmutation引数内callも通常変数として出力されていた。
+  mutationのindex/valueを共通のvalue expression length/writeへ統合し、引数の終端も
+  `expression_end`へ揃えた。
+- function #119では`write_u32_leb`の2 resultに対しlocal.setが1つしかなかった。
+  `is_array_return_call`の関数名固定リストを除去し、宣言されたbytes/[i32]戻り値型で判定する。
+  EOFを確認するtoken scanであり、parser metadataをsource末尾まで拡張する処理ではない。
+- `byte_at`は通常callのparameter型照会より前にlowerする。
+  未解決function indexから別関数のbytes parameter型を参照すると、pointerを2 slot出力して
+  stackに余分な値が残っていた。pointerとindexの2 operandだけを出力するようにした。
+- nested条件、byte/array mutationのcall・算術引数、任意の関数名のbytes-return localを
+  一緒に実行する回帰testを追加した。
+
+検証: `pnpm run test:seed`（Rust 8件・Node 23件、focused bootstrap testを含む）、
+`pnpm run lint`、`git diff --check`は成功。focused testは約78秒で完了した。
+
+### 残る停止点
+
+function #94の後続問題として、then側のmutation処理漏れを修正した。`write_i32_leb`の
+then側で`byte_set`が通常の変数代入として扱われていたため、`local.set -1`が生成されていた。
+`is_array_set_call` / `write_mutation`と同じdispatchをthen側へ追加し、実際の`write_i32_leb`
+について11例のバイト出力を検証した。
+
+さらに後続で発生したmutation引数内callとbytes戻り値の問題も修正した。現在のStage 2は
+function #134 (`single_function_module`)の`invalid local index: 4223`で停止する。
+Stage 2/3とbyte equalityは未達。次は#134の実際のlocal参照元を生成Wasmとsource tokenで照合する。
+
+戻り値型の宣言検索は繰り返しsourceを走査するため、self-host検証は従来より時間がかかる。
+focused testのtimeoutを30秒から180秒へ延長した。未コミット変更は保持し、コミットは未作成。
+
+## 2026-09-15 解決: array戻り値型のbody開始位置とresult ABI
+
+function #73の`invalid local index: 1535`を解消した。宣言順を再確認した結果、
+function #72が`count_functions`、#73は`mark_invalid`だった。以前の対応付けを訂正する。
+
+`function_body_first_token` / `returned_value_token`は戻り値型を1 tokenとして
+読み飛ばしていたため、`-> [i32]`でbody開始位置を誤認していた。
+`type_end`で型全体の終端へ進めるよう修正した。この修正単独で#73を越えることを確認した。
+
+さらにbytes/array戻り値をlocal body経路へ揃え、単一関数・複数関数moduleのtype sectionにも
+pointer + lengthの2 resultを出力した。従来はbody側が2値を積んでも、type sectionは
+1 resultのままでpointerが呼び出し元へ戻らなかった。
+array_set/byte_setだけを使うmoduleにもmemoryを出力するよう修正した。
+
+回帰testではbytes・[i32]、単一/複数関数、単純return/変更後returnの8組合せを
+compile・instantiate・実行し、非zero pointerとlengthの両方、および書き換え結果を確認した。
+検証: `pnpm run test:seed`（Rust 8件・Node 21件）、`pnpm run lint`、
+`git diff --check`は成功。
+
+### 残る問題
+
+Stage 2はfunction #76 (`function_table`)の`function index #4351 is out of bounds`で停止する。
+`allocate_i32_array(capacity)`が通常callとして扱われる経路が残る。
+配列確保intrinsic、2 slotを使う配列localの割り当て・保存、配列call resultの転送を
+length/writeと合わせて実装する必要がある。未解決indexへのfallbackは追加していない。
+Stage 2/3とbyte equalityは未達。未コミット変更を保持し、コミットは作成していない。
+
+## 2026-09-15 追加: allocate_i32_array intrinsicとarray local
+
+`allocate_i32_array(capacity)`が通常callとして出力され、function #76で未解決call indexに
+なっていたため、Rust seedと同じ`global.get/set 0`、4倍byte size、pointer + lengthの
+2値を`value_operand_length`/`write_value_operand`へ追加した。さらに生成moduleのmemory-required
+判定とsingle/multi module writerへmutable global 0を追加した。これにより#76を越え、global
+index errorも解消した。
+
+次にarray localのslot不足が判明した。`let table = allocate_i32_array(...)`とarray-return
+callをlocal count/offsetで2 slotとして数え、assignment writerでlength slotとpointer slotへ
+2回`local.set`する処理を追加した。`array_get(table, index)`もpointer + index * 4 + loadへ
+lowerした。
+
+その後、bytes/array returnのcall値を直接localとして扱っていた問題を修正し、`return mark_invalid(table)`を通常のcall + returnとして出力するようにした。さらに`allocate_bytes(size)` intrinsic（heap globalを使うpointer + length）と、bytes localの2-slot計上を追加した。これにより#81/#82のinvalid local、#91の`allocate_bytes` unresolved call、#92のbytes local slot不足を越えた。
+
+現在の停止点:
+
+```text
+function #94 failed: invalid local index: 4223
+```
+
+function #94は`write_i32_leb`相当のnested loopを含む関数で、raw bodyに`local.set -1`が残る。
+通常の`variable_index`、全let lexical scan、既存conditional-aware resolverをassignment/operand
+へ併用しても変化しなかった。次はmutation/loop writerが渡すstatement tokenと、nested loop内の
+`remaining`/`position`宣言の対応を直接照合する必要がある。Stage 2/3とbyte equalityは未達で、
+コミットは作成していない。
+
+## 2026-09-15 追加: function #38のstruct constructor lowering
+
+function #38 (`parse_loop_conditional_if`) の `function index #4351` は、関数名の
+lookup失敗ではなく、`function_definition(...)` を通常のfunction callとして出力して
+いたことが原因だった。`function_index_in_table` が返す -1 が `10 ff 21` として出力され、
+未解決call index 4351になっていた。
+
+`value_operand_length` / `write_value_operand` にstruct constructorの直接loweringを追加し、
+各fieldを address 0へstoreした後に `i32.const 0` を残すlength/write対へ統合した。この修正で
+function #38の停止は解消したが、Stage 2はfunction #41で次のエラーへ進んだ。
+
+```text
+function #41 failed: return_call_ref[0] expected type (ref null 5), found i32.load of type i32
+```
+
+focused testは旧停止点を期待しているため現在は失敗する。Stage 2/3とbyte equalityは未達で、
+この変更もコミットしていない。次はfunction #41の失敗位置付近で、struct field loadまたは
+conditional bodyのlength/write境界を照合する。
+
+その後、`local_struct_field_index` がstruct constructor initializerを通常functionとして
+lookupしていたため、`nested.position` のfield offsetが -1 になる経路を修正した。constructor
+型を直接 `struct_field_index` へ渡すようにしたことで、function #41の `return_call_ref` 誤読は
+解消し、停止はfunction #58 (`count_let_tokens_in_range`) の次へ進んだ。
+
+現在のエラー:
+
+```text
+function #58 failed: trailing code after function end
+```
+
+`count_let_tokens_in_range` は `let` 2件と `while current.start < end` を含むため、次は
+`while_statement_length` と `write_while_statement` の field条件・body終端・break/endの
+固定長を、この関数に限定して照合する。focused testの期待値はまだ更新していない。
+
+`while_statement_length` の固定値を一時的に12から10へ変更して検証したが、function #3の
+`reached end while decoding immi32`へ早期退行したため、この仮説は否定して12へ戻した。
+function #58のbody末尾には正しいreturn/endの後に2 bytesが残ることまでは確認済みである。
+
+その後、`while_statement_length` がstruct field条件の `left` を、field load加算後に
+`operand_length(left)`でもう一度数えていたことを修正した。writerとlengthの差分2 bytesが
+解消し、function #58の停止は越えた。
+
+続いて function #70 (`call_argument_value_of`) の `read_small_integer(source, argument)`で
+bytes parameterのlength slotが欠落していたため、local return conditionalの通常call引数を
+`function_parameter_is_bytes`に基づくlength/writeへ統合した。さらに `[i32]` / `bytes` return
+の `return table` をpointer + lengthの2 slotで出力する処理を追加した。
+
+現在の停止点:
+
+```text
+function #73 failed: invalid local index: 1535
+```
+
+生成されたfunction #73のbodyを直接確認すると、bodyは`00 20 ff 0b`相当で、`local.get -1`
+（Wasm上ではlocal index 1535）だけを含む。function tableの宣言順との対応から、これは
+`count_functions`の`return count`に対応する。したがって、array mutationだけでなく、共通の
+local variable index解決、またはfunction body metadataのlength/writeが一致していない可能性が高い。
+`mark_invalid`/`record_function`のarray return修正だけではこの停止は解消しなかった。
+
+その後、生成Wasmのtype sectionを照合し、function #73は2引数・1戻り値の`[i32]`系関数である
+ことを確認した。bytes/array return時にparameter indexを`returned_parameter_index`から直接
+解決する変更も試したが、bodyは引き続き`00 20 ff 0b`のままで停止位置は変わらなかった。
+したがって、現時点の主候補はreturn operand単体ではなく、`function_body_kind_of`または
+`local_body_length`/writerがこの関数本体をlocal bodyとして認識できていない問題である。
+
+Stage 2/3とbyte equalityは未達で、コミットは作成していない。
+
+## 2026-09-15 解決: function #30の不正なblockとconditional出力
+
+function #30 (`parse_conditional_statement`)の`need 3, got 2`を解消した。
+直接原因はconditionalの固定長ではなく、`let open = right_end`のstruct別名に対する
+field indexの未解決だった。`local_struct_field_index`はinitializerを関数callとしてのみ
+解釈していたため、`open.start`がindex -1、offset -4になっていた。
+
+### 停止位置のbyte照合
+
+修正前のStage 2では、offset 8248から次のbytesが出力されていた。
+
+```text
+20 17 28 02 fc 36 02 14
+```
+
+意図した命令は`local.get 23; i32.load align=2 offset=4; i32.store align=2 offset=20`。
+しかしoffsetの`fc`はLEBの継続bitを持つため、次のstore opcode `36`まで読み込む。
+その結果、offset 8254の`02 14`が`block`とtype index 20として解釈され、
+block引数不足になっていた。正しい並びは`20 17 28 02 04 36 02 14`。
+
+struct別名をinitializerへ遡って解決するよう修正した。探索範囲は別名宣言より前へ
+狭め、自己参照・循環で無限ループしないようにした。parameter由来とcall result由来の
+複数段の別名を、nested conditionalのfield参照・実行で検証する回帰testを追加した。
+この修正単独で停止点がfunction #38へ進むことを確認した。
+
+### conditionalのlength/write照合と修正
+
+指定された`conditional_statement_length` / `write_conditional_statement`には
+別の不一致もあったため、両辺と分岐内代入を共通の式処理へ統合した。
+
+- 旧固定値6は、単純な左辺local.getと右辺i32.constのopcode各1 byteに加え、
+  比較1・if 1・空block type 1・end 1を数えていた。一般の式には適用できない。
+  現在は左右の式長を個別に加え、固定部分を4 bytesとしている。
+- 左辺call出力後の余分な左辺operand出力を除去した。
+- 右辺が変数でも先に`i32.const`を出力していた処理を除去した。
+- nested conditionalの後はparserのpositionで次のstatementへ進め、各ifにendを1つ出す。
+  nested if後の代入も含め、計算長・writer終端・期待する全bytes・buffer外への書き込みなしを
+  回帰testで確認した。変数同士の比較、複数byteの即値、左右それぞれのcallも検証する。
+
+検証: `pnpm run test:seed`（Rust 8件・Node 20件、focused bootstrap testを含む）、
+`pnpm run lint`（build・workspace check・Markdownlint）、`git diff --check`は成功。
+
+### 残る停止点
+
+`pnpm bootstrap:verify`はStage 1を通過し、Stage 2はfunction #38
+(`parse_loop_conditional_if`)の`function index #4351 is out of bounds @+10500`で停止する。
+Stage 2/3とbyte equalityは未達。既存の未コミット変更を保持し、コミットは作成していない。
+
+## 2026-09-15 継続: while条件のbytes ABIと右辺call
+
+前回の`read_small_integer`（function #25）における停止を調査し、`while`本体の代入を
+`assignment_length` / `write_assignment`へ統合した。`result * 10 + byte_at(source, position) - 48`
+のlength/write不一致は解消し、停止はfunction #28（`parse_struct`）へ進んだ。
+
+さらに`while`条件の左辺・右辺callについて、bytes/array parameterを
+`bytes_argument_length` / `write_bytes_argument`で2 slot出力する処理を追加した。
+右辺が`byte_length(source)`のようなcallの場合に通常operandとして二重出力する経路も除去した。
+
+`byte_length`を通常のfunction table lookupからintrinsic loweringへ切り替えたことで、
+function #29（`struct_field_count`）の不正なfunction indexは解消した。現在の
+`pnpm bootstrap:verify`はStage 1を通過するが、Stage 2でfunction #30
+（`parse_conditional_statement`）の`not enough arguments on the stack for block
+(need 3, got 2)`に停止する。conditionalのbytes/array引数経路にも呼び先 parameter
+型による2 slot処理を追加したが、この停止点は変わらなかった。次はfunction #30の
+local body/conditional lengthとwriterのblock境界を照合する。Stage 2/3とbyte equalityは
+未達なので、現時点ではコミットしない。
+
+検証: `pnpm run test:seed`は17件成功・停止地点期待値の更新が必要、`pnpm run build`と
+workspace check、`pnpm run lint`、`git diff --check`は成功。修正後のfocused testを再実行する。
+
+## 2026-09-15 解決: conditional callのbytes/array ABI
+
+先頭の未解決事項だった`type_end`の`need 4, got 3`を解消した。
+通常callで使う`value_operand_length` / `write_value_operand`を、
+local return conditionalの左辺とloop conditionalの両辺でも共有する。
+bytes/array parameterのpointer・lengthは既存のslot出力処理を使い、
+array変数をbytes専用intrinsicへ渡す処理は追加していない。
+
+- loop conditionalのthen/else内の代入も`assignment_length` / `write_assignment`へ統合。
+- local bodyの最終returnは共通return処理へ統合し、bytes/arrayの転送を揃えた。
+- 分岐内で宣言したstruct localのfield解決は、関数body全体から宣言を探す。
+  従来の先頭の`let`だけを探す処理では`element.start`などのfield indexが未解決になった。
+- bytes・array・structの混在、条件式の左右、nested intrinsic、then/else内callを実行する
+  回帰testを追加。実際のcompiler sourceから`type_end`を含む部分をcompileし、
+  `[i32]`と`i32`の終端tokenを確認するtestも追加した。
+
+検証: `pnpm run test:seed`（Rust 8件・Node 18件）、`pnpm run lint`
+（build・workspace check・Markdownlintを含む）、`git diff --check`は成功。
+
+### 残るself-hostの問題
+
+`pnpm bootstrap:verify`はStage 1を通過し、Stage 2の停止箇所は
+function #25 (`read_small_integer`)へ進んだ。
+`function index #13695 is out of bounds`が発生する。
+同関数のwhile内代入には`result * 10 + byte_at(source, position) - 48`があり、
+while側に残る独自の式length/write処理の調査が必要。
+Stage 2/3の生成とbyte equalityは未達。コミットは行っていない。
+
+## 2026-09-15 追加調査: conditional call ABIは未解決
+
+Stage 2の`function #22 (type_end)`で発生する`need 4, got 3`を追加調査した。
+通常callの`value_operand_length` / `write_value_operand`はbytes/array parameterを
+2 slotとして扱う既存修正でfocused testを通過するが、self-hostのStage 2ではまだ停止する。
+
+conditionalのcall引数ループにも同じ処理を追加する試行を行った。しかし、bytes/arrayを
+一括で`write_bytes_argument`へ渡すとStage 1 compiler自身のコンパイルで
+`Unknown bytes variable: table`となる。array引数をbytes引数と同じABI slot数で扱うことと、
+bytes専用intrinsic/loweringへ渡すことは分離する必要がある。
+
+今回の試行は未検証のconditional ABI拡張を残さず整理した。現在確認済みの状態は以下。
+
+- focused bootstrap testは成功。
+- `git diff --check`は成功。
+- `pnpm bootstrap:verify`はStage 1成功、Stage 2で`type_end`の`need 4, got 3`に停止。
+- Stage 2/3とbyte equalityは未達のため、コミットしていない。
+
+次の候補は、conditionalの各argumentについて「呼び出し先parameterのslot数」と
+「現在関数側argument expressionの実型」を別々に解決するhelperを実装し、
+array variableをbytes専用intrinsicへ渡さずpointer/lengthだけを出力すること。
+
+## 2026-09-15 現在の到達点: 通常callのbytes ABI
+
+前節の未コミット変更を保持したまま、通常callのbytes/array引数でpointerだけを
+積んでいた経路を調査した。`value_operand_length` / `write_value_operand` の
+call引数処理で、bytes/array parameterを2 slot ABIとして扱い、pointerとlengthを
+length/writeの両方へ出力する共通処理を追加した。あわせてlocal return conditional
+の左辺`byte_at`が通常callとして出力される漏れを修正した。
+
+focused testでは、以前の未解決function indexと「need 3, got 2」が解消した。
+全体の`pnpm run test:seed`（Rust 8件・Node 16件）、`pnpm run build`、workspace check、
+`pnpm run lint`、`git diff --check`は成功している。
+
+### 現在のblocker
+
+`pnpm bootstrap:verify` は次で停止する。Stage 2/3とbyte一致には未到達である。
+
+```text
+Stage 1: ready
+Stage 2: blocked
+Generated WebAssembly is invalid: WebAssembly.compile(): Compiling function #22
+failed: not enough arguments on the stack for call (need 4, got 3) @+4564
+```
+
+function #22は`type_end`。`is_symbol(source, value, 91)`のような、bytes parameterと
+struct parameterを持つ通常callで、local conditional側のcall引数length/writeが
+まだbytesの2 slot ABIへ揃っていない。次は`local_return_conditional_length`と
+`write_local_return_conditional`の同じcall引数ループを、struct引数を壊さずに
+型別slot数へ統合する。未解決indexのfallback追加や、今回の未検証のsource名固定は
+根本修正として扱わない。
+
+Stage 2がvalidになり、focused test、`pnpm run test:seed`、`pnpm run lint`、
+`git diff --check`を再確認するまでコミットしない。
+
+## 2026-09-15 修正: loop conditional内の構造体return
+
+この節を現在の到達点とする。開始時の変更は保持している。`next_token`の無効なcallは解消し、
+lexer単体の生成Wasmをvalidate・実行できた。ただしself-hostは未成立である。
+
+### 確認した原因
+
+未解決indexの診断用probeを最小lexerへ適用すると、対象tokenは
+`return token(1, start, position - start)`の`token`だった。
+従来の「nested `byte_at` callが原因」という推定は撤回する。
+probeは撤回し、`function_index_in_table`の未解決値は変更していない。
+
+function bodyのcall conditionalはloop conditional経路へdispatchされる。
+そのreturn処理は構造体constructorを通常callとして扱い、引数の算術やnested callも
+共通の式処理を使用していなかった。
+
+### 修正と検証
+
+- call/localのloop conditionalのthen/elseで`return_statement_length`と
+  `write_return_statement`を共有する。constructorは関数のreturn型と比較して判定する。
+- return引数は`value_expression_length` / `write_value_expression`で処理し、
+  source cursorは`expression_end`へ揃える。
+- `loop_conditional_length`の初期値5は通常call opcodeの1 byteを含むため、
+  `byte_at`では差分3 bytesを加算する。従来は1 byte過大で、lexer内の2か所により
+  `trailing code after function end`も発生していた。
+- 実際のlexer sourceをstage-1でcompile・instantiateし、識別子、数字、コメント、
+  EOF、記号、offset付き走査を検証する回帰testを追加した。
+- call/local conditionalのthen/elseで構造体return、算術、nested intrinsicを実行するtestを追加した。
+
+検証: focused test、`pnpm run test:seed`（Rust 8件・Node 16件）、`pnpm run lint`、
+`git diff --check`は成功。`pnpm bootstrap:verify`は下記のABIエラーで失敗する。
+
+構造体returnの格納先は既存emitterと同じaddress 0であり、allocationや複数の生存structの
+保持はまだ実装していない。今回の修正をその対応済みとは扱わない。
+
+### 残るblocker
+
+```text
+Stage 1: ready
+Stage 2: blocked
+Generated WebAssembly is invalid: ... function #4 failed:
+not enough arguments on the stack for call (need 3, got 2)
+```
+
+function #4は`token_summary`で、`next_token(source, 0)`にbytes parameterのlength slotを
+転送していない。通常callのbytes/array ABI、struct allocation、global/exportの対応は引き続き必要。
+stage-2/stage-3の生成とbyte一致は未到達であり、コミットしない。
+
+## 2026-09-15 引き継ぎ: next_token の nested conditional cursor
+
+この節を現在の到達点とする。未コミット変更は保持しており、stage-2/stage-3 の
+self-host と byte equality には未到達である。
+
+### 現在の再現
+
+```text
+Stage 1: ready
+Stage 2: blocked
+Generated WebAssembly is invalid: WebAssembly.compile(): Compiling function #3
+failed: function index #2047 is out of bounds @+1668
+```
+
+再現コマンド:
+
+```sh
+node --test --test-name-pattern='bootstrap compiler maps' crates/matra-seed/tests/wasm.test.mjs
+pnpm bootstrap:verify
+```
+
+focused test と `git diff --check` は成功する。`pnpm bootstrap:verify` は上記の
+invalid Wasm で失敗する。
+
+### 確定した事実
+
+- function #3 は `next_token`。
+- `@+1668` 付近の `call 255` は `byte_at` の load opcode ではなく、
+  `local.get` の値を引数に取る通常 call である。
+- `next_token` 内の `is_identifier(byte_at(source, position))`、
+  `is_digit(byte_at(source, position))` が該当する nested call 群である。
+- 正しい bytes ABI（pointer と length の2引数）で function table を照会すると、
+  `is_space=0`、`is_identifier=1`、`is_digit=2` となり、function table 自体は正常。
+- 最小の `while` + nested `if is_identifier(byte_at(...))` source は valid Wasm を生成する。
+  従って intrinsic 単体の lowering 漏れではなく、実際の `next_token` にある複数段の
+  nested conditional を走査する parser/length/writer の境界ずれが有力。
+
+### 現在のコード状態
+
+- `value_operand_length` / `write_value_operand` と
+  `value_expression_length` / `write_value_expression` を導入済み。
+- `byte_length` と `byte_at` の複数経路の lowering を追加済み。
+- `write_operand` / `operand_length` に `byte_at` の intrinsic 経路を追加済み。
+- `local_return_conditional` の nested `byte_at` は length/write を intrinsic に揃えた。
+- 手動 token length 走査、function index fallback、debug helper は試行後に撤回済み。
+- OOB を起こす手動 loop branch は撤回済み。
+
+### 次に調査する箇所
+
+`parse_loop_conditional`、`loop_conditional_length`、`write_loop_conditional`、
+`parse_loop_local_conditional`、`loop_local_conditional_length`、
+`write_loop_local_conditional` の nested `if` 処理を、同じ source statement について
+1つずつ照合する。特に次を確認する。
+
+- parser が返す `nested.position`
+- length が加算する body の終端
+- writer が `current = next_token(source, nested.position)` で進める終端
+- `else` と nested `while` の後に同じ closing brace を消費しているか
+
+`function_index_in_table` に `-1` の fallback を追加して解決しようとしてはいけない。
+一時的に offset が変わっても、length/write の不一致や `trailing code after function end`
+を誘発するため、根本原因の修正とは扱わない。
+
+### 未コミット変更とコミット条件
+
+変更ファイルは次の5件。ユーザー変更を戻さず、現状態を基準に作業する。
+
+- `crates/matra-seed/examples/compiler.md`
+- `crates/matra-seed/src/lib.rs`
+- `crates/matra-seed/host/verify-self-host.mjs`
+- `crates/matra-seed/tests/wasm.test.mjs`
+- `crates/matra-seed/HANDOFF.ja.md`
+
+stage-2/stage-3 が valid になり、focused test、`pnpm run test:seed`、`pnpm run lint`、
+`git diff --check` が通るまでコミットしない。
+
+## 2026-09-14 追加実装: 代入式のintrinsic lowering
+
+この節を最新の到達点とする。開始時の未コミット変更を保持した。
+`assignment_length` / `write_assignment`の重複した引数走査を、
+`value_operand_length` / `write_value_operand`と
+`value_expression_length` / `write_value_expression`へ統合した。
+同じ`operand_end` / `expression_end`を使ってnested callと算術の境界を揃える。
+`parse_local_body`のcall initializerもnested callの括弧を消費する。
+
+代入式では`byte_length(bytes parameter)`をparameterの長さslotの`local.get`へ、
+`byte_at(pointer, index)`を`i32.add; i32.load8_u`へlowerする。
+scalar callの引数にあるintrinsic、算術途中のcall、callへの単項minusも扱う。
+byte accessを含むmoduleにはmemory sectionとmemory exportを追加する。
+
+追加testはstage-1で生成したWasmをinstantiate・実行し、2つのbytes parameter、
+非zero pointer、算術index、128/255のunsigned読み出し、nested scalar call、
+再代入、単項minusを検証する。期待値は389と263である。
+`byte_length`のlocal bytes・call result対応や、通常callへのbytes複数slot転送は未実装。
+今回の共通式処理を接続したのはassignment経路であり、他のcondition/return経路は残る。
+
+self-hostは引き続きstage-2のWasm validationでblockedとなる。
+function #3 (`next_token`)の未解決function index #4351は残り、byte offsetは1399となった。
+offsetの変化だけを未対応callの解消と判断しない。次はcondition/return側にも共通式処理を
+length/writeの対で接続し、通常callのbytes/array ABI、struct allocation、global/exportを整える。
+stage-2/stage-3の生成・byte一致には未到達である。
+
+検証: `pnpm run test:seed`、`pnpm run lint`、`git diff --check`。
+変更は既存の作業とともに未コミットで保持する。
+
+## 2026-09-14 修正: OOBの解消と生成Wasmの検証
+
+この節を最新の到達点とする。貼付ログの`memory access out of bounds`は解消した。
+ただしself-hostは未成立であり、stage-2/stage-3のbyte一致には到達していない。
+
+### 原因と修正
+
+- 4096 pages追加時の停止直後は、allocatorが268,500,994 bytes、memory容量が
+  268,500,992 bytesだった。「大容量でもtrapするので容量不足ではない」という過去の判断は撤回する。
+- `local_return_conditional_length`/`write_local_return_conditional`はconditional内の`let`を
+  assignment targetと誤認していた。function bodyと共有する`assignment_length`/`write_assignment`へ統合した。
+- 同じconditionalの`return parameter_count + local_offset`やnested callについて、parserの失敗結果を
+  emitterが使い続け、source cursorが進まなくなる経路があった。return算術をlength/writeへ追加し、
+  `operand_end`/`expression_end`でnested call、field、unary minus、call後の算術の終端を共通走査する。
+  EOFも返すため、閉じ括弧のないcallを無限に走査しない。
+- 正常な走査でもtoken/parse resultの一時structは大量に確保される。Rust seedでcall graphを解析し、
+  memory更新・明示allocation・pointer取り出しへ到達しない関数だけ、return時に一時領域を回収する。
+  scalar returnは全回収、struct returnは返すstructだけ保持する。呼び出し前から存在するstructは
+  コピーしない。mutable memory操作やescapeするallocationを含むcall graphは対象外にする。
+- OOBで以前は到達していなかった既存testの、引数個数不一致と未知関数の診断位置も修正した。
+
+### 現在の検証結果と次の対象
+
+hostの追加memory設定を増やさず、stage-1の`compile`が結果recordを返すところまで進んだ。
+一時的にWasmのexport sectionへ内部関数を公開したprobeで、全関数のbody length走査も確認した。
+probeは`/tmp`だけに置き、compiler sourceにはdebug exportを追加していない。
+
+生成されたstage-2相当のbytesは、まだ無効なWasmである。`verify-self-host.mjs`は生成物を
+`WebAssembly.compile`で検証してからreadyを表示するよう変更した。現在は次の内容で終了する。
+
+```text
+Stage 1: ready
+Stage 2: blocked
+Generated WebAssembly is invalid: ... function #3 ... function index #4351 is out of bounds ...
+```
+
+function #3は`next_token`である。`byte_length`などのintrinsicを通常callとして扱い、
+`function_index_in_table`の未解決値-1をcall operandへ流している。次はintrinsicのlowering、
+bytes/arrayの複数slot ABI、struct allocation、moduleのglobal/exportを整合させる必要がある。
+「recordのstatusが0」「出力bytesを得た」だけではstage-2 readyやself-host成功と判定しない。
+
+回帰testはconditional内のdeclaration/call initializer/return算術を実行し、両分岐で13と5を確認する。
+arenaのtestでは2万回のscalar呼び出し、再帰からのstruct return、既存structの保持、
+外部へ返したallocationとmutationを検証する。既存self-host testはWasm validationによるblockedを
+期待するものであり、self-host成功のtestにはしていない。
+
+検証: `pnpm run test:seed`（Rust 8件・Node 13件）、`pnpm run lint`、`git diff --check`。
+変更は未コミット。
+
 ## 2026-09-14 修正: function bodyの再代入を共通処理へ統合
 
 貼付された調査ログに対応する未コミット変更から再開し、`3726:3 expected return`を再現した。

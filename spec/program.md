@@ -114,6 +114,22 @@ the given offset, and `byte_pointer(bytes)` returns the value's first pointer.
 These are temporary intrinsics for the self-hosted compiler's binary emitter
 and ABI records.
 
+## Struct allocation in the current subset
+
+Constructor arguments are evaluated once, from left to right, before reserving
+the result's memory. Nested calls cannot change the address used for storing
+the constructor's fields. Struct locals and aliases remain valid across later
+calls, including calls that return another struct.
+
+The compilers may reclaim temporary allocations when a function returns if
+its call graph does not allocate bytes or arrays, expose their pointers, or
+mutate memory. A scalar return releases that invocation's temporary region.
+A new struct return retains only its fields; returning a struct that existed
+before the call preserves its pointer. Allocation-producing or mutating call
+graphs are excluded from this optimization, so their escaped allocations remain
+valid. This is per-call reclamation, not a general garbage collector: allocations
+within a long-running call can still exhaust the memory supplied by the host.
+
 ## Compiler ABI draft
 
 A compiler module exports `memory`, `alloc(size: i32) -> i32`, and

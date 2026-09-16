@@ -776,10 +776,16 @@ fn emit_module(program: &Program) -> Result<Vec<u8>, CompileError> {
         section(&mut output, 7, &exports);
     }
 
+    let temporary_functions = temporary_functions(program, &structs);
     let mut code = Vec::new();
     encode_u32(&mut code, program.functions.len() as u32);
     for function in &program.functions {
-        let body = emit_function(function, &functions, &structs)?;
+        let body = emit_function(
+            function,
+            &functions,
+            &structs,
+            temporary_functions.contains(function.name.as_str()),
+        )?;
         encode_u32(&mut code, body.len() as u32);
         code.extend(body);
     }
@@ -872,10 +878,131 @@ fn value_slots(value_type: &ValueType) -> usize {
     }
 }
 
+// memory操作やpointerの取り出しを行わないcall graphだけを対象にする。
+// structは値として読み出され、i32の戻り値から新規allocationはescapeしない。
+fn temporary_functions<'a>(
+    program: &'a Program,
+    structs: &HashMap<&str, StructSignature<'_>>,
+) -> HashSet<&'a str> {
+    let mut candidates: HashSet<_> = program.functions.iter().map(|f| f.name.as_str()).collect();
+    loop {
+        let previous = candidates.clone();
+        candidates.retain(|name| {
+            let function = program.functions.iter().find(|f| f.name == *name).unwrap();
+            temporary_statements(&function.statements, &previous, structs)
+        });
+        if candidates == previous {
+            return candidates;
+        }
+    }
+}
+
+fn temporary_statements(
+    statements: &[Statement],
+    functions: &HashSet<&str>,
+    structs: &HashMap<&str, StructSignature<'_>>,
+) -> bool {
+    statements.iter().all(|statement| match statement {
+        Statement::Let(_, _, value) | Statement::Assign(_, value) | Statement::Return(value) => {
+            temporary_expression(value, functions, structs)
+        }
+        Statement::If(condition, then_body, else_body) => {
+            temporary_expression(condition, functions, structs)
+                && temporary_statements(then_body, functions, structs)
+                && temporary_statements(else_body, functions, structs)
+        }
+        Statement::While(condition, body) => {
+            temporary_expression(condition, functions, structs)
+                && temporary_statements(body, functions, structs)
+        }
+        Statement::Break => true,
+        Statement::ByteSet(_, _, _) | Statement::ArraySet(_, _, _) => false,
+    })
+}
+
+fn temporary_expression(
+    expression: &Expression,
+    functions: &HashSet<&str>,
+    structs: &HashMap<&str, StructSignature<'_>>,
+) -> bool {
+    match expression {
+        Expression::Integer(_) | Expression::Variable(_) => true,
+        Expression::FieldAccess(value, _) | Expression::Negate(value) => {
+            temporary_expression(value, functions, structs)
+        }
+        Expression::Binary(_, left, right) => {
+            temporary_expression(left, functions, structs)
+                && temporary_expression(right, functions, structs)
+        }
+        Expression::Call(name, arguments) => {
+            name != "byte_pointer"
+                && (functions.contains(name.as_str())
+                    || structs.contains_key(name.as_str())
+                    || matches!(name.as_str(), "byte_at" | "byte_length" | "array_get"))
+                && arguments
+                    .iter()
+                    .all(|argument| temporary_expression(argument, functions, structs))
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct HeapCheckpoint {
+    index: u32,
+    result_fields: u32,
+}
+
+fn restore_heap(output: &mut Vec<u8>, checkpoint: Option<HeapCheckpoint>) {
+    if let Some(HeapCheckpoint {
+        index,
+        result_fields,
+    }) = checkpoint
+    {
+        if result_fields > 0 {
+            // 返すstructだけをarena先頭へ移し、一時objectはまとめて解放する。
+            output.push(0x22);
+            encode_u32(output, index + 1);
+            output.push(0x20);
+            encode_u32(output, index);
+            output.extend([0x49, 0x04, 0x7f]);
+            // 呼び出し前から存在するstructはコピーせずに返す。
+            output.push(0x20);
+            encode_u32(output, index + 1);
+            output.push(0x20);
+            encode_u32(output, index);
+            output.extend([0x24, 0x00, 0x05]);
+            for field in 0..result_fields {
+                output.push(0x20);
+                encode_u32(output, index);
+                output.push(0x20);
+                encode_u32(output, index + 1);
+                output.extend([0x28, 0x02]);
+                encode_u32(output, field * 4);
+                output.extend([0x36, 0x02]);
+                encode_u32(output, field * 4);
+            }
+            output.push(0x20);
+            encode_u32(output, index);
+        }
+        output.push(0x20);
+        encode_u32(output, index);
+        if result_fields > 0 {
+            output.push(0x41);
+            encode_i32(output, (result_fields * 4) as i32);
+            output.push(0x6a);
+        }
+        output.extend([0x24, 0x00]);
+        if result_fields > 0 {
+            output.push(0x0b);
+        }
+    }
+}
+
 fn emit_function(
     function: &Function,
     functions: &HashMap<&str, FunctionSignature>,
     structs: &HashMap<&str, StructSignature<'_>>,
+    temporary: bool,
 ) -> Result<Vec<u8>, CompileError> {
     let mut locals = HashMap::new();
     let mut bytes = HashMap::new();
@@ -923,7 +1050,23 @@ fn emit_function(
         functions,
         structs,
     )?;
-
+    // constructor引数は先に評価し、格納時だけこの2 localを使う。
+    local_count += 2;
+    let checkpoint =
+        if temporary && matches!(function.return_type, ValueType::I32 | ValueType::Struct(_)) {
+            let index = parameter_index + local_count;
+            let result_fields = match &function.return_type {
+                ValueType::Struct(name) => structs[name.as_str()].field_count,
+                _ => 0,
+            };
+            local_count += if result_fields > 0 { 2 } else { 1 };
+            Some(HeapCheckpoint {
+                index,
+                result_fields,
+            })
+        } else {
+            None
+        };
     let mut body = Vec::new();
     if local_count == 0 {
         body.push(0);
@@ -931,6 +1074,10 @@ fn emit_function(
         body.extend([0x01]);
         encode_u32(&mut body, local_count);
         body.push(0x7f);
+    }
+    if let Some(HeapCheckpoint { index, .. }) = checkpoint {
+        body.extend([0x23, 0x00, 0x21]);
+        encode_u32(&mut body, index);
     }
     emit_statements(
         &mut body,
@@ -942,11 +1089,19 @@ fn emit_function(
         structs,
         function.return_type.clone(),
         &mut Vec::new(),
+        checkpoint,
     )?;
     // 両方の分岐がreturnするifでも、WebAssemblyは構文上のfallthrough pathに値を要求する。
     for _ in 0..value_slots(&function.return_type) {
         body.extend([0x41, 0x00]);
     }
+    restore_heap(
+        &mut body,
+        checkpoint.map(|mark| HeapCheckpoint {
+            result_fields: 0,
+            ..mark
+        }),
+    );
     body.push(0x0f);
     body.push(0x0b);
     Ok(body)
@@ -1065,6 +1220,7 @@ fn emit_statements(
     structs: &HashMap<&str, StructSignature<'_>>,
     return_type: ValueType,
     controls: &mut Vec<ControlFrame>,
+    checkpoint: Option<HeapCheckpoint>,
 ) -> Result<(), CompileError> {
     for statement in statements {
         match statement {
@@ -1201,6 +1357,7 @@ fn emit_statements(
                         structs,
                     )?,
                 }
+                restore_heap(output, checkpoint);
                 output.push(0x0f);
             }
             Statement::Break => {
@@ -1233,6 +1390,7 @@ fn emit_statements(
                     structs,
                     return_type.clone(),
                     controls,
+                    checkpoint,
                 )?;
                 if !else_body.is_empty() {
                     output.push(0x05);
@@ -1246,6 +1404,7 @@ fn emit_statements(
                         structs,
                         return_type.clone(),
                         controls,
+                        checkpoint,
                     )?;
                 }
                 controls.pop();
@@ -1275,6 +1434,7 @@ fn emit_statements(
                     structs,
                     return_type.clone(),
                     controls,
+                    checkpoint,
                 )?;
                 output.extend([0x0c, 0x00, 0x0b, 0x0b]);
                 controls.pop();
@@ -1694,15 +1854,14 @@ fn emit_struct_expression(
                     arguments.len()
                 )));
             }
-            output.extend([0x23, 0x00, 0x41]);
-            encode_i32(output, (definition.field_count * 4) as i32);
-            output.extend([0x6a, 0x24, 0x00]);
-            for (index, argument) in arguments.iter().enumerate() {
-                output.extend([0x23, 0x00, 0x41]);
-                encode_i32(output, (definition.field_count * 4) as i32);
-                output.extend([0x6b, 0x41]);
-                encode_i32(output, (index * 4) as i32);
-                output.push(0x6a);
+            let scratch = locals
+                .values()
+                .copied()
+                .chain(bytes.values().map(|(_, length)| *length))
+                .chain(struct_values.values().map(|(_, index)| *index))
+                .max()
+                .map_or(0, |index| index + 1);
+            for argument in arguments {
                 emit_expression(
                     output,
                     argument,
@@ -1712,11 +1871,26 @@ fn emit_struct_expression(
                     functions,
                     structs,
                 )?;
-                output.extend([0x36, 0x02, 0x00]);
             }
-            output.extend([0x23, 0x00, 0x41]);
+            // 引数内callがheapを進めても、全フィールドの評価後に確保するので
+            // constructorのbase pointerは変わらない。
+            output.extend([0x23, 0x00, 0x22]);
+            encode_u32(output, scratch);
+            output.push(0x41);
             encode_i32(output, (definition.field_count * 4) as i32);
-            output.push(0x6b);
+            output.extend([0x6a, 0x24, 0x00]);
+            for index in (0..arguments.len()).rev() {
+                output.push(0x21);
+                encode_u32(output, scratch + 1);
+                output.push(0x20);
+                encode_u32(output, scratch);
+                output.push(0x20);
+                encode_u32(output, scratch + 1);
+                output.extend([0x36, 0x02]);
+                encode_u32(output, (index * 4) as u32);
+            }
+            output.push(0x20);
+            encode_u32(output, scratch);
             Ok(())
         }
         Expression::Call(name, arguments) => {
