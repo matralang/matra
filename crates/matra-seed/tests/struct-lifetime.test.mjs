@@ -37,6 +37,22 @@ async function bootstrap(source) {
 }
 
 for (const [name, compile] of [["seed", seed], ["bootstrap", bootstrap]]) {
+  test(`${name} preserves array local pointer and length slots`, async () => {
+    const source = `module demo
+fn make() -> [i32] {
+  let values = allocate_i32_array(2)
+  array_set(values, 0, 42)
+  return values
+}
+export fn probe() -> i32 {
+  let values = make()
+  return array_get(values, 0)
+}
+`
+    const { instance: { exports: generated } } = await WebAssembly.instantiate(await compile(source))
+    assert.equal(generated.probe(), 42)
+  })
+
   test(`${name} preserves consecutive lexer results and aliases`, async () => {
     const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
     const program = markdown.split("```compiler.matra.program\n")[1]

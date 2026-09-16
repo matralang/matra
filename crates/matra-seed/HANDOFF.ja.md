@@ -70,6 +70,15 @@ compiler自身のparser/metadata設計を変更する必要がある。従って
 ただし既存のtemporary struct ABIを壊すWasm heap cacheは不採用とし、parser結果をscalar fieldへ展開するか、
 既存tableの意味を変えない専用の不変metadata経路を、小さな回帰Programから段階導入する。
 
+flat `[i32]` metadata record（kind/start/lengthをallocate_i32_arrayへ格納し、後でarray_getする）を小さな
+seed/bootstrap回帰で試したが、現行のarray local/return ABIが期待どおりに扱われず値が崩れた。metadata表現の
+独立性を検証する前に、array ABI自体を別の実装単位として確立する必要があるため、テストは撤回した。
+
+その後、array ABIだけを切り出したstandalone回帰を追加した。`allocate_i32_array`の結果をlocalへ保存し、
+別関数の`[i32]` returnを受け、`array_set`後に`array_get`する最小Programをseed/bootstrapの両方で実行し、
+期待値42を確認した。struct lifetime suiteは8件すべて成功した。これにより、次のflat metadata実装は
+temporary structではなく、既存のarray pointer+length 2-slot ABI上へ段階的に載せられる。
+
 ### 制約と検証
 
 - sidecar cacheの構築中に`function_definition` pointerを保持しない。各loop iterationでposition scalarだけを保持する。
