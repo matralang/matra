@@ -53,6 +53,14 @@ host側で`//`コメントを除去し改行を保持するcompact source mode�
 `Unknown bytes variable: source`となった。現行parser/emitterはコメント除去によるsource offset変化にも依存する
 ため、入力圧縮は採用せず撤回した。
 
+### 別アプローチ: 成功artifactのhost cache
+
+embedded compiler内部の高速化がtemporary struct/slot ABI回帰を起こしやすいため、host側にStage 2/3 artifact
+cacheを追加した。`verify-self-host.mjs`はstage名、compiler bytes、source bytesのSHA-256をcache keyにし、
+既存artifactを`WebAssembly.compile`でvalidationしてから再利用する。失敗・壊れたartifactは採用せず、初回の
+compile検証とbyte equality判定は維持する。これは初回の長時間処理を短縮しないが、同一入力の再検証を高速化し、
+安全に別の性能アプローチを取るための基盤になる。
+
 ### 最適化の責務境界
 
 Rust seed (`src/lib.rs`)の解析共有を改善しても主にStage 1の生成時間しか短縮しない。Stage 2/3で実行される

@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto"
-import { readFile } from "node:fs/promises"
+import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { Worker } from "node:worker_threads"
 import { fileURLToPath } from "node:url"
 import { cachedCompiler, CommandError } from "./bootstrap-compiler.mjs"
 
 const compilerSourcePath = fileURLToPath(new URL("../examples/compiler.md", import.meta.url))
+const artifactCacheDirectory = fileURLToPath(new URL("../target/bootstrap/self-host", import.meta.url))
 
 try {
   const markdown = await readFile(compilerSourcePath, "utf8")
@@ -14,7 +15,7 @@ try {
   console.log(`Stage 1: ready (${checksum(stage1)}; ${elapsedSeconds(verificationStarted)}s)`)
 
   const stage2Started = performance.now()
-  const stage2 = await compile(stage1, source)
+  const stage2 = await compileCached(stage1, source, "stage2")
   if (!stage2.output) {
     console.error("Stage 2: blocked")
     console.error(`${stage2.diagnostic} (${elapsedSeconds(stage2Started)}s)`)
@@ -22,7 +23,7 @@ try {
   } else {
     console.log(`Stage 2: ready (${checksum(stage2.output)}; ${elapsedSeconds(stage2Started)}s)`)
     const stage3Started = performance.now()
-    const stage3 = await compile(stage2.output, source)
+    const stage3 = await compileCached(stage2.output, source, "stage3")
     if (!stage3.output) {
       console.error("Stage 3: blocked")
       console.error(`${stage3.diagnostic} (${elapsedSeconds(stage3Started)}s)`)
@@ -89,6 +90,32 @@ async function compile(compilerBytes, source) {
       reject(error)
     })
   })
+}
+
+async function compileCached(compilerBytes, source, stage) {
+  const key = createHash("sha256")
+    .update(stage)
+    .update(compilerBytes)
+    .update(source)
+    .digest("hex")
+  const cachePath = `${artifactCacheDirectory}/${stage}-${key}.wasm`
+  try {
+    await access(cachePath)
+    const output = await readFile(cachePath)
+    await WebAssembly.compile(output)
+    console.log(`${stage}: using cached artifact (${checksum(output)})`)
+    return { output }
+  } catch (error) {
+    if (error instanceof WebAssembly.CompileError) {
+      await rm(cachePath, { force: true })
+    }
+  }
+  const result = await compile(compilerBytes, source)
+  if (result.output) {
+    await mkdir(artifactCacheDirectory, { recursive: true })
+    await writeFile(cachePath, result.output)
+  }
+  return result
 }
 
 function checksum(bytes) {
