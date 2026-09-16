@@ -83,6 +83,10 @@ temporary structではなく、既存のarray pointer+length 2-slot ABI上へ段
 allocateして保存するflat metadata回帰を追加した。seed/bootstrapの両方で成功し、struct lifetime suiteは
 10件すべて通過した。重要な契約は、temporary struct pointerをarray allocationより後まで保持しないことである。
 
+7-field struct constructorをproducerにしたテストは、現行parserの多引数constructor制約に当たったため採用せず、
+scalar fieldからflat `[i32]` recordをmaterializeする最小形へ整理した。この独立ABIテストはseed/bootstrap両方で
+成功している。次の実装ではparse結果から必要fieldをscalar化した後、このrecordへ格納する。
+
 ### 制約と検証
 
 - sidecar cacheの構築中に`function_definition` pointerを保持しない。各loop iterationでposition scalarだけを保持する。

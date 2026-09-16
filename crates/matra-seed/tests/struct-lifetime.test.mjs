@@ -84,6 +84,28 @@ export fn probe(source: bytes) -> i32 {
     assert.equal(generated.probe(4096, bytes.length), 16)
   })
 
+  test(`${name} materializes flat metadata from scalar fields`, async () => {
+    const source = `module demo
+fn metadata(source: bytes) -> [i32] {
+  let status = 1
+  let position = 40
+  let record = allocate_i32_array(2)
+  array_set(record, 0, status)
+  array_set(record, 1, position)
+  let ignored = allocate_i32_array(1)
+  return record
+}
+export fn probe(source: bytes) -> i32 {
+  let record = metadata(source)
+  let status = array_get(record, 0)
+  let position = array_get(record, 1)
+  return status + position
+}
+`
+    const { instance: { exports: generated } } = await WebAssembly.instantiate(await compile(source))
+  assert.equal(generated.probe(0, 0), 41)
+  })
+
   test(`${name} preserves consecutive lexer results and aliases`, async () => {
     const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
     const program = markdown.split("```compiler.matra.program\n")[1]
