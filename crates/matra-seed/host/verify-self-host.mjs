@@ -109,6 +109,9 @@ async function compileCached(compilerBytes, source, stage) {
     if (error instanceof WebAssembly.CompileError) {
       await rm(cachePath, { force: true })
     }
+    if (error?.code !== "ENOENT") {
+      console.error(`${stage}: cache miss (${error.message})`)
+    }
   }
   const result = await compile(compilerBytes, source)
   if (result.output) {
