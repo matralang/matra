@@ -25,6 +25,34 @@ sidecar cacheを`function_positions()`と`function_at_index_cached()`として�
 追加allocationを避けるため、既存function tableの余剰領域へpositionを保存する変形も試したが、
 同じstruct lifetime回帰（bootstrap側の連続token testでinvalid local）が発生したため撤回した。
 
+`multiple_function_module`の最初のbody length scanだけを`first_function`から順次parseする実験も行った。
+struct lifetime回帰は通過したが、Stage 2の30秒計測ではtimeoutまで短縮せず、効果を確認できなかったため撤回した。
+
+`analyze_temporary_functions`の不動点反復内にある`function_at_index()`も、各反復で`first_function`から
+順次parseする実験を行った。struct lifetime回帰6件は通過したが、Stage 2は30秒でtimeoutしたため効果なしと
+判断して撤回した。現在のcompiler sourceにはこの実験は残っていない。
+
+診断として`analyze_temporary_functions`自体を一時bypassして`function_table`をそのまま返す試行も行ったが、
+Stage 2は同じく30秒でtimeoutした。このため主な遅延はtemporary function不動点解析単体ではなく、
+function table構築後のlength/writeやmodule生成経路全体にあると判断し、試行は撤回した。
+
+`compile`の複数function分岐で`multiple_function_module`を一時的に`empty_module`へ置き換える診断も試したが、
+Stage 1で`Unknown bytes variable: source`となり、module emitterの実行時間測定まで到達しなかった。
+dead branchでもembedded compilerの解析契約を壊すため撤回した。主因の切り分けには使えない結果として記録する。
+
+同様に`compile`内の`function_table(source)`を空の`[i32]`へ置き換える診断も試したが、Stage 1で同じ
+`Unknown bytes variable: source`となりruntime測定まで到達しなかった。parser/lowering全体がcompile bodyを
+解析するため、単純bypassによるhot path切り分けは成立しない。変更は撤回済み。
+
+その後、ユーザー側の未コミット編集で`analyze_temporary_functions(source, table)`が`record_function`または
+`record_call_metadata`内部へ移動していたため、Stage 1で`Unknown bytes variable: source`が発生した。
+両record helperを単純更新へ戻し、`function_table`の全metadata構築後に一度だけ解析する元の契約へ復旧した。
+現在はStage 1 ready後に通常のStage 2 timeout検知まで進む。
+
+host側で`//`コメントを除去し改行を保持するcompact source modeも一時実装したが、Stage 1で
+`Unknown bytes variable: source`となった。現行parser/emitterはコメント除去によるsource offset変化にも依存する
+ため、入力圧縮は採用せず撤回した。
+
 ### 最適化の責務境界
 
 Rust seed (`src/lib.rs`)の解析共有を改善しても主にStage 1の生成時間しか短縮しない。Stage 2/3で実行される

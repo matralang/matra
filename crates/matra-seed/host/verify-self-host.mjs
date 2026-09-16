@@ -58,6 +58,7 @@ function programSource(markdown, fenceName) {
 
 async function compile(compilerBytes, source) {
   const timeout = Number(process.env.MATRA_SELF_HOST_TIMEOUT_MS ?? 180000)
+  const started = performance.now()
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL("./compile-worker.mjs", import.meta.url), {
       workerData: {
@@ -66,17 +67,24 @@ async function compile(compilerBytes, source) {
         compilerSourcePath,
       },
     })
+    const heartbeatInterval = Number(process.env.MATRA_SELF_HOST_HEARTBEAT_MS ?? 10000)
+    const heartbeat = setInterval(() => {
+      console.error(`Self-host compile still running (${elapsedSeconds(started)}s elapsed).`)
+    }, heartbeatInterval)
     const timer = setTimeout(() => {
+      clearInterval(heartbeat)
       worker.terminate()
       resolve({ diagnostic: `Self-host compile exceeded ${timeout} ms and was terminated.` })
     }, timeout)
     worker.once("message", result => {
       clearTimeout(timer)
+      clearInterval(heartbeat)
       worker.terminate()
       resolve({ output: result.output ? Buffer.from(result.output) : undefined, diagnostic: result.diagnostic })
     })
     worker.once("error", error => {
       clearTimeout(timer)
+      clearInterval(heartbeat)
       worker.terminate()
       reject(error)
     })
