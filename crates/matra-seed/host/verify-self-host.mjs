@@ -93,6 +93,9 @@ async function compile(compilerBytes, source) {
 }
 
 async function compileCached(compilerBytes, source, stage) {
+  if (process.env.MATRA_SELF_HOST_CACHE === "0") {
+    return compile(compilerBytes, source)
+  }
   const key = createHash("sha256")
     .update(stage)
     .update(compilerBytes)

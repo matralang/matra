@@ -1,5 +1,42 @@
 # Matra bootstrap引き継ぎ
 
+## 2026-09-16 性能改善完了: local slot 型検索の範囲縮小
+
+下記の metadata cache 仮説よりも先に、Worker の CPU profile で実際の hot path を確認した。
+変更前の Stage 2 は30秒で timeout し、compile 配下のサンプルの約94%が
+`is_bytes_variable`、約1%が `function_at_index` を通っていた。
+主因は `local_slot_width` が各 local の幅を調べるたびに、ソース全体を token 化していたことである。
+
+実装した変更:
+
+- literal・call・field access を bytes 変数検索の対象から外す。
+- 所属関数の name offset を scalar として local count/index helper へ渡し、bytes 変数の型検索を
+  その関数の parameter 宣言に限定する。他の関数の同名 bytes 引数による誤判定も防ぐ。
+- `is_array_return_call` は宣言を検索する際に、関数・struct の body を brace 対応だけで読み飛ばす。
+  `//` comment 内の brace は無視する。既存 lexer と同じく文字列 token は扱わない。
+- `MATRA_SELF_HOST_CACHE=0` で Stage 2/3 artifact cache の読み書きを bypass できるようにする。
+- 古い self-host 失敗を期待するテストを、cache 無効で Stage 2/3 の成功と byte equality を確認する
+  テストへ更新する。各 Stage は60秒、親 process は150秒を上限とする。
+- その失敗 assertion の後ろに隠れていた複数関数の実行テストは、呼び出す関数に `export` を明示する。
+  compiler の export 仕様は変更せず、古いテストデータを現行仕様へ合わせる。
+
+cache 未使用の実測は Stage 2 が21.5秒、Stage 3 が22.4秒で、両者は byte-identical だった。
+以前の180秒 timeout は下記の過去ログに記録されている。今回の変更前実測は30秒 timeout までであり、
+厳密な速度倍率は測定していない。不要な bytes 検索の除外だけの中間版では Stage 2 が97.3秒だった。
+function table、temporary flags、struct/array ABI の layout は変更していない。
+
+回帰テストには別関数の同名 parameter、bytes local の後続 local、field access、array-return call、
+nested body と comment 内の偽の関数宣言・brace を含めた。struct/array lifetime suite は14件成功した。
+
+再計測は次の command で行う。Stage 1 cache は使用するが、Stage 2/3 は毎回実行する。
+
+```sh
+MATRA_SELF_HOST_CACHE=0 pnpm bootstrap:verify
+pnpm run test:seed
+pnpm run lint
+git diff --check
+```
+
 ## 2026-09-16 性能改善設計: function metadata sidecar cache
 
 Stage 2の遅延は、`function_at_index()`が毎回source先頭から関数を再走査し、さらに

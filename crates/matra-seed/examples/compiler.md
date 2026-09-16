@@ -2890,6 +2890,35 @@ fn function_body_kind_of(source: bytes, function: function_definition) -> i32 {
   return 1
 }
 
+// 型宣言の検索では関数本体を解析せず、comment を除いた brace の対応だけを追う。
+fn skip_braced_body(source: bytes, offset: i32) -> i32 {
+  let position = offset
+  let source_length = byte_length(source)
+  let depth = 1
+  while position < source_length {
+    let value = byte_at(source, position)
+    if value == 47 {
+      if position + 1 < source_length {
+        if byte_at(source, position + 1) == 47 {
+          position = position + 2
+          while position < source_length {
+            if byte_at(source, position) == 10 { break }
+            position = position + 1
+          }
+        }
+      }
+    } else {
+      if value == 123 { depth = depth + 1 }
+      if value == 125 {
+        depth = depth - 1
+        if depth == 0 { return position + 1 }
+      }
+    }
+    position = position + 1
+  }
+  return position
+}
+
 fn is_array_return_call(source: bytes, value: token) -> i32 {
   let after = next_token(source, value.start + value.length)
   if is_symbol(source, after, 40) == 0 {
@@ -2917,14 +2946,26 @@ fn is_array_return_call(source: bytes, value: token) -> i32 {
         return is_i32_array_type(source, result_type)
       }
     }
-    current = next_token(source, current.start + current.length)
+    if is_symbol(source, current, 123) == 1 {
+      let body_end = skip_braced_body(source, current.start + current.length)
+      current = next_token(source, body_end)
+    } else {
+      current = next_token(source, current.start + current.length)
+    }
   }
   return 0
 }
 
-fn is_bytes_variable(source: bytes, value: token) -> i32 {
-  let current = next_token(source, 0)
-  while current.kind != 0 {
+fn is_bytes_variable(source: bytes, function_start: i32, value: token) -> i32 {
+  // literal、call、field access は bytes 変数そのものではない。
+  if value.kind != 1 { return 0 }
+  let after = next_token(source, value.start + value.length)
+  if is_symbol(source, after, 40) == 1 { return 0 }
+  if is_symbol(source, after, 46) == 1 { return 0 }
+  // 変数の型は所属する関数の parameter 宣言だけから調べる。
+  let current = next_token(source, function_start)
+  while is_symbol(source, current, 41) == 0 {
+    if current.kind == 0 { return 0 }
     if current.kind == 1 {
       if same_token(source, current, value) == 1 {
         let colon = next_token(source, current.start + current.length)
@@ -2939,14 +2980,14 @@ fn is_bytes_variable(source: bytes, value: token) -> i32 {
   return 0
 }
 
-fn local_slot_width(source: bytes, statement: token) -> i32 {
+fn local_slot_width(source: bytes, function_start: i32, statement: token) -> i32 {
   let name = statement
   if is_let_keyword(source, name) == 1 {
     name = next_token(source, name.start + name.length)
   }
   let equals = next_token(source, name.start + name.length)
   let operand = next_token(source, equals.start + equals.length)
-  if is_bytes_variable(source, operand) == 1 {
+  if is_bytes_variable(source, function_start, operand) == 1 {
     return 2
   }
   if is_allocate_i32_array_call(source, operand) == 1 {
@@ -2971,19 +3012,19 @@ fn is_array_assignment(source: bytes, operand: token) -> i32 {
   return is_array_return_call(source, operand)
 }
 
-fn count_let_tokens_in_range(source: bytes, start: i32, end: i32) -> i32 {
+fn count_let_tokens_in_range(source: bytes, function_start: i32, start: i32, end: i32) -> i32 {
   let current = next_token(source, start)
   let count = 0
   while current.start < end {
     if is_let_keyword(source, current) == 1 {
-      count = count + local_slot_width(source, current)
+      count = count + local_slot_width(source, function_start, current)
     }
     current = next_token(source, current.start + current.length)
   }
   return count
 }
 
-fn let_offset_in_range(source: bytes, start: i32, end: i32, target: token) -> i32 {
+fn let_offset_in_range(source: bytes, function_start: i32, start: i32, end: i32, target: token) -> i32 {
   let current = next_token(source, start)
   let offset = 0
   while current.start < end {
@@ -2992,7 +3033,7 @@ fn let_offset_in_range(source: bytes, start: i32, end: i32, target: token) -> i3
       if same_token(source, name, target) == 1 {
         return offset
       }
-      offset = offset + local_slot_width(source, current)
+      offset = offset + local_slot_width(source, function_start, current)
     }
     current = next_token(source, current.start + current.length)
   }
@@ -3000,12 +3041,14 @@ fn let_offset_in_range(source: bytes, start: i32, end: i32, target: token) -> i3
 }
 
 fn local_count_of(source: bytes, function: function_definition) -> i32 {
+  let name_start = function.name_start
   let end = function.position
   let first = function_body_first_token(source, function)
-  return count_let_tokens_in_range(source, first.start, end)
+  return count_let_tokens_in_range(source, name_start, first.start, end)
 }
 
 fn fixed_local_count_of(source: bytes, function: function_definition) -> i32 {
+  let name_start = function.name_start
   let current = function_body_first_token(source, function)
   let count = 0
   while is_let_keyword(source, current) == 1 {
@@ -3056,7 +3099,7 @@ fn fixed_local_count_of(source: bytes, function: function_definition) -> i32 {
         } else {
           post_conditional_loop_statement = parse_loop_local_conditional(source, current.start)
         }
-        count = count + count_let_tokens_in_range(source, current.start, post_conditional_loop_statement.position)
+        count = count + count_let_tokens_in_range(source, name_start, current.start, post_conditional_loop_statement.position)
         current = next_token(source, post_conditional_loop_statement.position)
       } else {
         let post_conditional_target = current
@@ -3114,7 +3157,7 @@ fn fixed_local_count_of(source: bytes, function: function_definition) -> i32 {
         } else {
           conditional = parse_loop_local_conditional(source, current.start)
         }
-        count = count + count_let_tokens_in_range(source, current.start, conditional.position)
+        count = count + count_let_tokens_in_range(source, name_start, current.start, conditional.position)
         current = next_token(source, conditional.position)
       } else {
         let target = current
@@ -3156,7 +3199,7 @@ fn fixed_local_count_of(source: bytes, function: function_definition) -> i32 {
         } else {
           second_conditional = parse_loop_local_conditional(source, current.start)
         }
-        count = count + count_let_tokens_in_range(source, current.start, second_conditional.position)
+        count = count + count_let_tokens_in_range(source, name_start, current.start, second_conditional.position)
         current = next_token(source, second_conditional.position)
       } else {
         let second_target = current
@@ -3198,7 +3241,7 @@ fn variable_index(source: bytes, function: function_definition, target: token) -
     return parameter_index
   }
   let first = function_body_first_token(source, function)
-  let local_offset = let_offset_in_range(source, first.start, function_position, target)
+  let local_offset = let_offset_in_range(source, name_start, first.start, function_position, target)
   if local_offset >= 0 {
     let parameter_count = function_parameter_count_at(source, name_start, name_length)
     return parameter_count + local_offset
@@ -3219,7 +3262,7 @@ fn lexical_variable_index(source: bytes, function: function_definition, target: 
       if same_token(source, name, target) == 1 {
         return index
       }
-      index = index + local_slot_width(source, current)
+      index = index + local_slot_width(source, name_start, current)
     }
     current = next_token(source, current.start + current.length)
   }
@@ -3288,11 +3331,11 @@ fn fixed_variable_index(source: bytes, function: function_definition, target: to
         } else {
           post_conditional_loop_statement = parse_loop_local_conditional(source, current.start)
         }
-        let post_conditional_loop_offset = let_offset_in_range(source, current.start, post_conditional_loop_statement.position, target)
+        let post_conditional_loop_offset = let_offset_in_range(source, name_start, current.start, post_conditional_loop_statement.position, target)
         if post_conditional_loop_offset >= 0 {
           return index + post_conditional_loop_offset
         }
-        index = index + count_let_tokens_in_range(source, current.start, post_conditional_loop_statement.position)
+        index = index + count_let_tokens_in_range(source, name_start, current.start, post_conditional_loop_statement.position)
         current = next_token(source, post_conditional_loop_statement.position)
       } else {
         let post_conditional_target_name = current
@@ -3354,11 +3397,11 @@ fn fixed_variable_index(source: bytes, function: function_definition, target: to
         } else {
           conditional = parse_loop_local_conditional(source, current.start)
         }
-        let conditional_offset = let_offset_in_range(source, current.start, conditional.position, target)
+        let conditional_offset = let_offset_in_range(source, name_start, current.start, conditional.position, target)
         if conditional_offset >= 0 {
           return index + conditional_offset
         }
-        index = index + count_let_tokens_in_range(source, current.start, conditional.position)
+        index = index + count_let_tokens_in_range(source, name_start, current.start, conditional.position)
         current = next_token(source, conditional.position)
       } else {
         let target_name = current
@@ -3406,11 +3449,11 @@ fn fixed_variable_index(source: bytes, function: function_definition, target: to
         } else {
           second_conditional = parse_loop_local_conditional(source, current.start)
         }
-        let second_conditional_offset = let_offset_in_range(source, current.start, second_conditional.position, target)
+        let second_conditional_offset = let_offset_in_range(source, name_start, current.start, second_conditional.position, target)
         if second_conditional_offset >= 0 {
           return index + second_conditional_offset
         }
-        index = index + count_let_tokens_in_range(source, current.start, second_conditional.position)
+        index = index + count_let_tokens_in_range(source, name_start, current.start, second_conditional.position)
         current = next_token(source, second_conditional.position)
       } else {
         let second_target_name = current

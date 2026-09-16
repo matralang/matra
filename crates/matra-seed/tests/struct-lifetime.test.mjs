@@ -37,6 +37,48 @@ async function bootstrap(source) {
 }
 
 for (const [name, compile] of [["seed", seed], ["bootstrap", bootstrap]]) {
+  test(`${name} resolves local widths from the enclosing function and skips commented braces`, async () => {
+    const source = `module demo
+struct item { left: i32 }
+fn earlier(value: bytes) -> i32 {
+  // } fn make() -> i32 { {{
+  if byte_length(value) == 0 { return 0 }
+  return byte_length(value)
+}
+fn scalar(value: i32) -> i32 {
+  let copied = value
+  let extra = 2
+  return copied + extra
+}
+fn make() -> [i32] {
+  let values = allocate_i32_array(1)
+  array_set(values, 0, 20)
+  return values
+}
+export fn probe() -> i32 {
+  let scalar_result = scalar(20)
+  let values = make()
+  let element = array_get(values, 0)
+  return scalar_result + element
+}
+export fn field(value: item) -> i32 {
+  let copied = value.left
+  let extra = 2
+  return copied + extra
+}
+export fn bytes_copy(source: bytes) -> i32 {
+  let ignored = source
+  let result = 42
+  return result
+}
+`
+    const { instance: { exports: generated } } = await WebAssembly.instantiate(await compile(source))
+    assert.equal(generated.probe(), 42)
+    new DataView(generated.memory.buffer).setInt32(4096, 40, true)
+    assert.equal(generated.field(4096), 42)
+    assert.equal(generated.bytes_copy(4096, 4), 42)
+  })
+
   test(`${name} preserves array local pointer and length slots`, async () => {
     const source = `module demo
 fn make() -> [i32] {
