@@ -1,5 +1,47 @@
 # Matra bootstrap引き継ぎ
 
+## 2026-09-16 性能改善設計: function metadata sidecar cache
+
+Stage 2の遅延は、`function_at_index()`が毎回source先頭から関数を再走査し、さらに
+`function_parameter_count_of`、`function_body_kind_of`、`local_count_of`、length/writeが同じtoken列を
+繰り返し解析することが主因候補である。既存の7-field function tableやWasm ABIを直接変更するcache実験は
+struct lifetime回帰でinvalid localになったため、次は既存tableと分離したsidecar cacheとして設計する。
+
+### 方針
+
+1. `function_positions(source)`を一度だけ走査し、`[count, position_0, ...]`の`[i32]`を返す。
+2. `function_at_index_cached(source, positions, index)`はpositionから`parse_function`を一度だけ呼ぶ。
+3. 既存の`function_table`の7-field metadata、temporary flags、bytes/array slot ABIは変更しない。
+4. 最初は`multiple_function_module`、`analyze_temporary_functions`、type/code/export section生成など、
+  既にfunction indexとtableを持つhot pathだけをcached helperへ置換する。
+5. parserやlength/writeの意味、生成Wasm、Stage 2/3 byte equalityが変わらないことを各段階で確認する。
+
+sidecar cacheを`function_positions()`と`function_at_index_cached()`として実装し、
+`multiple_function_module`へ限定導入する試行を行ったが、struct lifetime回帰でinvalid localが発生した。
+既存table layoutを直接変更していなくても、function position arrayの評価・temporary allocationが
+既存のlocal index/arena契約へ影響したため撤回した。次回はcache dataをWasm heapへ置かず、既存の
+一時struct ABIと独立した仕組み（またはRust側での解析結果共有）として再設計する。
+
+追加allocationを避けるため、既存function tableの余剰領域へpositionを保存する変形も試したが、
+同じstruct lifetime回帰（bootstrap側の連続token testでinvalid local）が発生したため撤回した。
+
+### 最適化の責務境界
+
+Rust seed (`src/lib.rs`)の解析共有を改善しても主にStage 1の生成時間しか短縮しない。Stage 2/3で実行される
+compilerは`examples/compiler.md`から生成されたWasmなので、Stage 2の長時間問題を解消するにはembedded
+compiler自身のparser/metadata設計を変更する必要がある。従って次の性能改善では、Rust側のcacheを先に増やす
+のではなく、Matra側で「一度だけ解析した不変metadata」をlength/write/emitterが共有する境界を設計する。
+ただし既存のtemporary struct ABIを壊すWasm heap cacheは不採用とし、parser結果をscalar fieldへ展開するか、
+既存tableの意味を変えない専用の不変metadata経路を、小さな回帰Programから段階導入する。
+
+### 制約と検証
+
+- sidecar cacheの構築中に`function_definition` pointerを保持しない。各loop iterationでposition scalarだけを保持する。
+- cacheをfunction tableへ埋め込まず、既存indexの意味を変えない。
+- 初回実装はlookup置換だけとし、local indexやtemporary heapの変更を同時に行わない。
+- Stage 1/2/3のStage別秒数を比較し、Stage 2時間が短縮しない、または回帰testが失敗した場合は撤回する。
+- 成功条件は`pnpm run test:seed`、`pnpm run lint`、`git diff --check`、Stage 2/3 byte equalityである。
+
 ## 2026-09-16 verify-self-host の長時間実行検知
 
 `verify-self-host.mjs`のStage 2/3 compileをWorkerへ隔離し、既定180秒を超えた場合はWorkerをterminateして
