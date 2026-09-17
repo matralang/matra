@@ -11,6 +11,13 @@ describe("Markdown Matra fences", () => {
     )
   })
 
+  it("extracts a Matra Program fence", () => {
+    assert.deepEqual(
+      extractMatraMarkdown("# Program\n\n```answer.matra.program\nmodule answer\n```\n"),
+      { filename: "answer.matra.program", kind: "matra.program", source: "module answer\n" },
+    )
+  })
+
   it("supports long fences and selects a named entry", () => {
     const markdown = [
       "````page.matra",

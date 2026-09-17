@@ -5,7 +5,7 @@ export interface MarkdownFence {
 }
 /** A Matra source block embedded in a Markdown document. */
 export interface MatraMarkdownFence extends MarkdownFence {
-    kind: "matra" | "matra.ts";
+    kind: "matra" | "matra.ts" | "matra.program";
 }
 export interface ExtractMatraMarkdownOptions {
     /** Select a fenced source by filename when the document has multiple entries. */

@@ -9,14 +9,16 @@ export function extractMatraMarkdown(markdown, options = {}) {
         .map(fence => {
         const kind = fence.filename.endsWith(".matra.ts")
             ? "matra.ts"
-            : fence.filename.endsWith(".matra")
-                ? "matra"
-                : undefined;
+            : fence.filename.endsWith(".matra.program")
+                ? "matra.program"
+                : fence.filename.endsWith(".matra")
+                    ? "matra"
+                    : undefined;
         return kind ? { ...fence, kind } : undefined;
     })
         .filter((fence) => fence !== undefined);
     if (fences.length === 0) {
-        throw new SyntaxError("Markdown must contain one `*.matra` or `*.matra.ts` fenced code block.");
+        throw new SyntaxError("Markdown must contain one `*.matra`, `*.matra.ts`, or `*.matra.program` fenced code block.");
     }
     const fence = options.entry
         ? fences.find(candidate => candidate.filename === options.entry)

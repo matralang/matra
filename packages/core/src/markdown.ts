@@ -6,7 +6,7 @@ export interface MarkdownFence {
 
 /** A Matra source block embedded in a Markdown document. */
 export interface MatraMarkdownFence extends MarkdownFence {
-  kind: "matra" | "matra.ts"
+  kind: "matra" | "matra.ts" | "matra.program"
 }
 
 export interface ExtractMatraMarkdownOptions {
@@ -28,6 +28,8 @@ export function extractMatraMarkdown(
     .map(fence => {
       const kind = fence.filename.endsWith(".matra.ts")
         ? "matra.ts"
+        : fence.filename.endsWith(".matra.program")
+          ? "matra.program"
         : fence.filename.endsWith(".matra")
           ? "matra"
           : undefined
@@ -36,7 +38,7 @@ export function extractMatraMarkdown(
     .filter((fence): fence is MatraMarkdownFence => fence !== undefined)
 
   if (fences.length === 0) {
-    throw new SyntaxError("Markdown must contain one `*.matra` or `*.matra.ts` fenced code block.")
+    throw new SyntaxError("Markdown must contain one `*.matra`, `*.matra.ts`, or `*.matra.program` fenced code block.")
   }
 
   const fence = options.entry

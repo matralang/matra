@@ -21,8 +21,8 @@ const renderMode = required<HTMLSelectElement>("render-mode")
 const stylesheet = required<HTMLInputElement>("stylesheet")
 
 type OutputMode = "html" | "svg"
-type ResultMode = OutputMode | "math"
-type MatraFence = { filename: string; kind: "matra" | "matra.ts"; source: string }
+type ResultMode = OutputMode | "math" | "program"
+type MatraFence = { filename: string; kind: "matra" | "matra.ts" | "matra.program"; source: string }
 type MatraRenderer = ResultMode | "auto"
 type MatraDocument = MatraFence & { renderer: MatraRenderer; title?: string; stylesheet?: string }
 
@@ -124,6 +124,7 @@ const examples: Record<string, string> = {
   text(x=80, y=65, fill="#ffffff", font-size=18, font-family="monospace", "SIGNAL / 01")
 )`, "svg"),
   "compute-engine": markdown("formula.matra", "Add(Power(2, 10), Factorial(5), Sin(Divide(Pi, 2)))", "math"),
+  program: `# Program compiler\n\n\`\`\`answer.matra.program\nmodule playground\n\nexport fn answer() -> i32 {\n  let (value = 40)\n  while (value < 42) {\n    set (value = value + 1)\n  }\n  return value\n}\n\`\`\``,
   "js-card": markdown("card.matra.ts", `// TypeScript-compatible values are embedded with \${...}.
 const title = "Matra from JavaScript"
 
@@ -166,6 +167,10 @@ async function render(): Promise<void> {
 
   try {
     const document = extractMatraDocument(program)
+    if (document.kind === "matra.program") {
+      await renderMatraProgram(document, version)
+      return
+    }
     const programResult = document.kind === "matra.ts"
       ? await runMatraTypeScriptProgram(document.source)
       : { source: document.source }
@@ -203,6 +208,26 @@ async function render(): Promise<void> {
     status.textContent = "Invalid source"
     status.classList.add("is-error")
   }
+}
+
+async function renderMatraProgram(document: MatraDocument, version: number): Promise<void> {
+  const compilation = await compileMatraProgram(document.source, document.filename)
+  if (version !== renderVersion) return
+  latestMode = "program"
+  latestOutputs = {
+    ast: "Matra Program is compiled directly to WebAssembly; an AST is not exposed by the current compiler ABI.",
+    matraJSON: "MatraJSON is not defined for the Matra Program execution profile.",
+    renderer: compilation.result,
+  }
+  setExpressionTabLabel("MatraJSON")
+  astOutput.textContent = latestOutputs.ast
+  matraJSONOutput.textContent = latestOutputs.matraJSON
+  rendererOutput.textContent = compilation.result
+  preview.srcdoc = previewDocument(compilation.result, "program", document.filename)
+  downloadButton.dataset.output = compilation.output
+  errorCard.hidden = true
+  status.textContent = `Compiled ${document.filename} · WebAssembly · ${compilation.bytes} bytes`
+  status.classList.remove("is-error")
 }
 
 function renderMath(program: string, filename: string, selectedStylesheet: string): void {
@@ -293,6 +318,17 @@ copyButton.addEventListener("click", async () => {
 })
 
 downloadButton.addEventListener("click", () => {
+  if (latestMode === "program") {
+    const output = downloadButton.dataset.output
+    if (!output) return
+    const bytes = Uint8Array.from(atob(output), character => character.charCodeAt(0))
+    const link = document.createElement("a")
+    link.href = URL.createObjectURL(new Blob([bytes], { type: "application/wasm" }))
+    link.download = "matra-program.wasm"
+    link.click()
+    URL.revokeObjectURL(link.href)
+    return
+  }
   const content = latestOutputs.renderer
   const extension = latestMode === "svg" ? "svg" : latestMode === "math" ? "txt" : "html"
   const blob = new Blob([content], { type: latestMode === "svg" ? "image/svg+xml" : latestMode === "math" ? "text/plain" : "text/html" })
@@ -313,7 +349,40 @@ function outputForPanel(panel: string): string {
 function previewDocument(output: string, mode: ResultMode, title = "Matra Playground", selectedStylesheet = "matra"): string {
   const stylesheetTag = previewStylesheet(selectedStylesheet)
   const utilityStyles = `.graphics-preview{min-height:calc(100vh - 64px);display:grid;place-items:center}.graphics-preview svg{display:block;max-width:100%;height:auto;max-height:calc(100vh - 64px);filter:drop-shadow(0 18px 36px #10181422)}.math-preview{max-width:680px;margin:0;padding:28px;white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace}`
-  return `<!doctype html><html><head><title>${escapeHTML(title)}</title>${stylesheetTag}<style>${utilityStyles}</style></head><body>${mode === "svg" ? `<main class="graphics-preview">${output}</main>` : mode === "math" ? `<pre class="math-preview">${escapeHTML(output)}</pre>` : output}</body></html>`
+  return `<!doctype html><html><head><title>${escapeHTML(title)}</title>${stylesheetTag}<style>${utilityStyles}</style></head><body>${mode === "svg" ? `<main class="graphics-preview">${output}</main>` : mode === "math" || mode === "program" ? `<pre class="math-preview">${escapeHTML(output)}</pre>` : output}</body></html>`
+}
+
+async function compileMatraProgram(source: string, filename: string): Promise<{ output: string; result: string; bytes: number }> {
+  const id = ++workerSequence
+  const worker = new Worker(new URL("./matra-program-worker.js", import.meta.url), { type: "module" })
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      worker.terminate()
+      reject(new Error("Matra Program compilation timed out after 5 seconds."))
+    }, 5000)
+    const finish = () => {
+      window.clearTimeout(timeout)
+      worker.terminate()
+    }
+    worker.addEventListener("message", event => {
+      const response = event.data as { id: number; output?: ArrayBuffer; result?: string; error?: string }
+      if (response.id !== id) return
+      finish()
+      if (response.error) reject(new Error(response.error))
+      else if (!response.output) reject(new Error("Matra Program compiler did not return WebAssembly output."))
+      else {
+        const bytes = new Uint8Array(response.output)
+        let binary = ""
+        bytes.forEach(byte => { binary += String.fromCharCode(byte) })
+        resolve({ output: btoa(binary), result: response.result ?? "Compiled successfully.", bytes: bytes.length })
+      }
+    })
+    worker.addEventListener("error", () => {
+      finish()
+      reject(new Error("Matra Program compiler worker failed."))
+    })
+    worker.postMessage({ id, source, filename })
+  })
 }
 
 const stylesheetPresets: Record<string, string | undefined> = {

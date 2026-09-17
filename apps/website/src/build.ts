@@ -3,6 +3,7 @@ import * as fs from "fs"
 // @ts-ignore: allow importing path without @types/node installed
 import * as path from "path"
 import { build } from "esbuild"
+import { cachedCompiler } from "../../../crates/matra-seed/host/bootstrap-compiler.mjs"
 
 // Declare the Node `process` global when @types/node is not installed.
 declare const process: any;
@@ -412,10 +413,12 @@ async function handler() {
 
   const assetsDir = path.join(outputDir, "assets")
   fs.mkdirSync(assetsDir, { recursive: true })
+  fs.copyFileSync(await cachedCompiler(), path.join(assetsDir, "matra-program-compiler.wasm"))
   await build({
     entryPoints: {
       playground: path.join(process.cwd(), "src", "client", "playground.ts"),
       "matra-worker": path.join(process.cwd(), "src", "client", "matra-worker.ts"),
+      "matra-program-worker": path.join(process.cwd(), "src", "client", "matra-program-worker.ts"),
     },
     outdir: assetsDir,
     bundle: true,

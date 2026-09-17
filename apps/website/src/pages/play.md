@@ -188,6 +188,17 @@ section.playground-page {
               "Matra math input"
             }
           }
+          button.example-button[type="button", data-example="program", aria-pressed="false"] {
+            span.example-kind.math {
+              "PROGRAM"
+            }
+            strong {
+              "Compile to Wasm"
+            }
+            small {
+              "Run an exported function"
+            }
+          }
           button.example-button[type="button", data-example="js-card", aria-pressed="false"] {
             span.example-kind.js {
               "TS"
