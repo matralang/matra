@@ -162,6 +162,31 @@ export fn answer() -> i32 {
   assert.equal(generated.answer(), 42)
 })
 
+test("bootstrap compiler executes parenthesized let and set in nested blocks", async () => {
+  const compilerBytes = await readFile(await cachedCompiler())
+  const source = new TextEncoder().encode(`module example
+export fn answer() -> i32 {
+  let (value = 0)
+  if value == 0 {
+    let (increment = 20)
+    set (value = value + increment)
+  }
+  while value < 42 {
+    set (value = value + 1)
+  }
+  return value
+}`)
+  const { instance: { exports: { alloc, compile, memory } } } = await WebAssembly.instantiate(compilerBytes)
+  const pointer = alloc(source.length)
+  new Uint8Array(memory.buffer, pointer, source.length).set(source)
+  const recordPointer = compile(pointer, source.length)
+  const record = new DataView(memory.buffer, recordPointer, 36)
+  assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(source, memory, recordPointer))
+  const output = new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
+  const { instance: { exports: generated } } = await WebAssembly.instantiate(output)
+  assert.equal(generated.answer(), 42)
+})
+
 test("bootstrap compiler accepts a call guard before a local and while", async () => {
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-call-guard-"))
   const input = join(directory, "call-guard.md")

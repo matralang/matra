@@ -1040,23 +1040,38 @@ fn parse_conditional_statement(source: bytes, offset: i32, parameter: token) -> 
           }
           current = expression_end(source, returned_value)
         } else {
-          if current.kind != 1 {
-            return function_definition(0, 0, 0, 0, offset, current.start, 2)
+          let assignment = current
+          let assignment_name_token = assignment_name(source, assignment)
+          if is_set_keyword(source, assignment) == 1 {
+            let set_open = next_token(source, assignment.start + assignment.length)
+            if is_symbol(source, set_open, 40) == 0 {
+              return function_definition(0, 0, 0, 0, offset, set_open.start, 4)
+            }
           }
-          if is_let_keyword(source, current) == 1 {
-            current = next_token(source, current.start + current.length)
+          if assignment_name_token.kind != 1 {
+            return function_definition(0, 0, 0, 0, offset, assignment_name_token.start, 2)
           }
-          let assignment_equals = next_token(source, current.start + current.length)
+          let assignment_equals = next_token(source, assignment_name_token.start + assignment_name_token.length)
           if is_symbol(source, assignment_equals, 61) == 0 {
             return function_definition(0, 0, 0, 0, offset, assignment_equals.start, 13)
           }
-          let assignment_operand = next_token(source, assignment_equals.start + assignment_equals.length)
-          if is_symbol(source, assignment_operand, 45) == 1 {
-            let negative_assignment_operand = next_token(source, assignment_operand.start + assignment_operand.length)
-            current = expression_end(source, negative_assignment_operand)
-          } else {
-            current = expression_end(source, assignment_operand)
+          let assignment_value = assignment_operand(source, assignment)
+          if is_symbol(source, assignment_value, 45) == 1 {
+            assignment_value = next_token(source, assignment_value.start + assignment_value.length)
           }
+          if assignment_value.kind != 1 {
+            if assignment_value.kind != 2 {
+              return function_definition(0, 0, 0, 0, offset, assignment_value.start, 13)
+            }
+          }
+          let assignment_value_end = expression_end(source, assignment_value)
+          let after_assignment_keyword = next_token(source, assignment.start + assignment.length)
+          if is_symbol(source, after_assignment_keyword, 40) == 1 {
+            if is_symbol(source, assignment_value_end, 41) == 0 {
+              return function_definition(0, 0, 0, 0, offset, assignment_value_end.start, 14)
+            }
+          }
+          current = assignment_end(source, assignment)
         }
         }
       }
@@ -1785,9 +1800,13 @@ fn parse_while_statement(source: bytes, offset: i32) -> function_definition {
         }
         current = next_token(source, conditional.position)
       } else {
-        let target = current
-        if is_let_keyword(source, current) == 1 {
-          target = next_token(source, current.start + current.length)
+        let assignment = current
+        let target = assignment_name(source, assignment)
+        if is_set_keyword(source, assignment) == 1 {
+          let set_open = next_token(source, assignment.start + assignment.length)
+          if is_symbol(source, set_open, 40) == 0 {
+            return function_definition(0, 0, 0, 0, offset, set_open.start, 4)
+          }
         }
         if target.kind != 1 {
           return function_definition(0, 0, 0, 0, offset, target.start, 2)
@@ -1796,7 +1815,7 @@ fn parse_while_statement(source: bytes, offset: i32) -> function_definition {
         if is_symbol(source, equals, 61) == 0 {
           return function_definition(0, 0, 0, 0, offset, equals.start, 13)
         }
-        let operand = next_token(source, equals.start + equals.length)
+        let operand = assignment_operand(source, assignment)
         if operand.kind != 1 {
           if operand.kind != 2 {
             return function_definition(0, 0, 0, 0, offset, operand.start, 13)
@@ -1869,6 +1888,13 @@ fn parse_while_statement(source: bytes, offset: i32) -> function_definition {
               current = next_token(source, arithmetic_argument.start + arithmetic_argument.length)
             }
           }
+        }
+        let after_assignment_keyword = next_token(source, assignment.start + assignment.length)
+        if is_symbol(source, after_assignment_keyword, 40) == 1 {
+          if is_symbol(source, current, 41) == 0 {
+            return function_definition(0, 0, 0, 0, offset, current.start, 14)
+          }
+          current = next_token(source, current.start + current.length)
         }
       }
     }
@@ -2010,17 +2036,22 @@ fn parse_local_return_conditional(source: bytes, offset: i32) -> function_defini
       }
       body_statement = next_token(source, body_while.position)
       } else {
-        if body_statement.kind != 1 {
-          return function_definition(0, 0, 0, 0, offset, body_statement.start, 2)
+        let body_assignment = body_statement
+        let body_name = assignment_name(source, body_assignment)
+        if is_set_keyword(source, body_assignment) == 1 {
+          let body_set_open = next_token(source, body_assignment.start + body_assignment.length)
+          if is_symbol(source, body_set_open, 40) == 0 {
+            return function_definition(0, 0, 0, 0, offset, body_set_open.start, 4)
+          }
         }
-        if is_let_keyword(source, body_statement) == 1 {
-          body_statement = next_token(source, body_statement.start + body_statement.length)
+        if body_name.kind != 1 {
+          return function_definition(0, 0, 0, 0, offset, body_name.start, 2)
         }
-        let body_equals = next_token(source, body_statement.start + body_statement.length)
+        let body_equals = next_token(source, body_name.start + body_name.length)
         if is_symbol(source, body_equals, 61) == 0 {
           return function_definition(0, 0, 0, 0, offset, body_equals.start, 13)
         }
-        let body_operand = next_token(source, body_equals.start + body_equals.length)
+        let body_operand = assignment_operand(source, body_assignment)
         if is_symbol(source, body_operand, 45) == 1 {
           let negative_body_operand = next_token(source, body_operand.start + body_operand.length)
           if negative_body_operand.kind != 1 {
@@ -2028,15 +2059,22 @@ fn parse_local_return_conditional(source: bytes, offset: i32) -> function_defini
               return function_definition(0, 0, 0, 0, offset, negative_body_operand.start, 13)
             }
           }
-          body_statement = expression_end(source, negative_body_operand)
+          body_operand = negative_body_operand
         } else {
           if body_operand.kind != 1 {
             if body_operand.kind != 2 {
               return function_definition(0, 0, 0, 0, offset, body_operand.start, 13)
             }
           }
-          body_statement = expression_end(source, body_operand)
         }
+        let body_end = expression_end(source, body_operand)
+        let body_after_keyword = next_token(source, body_assignment.start + body_assignment.length)
+        if is_symbol(source, body_after_keyword, 40) == 1 {
+          if is_symbol(source, body_end, 41) == 0 {
+            return function_definition(0, 0, 0, 0, offset, body_end.start, 14)
+          }
+        }
+        body_statement = assignment_end(source, body_assignment)
       }
     }
     }
