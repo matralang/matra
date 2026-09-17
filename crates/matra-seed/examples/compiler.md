@@ -368,6 +368,22 @@ fn is_let_keyword(source: bytes, value: token) -> i32 {
   return 1
 }
 
+fn is_set_keyword(source: bytes, value: token) -> i32 {
+  if value.length != 3 {
+    return 0
+  }
+  if byte_at(source, value.start) != 115 {
+    return 0
+  }
+  if byte_at(source, value.start + 1) != 101 {
+    return 0
+  }
+  if byte_at(source, value.start + 2) != 116 {
+    return 0
+  }
+  return 1
+}
+
 fn is_array_set_call(source: bytes, value: token) -> i32 {
   if value.length == 8 {
     if byte_at(source, value.start) == 98 {
@@ -2086,6 +2102,9 @@ fn is_local_assignment(source: bytes, statement: token) -> i32 {
   if is_let_keyword(source, statement) == 1 {
     return 1
   }
+  if is_set_keyword(source, statement) == 1 {
+    return 1
+  }
   if statement.kind != 1 {
     return 0
   }
@@ -2109,9 +2128,21 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
       }
     }
     while is_local_assignment(source, current) == 1 {
+      let assignment = current
       let local_name = current
       if is_let_keyword(source, current) == 1 {
         local_name = next_token(source, current.start + current.length)
+      }
+      if is_set_keyword(source, current) == 1 {
+        local_name = next_token(source, current.start + current.length)
+        if is_symbol(source, local_name, 40) == 0 {
+          return function_definition(0, 0, 0, 0, offset, local_name.start, 4)
+        }
+        local_name = next_token(source, local_name.start + local_name.length)
+      } else {
+        if is_symbol(source, local_name, 40) == 1 {
+          local_name = next_token(source, local_name.start + local_name.length)
+        }
       }
       if local_name.kind != 1 {
         return function_definition(0, 0, 0, 0, offset, local_name.start, 2)
@@ -2212,6 +2243,13 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
           }
           current = next_token(source, next_argument.start + next_argument.length)
         }
+      }
+      let assignment_open = next_token(source, assignment.start + assignment.length)
+      if is_symbol(source, assignment_open, 40) == 1 {
+        if is_symbol(source, current, 41) == 0 {
+          return function_definition(0, 0, 0, 0, offset, current.start, 14)
+        }
+        current = next_token(source, current.start + current.length)
       }
     }
     while is_array_set_call(source, current) == 1 {
@@ -2981,12 +3019,7 @@ fn is_bytes_variable(source: bytes, function_start: i32, value: token) -> i32 {
 }
 
 fn local_slot_width(source: bytes, function_start: i32, statement: token) -> i32 {
-  let name = statement
-  if is_let_keyword(source, name) == 1 {
-    name = next_token(source, name.start + name.length)
-  }
-  let equals = next_token(source, name.start + name.length)
-  let operand = next_token(source, equals.start + equals.length)
+  let operand = assignment_operand(source, statement)
   if is_bytes_variable(source, function_start, operand) == 1 {
     return 2
   }
@@ -3029,7 +3062,7 @@ fn let_offset_in_range(source: bytes, function_start: i32, start: i32, end: i32,
   let offset = 0
   while current.start < end {
     if is_let_keyword(source, current) == 1 {
-      let name = next_token(source, current.start + current.length)
+      let name = assignment_name(source, current)
       if same_token(source, name, target) == 1 {
         return offset
       }
@@ -3258,7 +3291,7 @@ fn lexical_variable_index(source: bytes, function: function_definition, target: 
   let index = parameter_count
   while current.start < function_position {
     if is_let_keyword(source, current) == 1 {
-      let name = next_token(source, current.start + current.length)
+      let name = assignment_name(source, current)
       if same_token(source, name, target) == 1 {
         return index
       }
@@ -4736,17 +4769,39 @@ fn write_return_statement(buffer: bytes, index: i32, source: bytes, table: [i32]
   return position + 1
 }
 
-fn assignment_end(source: bytes, statement: token) -> token {
+fn assignment_name(source: bytes, statement: token) -> token {
   let name = statement
   if is_let_keyword(source, name) == 1 {
     name = next_token(source, name.start + name.length)
   }
+  if is_set_keyword(source, statement) == 1 {
+    name = next_token(source, statement.start + statement.length)
+  }
+  if is_symbol(source, name, 40) == 1 {
+    name = next_token(source, name.start + name.length)
+  }
+  return name
+}
+
+fn assignment_operand(source: bytes, statement: token) -> token {
+  let name = assignment_name(source, statement)
   let equals = next_token(source, name.start + name.length)
-  let operand = next_token(source, equals.start + equals.length)
+  return next_token(source, equals.start + equals.length)
+}
+
+fn assignment_end(source: bytes, statement: token) -> token {
+  let operand = assignment_operand(source, statement)
   if is_symbol(source, operand, 45) == 1 {
     operand = next_token(source, operand.start + operand.length)
   }
-  return expression_end(source, operand)
+  let end = expression_end(source, operand)
+  let after_keyword = next_token(source, statement.start + statement.length)
+  if is_symbol(source, after_keyword, 40) == 1 {
+    if is_symbol(source, end, 41) == 1 {
+      return next_token(source, end.start + end.length)
+    }
+  }
+  return end
 }
 
 fn function_parameter_is_bytes(source: bytes, function: function_definition, target: i32) -> i32 {
@@ -4934,12 +4989,8 @@ fn value_expression_length(source: bytes, table: [i32], function: function_defin
 }
 
 fn assignment_length(source: bytes, table: [i32], function: function_definition, statement: token) -> i32 {
-  let name = statement
-  if is_let_keyword(source, name) == 1 {
-    name = next_token(source, name.start + name.length)
-  }
-  let equals = next_token(source, name.start + name.length)
-  let operand = next_token(source, equals.start + equals.length)
+  let name = assignment_name(source, statement)
+  let operand = assignment_operand(source, statement)
   let local_index = variable_index(source, function, name)
   if local_index < 0 {
     local_index = lexical_variable_index(source, function, name)
@@ -5167,12 +5218,8 @@ fn write_array_assignment(buffer: bytes, index: i32, source: bytes, table: [i32]
 }
 
 fn write_assignment(buffer: bytes, index: i32, source: bytes, table: [i32], function: function_definition, statement: token) -> i32 {
-  let name = statement
-  if is_let_keyword(source, name) == 1 {
-    name = next_token(source, name.start + name.length)
-  }
-  let equals = next_token(source, name.start + name.length)
-  let operand = next_token(source, equals.start + equals.length)
+  let name = assignment_name(source, statement)
+  let operand = assignment_operand(source, statement)
   let local_index = variable_index(source, function, name)
   if local_index < 0 {
     local_index = lexical_variable_index(source, function, name)
