@@ -13,6 +13,10 @@ export type UnifiedExpression =
 export type UnifiedStatement =
   | { kind: "expression", expression: UnifiedExpression }
   | { kind: "let", name: string, value: UnifiedExpression }
+  | { kind: "return", value: UnifiedExpression }
+  | { kind: "if", condition: UnifiedExpression, thenBody: UnifiedStatement[], elseBody: UnifiedStatement[] }
+  | { kind: "for", name: string, iterable: UnifiedExpression, body: UnifiedStatement[] }
+  | { kind: "fn", name: string, parameters: string[], body: UnifiedStatement[] }
 
 export interface UnifiedModule {
   kind: "module"
@@ -54,9 +58,33 @@ export function evaluateStatic(module: UnifiedModule): StaticValue | undefined {
   let output: StaticValue | undefined
   for (const statement of module.statements) {
     if (statement.kind === "let") scope[statement.name] = evaluateExpression(statement.value, scope)
-    else output = evaluateExpression(statement.expression, scope)
+    else if (statement.kind === "expression") output = evaluateExpression(statement.expression, scope)
+    else throw new EvaluationRequiredError(`Static evaluation does not execute ${statement.kind} statements.`)
   }
   return output
+}
+
+/** Evaluate declarations, control flow, calls, and document bodies in TypeScript. */
+export function evaluateUnified(module: UnifiedModule): StaticValue | undefined {
+  const scope: Record<string, any> = {}
+  const run = (statements: UnifiedStatement[]): any => { let output; for (const statement of statements) {
+    if (statement.kind === "let") scope[statement.name] = expression(statement.value)
+    else if (statement.kind === "fn") scope[statement.name] = (...args: any[]) => { const saved = { ...scope }; statement.parameters.forEach((name, index) => { scope[name] = args[index] }); const result = run(statement.body); Object.assign(scope, saved); return result?.return ?? result }
+    else if (statement.kind === "return") return { return: expression(statement.value) }
+    else if (statement.kind === "if") { const result = run(expression(statement.condition) ? statement.thenBody : statement.elseBody); if (result?.return !== undefined) return result; output = result }
+    else if (statement.kind === "for") { const values = expression(statement.iterable); if (!Array.isArray(values)) throw new TypeError("for requires an array"); const results = []; for (const value of values) { scope[statement.name] = value; const result = run(statement.body); if (result?.return !== undefined) return result; results.push(result) } output = results }
+    else output = expression(statement.expression)
+  } return output }
+  const expression = (value: UnifiedExpression): any => {
+    if (value.kind === "literal") return value.value
+    if (value.kind === "array") return value.items.map(expression)
+    if (value.kind === "object") return Object.fromEntries(value.entries.map(entry => [entry.key, expression(entry.value)]))
+    if (value.kind === "reference") { if (!(value.name in scope)) throw new ReferenceError(`Unknown name: ${value.name}`); return scope[value.name] }
+    if (value.kind === "member") return expression(value.object)?.[value.name]
+    if (value.kind === "call") { const callee = expression(value.callee); if (typeof callee !== "function") throw new TypeError("Call target is not a function"); return callee(...value.arguments.map(expression)) }
+    const props = Object.fromEntries(value.attributes.map(attribute => [attribute.key, expression(attribute.value)])); if (value.classes.length) props.class = value.classes.join(" "); const children: any[] = []; for (const statement of value.body) { const result = run([statement]); if (result?.return !== undefined) return result; if (statement.kind === "expression") children.push(result); else if (statement.kind === "if" && result !== undefined) children.push(result); else if (statement.kind === "for") children.push(...result.filter(item => item !== undefined)) } return { tag: value.tag, props, children }
+  }
+  return run(module.statements)
 }
 
 /** Convert a statically evaluated document node to the renderer's tree shape. */
@@ -93,7 +121,8 @@ function evaluateExpression(expression: UnifiedExpression, scope: Record<string,
       const children: StaticValue[] = []
       for (const statement of expression.body) {
         if (statement.kind === "let") scope[statement.name] = evaluateExpression(statement.value, scope)
-        else children.push(evaluateExpression(statement.expression, scope))
+        else if (statement.kind === "expression") children.push(evaluateExpression(statement.expression, scope))
+        else throw new EvaluationRequiredError(`Static evaluation does not execute ${statement.kind} statements.`)
       }
       return { tag: expression.tag, props, children }
     }
@@ -127,8 +156,25 @@ class UnifiedParser {
       this.expect("=")
       return { kind: "let", name, value: this.expression() }
     }
+    if (this.at("return")) { this.next(); return { kind: "return", value: this.expression() } }
+    if (this.at("if")) {
+      this.next(); this.expect("("); const condition = this.expression(); this.expect(")")
+      const thenBody = this.block(); const elseBody = this.at("else") ? (this.next(), this.block()) : []
+      return { kind: "if", condition, thenBody, elseBody }
+    }
+    if (this.at("for")) {
+      this.next(); this.expect("("); const name = this.word("Expected a loop variable"); this.expect("in")
+      const iterable = this.expression(); this.expect(")"); return { kind: "for", name, iterable, body: this.block() }
+    }
+    if (this.at("fn")) {
+      this.next(); const name = this.word("Expected a function name"); this.expect("(")
+      const parameters = this.list(")", () => this.word("Expected a parameter name")); this.expect(")")
+      return { kind: "fn", name, parameters, body: this.block() }
+    }
     return { kind: "expression", expression: this.expression() }
   }
+
+  private block(): UnifiedStatement[] { this.expect("{"); const body = this.statements("}"); this.expect("}"); return body }
 
   private expression(): UnifiedExpression {
     let expression = this.primary()

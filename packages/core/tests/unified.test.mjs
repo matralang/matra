@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { EvaluationRequiredError, evaluateStatic, parse, parseUnified } from "../dist/index.js"
+import { EvaluationRequiredError, evaluateStatic, evaluateUnified, parse, parseUnified } from "../dist/index.js"
 
 describe("unified Matra parser", () => {
   it("uses the unified grammar through the default parser", () => {
@@ -35,5 +35,21 @@ article.card.card(lang="ja", options={theme: "dark"}) {
 
   it("requires an explicit separator between body expressions", () => {
     assert.throws(() => parseUnified('p { "one" "two" }'), /newline or ';'/)
+  })
+
+  it("parses control and function declarations without syntax fallback", () => {
+    const module = parseUnified('fn pick(value) { if (value) { return value } else { return "none" } }\nfor (item in items) { p { item } }')
+    assert.equal(module.statements[0].kind, "fn")
+    assert.equal(module.statements[1].kind, "for")
+  })
+
+  it("evaluates functions, conditions, and loops into document children", () => {
+    const module = parseUnified('fn label(value) { return value }\nlet items = ["one", "two"]\nul { for (item in items) { if (item) { li { label(item) } } } }')
+    assert.deepEqual(evaluateUnified(module), {
+      tag: "ul", props: {}, children: [
+        { tag: "li", props: {}, children: ["one"] },
+        { tag: "li", props: {}, children: ["two"] },
+      ],
+    })
   })
 })

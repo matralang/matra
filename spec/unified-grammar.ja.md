@@ -13,6 +13,11 @@
 静的評価の最小部分を提供する。`fn`、`if`、`for`、
 代入、演算子、import/export は parser 実装前であり、受理して別の意味に読み替えない。
 
+## 評価 mode の提案
+
+静的取得とは別の明示 API に `if`、`for`、`fn`、`return` を追加する。選択された分岐と反復は
+式結果を node body へソース順で追加し、宣言は child を追加しない。import/export、型、代入は対象外とする。
+
 ## ソースとトップレベル
 
 source は改行または `;` で区切った statement 列である。`let` は宣言であり出力を

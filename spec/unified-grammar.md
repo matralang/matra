@@ -15,6 +15,12 @@ evaluator. It does not yet parse `fn`, `if`, `for`,
 assignment, operators, or import/export; unsupported source is rejected rather
 than silently assigned another meaning.
 
+## Evaluation mode proposal
+
+An explicit evaluation API, separate from static retrieval, will add `if`, `for`, `fn`, and `return`.
+Selected branches and loop iterations contribute their expression results to a node body in source order;
+declarations contribute no child. Import/export, typing, and assignment remain out of scope.
+
 ## Source and top level
 
 A source is a sequence of statements separated by a newline or `;`. `let` is a

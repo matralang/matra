@@ -1,6 +1,6 @@
 /** @matra/core — domain-neutral Matra tree primitives. */
 export { parse } from "./parser/index.js";
-export { evaluateStatic, EvaluationRequiredError, parseUnified, staticValueToAST, UnifiedSyntaxError } from "./unified.js";
+export { evaluateStatic, evaluateUnified, EvaluationRequiredError, parseUnified, staticValueToAST, UnifiedSyntaxError } from "./unified.js";
 export type { StaticNode, StaticToASTNode, StaticValue, UnifiedExpression, UnifiedModule, UnifiedScalar, UnifiedStatement } from "./unified.js";
 export { formatCodeFrame, MatraSyntaxError } from "./parser/error.js";
 export { astToMatraJSON, isMatraAST, isMatraJSON, matraJSONToAST, } from "./ast/convert.js";
