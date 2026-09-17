@@ -46,7 +46,7 @@ export fn answer(input: i32) -> i32 {
 ```
 
 identifierには`snake_case`を使用します。`fn`、`let`、`set`、`if`、`else`、`while`、
-`return`、`break`、`module`、`import`、`export`はreserved wordです。
+`do`、`until`、`return`、`break`、`module`、`import`、`export`はreserved wordです。
 
 `()`はexpressionのgrouping、functionのdeclarationとcallに使用します。`[]`は
 array literal、index、array typeのために予約します。`{}`はblockを区切り、将来は
@@ -83,7 +83,7 @@ parameters = parameter, { ",", parameter } ;
 parameter  = identifier, ":", type ;
 type       = "i32" | "bool" | "bytes" | "[", type, "]" | identifier ;
 block      = "{", { statement }, "}" ;
-statement  = let | set | assignment | byte_set | if | while | break | return ;
+statement  = let | set | assignment | byte_set | if | while | do-until | break | return ;
 let        = "let", ( "(", binding, ")" | binding ) ;
 binding    = identifier, [ ":", type ], "=", expression ;
 set        = "set", "(", identifier, "=", expression, ")" ;
@@ -92,6 +92,7 @@ byte_set   = "byte_set", "(", expression, ",", expression, ",", expression, ")" 
 condition  = "(", expression, ")" | expression ;
 if         = "if", condition, block, [ "else", block ] ;
 while      = "while", condition, block ;
+do-until   = "do", block, "until", "(", expression, ")" ;
 break      = "break" ;
 return     = "return", expression ;
 ```
@@ -120,6 +121,19 @@ let (count = 1
 新しいsourceは`if (condition)`と`while (condition)`のように条件を丸括弧で囲むべきです
 （SHOULD）。移行期間中は`if condition`と`while condition`も同じ制御構文として受理します
 （MAY）。条件内では通常のexpression構文を使用し、`$`などの追加delimiterは使用しません。
+
+`do` blockは必ず1回実行され、その後に`until` conditionを評価します。conditionが`0`なら
+blockを再実行し、nonzeroなら後続statementへ進みます。`break`はconditionを評価せずに
+最も内側の`while`または`do-until`を終了します。`until`の条件を囲む丸括弧は必須です
+（MUST）。`do` blockの閉じる`}`、`until`、`(`、`)`のいずれかが欠落したsourceは拒否し、
+parserは欠落位置の次tokenまたはsource末尾をerror位置として報告しなければなりません（MUST）。
+
+```matra
+do {
+  set (count = count + 1)
+}
+until (count >= 10)
+```
 
 expressionはliteral、variable、call、index、field access、unary `-`と`!`、
 arithmetic、comparison、logical operatorを持ちます。result typeが`unit`以外の

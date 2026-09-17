@@ -48,7 +48,8 @@ export fn answer(input: i32) -> i32 {
 ```
 
 Use `snake_case` for identifiers. `fn`, `let`, `set`, `if`, `else`, `while`,
-`return`, `break`, `module`, `import`, and `export` are reserved words.
+`do`, `until`, `return`, `break`, `module`, `import`, and `export` are reserved
+words.
 
 `()` groups expressions and declares or calls functions. `[]` is reserved for
 array literals, indexing, and array types. `{}` delimits blocks and will also
@@ -86,7 +87,7 @@ parameters = parameter, { ",", parameter } ;
 parameter  = identifier, ":", type ;
 type       = "i32" | "bool" | "bytes" | "[", type, "]" | identifier ;
 block      = "{", { statement }, "}" ;
-statement  = let | set | assignment | byte_set | if | while | break | return ;
+statement  = let | set | assignment | byte_set | if | while | do-until | break | return ;
 let        = "let", ( "(", binding, ")" | binding ) ;
 binding    = identifier, [ ":", type ], "=", expression ;
 set        = "set", "(", identifier, "=", expression, ")" ;
@@ -95,6 +96,7 @@ byte_set   = "byte_set", "(", expression, ",", expression, ",", expression, ")" 
 condition  = "(", expression, ")" | expression ;
 if         = "if", condition, block, [ "else", block ] ;
 while      = "while", condition, block ;
+do-until   = "do", block, "until", "(", expression, ")" ;
 break      = "break" ;
 return     = "return", expression ;
 ```
@@ -128,6 +130,21 @@ New source SHOULD parenthesize conditions as `if (condition)` and
 `if condition` and `while condition` as equivalent control statements.
 Conditions use the normal expression syntax without an additional delimiter
 such as `$`.
+
+A `do` block executes once before its `until` condition is evaluated. If the
+condition is `0`, the block executes again; a nonzero condition continues with
+the following statement. `break` exits the innermost `while` or `do-until`
+without evaluating the condition. Parentheses around the `until` condition are
+required (MUST). A source missing the closing `}`, `until`, `(`, or `)` MUST be
+rejected, and the parser MUST report the following token or the end of the
+source as the error position.
+
+```matra
+do {
+  set (count = count + 1)
+}
+until (count >= 10)
+```
 
 Expressions include literals, variables, calls, indexing, field access,
 unary `-` and `!`, arithmetic, comparisons, and logical operators. A function

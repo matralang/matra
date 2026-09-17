@@ -185,6 +185,7 @@ enum Statement {
     ArraySet(Expression, Expression, Expression),
     If(Expression, Vec<Statement>, Vec<Statement>),
     While(Expression, Vec<Statement>),
+    DoUntil(Vec<Statement>, Expression),
     Break,
     Return(Expression),
 }
@@ -300,6 +301,7 @@ fn always_returns(statements: &[Statement]) -> bool {
         Some(Statement::If(_, then_body, else_body)) if !else_body.is_empty() => {
             always_returns(then_body) && always_returns(else_body)
         }
+        Some(Statement::DoUntil(body, _)) => always_returns(body),
         _ => false,
     }
 }
@@ -438,6 +440,14 @@ impl<'a> Parser<'a> {
         if self.consume_keyword("while") {
             let condition = self.expression()?;
             return Ok(Statement::While(condition, self.block()?));
+        }
+        if self.consume_keyword("do") {
+            let body = self.block()?;
+            self.expect_keyword("until")?;
+            self.expect('(')?;
+            let condition = self.expression()?;
+            self.expect(')')?;
+            return Ok(Statement::DoUntil(body, condition));
         }
         let name = self.identifier()?;
         if name == "byte_set" {
@@ -730,6 +740,8 @@ fn is_reserved_word(identifier: &str) -> bool {
             | "if"
             | "else"
             | "while"
+            | "do"
+            | "until"
             | "return"
             | "break"
             | "module"
@@ -928,6 +940,10 @@ fn temporary_statements(
         Statement::While(condition, body) => {
             temporary_expression(condition, functions, structs)
                 && temporary_statements(body, functions, structs)
+        }
+        Statement::DoUntil(body, condition) => {
+            temporary_statements(body, functions, structs)
+                && temporary_expression(condition, functions, structs)
         }
         Statement::Break => true,
         Statement::ByteSet(_, _, _) | Statement::ArraySet(_, _, _) => false,
@@ -1208,6 +1224,17 @@ fn collect_locals<'a>(
                 functions,
                 structs,
             )?,
+            Statement::DoUntil(body, _) => collect_locals(
+                body,
+                function,
+                locals,
+                bytes,
+                struct_values,
+                parameter_count,
+                local_count,
+                functions,
+                structs,
+            )?,
             Statement::Assign(_, _)
             | Statement::ByteSet(_, _, _)
             | Statement::ArraySet(_, _, _)
@@ -1378,7 +1405,7 @@ fn emit_statements(
                 let index = controls
                     .iter()
                     .rposition(|frame| matches!(frame, ControlFrame::LoopBreak))
-                    .ok_or_else(|| CompileError::new("break is only valid inside while."))?;
+                    .ok_or_else(|| CompileError::new("break is only valid inside a loop."))?;
                 output.push(0x0c);
                 encode_u32(output, (controls.len() - index - 1) as u32);
             }
@@ -1451,6 +1478,35 @@ fn emit_statements(
                     checkpoint,
                 )?;
                 output.extend([0x0c, 0x00, 0x0b, 0x0b]);
+                controls.pop();
+                controls.pop();
+            }
+            Statement::DoUntil(body, condition) => {
+                output.extend([0x02, 0x40, 0x03, 0x40]);
+                controls.push(ControlFrame::LoopBreak);
+                controls.push(ControlFrame::Block);
+                emit_statements(
+                    output,
+                    body,
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                    return_type.clone(),
+                    controls,
+                    checkpoint,
+                )?;
+                emit_expression(
+                    output,
+                    condition,
+                    locals,
+                    bytes,
+                    struct_values,
+                    functions,
+                    structs,
+                )?;
+                output.extend([0x45, 0x0d, 0x00, 0x0b, 0x0b]);
                 controls.pop();
                 controls.pop();
             }
@@ -2164,5 +2220,18 @@ export fn answer() -> i32 { return double(21) }
                 .to_string()
                 .contains("Unknown variable")
         );
+    }
+
+    #[test]
+    fn rejects_incomplete_do_until_statements() {
+        for statement in [
+            "do { set (value = 1) } (value == 1)",
+            "do { set (value = 1) } until value == 1",
+        ] {
+            let source = format!(
+                "```entry.matra.program\nmodule entry\nexport fn answer() -> i32 {{ let (value = 0) {statement} return value }}\n```"
+            );
+            assert!(compile_markdown(&source, None).is_err());
+        }
     }
 }

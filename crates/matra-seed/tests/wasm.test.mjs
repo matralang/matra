@@ -182,6 +182,53 @@ test("Rust seed executes parenthesized if and while conditions", async () => {
   }
 })
 
+test("Rust seed executes do-until loops", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "matra-seed-do-until-"))
+  const input = join(directory, "do-until.md")
+  const output = join(directory, "do-until.wasm")
+  await writeFile(input, [
+    "# Do until",
+    "",
+    "```answer.matra.program",
+    "module example",
+    "",
+    "export fn repeat(value: i32) -> i32 {",
+    "  do {",
+    "    set (value = value + 1)",
+    "  }",
+    "  until (value >= 3)",
+    "  return value",
+    "}",
+    "",
+    "export fn stop(value: i32) -> i32 {",
+    "  do {",
+    "    set (value = value + 1)",
+    "    break",
+    "  }",
+    "  until (value >= 100)",
+    "  return value",
+    "}",
+    "```",
+    "",
+  ].join("\n"))
+
+  try {
+    const result = spawnSync(
+      "cargo",
+      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "answer.matra.program"],
+      { cwd: root, encoding: "utf8" },
+    )
+    assert.equal(result.status, 0, result.stderr)
+
+    const { instance: { exports } } = await WebAssembly.instantiate(await readFile(output))
+    assert.equal(exports.repeat(0), 3)
+    assert.equal(exports.repeat(10), 11)
+    assert.equal(exports.stop(0), 1)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test("bootstrap compiler executes top-level parenthesized let and set statements", async () => {
   const compilerBytes = await readFile(await cachedCompiler())
   const source = new TextEncoder().encode(`module example
