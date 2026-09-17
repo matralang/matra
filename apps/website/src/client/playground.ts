@@ -82,24 +82,33 @@ section {
   }
 }`),
   poster: markdown("poster.matra", `svg(width=640, height=400) {
+  defs { linearGradient(id="glow") { stop(offset="0%", stop-color="#c8f135") {}; stop(offset="100%", stop-color="#39b7ff") {} } }
   rect(x=0, y=0, width=640, height=400, rx=28, fill="#101814") {}
-  circle(cx=500, cy=90, r=180, fill="#c8f135", opacity=0.88) {}
+  circle(cx=500, cy=90, r=180, fill="url(#glow)", opacity=0.88) {}
   text(x=48, y=210, fill="#ffffff", font-size=72, font-weight=700) { "MATRA" }
+  text(x=52, y=252, fill="#c8f135", font-size=22) { "structure becomes image" }
 }`, "svg"),
   orbit: markdown("orbit.matra", `svg(width=480, height=480) {
   rect(x=0, y=0, width=480, height=480, fill="#f3f1e9") {}
   circle(cx=240, cy=240, r=150, fill="none", stroke="#193e30", stroke-width=2) {}
+  circle(cx=240, cy=240, r=82, fill="none", stroke="#193e30", stroke-width=2, stroke-dasharray="8 12") {}
   circle(cx=390, cy=240, r=22, fill="#c8f135") {}
+  circle(cx=240, cy=158, r=12, fill="#39b7ff") {}
+  circle(cx=240, cy=240, r=34, fill="#101814") {}
 }`, "svg"),
   landscape: markdown("landscape.matra", `svg(width=640, height=400) {
   rect(x=0, y=0, width=640, height=400, fill="#e9f4f1") {}
   circle(cx=520, cy=92, r=48, fill="#c8f135") {}
   path(d="M0 280 L170 115 L330 280 Z", fill="#315f50") {}
+  path(d="M150 310 L390 105 L640 310 Z", fill="#193e30") {}
+  path(d="M0 300 Q160 250 320 310 T640 290 V400 H0 Z", fill="#39b7ff", opacity=0.75) {}
 }`, "svg"),
   signal: markdown("signal.matra", `svg(width=640, height=360) {
   rect(x=0, y=0, width=640, height=360, rx=24, fill="#101814") {}
   line(x1=80, y1=180, x2=560, y2=180, stroke="#435149", stroke-width=2) {}
-  text(x=80, y=65, fill="#ffffff", font-size=18) { "SIGNAL / 01" }
+  path(d="M80 180 L150 180 L180 90 L225 270 L270 135 L310 180 L560 180", fill="none", stroke="#c8f135", stroke-width=8, stroke-linecap="round", stroke-linejoin="round") {}
+  circle(cx=180, cy=90, r=10, fill="#39b7ff") {}
+  text(x=80, y=65, fill="#ffffff", font-size=18, font-family="monospace") { "SIGNAL / 01" }
 }`, "svg"),
   "js-card": markdown("card.matra.ts", `const title = "Matra from JavaScript"
 export default matra\`article.card { h2 { \${title} } }\``),
