@@ -1,5 +1,6 @@
 /** @matra/core — domain-neutral Matra tree primitives. */
-export { parse, parseWith } from "./parser/index.js";
+export { parse } from "./parser/index.js";
+export { evaluateStatic, EvaluationRequiredError, parseUnified, staticValueToAST, UnifiedSyntaxError } from "./unified.js";
 export { formatCodeFrame, MatraSyntaxError } from "./parser/error.js";
 export { astToMatraJSON, isMatraAST, isMatraJSON, matraJSONToAST, } from "./ast/convert.js";
 export { printJSON } from "./printer.js";
@@ -10,7 +11,7 @@ export { renderWith } from "./render.js";
 export { evaluateStandard, evaluateStandardProps, Map, Range } from "./standard.js";
 export { loadMatra, matra, normalizeMatra } from "./jsonmatra.js";
 export { CORE_VERSION, SPEC_VERSION } from "./ast/types.js";
-import { parse, parseWith } from "./parser/index.js";
+import { parse } from "./parser/index.js";
 import { astToMatraJSON, matraJSONToAST } from "./ast/convert.js";
 import { printJSON } from "./printer.js";
 import { extractMarkdownFences, extractMatraMarkdown } from "./markdown.js";
@@ -23,7 +24,6 @@ import { CORE_VERSION } from "./ast/types.js";
 export const VERSION = CORE_VERSION;
 export default {
     parse,
-    parseWith,
     astToMatraJSON,
     matraJSONToAST,
     printJSON,

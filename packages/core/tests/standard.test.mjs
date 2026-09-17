@@ -5,9 +5,10 @@ import {
   evaluateStandard,
   evaluateStandardProps,
   Map,
-  parse,
   Range,
 } from "../dist/index.js"
+
+const call = (tag, ...children) => ({ tag, props: {}, children })
 
 describe("Matra standard collection functions", () => {
   it("creates inclusive ranges", () => {
@@ -30,16 +31,16 @@ describe("Matra standard collection functions", () => {
 
   it("evaluates Range and Map from Matra application syntax", () => {
     const functions = { square: value => Number(value) ** 2 }
-    assert.deepEqual(evaluateStandard(parse("Range(3)")), [1, 2, 3])
+    assert.deepEqual(evaluateStandard(call("Range", 3)), [1, 2, 3])
     assert.deepEqual(
-      evaluateStandard(parse("Map(square, Range(1, 4))"), { functions }),
+      evaluateStandard(call("Map", "square", call("Range", 1, 4)), { functions }),
       [1, 4, 9, 16],
     )
   })
 
   it("reports unresolved Map functions", () => {
     assert.throws(
-      () => evaluateStandard(parse("Map(missing, Range(3))")),
+      () => evaluateStandard(call("Map", "missing", call("Range", 3))),
       /Unknown Map function: missing/,
     )
   })
@@ -50,7 +51,7 @@ describe("Matra standard collection functions", () => {
     }
     assert.deepEqual(
       evaluateStandard(
-        parse("Map(Lambda(n, multiply(Var(n), Var(n))), Range(1, 4))"),
+        call("Map", call("Lambda", "n", call("multiply", call("Var", "n"), call("Var", "n"))), call("Range", 1, 4)),
         { functions },
       ),
       [1, 4, 9, 16],
@@ -61,7 +62,7 @@ describe("Matra standard collection functions", () => {
     const functions = { pair: (left, right) => [left, right] }
     assert.deepEqual(
       evaluateStandard(
-        parse("Map(Lambda(n, Map(Lambda(m, pair(Var(n), Var(m))), Range(2))), Range(2))"),
+        call("Map", call("Lambda", "n", call("Map", call("Lambda", "m", call("pair", call("Var", "n"), call("Var", "m"))), call("Range", 2))), call("Range", 2)),
         { functions },
       ),
       [
@@ -73,24 +74,24 @@ describe("Matra standard collection functions", () => {
 
   it("reports invalid Lambda use and unresolved variables", () => {
     assert.throws(
-      () => evaluateStandard(parse("Lambda(n, Var(n))")),
+      () => evaluateStandard(call("Lambda", "n", call("Var", "n"))),
       /only valid where a function is expected/,
     )
     assert.throws(
-      () => evaluateStandard(parse("Map(Lambda(n, Var(m)), Range(1))")),
+      () => evaluateStandard(call("Map", call("Lambda", "n", call("Var", "m")), call("Range", 1))),
       /Unknown standard variable: m/,
     )
   })
 
   it("evaluates expressions embedded in props", () => {
-    const ast = parse("circle(cx=double(4), fill=red)")
+    const ast = { tag: "circle", props: { cx: call("double", 4), fill: "red" }, children: [] }
     assert.deepEqual(
       evaluateStandardProps(ast, { functions: { double: value => Number(value) * 2 } }),
       { tag: "circle", props: { cx: 8, fill: "red" }, children: [] },
     )
 
     assert.deepEqual(
-      evaluatePropExpressions(parse("g(circle(cx=value()))"), () => 12),
+      evaluatePropExpressions({ tag: "g", props: {}, children: [{ tag: "circle", props: { cx: call("value") }, children: [] }] }, () => 12),
       {
         tag: "g",
         props: {},

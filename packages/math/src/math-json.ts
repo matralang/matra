@@ -1,4 +1,4 @@
-import { isMatraAST, parse, type MatraAST, type MatraASTChild } from "@matra/core"
+import { isMatraAST, parse, type MatraAST, type MatraASTChild, type UnifiedExpression } from "@matra/core"
 import type { MathJson } from "./types.js"
 
 /** Convert a Core AST into the canonical recursive MathJSON representation. */
@@ -19,11 +19,29 @@ export function astToMathJson(ast: MatraAST): MathJson {
 /** Parse application-style Matra and convert it to MathJSON. */
 export function parseMath(source: string): MathJson {
   try {
-    return astToMathJson(parse(source, { syntaxMode: "application" }))
+    const statements = parse(source).statements
+    if (statements.length !== 1 || statements[0].kind !== "expression") {
+      throw new SyntaxError("MathJSON source must contain exactly one expression")
+    }
+    return expressionToMathJson(statements[0].expression)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     throw new SyntaxError(`Failed to parse Matra as MathJSON: ${message}`, { cause: error })
   }
+}
+
+function expressionToMathJson(expression: UnifiedExpression): MathJson {
+  if (expression.kind === "literal") return expression.value
+  if (expression.kind === "array") return expression.items.map(expressionToMathJson) as MathJson
+  if (expression.kind === "reference") return expression.name
+  if (expression.kind === "call" && expression.callee.kind === "reference") {
+    if (expression.callee.name === "Formula") {
+      if (expression.arguments.length !== 1) throw new TypeError("Formula expects exactly one expression")
+      return expressionToMathJson(expression.arguments[0])
+    }
+    return [expression.callee.name, ...expression.arguments.map(expressionToMathJson)]
+  }
+  throw new TypeError(`MathJSON does not support unified ${expression.kind} expressions`)
 }
 
 /** Convert MathJSON to a Core AST. Scalar roots have no Matra AST equivalent. */

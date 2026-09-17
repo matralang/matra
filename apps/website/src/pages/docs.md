@@ -18,10 +18,7 @@ export default pageLayout({
   content: matra`
     section.hero {
       div.shell { div.hero-copy {
-        p.eyebrow { "DOCUMENTATION" }
-        h1 { "Matraを使う" }
-        p.lede { "言語仕様、Playground、作例、パッケージへの入口です。" }
-        div.docs-card-list { ${docsCards(links)} }
+        p.eyebrow { "DOCUMENTATION" }; h1 { "Matraを使う" }; p.lede { "言語仕様、Playground、作例、パッケージへの入口です。" }; div.docs-card-list { ${docsCards(links)} }
       } }
     }
   `,

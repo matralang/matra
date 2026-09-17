@@ -1,6 +1,10 @@
-# Matra Grammar v0.2
+# Matra Grammar v0.2（廃止）
 
 [English](./grammar.md) | [日本語](./grammar.ja.md) | [索引](./README.ja.md)
+
+この文書は Core v0.2 の歴史的な文法です。一般の `.matra` の正本は
+[統一文法 v0.3 draft](./unified-grammar.ja.md) へ移りました。以下の規則を新規 source や
+parser 実装に適用してはなりません。
 
 ## ソーステキスト
 

@@ -11,7 +11,7 @@ Matraはルート付きツリーを記述する、ドメイン非依存の記法
 
 1. [Data Model](./data-model.ja.md) — Matraが表現する抽象的な値
 2. [AST](./ast.ja.md) — object形式のメモリ内表現
-3. [Grammar](./grammar.ja.md) — ソーステキストと構文
+3. [Unified Grammar v0.3 draft](./unified-grammar.ja.md) — 統一 `.matra` のソーステキストと構文
 4. [Parser](./parser.ja.md) — parse interface、出力、mode、error
 5. [Matra Program](./program.ja.md) — WebAssembly向け実行profileのdraft
 

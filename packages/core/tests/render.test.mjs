@@ -1,9 +1,9 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { parse, renderWith } from "../dist/index.js"
+import { renderWith } from "../dist/index.js"
 
 test("renderWith delegates a normalized AST to a domain renderer", () => {
-  const ast = parse('message(tone="warm", "hello")')
+  const ast = { tag: "message", props: { tone: "warm" }, children: ["hello"] }
   const renderer = {
     render(node, options) {
       return `${options.prefix}${node.tag}:${node.props.tone}:${node.children[0]}`

@@ -1,9 +1,10 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { parse } from "@matra/core"
+import { evaluateStatic, parse, staticValueToAST } from "@matra/core"
 
 const htmlSource = await import("../dist/index.js")
 const { toHTML } = htmlSource
+const parseStaticDocument = source => staticValueToAST(evaluateStatic(parse(source)))
 
 describe("@matra/html", () => {
   it("renders AST using HTML semantics", () => {
@@ -22,12 +23,12 @@ describe("@matra/html", () => {
   })
 
   it("renders output from the Core parser", () => {
-    assert.equal(toHTML(parse('p("Hello")')), "<p>Hello</p>")
+    assert.equal(toHTML(parseStaticDocument('p { "Hello" }')), "<p>Hello</p>")
   })
 
   it("preserves inline script content", () => {
     assert.equal(
-      toHTML(parse('script { "window.dataLayer = window.dataLayer || [];" }')),
+      toHTML(parseStaticDocument('script { "window.dataLayer = window.dataLayer || [];" }')),
       "<script>window.dataLayer = window.dataLayer || [];</script>",
     )
   })
@@ -63,12 +64,12 @@ describe("@matra/html", () => {
   })
 
   it("prefixes site-root links for static deployments", () => {
-    const ast = parse(`$root {
-      a[href="/docs/"] { "Docs" }
-      img[src="/image.svg"];
-      a[href="https://example.com/"] { "External" }
-      img[src="//cdn.example.com/image.svg"];
-    }`)
+    const ast = [
+      parseStaticDocument('a(href="/docs/") { "Docs" }'),
+      parseStaticDocument('img(src="/image.svg") {}'),
+      parseStaticDocument('a(href="https://example.com/") { "External" }'),
+      parseStaticDocument('img(src="//cdn.example.com/image.svg") {}'),
+    ]
     assert.equal(
       toHTML(ast, { basePath: "/website/" }),
       '<a href="/website/docs/">Docs</a><img src="/website/image.svg"><a href="https://example.com/">External</a><img src="//cdn.example.com/image.svg">',

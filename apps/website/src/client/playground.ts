@@ -1,4 +1,4 @@
-import { astToMatraJSON, extractMatraMarkdown, parse, printJSON } from "@matra/core"
+import { astToMatraJSON, evaluateStatic, extractMatraMarkdown, parse, printJSON, staticValueToAST } from "@matra/core"
 import { toSVG } from "@matra/graphics"
 import { toHTML } from "@matra/html"
 import { parseMath } from "@matra/math"
@@ -152,6 +152,54 @@ export default matra\`
 \``, "svg"),
 }
 
+Object.assign(examples, {
+  card: markdown("card.matra", `article.matra-frame {
+  p.eyebrow { "MATRA" }
+  h2 { "Structure first." }
+  p { "Edit this source and watch it render." }
+  a.matra-button(href="/spec/") { "Read the spec" }
+  hr {}
+}`, "html", false),
+  list: markdown("list.matra", `section {
+  h2 { "Specification" }
+  ol { li { "Data Model" }; li { "AST" }; li { "Grammar" }; li { "Parser" } }
+}`),
+  profile: markdown("profile.matra", `article.profile {
+  p.eyebrow { "CONTRIBUTOR" }
+  h2 { "Ada Lovelace" }
+  p { "Mathematics, poetry, and the first algorithm." }
+}`),
+  navigation: markdown("navigation.matra", `nav(aria-label="Main navigation") {
+  a.brand(href="/") { "MATRA" }
+  ul { li { a(href="/docs/") { "Docs" } }; li { a(href="/examples/") { "Examples" } }; li { a(href="/play/") { "Playground" } } }
+}`),
+  article: markdown("article.matra", `main { article { header { h1 { "Structure is a way of seeing." } }; section { h2 { "Start with the outline" }; p { "Names, attributes, and children make the hierarchy visible." } } } }`),
+  poster: markdown("poster.matra", `svg(width=640, height=400) {
+  rect(x=0, y=0, width=640, height=400, rx=28, fill="#101814") {}
+  circle(cx=500, cy=90, r=180, fill="#c8f135", opacity=0.88) {}
+  text(x=48, y=210, fill="#ffffff", font-size=72, font-weight=700) { "MATRA" }
+}`, "svg"),
+  orbit: markdown("orbit.matra", `svg(width=480, height=480) {
+  rect(x=0, y=0, width=480, height=480, fill="#f3f1e9") {}
+  circle(cx=240, cy=240, r=150, fill="none", stroke="#193e30", stroke-width=2) {}
+  circle(cx=390, cy=240, r=22, fill="#c8f135") {}
+}`, "svg"),
+  landscape: markdown("landscape.matra", `svg(width=640, height=400) {
+  rect(x=0, y=0, width=640, height=400, fill="#e9f4f1") {}
+  circle(cx=520, cy=92, r=48, fill="#c8f135") {}
+  path(d="M0 280 L170 115 L330 280 Z", fill="#315f50") {}
+}`, "svg"),
+  signal: markdown("signal.matra", `svg(width=640, height=360) {
+  rect(x=0, y=0, width=640, height=360, rx=24, fill="#101814") {}
+  line(x1=80, y1=180, x2=560, y2=180, stroke="#435149", stroke-width=2) {}
+  text(x=80, y=65, fill="#ffffff", font-size=18) { "SIGNAL / 01" }
+}`, "svg"),
+  "js-card": markdown("card.matra.ts", `const title = "Matra from JavaScript"
+export default matra\`article.card { h2 { \${title} } }\``),
+  "js-graphics": markdown("graphics.matra.ts", `const dots = matra.raw(\`circle(cx=280, cy=180, r=48, fill="#c8f135") {}\`)
+export default matra\`svg(width=560, height=360) { rect(x=0, y=0, width=560, height=360, fill="#101814") {}; \${dots} }\``, "svg"),
+})
+
 let activePanel = "preview"
 let latestOutputs = { ast: "", matraJSON: "", renderer: "" }
 let latestMode: ResultMode = "html"
@@ -181,7 +229,10 @@ async function render(): Promise<void> {
       renderMath(value, document.filename, selectedStylesheet)
       return
     }
-    const parsedAst = parse(value, { locations: true, sourceId: "playground.matra" })
+    const parsedModule = parse(value)
+    const staticValue = evaluateStatic(parsedModule)
+    if (staticValue === undefined) throw new TypeError("A preview requires an output expression.")
+    const parsedAst = staticValueToAST(staticValue)
     const mode = document.renderer === "auto" && renderMode.value === "auto"
       ? (parsedAst.tag === "svg" || (parsedAst.tag === "$root" && parsedAst.children.some(child => isNode(child) && child.tag === "svg")) ? "svg" : "html")
       : document.renderer === "auto" ? renderMode.value as OutputMode : document.renderer
@@ -487,7 +538,7 @@ function extractMarkdownTitle(markdown: string): string | undefined {
   return withoutFrontMatter.match(/^#\s+(.+?)\s*$/m)?.[1]
 }
 
-function injectDocumentTitle(ast: ReturnType<typeof parse>, title: string): ReturnType<typeof parse> {
+function injectDocumentTitle(ast: any, title: string): any {
   const heading = { tag: "h1", props: {}, children: [title] }
   if (ast.tag === "$root") return { ...ast, children: [heading, ...ast.children] }
   return { tag: "$root", props: {}, children: [heading, ast] }

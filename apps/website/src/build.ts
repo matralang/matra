@@ -8,7 +8,7 @@ import { cachedCompiler } from "../../../crates/matra-seed/host/bootstrap-compil
 // Declare the Node `process` global when @types/node is not installed.
 declare const process: any;
 
-import { extractMarkdownFences, extractMatraMarkdown, parse } from "@matra/core"
+import { evaluateStatic, extractMarkdownFences, extractMatraMarkdown, parse, staticValueToAST } from "@matra/core"
 import { toHTML } from "@matra/html"
 import { pageLayout } from "./layouts/page.js"
 
@@ -18,60 +18,72 @@ type PageMetadata = {
   layout: "site" | "specification"
 }
 
-const siteHeader = parse(`
+function parseStaticDocument(source: string, sourceId = "Matra source") {
+  let value
+  try {
+    value = evaluateStatic(parse(source))
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new SyntaxError(`${sourceId}: ${message}`, { cause: error })
+  }
+  if (value === undefined) throw new SyntaxError("A website Matra source must have an output expression.")
+  return staticValueToAST(value)
+}
+
+const siteHeader = parseStaticDocument(`
   header.site-header {
     div.shell.nav-shell {
-      a.brand[href="/"] { span.brand-mark { "M" } span { "Matra" } }
-      nav.site-nav[aria-label="メインナビゲーション"] {
-        a[href="/docs/"] { "Docs" }
-        a[href="/spec/"] { "Specification" }
-        a[href="/play/"] { "Playground" }
-        a[href="https://github.com/matralang/matra"] { "GitHub" }
+      a.brand(href="/") { span.brand-mark { "M" }; span { "Matra" } }
+      nav.site-nav(aria-label="メインナビゲーション") {
+        a(href="/docs/") { "Docs" }
+        a(href="/spec/") { "Specification" }
+        a(href="/play/") { "Playground" }
+        a(href="https://github.com/matralang/matra") { "GitHub" }
       }
     }
   }
 `)
 
-const siteFooter = parse(`
+const siteFooter = parseStaticDocument(`
   footer.site-footer {
     div.shell.footer-grid {
-      div { strong { "Matra" } p { "Structure first. Domain later." } }
+      div { strong { "Matra" }; p { "Structure first. Domain later." } }
       p { "Matra Specification v0.2" }
     }
   }
 `)
 
-const specificationNavigation = parse(`
+const specificationNavigation = parseStaticDocument(`
   aside.docs-nav {
     p { "SPECIFICATION 0.2" }
-    nav[aria-label="仕様書"] {
-      a[href="/spec/data-model/"] { span { "01" } "Data Model" }
-      a[href="/spec/ast/"] { span { "02" } "AST" }
-      a[href="/spec/grammar/"] { span { "03" } "Grammar" }
-      a[href="/spec/parser/"] { span { "04" } "Parser" }
+    nav(aria-label="仕様書") {
+      a(href="/spec/data-model/") { span { "01" }; "Data Model" }
+      a(href="/spec/ast/") { span { "02" }; "AST" }
+      a(href="/spec/grammar/") { span { "03" }; "Grammar" }
+      a(href="/spec/parser/") { span { "04" }; "Parser" }
     }
   }
 `)
 
-const googleTagManagerBody = parse(`
+const googleTagManagerBody = parseStaticDocument(`
   noscript {
-    iframe[src="https://www.googletagmanager.com/ns.html?id=GTM-T8JD7GH9", height="0", width="0", style="display:none;visibility:hidden"] {}
+    iframe(src="https://www.googletagmanager.com/ns.html?id=GTM-T8JD7GH9", height="0", width="0", style="display:none;visibility:hidden") {}
   }
 `)
 
-const googleTagManagerHead = parse(`
-  script~(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-T8JD7GH9');~
+const googleTagManagerHead = parseStaticDocument(`
+  script { "(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-T8JD7GH9');" }
 `)
 
-const sharedHeadNodes = parse(`
-  $root {
-    link[rel="icon", href="/favicon.ico", sizes="any"];
-    link[rel="icon", href="/favicon.svg", type="image/svg+xml"];
-    meta[property="og:image", content="https://matralang.org/og-image.png"];
-    meta[name="twitter:image", content="https://matralang.org/og-image.png"];
-    link[rel="preconnect", href="https://fonts.googleapis.com"];
-    link[rel="preconnect", href="https://fonts.gstatic.com", crossorigin="anonymous"];
-    link[href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap", rel="stylesheet"];
+const sharedHeadNodes = parseStaticDocument(`
+  head {
+    link(rel="icon", href="/favicon.ico", sizes="any") {}
+    link(rel="icon", href="/favicon.svg", type="image/svg+xml") {}
+    meta(property="og:image", content="https://matralang.org/og-image.png") {}
+    meta(name="twitter:image", content="https://matralang.org/og-image.png") {}
+    link(rel="preconnect", href="https://fonts.googleapis.com") {}
+    link(rel="preconnect", href="https://fonts.gstatic.com", crossorigin="anonymous") {}
+    link(href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap", rel="stylesheet") {}
   }
 `).children
 
@@ -387,7 +399,7 @@ async function handler() {
     const ast = normalizeInternalLinks(applySpecificationLayout(
       applySiteChrome(
         injectMarkdownCode(
-          parse(source, { sourceId: path.relative(process.cwd(), filePath) }),
+          parseStaticDocument(source, path.relative(process.cwd(), filePath)),
           markdown,
           filePath,
         ),

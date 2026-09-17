@@ -51,10 +51,10 @@ article.docs-content {
     "交換形式ではnodeを3要素のJSON配列で表します。"
   }
   pre {
-    code[src="matra:matra-json.txt"];
+    code(src="matra:matra-json.txt"){}
   }
   p.source-link {
-    a[href="https://github.com/matralang/matra/blob/main/spec/data-model.ja.md"] {
+    a(href="https://github.com/matralang/matra/blob/main/spec/data-model.ja.md") {
       "完全な仕様をGitHubで読む →"
     }
   }

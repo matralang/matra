@@ -15,7 +15,7 @@ section.examples-hero {
         "JavaScriptからMatraを使う。"
       }
       p.lede {
-        "websiteの作例は、Matra sourceを単体で眺めるだけでなく、" "TypeScriptやJavaScriptからparse、変換、renderする入口として掲載します。"
+        "websiteの作例は、Matra sourceを単体で眺めるだけでなく、"; "TypeScriptやJavaScriptからparse、変換、renderする入口として掲載します。"
       }
     }
     div.example-note {
@@ -44,7 +44,7 @@ section.examples-section {
           }
         }
         div.example-code-pair {
-          div.code-window.example-code[aria-label="TypeScript HTML example"] {
+          div.code-window.example-code(aria-label="TypeScript HTML example") {
             div.window-bar {
               span.window-label {
                 "TS"
@@ -54,10 +54,10 @@ section.examples-section {
               }
             }
             pre {
-              code[src="matra:render-html.ts"];
+              code(src="matra:render-html.ts"){}
             }
           }
-          div.code-window.example-code[aria-label="Matra HTML source"] {
+          div.code-window.example-code(aria-label="Matra HTML source") {
             div.window-bar {
               span.window-label {
                 "MATRA"
@@ -67,7 +67,7 @@ section.examples-section {
               }
             }
             pre {
-              code[src="matra:article.matra"];
+              code(src="matra:article.matra"){}
             }
           }
         }
@@ -85,7 +85,7 @@ section.examples-section {
           }
         }
         div.example-code-pair {
-          div.code-window.example-code[aria-label="TypeScript SVG example"] {
+          div.code-window.example-code(aria-label="TypeScript SVG example") {
             div.window-bar {
               span.window-label {
                 "TS"
@@ -95,10 +95,10 @@ section.examples-section {
               }
             }
             pre {
-              code[src="matra:render-svg.ts"];
+              code(src="matra:render-svg.ts"){}
             }
           }
-          div.code-window.example-code[aria-label="Matra SVG source"] {
+          div.code-window.example-code(aria-label="Matra SVG source") {
             div.window-bar {
               span.window-label {
                 "MATRA"
@@ -108,7 +108,7 @@ section.examples-section {
               }
             }
             pre {
-              code[src="matra:badge.matra"];
+              code(src="matra:badge.matra"){}
             }
           }
         }
@@ -126,7 +126,7 @@ section.examples-section {
           }
         }
         div.example-code-pair {
-          div.code-window.example-code[aria-label="TypeScript AST example"] {
+          div.code-window.example-code(aria-label="TypeScript AST example") {
             div.window-bar {
               span.window-label {
                 "TS"
@@ -136,10 +136,10 @@ section.examples-section {
               }
             }
             pre {
-              code[src="matra:transform.ts"];
+              code(src="matra:transform.ts"){}
             }
           }
-          div.code-window.example-code[aria-label="Matra menu source"] {
+          div.code-window.example-code(aria-label="Matra menu source") {
             div.window-bar {
               span.window-label {
                 "MATRA"
@@ -149,7 +149,7 @@ section.examples-section {
               }
             }
             pre {
-              code[src="matra:menu.matra"];
+              code(src="matra:menu.matra"){}
             }
           }
         }

@@ -1,6 +1,5 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { parse } from "@matra/core"
 import {
   authorizePlan,
   CommandAuthorizationError,
@@ -9,25 +8,16 @@ import {
   planCommands,
 } from "../dist/index.js"
 
+const command = (props) => ({ tag: "command", props, children: [] })
+const workflow = children => ({ tag: "workflow", props: {}, children })
+const nodejs = (props, code) => ({ tag: "nodejs", props, children: [code] })
+
 describe("Matra command planning", () => {
   it("validates command nodes and builds a dependency-ordered plan", () => {
-    const ast = parse(`workflow(
-      command(
-        program="consumer",
-        args=["--json"],
-        stdin={ref: "producer-output"},
-        stdout="json",
-        bind="consumer-output",
-        requires=["producer-output"],
-        capabilities={read: ["./data"], network: false}
-      ),
-      command(
-        program="producer",
-        stdout="json",
-        bind="producer-output",
-        capabilities={write: ["./out"]}
-      )
-    )`)
+    const ast = workflow([
+      command({ program: "consumer", args: ["--json"], stdin: { ref: "producer-output" }, stdout: "json", bind: "consumer-output", requires: ["producer-output"], capabilities: { read: ["./data"], network: false } }),
+      command({ program: "producer", stdout: "json", bind: "producer-output", capabilities: { write: ["./out"] } }),
+    ])
 
     const plan = planCommands(ast)
     assert.deepEqual(plan.commands.map(command => command.id), [
@@ -44,26 +34,26 @@ describe("Matra command planning", () => {
 
   it("rejects malformed commands, missing dependencies, and cycles", () => {
     assert.throws(
-      () => planCommands(parse("command(program=python, args=[1])")),
+      () => planCommands(command({ program: "python", args: [1] })),
       CommandValidationError,
     )
     assert.throws(
-      () => planCommands(parse('command(program="a", requires=["missing"])')),
+      () => planCommands(command({ program: "a", requires: ["missing"] })),
       /Unknown dependency/,
     )
     assert.throws(
-      () => planCommands(parse('command(program="a", timeot=100)')),
+      () => planCommands(command({ program: "a", timeot: 100 })),
       /Unknown command prop: timeot/,
     )
     assert.throws(
-      () => planCommands(parse('command(program="a", capabilities={netwrok: true})')),
+      () => planCommands(command({ program: "a", capabilities: { netwrok: true } })),
       /Unknown command capability: netwrok/,
     )
     assert.throws(
-      () => planCommands(parse(`workflow(
-        command(program="a", id="a", requires=["b"]),
-        command(program="b", id="b", requires=["a"])
-      )`)),
+      () => planCommands(workflow([
+        command({ program: "a", id: "a", requires: ["b"] }),
+        command({ program: "b", id: "b", requires: ["a"] }),
+      ])),
       /dependency cycle/,
     )
   })
@@ -71,10 +61,7 @@ describe("Matra command planning", () => {
 
 describe("Matra command authorization", () => {
   it("authorizes exact commands and paths below allowed roots", () => {
-    const plan = planCommands(parse(`command(
-      program="python",
-      capabilities={read: ["./data/input.json"], write: ["./out/result.json"]}
-    )`))
+    const plan = planCommands(command({ program: "python", capabilities: { read: ["./data/input.json"], write: ["./out/result.json"] } }))
     const authorized = authorizePlan(plan, {
       commands: ["python"],
       read: ["./data"],
@@ -85,10 +72,7 @@ describe("Matra command authorization", () => {
   })
 
   it("reports every denied capability", () => {
-    const plan = planCommands(parse(`command(
-      program="python",
-      capabilities={read: ["./private"], network: true}
-    )`))
+    const plan = planCommands(command({ program: "python", capabilities: { read: ["./private"], network: true } }))
     assert.throws(
       () => authorizePlan(plan, { commands: ["node"], read: ["./data"], network: false }),
       error => {
@@ -102,10 +86,7 @@ describe("Matra command authorization", () => {
 
 describe("Matra local process execution", () => {
   it("executes the same nodejs block syntax through the Node adapter", async () => {
-    const source = `nodejs[stdout="json", bind="answer"] \`
-return { answer: 6 * 7 }
-\``
-    const plan = planCommands(parse(source))
+    const plan = planCommands(nodejs({ stdout: "json", bind: "answer" }, "return { answer: 6 * 7 }"))
     assert.deepEqual(plan.capabilities.commands, ["node"])
     const result = await executePlan(authorizePlan(plan, { commands: ["node"] }))
     assert.deepEqual(result.bindings.answer, { answer: 42 })

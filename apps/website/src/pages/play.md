@@ -20,7 +20,7 @@ section.playground-page {
     }
   }
   div.playground-workspace {
-    section.editor-panel[aria-label="Markdown editor"] {
+    section.editor-panel(aria-label="Markdown editor") {
       header.panel-header {
         div.panel-title {
           span.status-dot {
@@ -33,42 +33,42 @@ section.playground-page {
           span {
             "Markdown / Matra"
           }
-          label[for="render-mode"] {
+          label(for="render-mode") {
             "Output"
           }
-          select#render-mode {
-            option[value="auto"] {
+          select(id="render-mode") {
+            option(value="auto") {
               "Auto"
             }
-            option[value="html"] {
+            option(value="html") {
               "HTML"
             }
-            option[value="svg"] {
+            option(value="svg") {
               "SVG"
             }
           }
-          label[for="stylesheet"] {
+          label(for="stylesheet") {
             "CSS"
           }
-          input#stylesheet[list="stylesheet-presets", value="matra", spellcheck="false", aria-label="Preview stylesheet", placeholder="matra, water.css, or HTTPS URL"] {
+          input(id="stylesheet", list="stylesheet-presets", value="matra", spellcheck="false", aria-label="Preview stylesheet", placeholder="matra, water.css, or HTTPS URL") {
           }
-          datalist#stylesheet-presets {
-            option[value="matra"] {
+          datalist(id="stylesheet-presets") {
+            option(value="matra") {
               "Matra Base"
             }
-            option[value="water.css"] {
+            option(value="water.css") {
               "Water.css"
             }
-            option[value="simple.css"] {
+            option(value="simple.css") {
               "Simple.css"
             }
-            option[value="pico.css"] {
+            option(value="pico.css") {
               "Pico CSS"
             }
           }
         }
       }
-      div.example-browser[aria-label="Examples"] {
+      div.example-browser(aria-label="Examples") {
         div.example-browser-heading {
           span {
             "EXAMPLES"
@@ -78,7 +78,7 @@ section.playground-page {
           }
         }
         div.example-list {
-          button.example-button.active[type="button", data-example="card", aria-pressed="true"] {
+          button.example-button.active(type="button", data-example="card", aria-pressed="true") {
             span.example-kind {
               "HTML"
             }
@@ -89,7 +89,7 @@ section.playground-page {
               "Content and link"
             }
           }
-          button.example-button[type="button", data-example="list", aria-pressed="false"] {
+          button.example-button(type="button", data-example="list", aria-pressed="false") {
             span.example-kind {
               "HTML"
             }
@@ -100,7 +100,7 @@ section.playground-page {
               "Nested structure"
             }
           }
-          button.example-button[type="button", data-example="profile", aria-pressed="false"] {
+          button.example-button(type="button", data-example="profile", aria-pressed="false") {
             span.example-kind {
               "HTML"
             }
@@ -111,7 +111,7 @@ section.playground-page {
               "Semantic content"
             }
           }
-          button.example-button[type="button", data-example="navigation", aria-pressed="false"] {
+          button.example-button(type="button", data-example="navigation", aria-pressed="false") {
             span.example-kind {
               "HTML"
             }
@@ -122,7 +122,7 @@ section.playground-page {
               "Links and attributes"
             }
           }
-          button.example-button[type="button", data-example="article", aria-pressed="false"] {
+          button.example-button(type="button", data-example="article", aria-pressed="false") {
             span.example-kind {
               "HTML"
             }
@@ -133,7 +133,7 @@ section.playground-page {
               "A complete document"
             }
           }
-          button.example-button[type="button", data-example="poster", aria-pressed="false"] {
+          button.example-button(type="button", data-example="poster", aria-pressed="false") {
             span.example-kind.svg {
               "SVG"
             }
@@ -144,7 +144,7 @@ section.playground-page {
               "Gradient and type"
             }
           }
-          button.example-button[type="button", data-example="orbit", aria-pressed="false"] {
+          button.example-button(type="button", data-example="orbit", aria-pressed="false") {
             span.example-kind.svg {
               "SVG"
             }
@@ -155,7 +155,7 @@ section.playground-page {
               "Shapes and strokes"
             }
           }
-          button.example-button[type="button", data-example="landscape", aria-pressed="false"] {
+          button.example-button(type="button", data-example="landscape", aria-pressed="false") {
             span.example-kind.svg {
               "SVG"
             }
@@ -166,7 +166,7 @@ section.playground-page {
               "Layered geometry"
             }
           }
-          button.example-button[type="button", data-example="signal", aria-pressed="false"] {
+          button.example-button(type="button", data-example="signal", aria-pressed="false") {
             span.example-kind.svg {
               "SVG"
             }
@@ -177,7 +177,7 @@ section.playground-page {
               "Lines and opacity"
             }
           }
-          button.example-button[type="button", data-example="compute-engine", aria-pressed="false"] {
+          button.example-button(type="button", data-example="compute-engine", aria-pressed="false") {
             span.example-kind.math {
               "MATH"
             }
@@ -188,7 +188,7 @@ section.playground-page {
               "Matra math input"
             }
           }
-          button.example-button[type="button", data-example="program", aria-pressed="false"] {
+          button.example-button(type="button", data-example="program", aria-pressed="false") {
             span.example-kind.math {
               "PROGRAM"
             }
@@ -199,7 +199,7 @@ section.playground-page {
               "Run an exported function"
             }
           }
-          button.example-button[type="button", data-example="js-card", aria-pressed="false"] {
+          button.example-button(type="button", data-example="js-card", aria-pressed="false") {
             span.example-kind.js {
               "TS"
             }
@@ -210,7 +210,7 @@ section.playground-page {
               "Values with interpolation"
             }
           }
-          button.example-button[type="button", data-example="js-graphics", aria-pressed="false"] {
+          button.example-button(type="button", data-example="js-graphics", aria-pressed="false") {
             span.example-kind.js {
               "TS"
             }
@@ -223,68 +223,68 @@ section.playground-page {
           }
         }
       }
-      label.sr-only[for="matra-source"] {
+      label.sr-only(for="matra-source") {
         "Markdown source"
       }
-      textarea#matra-source[spellcheck="false", aria-describedby="playground-status", src="matra:playground.md"];
+      textarea(id="matra-source", spellcheck="false", aria-describedby="playground-status", src="matra:playground.md"){}
       footer.editor-footer {
-              span#playground-status[role="status", aria-live="polite"] {
+              span(id="playground-status", role="status", aria-live="polite") {
                 "Ready"
               }
-              span#source-stats {
+              span(id="source-stats") {
                 "0 chars"
               }
             }
           }
-          section.result-panel[aria-label="Playground result"] {
-            div.result-tabs[role="tablist", aria-label="Output"] {
-              button.result-tab.active#tab-preview[type="button", role="tab", aria-selected="true", data-panel="preview"] {
+          section.result-panel(aria-label="Playground result") {
+            div.result-tabs(role="tablist", aria-label="Output") {
+              button.result-tab.active(id="tab-preview", type="button", role="tab", aria-selected="true", data-panel="preview") {
                 "Preview"
               }
-              button.result-tab#tab-ast[type="button", role="tab", aria-selected="false", data-panel="ast"] {
+              button.result-tab(id="tab-ast", type="button", role="tab", aria-selected="false", data-panel="ast") {
                 "AST"
               }
-              button.result-tab#tab-matra-json[type="button", role="tab", aria-selected="false", data-panel="matra-json"] {
+              button.result-tab(id="tab-matra-json", type="button", role="tab", aria-selected="false", data-panel="matra-json") {
                 "MatraJSON"
               }
-              button.result-tab#tab-output[type="button", role="tab", aria-selected="false", data-panel="output"] {
+              button.result-tab(id="tab-output", type="button", role="tab", aria-selected="false", data-panel="output") {
                 "Output"
               }
-              button.copy-button#download-output[type="button"] {
+              button.copy-button(id="download-output", type="button") {
                 "Download"
               }
-              button.copy-button#copy-output[type="button"] {
+              button.copy-button(id="copy-output", type="button") {
                 "Copy"
               }
             }
             div.result-body {
-              div.result-view.active#panel-preview[role="tabpanel", aria-labelledby="tab-preview"] {
-                iframe#preview-frame[title="Rendered Matra preview", sandbox=""];
+              div.result-view.active(id="panel-preview", role="tabpanel", aria-labelledby="tab-preview") {
+                iframe(id="preview-frame", title="Rendered Matra preview", sandbox=""){}
               }
-              pre.result-view#panel-ast[role="tabpanel", aria-labelledby="tab-ast"] {
-                code#ast-output {
+              pre.result-view(id="panel-ast", role="tabpanel", aria-labelledby="tab-ast") {
+                code(id="ast-output") {
                 }
               }
-              pre.result-view#panel-matra-json[role="tabpanel", aria-labelledby="tab-matra-json"] {
-                code#matra-json-output {
+              pre.result-view(id="panel-matra-json", role="tabpanel", aria-labelledby="tab-matra-json") {
+                code(id="matra-json-output") {
                 }
               }
-              pre.result-view#panel-output[role="tabpanel", aria-labelledby="tab-output"] {
-                code#renderer-output {
+              pre.result-view(id="panel-output", role="tabpanel", aria-labelledby="tab-output") {
+                code(id="renderer-output") {
                 }
               }
-              div.error-card#playground-error[hidden="true"] {
+              div.error-card(id="playground-error", hidden="true") {
                 strong {
                   "Parse error"
                 }
-                pre#playground-error-message {
+                pre(id="playground-error-message") {
                 }
               }
             }
           }
         }
       }
-      script[type="module", src="/assets/playground.js"] {
+      script(type="module", src="/assets/playground.js") {
       }
 ````
 
@@ -296,8 +296,8 @@ article.matra-frame {
   p.eyebrow { "MATRA" }
   h2 { "Structure first." }
   p { "Edit this source and watch it render." }
-  a.matra-button[href="/spec/"] { "Read the spec" }
-  hr;
+  a.matra-button(href="/spec/") { "Read the spec" }
+  hr{}
 }
 ```
 ````

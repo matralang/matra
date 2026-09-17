@@ -12,7 +12,7 @@ requirements.
 
 1. [Data Model](./data-model.md) — abstract values represented by Matra
 2. [AST](./ast.md) — object-shaped in-memory representation
-3. [Grammar](./grammar.md) — source text and syntax
+3. [Unified Grammar v0.3 draft](./unified-grammar.md) — unified `.matra` source and syntax
 4. [Parser](./parser.md) — parsing interface, output, modes, and errors
 5. [Matra Program](./program.md) — draft executable profile for WebAssembly
 

@@ -1,17 +1,16 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { parse } from "@matra/core"
 import {
   browserWorkerSource,
   executeNodejsBlock,
   prepareNodejsBlock,
 } from "../dist/browser.js"
 
+const nodejs = (props = {}, code = "") => ({ tag: "nodejs", props, children: [code] })
+
 describe("Matra browser nodejs adapter", () => {
   it("prepares a nodejs code block without Node runtime capabilities", () => {
-    const ast = parse(`nodejs[stdout="json", bind="answer"] \`
-return { answer: 42 }
-\``)
+    const ast = nodejs({ stdout: "json", bind: "answer" }, "\nreturn { answer: 42 }\n")
     assert.deepEqual(prepareNodejsBlock(ast), {
       code: "\nreturn { answer: 42 }\n",
       stdout: "json",
@@ -29,14 +28,14 @@ return { answer: 42 }
 
   it("rejects execution when Web Workers are unavailable", async () => {
     await assert.rejects(
-      executeNodejsBlock(parse("nodejs`return 1`")),
+      executeNodejsBlock(nodejs({}, "return 1")),
       /Web Worker execution is not available/,
     )
   })
 
   it("rejects process-oriented props in browser blocks", () => {
     assert.throws(
-      () => prepareNodejsBlock(parse('nodejs[cwd="/tmp"]`return 1`')),
+      () => prepareNodejsBlock(nodejs({ cwd: "/tmp" }, "return 1")),
       /Unsupported browser nodejs prop: cwd/,
     )
   })

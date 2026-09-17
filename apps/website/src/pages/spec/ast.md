@@ -19,7 +19,7 @@ article.docs-content {
     "Shape"
   }
   pre {
-    code[src="matra:ast-shape.txt"];
+    code(src="matra:ast-shape.txt"){}
   }
   h2 {
     "Lossless conversion"
@@ -28,10 +28,10 @@ article.docs-content {
     "ASTとMatraJSONの変換は再帰的で、tag、value、型、child順序を保持します。"
   }
   pre {
-    code[src="matra:ast-conversion.txt"];
+    code(src="matra:ast-conversion.txt"){}
   }
   p.source-link {
-    a[href="https://github.com/matralang/matra/blob/main/spec/ast.ja.md"] {
+    a(href="https://github.com/matralang/matra/blob/main/spec/ast.ja.md") {
       "完全な仕様をGitHubで読む →"
     }
   }

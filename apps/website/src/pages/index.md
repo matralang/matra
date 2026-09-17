@@ -15,18 +15,18 @@ section.hero {
         "意味より先に、構造を書く。"
       }
       p.lede {
-        "Matraは、tag・props・childrenからなるツリーを記述するための、" "小さくドメイン非依存な言語です。"
+        "Matraは、tag・props・childrenからなるツリーを記述するための、"; "小さくドメイン非依存な言語です。"
       }
       div.actions {
-        a.button.primary[href="/docs/"] {
+        a.button.primary(href="/docs/") {
           "ドキュメントを見る"
         }
-        a.button.secondary[href="https://github.com/matralang/matra"] {
+        a.button.secondary(href="https://github.com/matralang/matra") {
           "ソースを見る"
         }
       }
     }
-    div.code-window[aria-label="Matraコード例"] {
+    div.code-window(aria-label="Matraコード例") {
       div.window-bar {
         span.window-label {
           "SOURCE"
@@ -36,13 +36,13 @@ section.hero {
         }
       }
       pre {
-        code[src="matra:hello.matra"];
+        code(src="matra:hello.matra"){}
       }
       div.output {
         span {
           "AST"
       }
-        code[src="matra:ast.txt"];
+        code(src="matra:ast.txt"){}
       }
     }
   }
@@ -104,7 +104,7 @@ section.spec-callout {
     }
     ol.spec-mini-list {
       li {
-        a[href="/spec/data-model/"] {
+        a(href="/spec/data-model/") {
           span {
             "01"
           }
@@ -114,7 +114,7 @@ section.spec-callout {
         }
       }
       li {
-        a[href="/spec/ast/"] {
+        a(href="/spec/ast/") {
           span {
             "02"
           }
@@ -124,7 +124,7 @@ section.spec-callout {
         }
       }
       li {
-        a[href="/spec/grammar/"] {
+        a(href="/spec/grammar/") {
           span {
             "03"
           }
@@ -134,7 +134,7 @@ section.spec-callout {
         }
       }
       li {
-        a[href="/spec/parser/"] {
+        a(href="/spec/parser/") {
           span {
             "04"
           }
@@ -149,7 +149,7 @@ section.spec-callout {
 ```
 
 ```hello.matra
-group[role="list"] {
+group(role="list") {
   item { "one" }
   item { "two" }
 }

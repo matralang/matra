@@ -19,7 +19,7 @@ article.docs-content {
     "Minimal interface"
   }
   pre {
-    code[src="matra:parser-signature.txt"];
+    code(src="matra:parser-signature.txt"){}
   }
   h2 {
     "Syntax modes"
@@ -69,7 +69,7 @@ article.docs-content {
     }
   }
   p.source-link {
-    a[href="https://github.com/matralang/matra/blob/main/spec/parser.ja.md"] {
+    a(href="https://github.com/matralang/matra/blob/main/spec/parser.ja.md") {
       "完全な仕様をGitHubで読む →"
     }
   }

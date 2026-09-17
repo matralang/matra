@@ -1,4 +1,5 @@
-export { parse, parseWith } from "../../../../packages/core/dist/parser/index.js"
+export { parse } from "../../../../packages/core/dist/parser/index.js"
+export { evaluateStatic, staticValueToAST } from "../../../../packages/core/dist/unified.js"
 export {
   astToMatraJSON,
   isMatraAST,

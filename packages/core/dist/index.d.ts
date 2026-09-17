@@ -1,5 +1,7 @@
 /** @matra/core — domain-neutral Matra tree primitives. */
-export { parse, parseWith } from "./parser/index.js";
+export { parse } from "./parser/index.js";
+export { evaluateStatic, EvaluationRequiredError, parseUnified, staticValueToAST, UnifiedSyntaxError } from "./unified.js";
+export type { StaticNode, StaticToASTNode, StaticValue, UnifiedExpression, UnifiedModule, UnifiedScalar, UnifiedStatement } from "./unified.js";
 export { formatCodeFrame, MatraSyntaxError } from "./parser/error.js";
 export { astToMatraJSON, isMatraAST, isMatraJSON, matraJSONToAST, } from "./ast/convert.js";
 export { printJSON } from "./printer.js";
@@ -16,7 +18,7 @@ export { loadMatra, matra, normalizeMatra } from "./jsonmatra.js";
 export type { JSONMatraPrimitive, JSONMatraNode, JSONMatraValue, MatraDocumentSource, MatraExpressionSource, MatraFactory, MatraRawSource, } from "./jsonmatra.js";
 export { CORE_VERSION, SPEC_VERSION } from "./ast/types.js";
 export type * from "./ast/types.js";
-import { parse, parseWith } from "./parser/index.js";
+import { parse } from "./parser/index.js";
 import { astToMatraJSON, matraJSONToAST } from "./ast/convert.js";
 import { printJSON } from "./printer.js";
 import { extractMarkdownFences, extractMatraMarkdown } from "./markdown.js";
@@ -28,7 +30,6 @@ import { loadMatra, normalizeMatra } from "./jsonmatra.js";
 export declare const VERSION = "0.2.1";
 declare const _default: {
     parse: typeof parse;
-    parseWith: typeof parseWith;
     astToMatraJSON: typeof astToMatraJSON;
     matraJSONToAST: typeof matraJSONToAST;
     printJSON: typeof printJSON;

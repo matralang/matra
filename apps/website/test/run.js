@@ -40,32 +40,32 @@ for (const source of matraTypeScriptPages) {
 execFileSync("pnpm", ["run", "build"], { stdio: "inherit" })
 
 const index = await readFile(new URL("../dist/index.html", import.meta.url), "utf8")
-const docs = await readFile(new URL("../dist/docs/index.html", import.meta.url), "utf8")
-const packages = await readFile(new URL("../dist/packages/index.html", import.meta.url), "utf8")
-const spec = await readFile(new URL("../dist/spec/index.html", import.meta.url), "utf8")
+const docs = await readFile(new URL("../dist/docs.html", import.meta.url), "utf8")
+const packages = await readFile(new URL("../dist/packages.html", import.meta.url), "utf8")
+const spec = await readFile(new URL("../dist/spec.html", import.meta.url), "utf8")
 const specPages = await Promise.all([
   "data-model",
   "ast",
   "grammar",
   "parser",
-].map(page => readFile(new URL(`../dist/spec/${page}/index.html`, import.meta.url), "utf8")))
-const playground = await readFile(new URL("../dist/play/index.html", import.meta.url), "utf8")
+].map(page => readFile(new URL(`../dist/spec/${page}.html`, import.meta.url), "utf8")))
+const playground = await readFile(new URL("../dist/play.html", import.meta.url), "utf8")
 const playgroundBundle = await readFile(new URL("../dist/assets/playground.js", import.meta.url), "utf8")
 const playgroundWorker = await readFile(new URL("../dist/assets/matra-worker.js", import.meta.url), "utf8")
 const playgroundSource = await readFile(new URL("../src/client/playground.ts", import.meta.url), "utf8")
 
 for (const page of [
-  "blog/index.html",
-  "docs/index.html",
-  "examples/index.html",
+  "blog.html",
+  "docs.html",
+  "examples.html",
   "index.html",
-  "packages/index.html",
-  "play/index.html",
-  "spec/index.html",
-  "spec/data-model/index.html",
-  "spec/ast/index.html",
-  "spec/grammar/index.html",
-  "spec/parser/index.html",
+  "packages.html",
+  "play.html",
+  "spec.html",
+  "spec/data-model.html",
+  "spec/ast.html",
+  "spec/grammar.html",
+  "spec/parser.html",
 ]) {
   const document = await readFile(new URL(`../dist/${page}`, import.meta.url), "utf8")
   assert.match(document, /^<!DOCTYPE html>\n<html/, page)
@@ -83,17 +83,17 @@ assert.match(index, /<noscript>\s*<iframe src="https:\/\/www\.googletagmanager\.
 assert.match(index, /意味より先に、構造を書く/)
 assert.match(index, /hello\.matra/)
 assert.doesNotMatch(index, /hello\.matra\.ts/)
-assert.match(index, /<code>group\[role=&quot;list&quot;\]/)
+assert.match(index, /<code>group\(role=&quot;list&quot;\)/)
 assert.match(docs, /<title>Matraを使う — Matra/)
 assert.match(docs, /Language Specification/)
 assert.match(packages, /公式パッケージ/)
-const examples = await readFile(new URL("../dist/examples/index.html", import.meta.url), "utf8")
+const examples = await readFile(new URL("../dist/examples.html", import.meta.url), "utf8")
 assert.match(examples, /render-html\.ts/)
 assert.match(examples, /render-svg\.ts/)
 assert.match(examples, /transform\.ts/)
 assert.match(examples, /@matra\/graphics/)
 assert.doesNotMatch(examples, /matra:render-/)
-assert.match(spec, /<title>Index — Matra Specification v0.2/)
+assert.match(spec, /<title>Matra Specification v0.2<\/title>/)
 assert.match(spec, /Data Model/)
 for (const page of specPages) {
   assert.match(page, /<aside class="docs-nav">/)
@@ -143,10 +143,10 @@ execFileSync("pnpm", ["run", "build"], {
 })
 
 const pagesIndex = await readFile(new URL("../dist/index.html", import.meta.url), "utf8")
-const pagesPlayground = await readFile(new URL("../dist/play/index.html", import.meta.url), "utf8")
+const pagesPlayground = await readFile(new URL("../dist/play.html", import.meta.url), "utf8")
 
 assert.match(pagesIndex, /href="\/website\/app\.css"/)
-assert.match(pagesIndex, /href="\/website\/docs\/"/)
+assert.match(pagesIndex, /href="\/website\/docs"/)
 assert.match(pagesPlayground, /src="\/website\/assets\/playground\.js"/)
 assert.doesNotMatch(pagesIndex, /href="\/(?!website\/)/)
 

@@ -7,7 +7,8 @@ import {
   numericEvaluateProps,
   simplifyMatra,
 } from "../dist/index.js"
-import { parse } from "@matra/core"
+
+const call = (tag, ...children) => ({ tag, props: {}, children })
 
 describe("Cortex Compute Engine adapter", () => {
   it("evaluates MathJSON without going through the Matra parser", () => {
@@ -36,7 +37,7 @@ describe("Cortex Compute Engine adapter", () => {
 
   it("evaluates math expressions embedded in props", () => {
     assert.deepEqual(
-      numericEvaluateProps(parse("circle(cx=Cos(theta), r=Divide(3, 8))"), {
+      numericEvaluateProps({ tag: "circle", props: { cx: call("Cos", "theta"), r: call("Divide", 3, 8) }, children: [] }, {
         theta: ["Divide", "Pi", 3],
       }),
       {
@@ -52,7 +53,7 @@ describe("Cortex Compute Engine adapter", () => {
 
   it("falls back to approximation when an exact expression is not scalar", () => {
     assert.deepEqual(
-      numericEvaluateProps(parse("circle(cx=Sqrt(4), cy=Sqrt(3))")),
+      numericEvaluateProps({ tag: "circle", props: { cx: call("Sqrt", 4), cy: call("Sqrt", 3) }, children: [] }),
       {
         tag: "circle",
         props: { cx: 2, cy: "1.73205080756887729353" },

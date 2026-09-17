@@ -1,4 +1,4 @@
-import { astToMatraJSON, parse, printJSON } from "@matra/core"
+import { astToMatraJSON, evaluateStatic, parse, printJSON, staticValueToAST } from "@matra/core"
 import { toSVG } from "@matra/graphics"
 import { toHTML } from "@matra/html"
 
@@ -21,7 +21,9 @@ const HELP = {
 export function evaluate(source) {
   const { mode, code } = splitMagic(source)
   if (!code.trim()) return null
-  const ast = parse(code)
+  const value = evaluateStatic(parse(code))
+  if (value === undefined) throw new TypeError("A kernel cell must have an output expression.")
+  const ast = staticValueToAST(value)
   const json = printJSON(ast, { pretty: true })
   if (mode === "svg") {
     const svg = toSVG(ast)

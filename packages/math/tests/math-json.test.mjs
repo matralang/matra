@@ -9,8 +9,8 @@ describe("Matra MathJSON bridge", () => {
   it("unwraps the optional Formula document node", () => {
     assert.deepEqual(parseMath("Formula(Divide(1, 2))"), ["Divide", 1, 2])
   })
-  it("rejects domain props instead of silently losing them", () => {
-    assert.throws(() => parseMath('Add(axis="x", 1, 2)'), /cannot have Matra props/)
+  it("rejects node construction instead of silently treating it as MathJSON", () => {
+    assert.throws(() => parseMath('Add(axis="x") { 1; 2 }'), /does not support unified node/)
   })
   it("round-trips nested MathJSON through the Core AST", () => {
     const expression = ["Add", ["Power", "x", 2], -1]

@@ -19,16 +19,16 @@ article.docs-content {
     "Function syntax"
   }
   pre {
-    code[src="matra:function-syntax.matra"];
+    code(src="matra:function-syntax.matra"){}
   }
   h2 {
     "Document syntax"
   }
   pre {
-    code[src="matra:document-syntax.matra"];
+    code(src="matra:document-syntax.matra"){}
   }
   p.source-link {
-    a[href="https://github.com/matralang/matra/blob/main/spec/grammar.ja.md"] {
+    a(href="https://github.com/matralang/matra/blob/main/spec/grammar.ja.md") {
       "完全な仕様をGitHubで読む →"
     }
   }
@@ -44,7 +44,7 @@ section(
 ```
 
 ```document-syntax.matra
-article.card#main {
+article.card(id="main") {
   h1 { "Title" }
   p`Body`
 }
