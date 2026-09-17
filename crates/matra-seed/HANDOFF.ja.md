@@ -1,5 +1,17 @@
 # Matra bootstrap引き継ぎ
 
+> **Archive:** この文書はbootstrap成立までの調査・試行・停止点を保存した履歴です。
+> 現在の状態と再検証方法は [`README.ja.md`](README.ja.md) を正とします。過去の「未達」「blocked」や
+> 未チェック項目は、その時点の記録であり、現在の状態を示しません。
+
+| 項目 | 現在の状態 | 再確認 |
+| --- | --- | --- |
+| Stage 1 | Rust seedから生成成功 | `pnpm bootstrap:verify` |
+| Stage 2 | Stage 1 compilerから生成成功 | 同上 |
+| Stage 3 | Stage 2 compilerから生成成功 | 同上 |
+| byte equality | Stage 2/3のWasmが完全一致 | 同上 |
+| 回帰検証 | Rust 8件、Node 38件、lint成功 | `pnpm run test:seed && pnpm run lint` |
+
 ## 2026-09-16 性能改善完了: local slot 型検索の範囲縮小
 
 下記の metadata cache 仮説よりも先に、Worker の CPU profile で実際の hot path を確認した。

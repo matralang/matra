@@ -1,7 +1,7 @@
 # Matra seed compiler
 
 Matra ProgramをWebAssemblyへcompileするRust製seed compilerと、Matraで記述したbootstrap compilerの
-開発資産です。現在はbootstrap基盤の検証段階であり、本番compilerとしての利用は推奨しません。
+開発資産です。bootstrap基盤は成立していますが、本番compilerとしての利用は推奨しません。
 
 ## 現在地
 
@@ -9,11 +9,11 @@ Matra ProgramをWebAssemblyへcompileするRust製seed compilerと、Matraで記
 - stage-1は限定されたMatra Program、struct return、nested `if`、loop内算術条件と`break`をcompileできる
 - diagnosticは36-byte result ABIでsource rangeと期待grammarを返す
 - compiler artifactはcontent-addressed cacheとSHA-256 sidecarを持つ
-- stage-1によるcompiler自身のcompileは未達である
+- stage-1からstage-2、stage-3までcompiler自身をcompileできる
+- stage-2とstage-3の生成Wasmはbyte単位で一致する
 
 self-host検証はstage-1、stage-2、stage-3の順にcompiler sourceをcompileし、stage-2とstage-3の
-byte一致を判定する。現在はcompiler sourceの最初のconditional call argument内struct field accessに続く
-算術でstage-2が停止するため、commandはexit code `1`を返す。
+byte一致を判定する。成功時は各StageのSHA-256と処理時間を表示する。
 
 ```text
 pnpm bootstrap:verify
@@ -53,7 +53,7 @@ pnpm run lint
 - [`examples/compiler.md`](examples/compiler.md): Matra製bootstrap compiler source
 - [`host/`](host/): Node.js host、cache、artifact、self-host検証command
 - [`tests/`](tests/): Rust seedとbootstrap compilerのintegration test
-- [`HANDOFF.ja.md`](HANDOFF.ja.md): 正確な再開地点と次工程
+- [`HANDOFF.ja.md`](HANDOFF.ja.md): bootstrap成立までの調査履歴（archive）
 - [`../../spec/program.ja.md`](../../spec/program.ja.md): Program ABI draft
 
 生成Wasmとcacheは`target/`または指定した出力先へ置かれ、repositoryにはcommitしない。release workflowは
