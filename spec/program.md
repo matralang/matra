@@ -40,7 +40,7 @@ import math
 
 export fn answer(input: i32) -> i32 {
   let (result = double(input))
-  while result < 42 {
+  while (result < 42) {
     set (result = result + 1)
   }
   return result
@@ -92,8 +92,9 @@ binding    = identifier, [ ":", type ], "=", expression ;
 set        = "set", "(", identifier, "=", expression, ")" ;
 assignment = identifier, "=", expression ;
 byte_set   = "byte_set", "(", expression, ",", expression, ",", expression, ")" ;
-if         = "if", expression, block, [ "else", block ] ;
-while      = "while", expression, block ;
+condition  = "(", expression, ")" | expression ;
+if         = "if", condition, block, [ "else", block ] ;
+while      = "while", condition, block ;
 break      = "break" ;
 return     = "return", expression ;
 ```
@@ -121,6 +122,12 @@ The following is rejected because its closing `)` is missing.
 ```matra
 let (count = 1
 ```
+
+New source SHOULD parenthesize conditions as `if (condition)` and
+`while (condition)`. During migration, implementations MAY accept
+`if condition` and `while condition` as equivalent control statements.
+Conditions use the normal expression syntax without an additional delimiter
+such as `$`.
 
 Expressions include literals, variables, calls, indexing, field access,
 unary `-` and `!`, arithmetic, comparisons, and logical operators. A function

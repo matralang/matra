@@ -38,7 +38,7 @@ import math
 
 export fn answer(input: i32) -> i32 {
   let (result = double(input))
-  while result < 42 {
+  while (result < 42) {
     set (result = result + 1)
   }
   return result
@@ -89,8 +89,9 @@ binding    = identifier, [ ":", type ], "=", expression ;
 set        = "set", "(", identifier, "=", expression, ")" ;
 assignment = identifier, "=", expression ;
 byte_set   = "byte_set", "(", expression, ",", expression, ",", expression, ")" ;
-if         = "if", expression, block, [ "else", block ] ;
-while      = "while", expression, block ;
+condition  = "(", expression, ")" | expression ;
+if         = "if", condition, block, [ "else", block ] ;
+while      = "while", condition, block ;
 break      = "break" ;
 return     = "return", expression ;
 ```
@@ -115,6 +116,10 @@ set (count = count + 1)
 ```matra
 let (count = 1
 ```
+
+新しいsourceは`if (condition)`と`while (condition)`のように条件を丸括弧で囲むべきです
+（SHOULD）。移行期間中は`if condition`と`while condition`も同じ制御構文として受理します
+（MAY）。条件内では通常のexpression構文を使用し、`$`などの追加delimiterは使用しません。
 
 expressionはliteral、variable、call、index、field access、unary `-`と`!`、
 arithmetic、comparison、logical operatorを持ちます。result typeが`unit`以外の

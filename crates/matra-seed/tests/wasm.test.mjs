@@ -143,6 +143,45 @@ test("Rust seed executes parenthesized let and set statements", async () => {
   }
 })
 
+test("Rust seed executes parenthesized if and while conditions", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "matra-seed-conditions-"))
+  const input = join(directory, "conditions.md")
+  const output = join(directory, "conditions.wasm")
+  await writeFile(input, [
+    "# Parenthesized conditions",
+    "",
+    "```answer.matra.program",
+    "module example",
+    "",
+    "export fn answer() -> i32 {",
+    "  let (value = 0)",
+    "  if (value == 0) {",
+    "    set (value = 40)",
+    "  }",
+    "  while (value < 42) {",
+    "    set (value = value + 1)",
+    "  }",
+    "  return value",
+    "}",
+    "```",
+    "",
+  ].join("\n"))
+
+  try {
+    const result = spawnSync(
+      "cargo",
+      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "answer.matra.program"],
+      { cwd: root, encoding: "utf8" },
+    )
+    assert.equal(result.status, 0, result.stderr)
+
+    const { instance } = await WebAssembly.instantiate(await readFile(output))
+    assert.equal(instance.exports.answer(), 42)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test("bootstrap compiler executes top-level parenthesized let and set statements", async () => {
   const compilerBytes = await readFile(await cachedCompiler())
   const source = new TextEncoder().encode(`module example
