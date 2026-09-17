@@ -55,6 +55,8 @@ article.card.card(lang="ja", options={theme: "dark"}) {
 
   it("evaluates arithmetic and comparison operators by precedence", () => {
     assert.equal(evaluateUnified(parseUnified("1 + 2 * 3 == 7")), true)
+    assert.equal(evaluateUnified(parseUnified("5 - 2 == 3")), true)
+    assert.equal(evaluateUnified(parseUnified("-2 + 3 == 1")), true)
   })
 
   it("evaluates logical operators with unary negation", () => {

@@ -285,7 +285,7 @@ function tokenize(source: string): Token[] {
     if (char === "\n") { tokens.push({ kind: "newline", value: "\n", offset }); index++; continue }
     if (source.startsWith("//", index)) { while (index < source.length && source[index] !== "\n") index++; continue }
     if (char === '"') { index++; let value = ""; while (index < source.length && source[index] !== '"') { if (source[index] === "\\") throw new UnifiedSyntaxError(`String escapes are not implemented at offset ${index}.`); value += source[index++] } if (source[index] !== '"') throw new UnifiedSyntaxError(`Unterminated string at offset ${offset}.`); index++; tokens.push({ kind: "string", value, offset }); continue }
-    const number = source.slice(index).match(/^-?(?:\d+\.?\d*|\.\d+)/)
+    const number = source.slice(index).match(/^(?:\d+\.?\d*|\.\d+)/)
     if (number) { index += number[0].length; tokens.push({ kind: "word", value: number[0], offset }); continue }
     const word = source.slice(index).match(/^[A-Za-z_][A-Za-z0-9_-]*/)
     if (word) { index += word[0].length; tokens.push({ kind: "word", value: word[0], offset }); continue }

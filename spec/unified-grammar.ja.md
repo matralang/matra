@@ -9,14 +9,14 @@
 `.matra.program` と Rust seed compiler はこの変更の対象外であり、当面は v0.1 draft の
 文法を維持する。
 
-現在の TypeScript 実装では `@matra/core` の `parse()` がこの構文木を返す。字句・構文と
-静的評価の最小部分を提供する。`fn`、`if`、`for`、
-代入、演算子、import/export は parser 実装前であり、受理して別の意味に読み替えない。
+現在の TypeScript 実装では `@matra/core` の `parse()` がこの構文木を返す。`evaluateStatic()` は
+実行せず静的文書を取得し、明示 API の `evaluateUnified()` は実装済みの手続き subset を評価する。
+代入、import/export、型構文は受理して別の意味に読み替えない。
 
-## 評価 mode の提案
+## 評価 mode
 
-静的取得とは別の明示 API に `if`、`for`、`fn`、`return` を追加する。選択された分岐と反復は
-式結果を node body へソース順で追加し、宣言は child を追加しない。import/export、型、代入は対象外とする。
+`evaluateUnified()` は `fn`、`return`、`if` / `else`、array `for` loop を扱う。選択された分岐と
+反復は式結果を node body へソース順で追加し、宣言は child を追加しない。import/export、型、代入は対象外とする。
 
 ## ソースとトップレベル
 
@@ -42,17 +42,21 @@ chart(options={theme: "dark"}, series=[10, 20]) {}
 node body は statement の式結果をソース順の child とする。`let` は child を追加しない。
 配列と object は暗黙に child へ展開または文字列化しない。
 
+実装済みの式演算子は、grouping `(...)`、prefix `!` と `-`、`*` と `/`、`+` と `-`、比較
+（`==`、`!=`、`<`、`<=`、`>`、`>=`）、`&&`、`||` の順に高い優先順位を持つ。number literal は符号を
+含まず、負数は prefix `-` として parse するため、`5 - 2` と `-2 + 3` は曖昧にならない。
+
 ## 静的取得
 
 literal、array、object、先行する static `let`、それらだけから成る node は実行せずに
-取得できる。未束縛 reference、member access、call は `EvaluationRequired` であり、静的取得が
-実行へ fallback してはならない。
+取得できる。reference、member access、call、operator、手続き statement は `EvaluationRequired` であり、
+静的取得が実行へ fallback してはならない。
 
 ## 未確定事項
 
 次は実装せず保留する: import/module 解決、文字列 escape／複数行文字列、明示的 `class`
 属性との結合、重複属性、文書内 scalar と null の renderer 上の扱い、scope／可変性、型推論、
-`return`、改行継続、二項演算子周辺の空白、Wasm 値表現。
+改行継続、Wasm 値表現。
 
 推奨案は、明示的 `class` と shorthand を空白結合して安定重複除去し、属性重複は parse error、
 文書の scalar/null は renderer ごとの明示的規則とすることである。
