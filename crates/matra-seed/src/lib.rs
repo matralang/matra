@@ -397,6 +397,7 @@ impl<'a> Parser<'a> {
 
     fn statement(&mut self) -> Result<Statement, CompileError> {
         if self.consume_keyword("let") {
+            let parenthesized = self.consume('(');
             let name = self.identifier()?;
             let value_type = if self.consume(':') {
                 Some(self.parse_type()?)
@@ -404,7 +405,19 @@ impl<'a> Parser<'a> {
                 None
             };
             self.expect('=')?;
-            return Ok(Statement::Let(name, value_type, self.expression()?));
+            let expression = self.expression()?;
+            if parenthesized {
+                self.expect(')')?;
+            }
+            return Ok(Statement::Let(name, value_type, expression));
+        }
+        if self.consume_keyword("set") {
+            self.expect('(')?;
+            let name = self.identifier()?;
+            self.expect('=')?;
+            let expression = self.expression()?;
+            self.expect(')')?;
+            return Ok(Statement::Assign(name, expression));
         }
         if self.consume_keyword("return") {
             return Ok(Statement::Return(self.expression()?));
@@ -713,6 +726,7 @@ fn is_reserved_word(identifier: &str) -> bool {
     matches!(
         identifier,
         "fn" | "let"
+            | "set"
             | "if"
             | "else"
             | "while"
@@ -2117,6 +2131,38 @@ export fn answer() -> i32 { return double(21) }
                 .unwrap_err()
                 .to_string()
                 .contains("Duplicate parameter")
+        );
+    }
+
+    #[test]
+    fn accepts_parenthesized_let_and_set_statements() {
+        let source = "```entry.matra.program\nmodule entry\nexport fn answer() -> i32 { let // declaration\n(value: i32 = 40) set (value = value + 2) return value }\n```";
+        assert!(compile_markdown(source, None).is_ok());
+    }
+
+    #[test]
+    fn rejects_unclosed_parenthesized_statements() {
+        for statement in ["let (value = 1", "set (value = 1"] {
+            let source = format!(
+                "```entry.matra.program\nmodule entry\nexport fn answer() -> i32 {{ {statement} return 0 }}\n```"
+            );
+            assert!(
+                compile_markdown(&source, None)
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Expected ')'")
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_set_for_an_unknown_local() {
+        let source = "```entry.matra.program\nmodule entry\nexport fn answer() -> i32 { set (value = 1) return 0 }\n```";
+        assert!(
+            compile_markdown(source, None)
+                .unwrap_err()
+                .to_string()
+                .contains("Unknown variable")
         );
     }
 }

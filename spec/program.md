@@ -39,15 +39,15 @@ module example
 import math
 
 export fn answer(input: i32) -> i32 {
-  let result = double(input)
+  let (result = double(input))
   while result < 42 {
-    result = result + 1
+    set (result = result + 1)
   }
   return result
 }
 ```
 
-Use `snake_case` for identifiers. `fn`, `let`, `if`, `else`, `while`,
+Use `snake_case` for identifiers. `fn`, `let`, `set`, `if`, `else`, `while`,
 `return`, `break`, `module`, `import`, and `export` are reserved words.
 
 `()` groups expressions and declares or calls functions. `[]` is reserved for
@@ -86,14 +86,40 @@ parameters = parameter, { ",", parameter } ;
 parameter  = identifier, ":", type ;
 type       = "i32" | "bool" | "bytes" | "[", type, "]" | identifier ;
 block      = "{", { statement }, "}" ;
-statement  = let | assignment | byte_set | if | while | break | return ;
-let        = "let", identifier, [ ":", type ], "=", expression ;
+statement  = let | set | assignment | byte_set | if | while | break | return ;
+let        = "let", ( "(", binding, ")" | binding ) ;
+binding    = identifier, [ ":", type ], "=", expression ;
+set        = "set", "(", identifier, "=", expression, ")" ;
 assignment = identifier, "=", expression ;
 byte_set   = "byte_set", "(", expression, ",", expression, ",", expression, ")" ;
 if         = "if", expression, block, [ "else", block ] ;
 while      = "while", expression, block ;
 break      = "break" ;
 return     = "return", expression ;
+```
+
+New source SHOULD use `let (name = expression)` for local declarations and
+`set (name = expression)` for assignment to an existing local. A type
+annotation follows the identifier, as in `let (name: type = expression)`.
+During migration, implementations MAY also accept `let name = expression` and
+`name = expression` as equivalent statements.
+
+The parentheses belong to the statement, not to its expression. Normal
+whitespace and line comments may appear between `let` or `set` and `(` and
+between tokens inside the parentheses. If the closing `)` is missing, the
+parser MUST report the next token or the end of the source as the error
+position. The target of `set` MUST be a previously declared local and cannot
+include a type annotation.
+
+```matra
+let (count: i32 = 1)
+set (count = count + 1)
+```
+
+The following is rejected because its closing `)` is missing.
+
+```matra
+let (count = 1
 ```
 
 Expressions include literals, variables, calls, indexing, field access,

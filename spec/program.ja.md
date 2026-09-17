@@ -37,15 +37,15 @@ module example
 import math
 
 export fn answer(input: i32) -> i32 {
-  let result = double(input)
+  let (result = double(input))
   while result < 42 {
-    result = result + 1
+    set (result = result + 1)
   }
   return result
 }
 ```
 
-identifierには`snake_case`を使用します。`fn`、`let`、`if`、`else`、`while`、
+identifierには`snake_case`を使用します。`fn`、`let`、`set`、`if`、`else`、`while`、
 `return`、`break`、`module`、`import`、`export`はreserved wordです。
 
 `()`はexpressionのgrouping、functionのdeclarationとcallに使用します。`[]`は
@@ -83,14 +83,37 @@ parameters = parameter, { ",", parameter } ;
 parameter  = identifier, ":", type ;
 type       = "i32" | "bool" | "bytes" | "[", type, "]" | identifier ;
 block      = "{", { statement }, "}" ;
-statement  = let | assignment | byte_set | if | while | break | return ;
-let        = "let", identifier, [ ":", type ], "=", expression ;
+statement  = let | set | assignment | byte_set | if | while | break | return ;
+let        = "let", ( "(", binding, ")" | binding ) ;
+binding    = identifier, [ ":", type ], "=", expression ;
+set        = "set", "(", identifier, "=", expression, ")" ;
 assignment = identifier, "=", expression ;
 byte_set   = "byte_set", "(", expression, ",", expression, ",", expression, ")" ;
 if         = "if", expression, block, [ "else", block ] ;
 while      = "while", expression, block ;
 break      = "break" ;
 return     = "return", expression ;
+```
+
+新しいsourceはlocal宣言に`let (name = expression)`、既存localへの代入に
+`set (name = expression)`を使用すべきです（SHOULD）。型注釈は
+`let (name: type = expression)`のようにidentifierの直後へ置きます。移行期間中は
+`let name = expression`と`name = expression`も同じstatementとして受理します（MAY）。
+
+丸括弧はstatementの一部であり、式の一部ではありません。通常のwhitespaceとline commentは
+`let`または`set`と`(`の間、および丸括弧内のtoken間に置けます。閉じる`)`がない場合、
+parserは次のtoken、またはsource末尾をerror位置として報告しなければなりません（MUST）。
+`set`の対象は宣言済みのlocalでなければならず（MUST）、型注釈を含めることはできません。
+
+```matra
+let (count: i32 = 1)
+set (count = count + 1)
+```
+
+次は閉じる`)`がなく、拒否されます。
+
+```matra
+let (count = 1
 ```
 
 expressionはliteral、variable、call、index、field access、unary `-`と`!`、

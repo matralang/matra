@@ -109,6 +109,40 @@ test("bootstrap compiler accepts a simple conditional return in a function body"
   }
 })
 
+test("Rust seed executes parenthesized let and set statements", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "matra-seed-let-set-"))
+  const input = join(directory, "let-set.md")
+  const output = join(directory, "let-set.wasm")
+  await writeFile(input, [
+    "# Parenthesized let and set",
+    "",
+    "```answer.matra.program",
+    "module example",
+    "",
+    "export fn answer() -> i32 {",
+    "  let (value: i32 = 40)",
+    "  set (value = value + 2)",
+    "  return value",
+    "}",
+    "```",
+    "",
+  ].join("\n"))
+
+  try {
+    const result = spawnSync(
+      "cargo",
+      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "answer.matra.program"],
+      { cwd: root, encoding: "utf8" },
+    )
+    assert.equal(result.status, 0, result.stderr)
+
+    const { instance } = await WebAssembly.instantiate(await readFile(output))
+    assert.equal(instance.exports.answer(), 42)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test("bootstrap compiler accepts a call guard before a local and while", async () => {
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-call-guard-"))
   const input = join(directory, "call-guard.md")
