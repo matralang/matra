@@ -8,6 +8,7 @@ export type UnifiedExpression =
   | { kind: "reference", name: string }
   | { kind: "member", object: UnifiedExpression, name: string }
   | { kind: "call", callee: UnifiedExpression, arguments: UnifiedExpression[] }
+  | { kind: "binary", operator: string, left: UnifiedExpression, right: UnifiedExpression }
   | { kind: "node", tag: string, classes: string[], attributes: { key: string, value: UnifiedExpression }[], body: UnifiedStatement[] }
 
 export type UnifiedStatement =
@@ -82,6 +83,7 @@ export function evaluateUnified(module: UnifiedModule): StaticValue | undefined 
     if (value.kind === "reference") { if (!(value.name in scope)) throw new ReferenceError(`Unknown name: ${value.name}`); return scope[value.name] }
     if (value.kind === "member") return expression(value.object)?.[value.name]
     if (value.kind === "call") { const callee = expression(value.callee); if (typeof callee !== "function") throw new TypeError("Call target is not a function"); return callee(...value.arguments.map(expression)) }
+    if (value.kind === "binary") { const left = expression(value.left); const right = expression(value.right); return ({ "+": () => left + right, "-": () => left - right, "*": () => left * right, "/": () => left / right, "==": () => left === right, "!=": () => left !== right, "<": () => left < right, "<=": () => left <= right, ">": () => left > right, ">=": () => left >= right } as Record<string, () => unknown>)[value.operator]() }
     const props = Object.fromEntries(value.attributes.map(attribute => [attribute.key, expression(attribute.value)])); if (value.classes.length) props.class = value.classes.join(" "); const children: any[] = []; for (const statement of value.body) { const result = run([statement]); if (result?.return !== undefined) return result; if (statement.kind === "expression") children.push(result); else if (statement.kind === "if" && result !== undefined) children.push(result); else if (statement.kind === "for") children.push(...result.filter(item => item !== undefined)) } return { tag: value.tag, props, children }
   }
   return run(module.statements)
@@ -114,6 +116,7 @@ function evaluateExpression(expression: UnifiedExpression, scope: Record<string,
       throw new EvaluationRequiredError(`Static evaluation requires a value for '${expression.name}'.`)
     case "member":
     case "call":
+    case "binary":
       throw new EvaluationRequiredError(`Static evaluation does not execute ${expression.kind} expressions.`)
     case "node": {
       const props = Object.fromEntries(expression.attributes.map(attribute => [attribute.key, evaluateExpression(attribute.value, scope)]))
@@ -176,7 +179,8 @@ class UnifiedParser {
 
   private block(): UnifiedStatement[] { this.expect("{"); const body = this.statements("}"); this.expect("}"); return body }
 
-  private expression(): UnifiedExpression {
+  private expression(): UnifiedExpression { return this.binary(0) }
+  private binary(minimum: number): UnifiedExpression {
     let expression = this.primary()
     while (this.at(".")) {
       this.next()
@@ -187,6 +191,11 @@ class UnifiedParser {
       const args = this.list(")", () => this.expression())
       this.expect(")")
       expression = { kind: "call", callee: expression, arguments: args }
+    }
+    const precedence: Record<string, number> = { "==": 1, "!=": 1, "<": 2, "<=": 2, ">": 2, ">=": 2, "+": 3, "-": 3, "*": 4, "/": 4 }
+    while ((precedence[this.peek().value] ?? 0) >= minimum && (precedence[this.peek().value] ?? 0) > 0) {
+      const operator = this.next().value
+      expression = { kind: "binary", operator, left: expression, right: this.binary(precedence[operator] + 1) }
     }
     return expression
   }
@@ -275,7 +284,9 @@ function tokenize(source: string): Token[] {
     if (number) { index += number[0].length; tokens.push({ kind: "word", value: number[0], offset }); continue }
     const word = source.slice(index).match(/^[A-Za-z_][A-Za-z0-9_-]*/)
     if (word) { index += word[0].length; tokens.push({ kind: "word", value: word[0], offset }); continue }
-    if ("{}[](),.:=;".includes(char)) { tokens.push({ kind: "symbol", value: char, offset }); index++; continue }
+    const operator = source.slice(index).match(/^(==|!=|<=|>=)/)
+    if (operator) { tokens.push({ kind: "symbol", value: operator[0], offset }); index += operator[0].length; continue }
+    if ("{}[](),.:=;+-*/<>".includes(char)) { tokens.push({ kind: "symbol", value: char, offset }); index++; continue }
     throw new UnifiedSyntaxError(`Unexpected '${char}' at offset ${offset}.`)
   }
   tokens.push({ kind: "eof", value: "", offset: source.length })

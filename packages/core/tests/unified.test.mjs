@@ -52,4 +52,8 @@ article.card.card(lang="ja", options={theme: "dark"}) {
       ],
     })
   })
+
+  it("evaluates arithmetic and comparison operators by precedence", () => {
+    assert.equal(evaluateUnified(parseUnified("1 + 2 * 3 == 7")), true)
+  })
 })
