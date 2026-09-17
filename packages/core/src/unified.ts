@@ -213,7 +213,7 @@ class UnifiedParser {
     if (token.kind === "string") return { kind: "literal", value: this.next().value }
     if (token.value === "true" || token.value === "false") { this.next(); return { kind: "literal", value: token.value === "true" } }
     if (token.value === "null") { this.next(); return { kind: "literal", value: null } }
-    if (/^-?(?:\d+\.?\d*|\.\d+)$/.test(token.value)) { this.next(); return { kind: "literal", value: Number(token.value) } }
+    if (/^(?:\d+\.?\d*|\.\d+)$/.test(token.value)) { this.next(); return { kind: "literal", value: Number(token.value) } }
     if (token.value === "[") {
       this.next(); const items = this.list("]", () => this.expression()); this.expect("]")
       return { kind: "array", items }
