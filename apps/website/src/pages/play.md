@@ -133,6 +133,17 @@ section.playground-page {
               "A complete document"
             }
           }
+          button.example-button(type="button", data-example="dynamic", aria-pressed="false") {
+            span.example-kind {
+              "HTML"
+            }
+            strong {
+              "Dynamic list"
+            }
+            small {
+              "Functions, conditions, and loops"
+            }
+          }
           button.example-button(type="button", data-example="poster", aria-pressed="false") {
             span.example-kind.svg {
               "SVG"

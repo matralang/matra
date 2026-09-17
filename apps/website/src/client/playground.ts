@@ -174,6 +174,20 @@ Object.assign(examples, {
   ul { li { a(href="/docs/") { "Docs" } }; li { a(href="/examples/") { "Examples" } }; li { a(href="/play/") { "Playground" } } }
 }`),
   article: markdown("article.matra", `main { article { header { h1 { "Structure is a way of seeing." } }; section { h2 { "Start with the outline" }; p { "Names, attributes, and children make the hierarchy visible." } } } }`),
+  dynamic: markdown("dynamic-list.matra", `fn label(value) {
+  if (value == "stable") { return "Stable API" } else { return "Experimental" }
+}
+
+let releases = ["stable", "preview"]
+
+section {
+  h2 { "Release channels" }
+  ul {
+    for (release in releases) {
+      li { label(release) }
+    }
+  }
+}`),
   poster: markdown("poster.matra", `svg(width=640, height=400) {
   rect(x=0, y=0, width=640, height=400, rx=28, fill="#101814") {}
   circle(cx=500, cy=90, r=180, fill="#c8f135", opacity=0.88) {}
