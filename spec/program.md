@@ -15,7 +15,7 @@ imports to one WebAssembly module.
 ## Current seed subset
 
 The seed compiler currently supports `i32` and `bytes` functions, local
-variables, function calls, arithmetic, comparisons, `if` / `else`, `while`,
+variables, function calls, arithmetic, comparisons, `if` / `else`, `while`, `do-until`,
 and `break`. It exports one page of WebAssembly linear memory. A `bytes`
 parameter and return value lower to `(pointer, length)`, and parameters support
 `byte_length(source)` and `byte_at(source, index)`.
@@ -138,6 +138,11 @@ without evaluating the condition. Parentheses around the `until` condition are
 required (MUST). A source missing the closing `}`, `until`, `(`, or `)` MUST be
 rejected, and the parser MUST report the following token or the end of the
 source as the error position.
+
+The self-hosted compiler also accepts this syntax. This is a compatible addition
+that preserves existing source and `fn name(parameters) -> type`. Normal
+whitespace and line comments may separate tokens. `until ()`, `until (count >=)`,
+and `until count >= 10` are rejected.
 
 ```matra
 do {

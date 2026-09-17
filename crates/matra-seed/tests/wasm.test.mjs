@@ -6,6 +6,7 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
 import { test } from "node:test"
+import { Worker } from "node:worker_threads"
 import { cachedCompiler } from "../host/bootstrap-compiler.mjs"
 import { formatCompilerDiagnostic, sourceExcerpt, sourcePosition } from "../host/compiler-host.mjs"
 
@@ -226,6 +227,152 @@ test("Rust seed executes do-until loops", async () => {
     assert.equal(exports.stop(0), 1)
   } finally {
     await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test("bootstrap compiler executes and validates do-until loops", async () => {
+  const stage1 = await readFile(await cachedCompiler())
+  const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
+  const compilerSource = markdown.split("```compiler.matra.program\n")[1].split("\n```")[0]
+  const stage2 = await new Promise((resolve, reject) => {
+    const worker = new Worker(new URL("../host/compile-worker.mjs", import.meta.url), {
+      workerData: { compilerBytes: stage1, source: new TextEncoder().encode(compilerSource) },
+    })
+    const timer = setTimeout(() => {
+      worker.terminate()
+      reject(new Error("do-until test: Stage 2 compilation timed out"))
+    }, 180000)
+    worker.once("message", (result) => {
+      clearTimeout(timer)
+      worker.terminate()
+      if (result.output) resolve(result.output)
+      else reject(new Error(result.diagnostic))
+    })
+    worker.once("error", (error) => {
+      clearTimeout(timer)
+      worker.terminate()
+      reject(error)
+    })
+  })
+  for (const compilerBytes of [stage1, stage2]) {
+    const compileSource = async (text) => {
+      const source = new TextEncoder().encode(text)
+      const { instance: { exports: { alloc, compile, memory } } } = await WebAssembly.instantiate(compilerBytes)
+      const pointer = alloc(source.length)
+      new Uint8Array(memory.buffer, pointer, source.length).set(source)
+      const recordPointer = compile(pointer, source.length)
+      const record = new DataView(memory.buffer, recordPointer, 36)
+      return { source, memory, recordPointer, record }
+    }
+    const { source, memory, recordPointer, record } = await compileSource(`module example
+export fn repeat(value: i32) -> i32 {
+  do {
+    set (value = value + 1)
+  } until (value >= 3)
+  return value
+}
+export fn stop(value: i32) -> i32 {
+  do {
+    set (value = value + 1)
+    break
+  } until (value >= 100)
+  return value
+}
+export fn nested(value: i32) -> i32 {
+  do {
+    do { set (value = value + 1) break } until (0)
+    if (value >= 3) { break }
+  } until (0)
+  return value
+}
+export fn truthy(value: i32) -> i32 {
+  do { set (value = value + 1) } until (value)
+  return value
+}
+fn identity(value: i32) -> i32 { return value }
+export fn mixed() -> i32 {
+  let (value = 0)
+  while (value < 10) {
+    do {
+      let (increment = 1)
+      set (value = value + increment)
+      if (identity(value) >= 3) { break }
+    } until (0)
+    if (value >= 3) { break }
+  }
+  do {
+    while (value < 10) {
+      set (value = value + 1)
+      if (value >= 4) { break }
+    }
+    set (value = value + 1)
+  } until (identity(value) + 1 >= 6)
+  return value
+}
+export fn mutation() -> i32 {
+  let (data = allocate_bytes(1))
+  do // } is a comment, not a delimiter
+  { byte_set(data, 0, 42) }
+  // tokens may cross lines
+  until // required keyword
+  (byte_at(data, 0) == 42)
+  return byte_at(data, 0)
+}
+export fn early_return() -> i32 {
+  do { return 42 } until (0)
+  return 0
+}
+export fn skip_condition() -> i32 {
+  do { break } until (1 / 0)
+  do {} until (1)
+  return 42
+}
+export fn conditional() -> i32 {
+  let (value = 0)
+  if (value == 0) {
+    do { set (value = value + 1) } until (value == 2)
+  }
+  let (after = value + 40)
+  return after
+}`)
+    assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(source, memory, recordPointer))
+    const output = new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
+    const { instance: { exports } } = await WebAssembly.instantiate(output)
+    assert.equal(exports.repeat(0), 3)
+    assert.equal(exports.repeat(10), 11)
+    assert.equal(exports.stop(0), 1)
+    assert.equal(exports.nested(0), 3)
+    assert.equal(exports.truthy(0), 1)
+    assert.equal(exports.mixed(), 5)
+    assert.equal(exports.mutation(), 42)
+    assert.equal(exports.early_return(), 42)
+    assert.equal(exports.skip_condition(), 42)
+    assert.equal(exports.conditional(), 42)
+
+    for (const body of [
+      "do { break } (1 == 1)",
+      "do { break } until 1",
+      "do { break } until ()",
+      "do { break } until (value >=)",
+      "do { break } until (value = 1)",
+      "do { break } until (value ? 1)",
+      "do { break } until (value +)",
+      "do { break } until (identity(1,))",
+      "do { break } until (value >= 1",
+      "do break } until (1)",
+      "do { nonsense } until (1)",
+      "do { set (value = 1 } until (1)",
+      "do { set (value = ) } until (1)",
+      "do { do { break } until () } until (1)",
+    ]) {
+      const malformed = await compileSource(`module example
+export fn answer(value: i32) -> i32 { ${body} return value }`)
+      assert.notEqual(malformed.record.getInt32(0, true), 0, body)
+      assert.match(formatCompilerDiagnostic(malformed.source, malformed.memory, malformed.recordPointer), /parse error/, body)
+    }
+    const truncated = await compileSource("module example\nexport fn answer() -> i32 { do {")
+    assert.notEqual(truncated.record.getInt32(0, true), 0)
+    assert.equal(truncated.record.getInt32(24, true), truncated.source.length)
   }
 })
 

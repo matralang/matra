@@ -15,7 +15,7 @@ moduleへcompileします。
 ## 現在のseed subset
 
 seed compilerは現在、`i32` / `bytes` function、local variable、function call、
-arithmetic、comparison、`if` / `else`、`while`、`break`を実装します。WebAssembly
+arithmetic、comparison、`if` / `else`、`while`、`do-until`、`break`を実装します。WebAssembly
 linear memoryを1 page exportし、`bytes` parameterとreturn valueを`(pointer, length)`へ
 lowerします。
 `byte_length(source)`と`byte_at(source, index)`を利用できます。
@@ -127,6 +127,10 @@ blockを再実行し、nonzeroなら後続statementへ進みます。`break`はc
 最も内側の`while`または`do-until`を終了します。`until`の条件を囲む丸括弧は必須です
 （MUST）。`do` blockの閉じる`}`、`until`、`(`、`)`のいずれかが欠落したsourceは拒否し、
 parserは欠落位置の次tokenまたはsource末尾をerror位置として報告しなければなりません（MUST）。
+
+自己ホストcompilerもこの構文を受理します。既存sourceを維持する互換追加で、
+`fn name(parameters) -> type`は変更しません。token間には通常のwhitespaceとline commentを
+置けます。`until ()`、`until (count >=)`、`until count >= 10`は拒否します。
 
 ```matra
 do {

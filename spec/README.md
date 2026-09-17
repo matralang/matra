@@ -19,6 +19,8 @@ requirements.
 Each English document is named `name.md`; its Japanese counterpart is named
 `name.ja.md`. Both versions have the same normative meaning.
 
+Unimplemented proposal: [Matra Program for syntax](./for-loop-proposal.md).
+
 ## Scope
 
 Tags and property names have no built-in domain meaning. HTML rendering,

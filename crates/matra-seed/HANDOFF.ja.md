@@ -1801,6 +1801,17 @@ focused testが成功しても、`bootstrap:verify`がOOBになる変更は採�
 
 ## 運用上の判断
 
+### do-until導入時の回帰
+
+`fn repeat(value: i32) -> i32 { do { set (value = value + 1) } until (value >= 3) return value }`
+は、最初に`parse_function`の先頭statement dispatchで`expected return`になった。
+`is_do_keyword`と`parse_local_body`内部の問題ではなく、loopを本体parserへ渡す入口の欠落だった。
+入口修正後は`function_body_kind_of`もloopをlocal body（kind 6）へ分類する必要があり、
+未修正では単純return経路からinvalid local indexを持つWasmが生成された。
+両入口とparse・length・writerを同期し、関数先頭のdo、入れ子、break、拒否例を実行testで検証する。
+
+### リリース判断
+
 - 現在の成熟度は`experimental`であり、本番compilerとしてreleaseしない
 - generated Wasmとcacheは`target/`またはrelease出力先へ置き、source管理しない
 - GitHub Actions artifactは検証用であり、GitHub Releaseへの自動添付はまだ行わない

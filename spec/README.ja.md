@@ -18,6 +18,8 @@ Matraはルート付きツリーを記述する、ドメイン非依存の記法
 英語文書は`name.md`、対応する日本語文書は`name.ja.md`とします。両言語版の
 規範的な意味は同一です。
 
+未実装の提案: [Matra Programのfor構文](./for-loop-proposal.ja.md)。
+
 ## 適用範囲
 
 tagとproperty名に組み込みのドメイン的意味はありません。HTML rendering、
