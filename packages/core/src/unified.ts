@@ -165,7 +165,10 @@ class UnifiedParser {
     if (this.at("return")) { this.next(); return { kind: "return", value: this.expression() } }
     if (this.at("if")) {
       this.next(); this.expect("("); const condition = this.expression(); this.expect(")")
-      const thenBody = this.block(); const elseBody = this.at("else") ? (this.next(), this.block()) : []
+      const thenBody = this.block()
+      const afterThenBody = this.index
+      this.inline()
+      const elseBody = this.at("else") ? (this.next(), this.block()) : (this.index = afterThenBody, [])
       return { kind: "if", condition, thenBody, elseBody }
     }
     if (this.at("for")) {

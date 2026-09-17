@@ -21,6 +21,7 @@ silently assigned another meaning.
 loops. Selected branches and loop iterations contribute their expression
 results to a node body in source order; declarations contribute no child.
 Import/export, typing, and assignment remain out of scope.
+`else` may start on the line following the closing `}` of its `if` body.
 
 ## Source and top level
 

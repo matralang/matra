@@ -17,6 +17,7 @@
 
 `evaluateUnified()` は `fn`、`return`、`if` / `else`、array `for` loop を扱う。選択された分岐と
 反復は式結果を node body へソース順で追加し、宣言は child を追加しない。import/export、型、代入は対象外とする。
+`else` は対応する `if` body の閉じ `}` の次行から開始してよい。
 
 ## ソースとトップレベル
 

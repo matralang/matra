@@ -53,6 +53,15 @@ article.card.card(lang="ja", options={theme: "dark"}) {
     })
   })
 
+  it("accepts else after a newline", () => {
+    assert.equal(evaluateUnified(parseUnified(`if (false) {
+  "unreachable"
+}
+else {
+  "selected"
+}`)), "selected")
+  })
+
   it("evaluates arithmetic and comparison operators by precedence", () => {
     assert.equal(evaluateUnified(parseUnified("1 + 2 * 3 == 7")), true)
     assert.equal(evaluateUnified(parseUnified("5 - 2 == 3")), true)
