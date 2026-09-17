@@ -1,4 +1,4 @@
-import { astToMatraJSON, evaluateStatic, extractMatraMarkdown, parse, printJSON, staticValueToAST } from "@matra/core"
+import { astToMatraJSON, evaluateUnified, extractMatraMarkdown, parse, printJSON, staticValueToAST } from "@matra/core"
 import { toSVG } from "@matra/graphics"
 import { toHTML } from "@matra/html"
 import { parseMath } from "@matra/math"
@@ -230,9 +230,9 @@ async function render(): Promise<void> {
       return
     }
     const parsedModule = parse(value)
-    const staticValue = evaluateStatic(parsedModule)
-    if (staticValue === undefined) throw new TypeError("A preview requires an output expression.")
-    const parsedAst = staticValueToAST(staticValue)
+    const evaluatedValue = evaluateUnified(parsedModule)
+    if (evaluatedValue === undefined) throw new TypeError("A preview requires an output expression.")
+    const parsedAst = staticValueToAST(evaluatedValue)
     const mode = document.renderer === "auto" && renderMode.value === "auto"
       ? (parsedAst.tag === "svg" || (parsedAst.tag === "$root" && parsedAst.children.some(child => isNode(child) && child.tag === "svg")) ? "svg" : "html")
       : document.renderer === "auto" ? renderMode.value as OutputMode : document.renderer
