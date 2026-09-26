@@ -97,7 +97,7 @@ export fn probe() -> i32 {
 
   test(`${name} materializes flat metadata after scalar extraction`, async () => {
     const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
-    const program = markdown.split("```compiler.matra.program\n")[1]
+    const program = markdown.split("```compiler.matra\n")[1]
     const source = program.slice(0, program.indexOf("// A temporary execution probe")) + `
 fn metadata(source: bytes, offset: i32) -> [i32] {
   let value = next_token(source, offset)
@@ -150,7 +150,7 @@ export fn probe(source: bytes) -> i32 {
 
   test(`${name} preserves consecutive lexer results and aliases`, async () => {
     const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
-    const program = markdown.split("```compiler.matra.program\n")[1]
+    const program = markdown.split("```compiler.matra\n")[1]
     const source = program.slice(0, program.indexOf("// A temporary execution probe")) + `
 export fn probe(source: bytes, selected: i32) -> token {
   let first = next_token(source, 0)

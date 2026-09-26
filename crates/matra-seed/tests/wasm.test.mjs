@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
 import { test } from "node:test"
 import { Worker } from "node:worker_threads"
+import { instantiateUnified } from "../host/unified-host.mjs"
 import { cachedCompiler } from "../host/bootstrap-compiler.mjs"
 import { formatCompilerDiagnostic, sourceExcerpt, sourcePosition } from "../host/compiler-host.mjs"
 
@@ -233,7 +234,7 @@ test("Rust seed executes do-until loops", async () => {
 test("bootstrap compiler executes and validates do-until loops", async () => {
   const stage1 = await readFile(await cachedCompiler())
   const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
-  const compilerSource = markdown.split("```compiler.matra.program\n")[1].split("\n```")[0]
+  const compilerSource = markdown.split("```compiler.matra\n")[1].split("\n```")[0]
   const stage2 = await new Promise((resolve, reject) => {
     const worker = new Worker(new URL("../host/compile-worker.mjs", import.meta.url), {
       workerData: { compilerBytes: stage1, source: new TextEncoder().encode(compilerSource) },
@@ -739,7 +740,7 @@ export fn answer(prefix: bytes, source: bytes, offset: i32) -> i32 {
 
 test("bootstrap compiler executes the bootstrap lexer with nested loop returns", async () => {
   const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
-  const program = markdown.split("```compiler.matra.program\n")[1]
+  const program = markdown.split("```compiler.matra\n")[1]
   const lexer = program.slice(0, program.indexOf("// A temporary execution probe")).replace("fn next_token(", "export fn next_token(")
   const { instance: { exports: { alloc, compile, memory } } } =
     await WebAssembly.instantiate(await readFile(await cachedCompiler()))
@@ -774,7 +775,7 @@ test("conditional statement length matches emitted comparison and nested block b
   const directory = await mkdtemp(join(tmpdir(), "matra-conditional-bytes-"))
   try {
     const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
-    const program = markdown.split("```compiler.matra.program\n")[1].split("\n```")[0]
+    const program = markdown.split("```compiler.matra\n")[1].split("\n```")[0]
     const input = join(directory, "probe.md")
     const output = join(directory, "probe.wasm")
     await writeFile(input, "```compiler.matra.program\n" + program + `
@@ -983,7 +984,7 @@ export fn answer(source: bytes, table: [i32], value: token) -> i32 {
 
 test("bootstrap compiler executes type_end with a conditional struct local", async () => {
   const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
-  const program = markdown.split("```compiler.matra.program\n")[1]
+  const program = markdown.split("```compiler.matra\n")[1]
   const source = new TextEncoder().encode(program.slice(0, program.indexOf("fn read_small_integer(")) + `
 export fn probe(source: bytes) -> token {
   let first = next_token(source, 0)
@@ -1224,20 +1225,20 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
   }
 })
 
-test("bootstrap compiler maps an empty source to an empty Wasm module", async () => {
+test("bootstrap compiler self-hosts and executes document and native profiles", async () => {
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-compiler-"))
   const output = join(directory, "compiler.wasm")
 
   try {
     const result = spawnSync(
       "cargo",
-      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", fileURLToPath(new URL("crates/matra-seed/examples/compiler.md", root)), output, "--entry", "compiler.matra.program"],
+      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", fileURLToPath(new URL("crates/matra-seed/examples/compiler.md", root)), output, "--entry", "compiler.matra"],
       { cwd: root, encoding: "utf8" },
     )
     assert.equal(result.status, 0, result.stderr)
 
     const module = await WebAssembly.instantiate(await readFile(output))
-    module.instance.exports.memory.grow(16)
+    module.instance.exports.memory.grow(64)
 
     const hostInput = join(directory, "host-input.matra")
     const hostOutput = join(directory, "host-output.wasm")
@@ -1295,6 +1296,7 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
       assert.match(selfHostResult.stdout, new RegExp(`Stage ${stage}: ready \\([0-9a-f]{64}; [0-9.]+s\\)`))
     }
     assert.match(selfHostResult.stdout, /Self-host verification: stage 2 and stage 3 are byte-identical\./)
+    assert.match(selfHostResult.stdout, /Stage 3: unified grammar conformance/)
     assert.doesNotMatch(selfHostResult.stdout, /using cached artifact/)
     assert.doesNotMatch(selfHostResult.stderr, /blocked|RuntimeError|memory access out of bounds/)
 
@@ -1325,20 +1327,18 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     assert.equal(record.getInt32(24, true), 0)
     assert.equal(record.getInt32(28, true), 0)
     assert.equal(record.getInt32(32, true), 0)
-    assert.equal(length, 8)
     const bytes = new Uint8Array(module.instance.exports.memory.buffer, pointer, length)
-    assert.deepEqual([...bytes], [0, 97, 115, 109, 1, 0, 0, 0])
-    await WebAssembly.compile(bytes)
+    assert.equal((await instantiateUnified(bytes)).run(), null)
 
     const nextRecordPointer = module.instance.exports.compile(0, 0)
     const nextRecord = new DataView(module.instance.exports.memory.buffer, nextRecordPointer, 20)
     const nextPointer = nextRecord.getInt32(4, true)
     const nextLength = nextRecord.getInt32(8, true)
     assert.equal(nextRecord.getInt32(0, true), 0)
-    assert.equal(nextLength, 8)
+    assert.equal(nextLength, length)
     assert.notEqual(nextPointer, pointer)
     const nextBytes = new Uint8Array(module.instance.exports.memory.buffer, nextPointer, nextLength)
-    assert.deepEqual([...nextBytes], [0, 97, 115, 109, 1, 0, 0, 0])
+    assert.equal((await instantiateUnified(nextBytes)).run(), null)
     assert.equal(typeof module.instance.exports.alloc, "function")
 
     const whitespacePointer = module.instance.exports.alloc(3)
@@ -1346,7 +1346,9 @@ test("bootstrap compiler maps an empty source to an empty Wasm module", async ()
     const whitespaceRecordPointer = module.instance.exports.compile(whitespacePointer, 3)
     const whitespaceRecord = new DataView(module.instance.exports.memory.buffer, whitespaceRecordPointer, 20)
     assert.equal(whitespaceRecord.getInt32(0, true), 0)
-    assert.equal(whitespaceRecord.getInt32(8, true), 8)
+    const whitespaceOutput = new Uint8Array(module.instance.exports.memory.buffer,
+      whitespaceRecord.getInt32(4, true), whitespaceRecord.getInt32(8, true))
+    assert.equal((await instantiateUnified(whitespaceOutput)).run(), null)
 
     const identifierPointer = module.instance.exports.alloc(8)
     new Uint8Array(module.instance.exports.memory.buffer, identifierPointer, 8).set(

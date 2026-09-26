@@ -1,0 +1,10 @@
+fn label(value) { return value + "!" }
+let title = "Matra"
+article.card.card(lang="ja") {
+  h1 { title }
+  ul {
+    ...for (item in ["文書", "関数", "Wasm"]) {
+      li { label(item) }
+    }
+  }
+}

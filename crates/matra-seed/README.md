@@ -1,6 +1,6 @@
 # Matra seed compiler
 
-This directory contains the Rust seed compiler that compiles Matra Program to WebAssembly and
+This directory contains the Rust seed compiler that compiles unified Matra and legacy Matra Program to WebAssembly and
 the bootstrap compiler written in Matra. The bootstrap foundation is complete, but the
 compiler is not recommended for production use.
 
@@ -19,6 +19,42 @@ The self-host check compiles the compiler source through stages 1, 2, and 3, the
 ```text
 pnpm bootstrap:verify
 ```
+
+## Unified grammar
+
+Rust seed supports the document and native compiler profiles of the [unified grammar](../../spec/unified-grammar.md).
+The document profile executes string/number/boolean/null values, arrays, objects, members, calls, nodes,
+`fn`, `return`, `if` / `else`, `for`, assignment, `while`, `do-until`, and `break` in Wasm.
+Control constructs are expressions: if returns its selected block value, for returns iteration values as an array,
+and while/do-until return null. Each node-body expression adds one child; `...expression` explicitly expands an array.
+Parentheses in `let (x = value)`, `if (condition)`, and `for (item in items)` may be omitted under the specified rules.
+
+```text
+cargo run --manifest-path crates/matra-seed/Cargo.toml -- \
+  crates/matra-seed/examples/document.matra /tmp/document.wasm
+```
+
+Run document Wasm with the supplied host:
+
+```js
+import { readFile } from "node:fs/promises"
+import { instantiateUnified } from "./crates/matra-seed/host/unified-host.mjs"
+
+const program = await instantiateUnified(await readFile("/tmp/document.wasm"))
+console.log(program.run())
+```
+
+The Rust library exposes `compile_unified(source)`, `unified::parse(source)`, and
+`unified::evaluate_static(&module)`. Static retrieval returns an `EvaluationRequired` error for
+expressions requiring execution. Select a named Markdown fence with `--entry document.matra`.
+
+`examples/compiler.md` now uses the `compiler.matra` fence; `module compiler` selects the native
+profile. The Rust seed's common parser builds a syntax tree lowered to the existing typed linear-memory
+ABI. The self-hosted compiler also parses document programs and emits Wasm using the provisional host ABI.
+`bootstrap:verify` runs shared acceptance, rejection, and execution tests at every Stage.
+Existing `.matra.program` fences retain their compatibility entry point. Migration affects the compiler
+example, fence-reading hosts/tests, seed READMEs, and both unified specifications. Existing legacy
+Program examples do not need bulk conversion.
 
 ## Commands
 

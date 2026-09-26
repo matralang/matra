@@ -40,11 +40,11 @@ article.card.card(lang="ja", options={theme: "dark"}) {
   it("parses control and function declarations without syntax fallback", () => {
     const module = parseUnified('fn pick(value) { if (value) { return value } else { return "none" } }\nfor (item in items) { p { item } }')
     assert.equal(module.statements[0].kind, "fn")
-    assert.equal(module.statements[1].kind, "for")
+    assert.equal(module.statements[1].expression.kind, "for")
   })
 
   it("evaluates functions, conditions, and loops into document children", () => {
-    const module = parseUnified('fn label(value) { return value }\nlet items = ["one", "two"]\nul { for (item in items) { if (item) { li { label(item) } } } }')
+    const module = parseUnified('fn label(value) { return value }\nlet items = ["one", "two"]\nul { ...for (item in items) { if (item) { li { label(item) } } } }')
     assert.deepEqual(evaluateUnified(module), {
       tag: "ul", props: {}, children: [
         { tag: "li", props: {}, children: ["one"] },
@@ -71,4 +71,29 @@ else {
   it("evaluates logical operators with unary negation", () => {
     assert.equal(evaluateUnified(parseUnified("!(false || false) && true")), true)
   })
+})
+
+
+const { readFile } = await import("node:fs/promises")
+const conformance = JSON.parse(await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"))
+for (const fixture of conformance.accept) {
+  it(`unified conformance: ${fixture.name}`, () => {
+    assert.deepEqual(evaluateUnified(parseUnified(fixture.source)), fixture.value)
+  })
+}
+for (const source of conformance.reject) {
+  it(`unified rejects: ${source}`, () => {
+    assert.throws(() => evaluateUnified(parseUnified(source)))
+  })
+}
+
+it("static retrieval respects scope, explicit spread, and null results", () => {
+  assert.deepEqual(evaluateStatic(parseUnified('let x = 1\np { let x = 2; ...[x, null] }')), {
+    tag: "p", props: {}, children: [2, null],
+  })
+  assert.equal(evaluateStatic(parseUnified("1; let x = 2")), null)
+  assert.throws(() => evaluateStatic(parseUnified("let x = 1; let x = 2")), /Duplicate binding/)
+  for (const source of ["if true { 1 }", "for x in [1] { x }", "let x = 1; x = 2"]) {
+    assert.throws(() => evaluateStatic(parseUnified(source)), EvaluationRequiredError)
+  }
 })

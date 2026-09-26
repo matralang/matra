@@ -1,10 +1,30 @@
-//! Matra Program の最小 seed compiler。
+//! 統一 Matra と互換 Matra Program の seed compiler。
 //!
-//! Markdown 内の `*.matra.program` fence から WebAssembly module を生成する。
-//! 現在は `i32` 関数、局所変数、四則演算、関数呼び出しを実装する。
+//! `.matra` source、Markdown 内の `*.matra` / `*.matra.program` fence から
+//! WebAssembly module を生成する。
 
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+
+pub mod unified;
+mod unified_native;
+mod unified_wasm;
+
+/// 統一文法を解析し、宣言された profile の Wasm を生成する。
+pub fn compile_unified(source: &str) -> Result<Vec<u8>, CompileError> {
+    let module = unified::parse(source)?;
+    if matches!(module.statements.first(), Some(unified::Stmt::Module(_))) {
+        let program = unified_native::lower(&module)?;
+        if !program.imports.is_empty() {
+            return Err(CompileError::new(
+                "Imports require a Markdown source bundle.",
+            ));
+        }
+        emit_module(&program)
+    } else {
+        unified_wasm::compile(&module)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CompileError {
@@ -27,14 +47,41 @@ impl fmt::Display for CompileError {
 
 impl std::error::Error for CompileError {}
 
-/// Compile the selected `*.matra.program` Markdown fence into a Wasm binary.
+/// 選択した `*.matra` / `*.matra.program` fence を Wasm binary に compile する。
 pub fn compile_markdown(markdown: &str, entry: Option<&str>) -> Result<Vec<u8>, CompileError> {
     let fences = extract_programs(markdown)?;
     let entry_index = select_entry(&fences, entry)?;
+    if fences[entry_index].filename.ends_with(".matra") {
+        let module = unified::parse(&fences[entry_index].source)?;
+        if !matches!(module.statements.first(), Some(unified::Stmt::Module(_))) {
+            return unified_wasm::compile(&module);
+        }
+    }
     let modules: Vec<_> = fences
         .iter()
-        .map(|fence| parse_program(&fence.source).map(|program| (fence.filename.clone(), program)))
+        .filter_map(|fence| {
+            if fence.filename.ends_with(".matra") {
+                match unified::parse(&fence.source) {
+                    Ok(module)
+                        if !matches!(module.statements.first(), Some(unified::Stmt::Module(_))) =>
+                    {
+                        None
+                    }
+                    Ok(module) => Some(
+                        unified_native::lower(&module)
+                            .map(|program| (fence.filename.clone(), program)),
+                    ),
+                    Err(error) => Some(Err(error)),
+                }
+            } else {
+                Some(parse_program(&fence.source).map(|program| (fence.filename.clone(), program)))
+            }
+        })
         .collect::<Result<_, _>>()?;
+    let entry_index = modules
+        .iter()
+        .position(|(name, _)| *name == fences[entry_index].filename)
+        .ok_or_else(|| CompileError::new("Native entry was not found."))?;
     let mut modules_by_name = HashMap::new();
     for (index, (_, program)) in modules.iter().enumerate() {
         if modules_by_name
@@ -86,7 +133,7 @@ fn extract_programs(markdown: &str) -> Result<Vec<ProgramFence>, CompileError> {
             .split_whitespace()
             .next()
             .unwrap_or_default();
-        if !name.ends_with(".matra.program") {
+        if !name.ends_with(".matra.program") && !name.ends_with(".matra") {
             continue;
         }
 

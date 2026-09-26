@@ -1,0 +1,297 @@
+{
+  "accept": [
+    {
+      "name": "parenthesized binding",
+      "source": "let (x = 3)\nx",
+      "value": 3
+    },
+    {
+      "name": "multiline binding",
+      "source": "let (\n x = 1 +\n 2\n)\nx",
+      "value": 3
+    },
+    {
+      "name": "if value",
+      "source": "let (x = if true { 3 } else { 5 })\nx + 1",
+      "value": 4
+    },
+    {
+      "name": "empty branches",
+      "source": "[if false { 1 }, if true {}, if true { 1; let x = 2 }]",
+      "value": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "name": "iteration values",
+      "source": "for x in [1, 2, 3] { x * 2 }",
+      "value": [
+        2,
+        4,
+        6
+      ]
+    },
+    {
+      "name": "empty iteration",
+      "source": "for (x in []) { x }",
+      "value": []
+    },
+    {
+      "name": "declaration result",
+      "source": "fn f() { 42; let (x = 1) }\nf()",
+      "value": null
+    },
+    {
+      "name": "return null",
+      "source": "fn f() { if true { return null }; 42 }\nf()",
+      "value": null
+    },
+    {
+      "name": "lexical shadowing",
+      "source": "let x = 1\nlet y = if true { let x = 2; x }\n[x, y]",
+      "value": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "closure",
+      "source": "fn outer(x) { fn inner(y) { x + y }; inner }\nlet f = outer(3)\nf(5)",
+      "value": 8
+    },
+    {
+      "name": "arbitrary constructors",
+      "source": "fn rational(n, d) { {numerator: n, denominator: d} }\nfn point(x, y) { [x, y] }\n[rational(3, 5), point(2, 4)]",
+      "value": [
+        {
+          "numerator": 3,
+          "denominator": 5
+        },
+        [
+          2,
+          4
+        ]
+      ]
+    },
+    {
+      "name": "one child per expression",
+      "source": "p { if true { \"a\"; \"b\" }; for x in [1, 2] { x } }",
+      "value": {
+        "tag": "p",
+        "props": {},
+        "children": [
+          "b",
+          [
+            1,
+            2
+          ]
+        ]
+      }
+    },
+    {
+      "name": "explicit expansion",
+      "source": "ul { ...for x in [1, 2] { li { x } } }",
+      "value": {
+        "tag": "ul",
+        "props": {},
+        "children": [
+          {
+            "tag": "li",
+            "props": {},
+            "children": [
+              1
+            ]
+          },
+          {
+            "tag": "li",
+            "props": {},
+            "children": [
+              2
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "one level expansion",
+      "source": "p { ...[[1], [2]]; null }",
+      "value": {
+        "tag": "p",
+        "props": {},
+        "children": [
+          [
+            1
+          ],
+          [
+            2
+          ],
+          null
+        ]
+      }
+    },
+    {
+      "name": "break partial collection",
+      "source": "for x in [1, 2, 3] { if x == 2 { break }; x }",
+      "value": [
+        1
+      ]
+    },
+    {
+      "name": "while value",
+      "source": "let x = 0\nlet result = while x < 3 { x = x + 1 }\n[x, result]",
+      "value": [
+        3,
+        null
+      ]
+    },
+    {
+      "name": "do value",
+      "source": "let x = 0\nlet result = do { x = x + 1 } until (x == 2)\n[x, result]",
+      "value": [
+        2,
+        null
+      ]
+    },
+    {
+      "name": "nested delimiter in header",
+      "source": "fn f(value) { value.ok }\nif f({ok: true}) { 9 }",
+      "value": 9
+    },
+    {
+      "name": "parenthesized multiline condition",
+      "source": "if (\n 1 +\n 2 == 3\n) { 9 }",
+      "value": 9
+    },
+    {
+      "name": "source final declaration",
+      "source": "42\nlet x = 1",
+      "value": null
+    },
+    {
+      "name": "unicode and class deduplication",
+      "source": "p.card.card.wide(title=\"日本語\") { \"こんにちは\" }",
+      "value": {
+        "tag": "p",
+        "props": {
+          "title": "日本語",
+          "class": "card wide"
+        },
+        "children": [
+          "こんにちは"
+        ]
+      }
+    },
+    {
+      "name": "literal delimiters and own properties",
+      "source": "let value = {\"__proto__\": \"safe\", \"constructor\": \"data\"}\np { \"}\"; \")\"; \"null\"; \"if\"; value.__proto__; value.constructor }",
+      "value": {
+        "tag": "p",
+        "props": {},
+        "children": [
+          "}",
+          ")",
+          "null",
+          "if",
+          "safe",
+          "data"
+        ]
+      }
+    },
+    {
+      "name": "short circuit and decimals",
+      "source": "[5 - 2, -2 + 3, 1 + 2 * 3 == 7, !(false || false) && true, -(.5 + .25), false && unknown(), true || unknown(), 0 || 9]",
+      "value": [
+        3,
+        1,
+        true,
+        true,
+        -0.75,
+        false,
+        true,
+        9
+      ]
+    },
+    {
+      "name": "recursion",
+      "source": "fn factorial(n) { if (n <= 1) { return 1 }; return n * factorial(n - 1) }\nfactorial(5)",
+      "value": 120
+    },
+    {
+      "name": "nested loop break",
+      "source": "let n = 0\nlet total = 0\nwhile (n < 4) { n = n + 1; do { total = total + 2; break } until (false) }\ndo { total = total + 1 } until (total >= 10)\n[n, total]",
+      "value": [
+        4,
+        10
+      ]
+    },
+    {
+      "name": "comment in multiline header",
+      "source": "if (\n// condition\ntrue\n) { 42 }\nelse { 0 }",
+      "value": 42
+    },
+    {
+      "name": "nearest binding assignment",
+      "source": "let x = 1\nlet y = if true { let x = 2; if true { x = 3 }; x }\n[x, y]",
+      "value": [
+        1,
+        3
+      ]
+    },
+    {
+      "name": "node declaration scope",
+      "source": "let x = 1\np { let x = 2; x }; x",
+      "value": 1
+    },
+    {
+      "name": "empty source",
+      "source": "// empty\n",
+      "value": null
+    },
+    {
+      "name": "reserved property names",
+      "source": "let value = {if: 1, for: 2}\nlabel.if(for=\"x\") { value.if; value.for }",
+      "value": {
+        "tag": "label",
+        "props": {
+          "for": "x",
+          "class": "if"
+        },
+        "children": [
+          1,
+          2
+        ]
+      }
+    }
+  ],
+  "reject": [
+    "let (x = 1",
+    "if x +\n1 {}",
+    "for x in\n[] {}",
+    "while x +\n1 {}",
+    "f 1",
+    "...items",
+    "p { ...1 }",
+    "fn f() { break }",
+    "return 1",
+    "let x = 1\nlet x = 2",
+    "p { let x = 1 }\nx",
+    "x = 1",
+    "p { if true { ...[] } }",
+    "for x in [1] { fn f() { break } }",
+    "let (x = )",
+    "if (true {}",
+    "[1,]",
+    "p { \"a\" \"b\" }",
+    "fn f(x, x) { x }\nf(1, 2)",
+    "let value = {}\nvalue.constructor",
+    "for x in 1 { x }",
+    "\"line\nbreak\"",
+    "\"escape\\n\"",
+    "fn if() { 1 }",
+    "if true { 1",
+    "p(href=\"/\")",
+    "fn f(x, x) { x }"
+  ]
+}

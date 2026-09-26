@@ -1,12 +1,13 @@
 import { parentPort, workerData } from "node:worker_threads"
-import { formatCompilerDiagnostic } from "./compiler-host.mjs"
+import { formatCompilerDiagnostic, reserveCompilerWorkspace } from "./compiler-host.mjs"
 
 const compiler = await WebAssembly.instantiate(workerData.compilerBytes)
 const { alloc, compile: compileSource, memory } = compiler.instance.exports
 const source = new Uint8Array(workerData.source)
-memory.grow(Math.ceil((source.length * 4) / 65536) + 128)
+memory.grow(Math.ceil(source.length / 65536) + 2)
 const sourcePointer = alloc(source.length)
 new Uint8Array(memory.buffer, sourcePointer, source.length).set(source)
+reserveCompilerWorkspace(compiler.instance.exports, sourcePointer, source.length)
 const recordPointer = compileSource(sourcePointer, source.length)
 const record = new DataView(memory.buffer, recordPointer, 36)
 if (record.getInt32(0, true) !== 0) {

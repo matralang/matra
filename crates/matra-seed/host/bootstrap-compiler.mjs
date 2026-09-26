@@ -38,7 +38,7 @@ export async function cachedCompiler() {
       compilerSource,
       temporaryCompiler,
       "--entry",
-      "compiler.matra.program",
+      "compiler.matra",
     ])
     await rename(temporaryCompiler, compiler)
   } finally {
@@ -54,6 +54,9 @@ async function compilerCacheKey() {
     compilerSource,
     join(seedRoot, "src/lib.rs"),
     join(seedRoot, "src/main.rs"),
+    join(seedRoot, "src/unified.rs"),
+    join(seedRoot, "src/unified_native.rs"),
+    join(seedRoot, "src/unified_wasm.rs"),
     manifest,
     join(seedRoot, "Cargo.lock"),
   ]

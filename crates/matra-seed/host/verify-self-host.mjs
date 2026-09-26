@@ -1,3 +1,5 @@
+import assert from "node:assert/strict"
+import { instantiateUnified } from "./unified-host.mjs"
 import { createHash } from "node:crypto"
 import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { Worker } from "node:worker_threads"
@@ -9,7 +11,7 @@ const artifactCacheDirectory = fileURLToPath(new URL("../target/bootstrap/self-h
 
 try {
   const markdown = await readFile(compilerSourcePath, "utf8")
-  const source = new TextEncoder().encode(programSource(markdown, "compiler.matra.program"))
+  const source = new TextEncoder().encode(programSource(markdown, "compiler.matra"))
   const verificationStarted = performance.now()
   const stage1 = await readFile(await cachedCompiler())
   console.log(`Stage 1: ready (${checksum(stage1)}; ${elapsedSeconds(verificationStarted)}s)`)
@@ -32,6 +34,9 @@ try {
       console.log(`Stage 3: ready (${checksum(stage3.output)}; ${elapsedSeconds(stage3Started)}s)`)
       if (Buffer.compare(stage2.output, stage3.output) === 0) {
         console.log("Self-host verification: stage 2 and stage 3 are byte-identical.")
+        for (const [name, compiler] of [["Stage 1", stage1], ["Stage 2", stage2.output], ["Stage 3", stage3.output]]) {
+          await verifyUnified(name, compiler)
+        }
       } else {
         console.error("Self-host verification: stage 2 and stage 3 differ.")
         process.exitCode = 1
@@ -130,4 +135,49 @@ function checksum(bytes) {
 
 function elapsedSeconds(started) {
   return ((performance.now() - started) / 1000).toFixed(1)
+}
+
+// bootstrap の一致だけでなく、各段階の compiler が統一文法を実行可能な Wasm にすることを確認する。
+async function verifyUnified(name, compiler) {
+  const fixtures = JSON.parse(await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"))
+  for (const fixture of fixtures.accept) {
+    const result = await compile(compiler, new TextEncoder().encode(fixture.source))
+    assert.ok(result.output, `${name}: ${fixture.name}: ${result.diagnostic}`)
+    const instance = await instantiateUnified(result.output)
+    assert.deepEqual(instance.run(), fixture.value, `${name}: ${fixture.name}`)
+  }
+  for (const source of fixtures.reject) {
+    const result = await compile(compiler, new TextEncoder().encode(source))
+    if (!result.output) {
+      assert.doesNotMatch(result.diagnostic, /exceeded|unreachable|out of bounds|Generated WebAssembly is invalid/i)
+      continue
+    }
+    const instance = await instantiateUnified(result.output)
+    assert.throws(() => instance.run(), error => !(error instanceof WebAssembly.RuntimeError), `${name}: unexpected acceptance: ${source}`)
+  }
+  const native = await compile(compiler, new TextEncoder().encode(`module regression
+fn store(values: [i32], value: i32) -> i32 {
+  array_set(values, 0, value)
+  return array_get(values, 0)
+}
+fn identity(value: i32) -> i32 { return value }
+export fn answer() -> i32 {
+  let values = allocate_i32_array(1)
+  let count = 0
+  let value = 0
+  while (count < 1) {
+    value = identity(-1)
+    count = count + 1
+  }
+  if (value < 0) {
+    let flag = 1
+    if (array_get(values, 0 + 0) != 0) { flag = 0 }
+    if (flag == 1) { return store(values, value) }
+  }
+  return 0
+}`))
+  assert.ok(native.output, `${name}: native statement regression: ${native.diagnostic}`)
+  const { instance } = await WebAssembly.instantiate(native.output)
+  assert.equal(instance.exports.answer(), -1)
+  console.log(`${name}: unified grammar conformance (${fixtures.accept.length + fixtures.reject.length} cases).`)
 }

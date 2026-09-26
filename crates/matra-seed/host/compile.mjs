@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises"
-import { formatCompilerDiagnostic } from "./compiler-host.mjs"
+import { formatCompilerDiagnostic, reserveCompilerWorkspace } from "./compiler-host.mjs"
 
 const [compilerPath, inputPath, outputPath, extra] = process.argv.slice(2)
 if (!compilerPath || !inputPath || !outputPath || extra) {
@@ -13,6 +13,7 @@ try {
   memory.grow(Math.ceil(source.length / 65536) + 2)
   const sourcePointer = alloc(source.length)
   new Uint8Array(memory.buffer, sourcePointer, source.length).set(source)
+  reserveCompilerWorkspace(compiler.instance.exports, sourcePointer, source.length)
   const recordPointer = compile(sourcePointer, source.length)
   const record = new DataView(memory.buffer, recordPointer, 36)
   if (record.getInt32(0, true) !== 0) {

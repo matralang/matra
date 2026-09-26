@@ -76,7 +76,7 @@ let releases = ["stable", "preview"]
 section {
   h2 { "Release channels" }
   ul {
-    for (release in releases) {
+    ...for (release in releases) {
       li { label(release) }
     }
   }

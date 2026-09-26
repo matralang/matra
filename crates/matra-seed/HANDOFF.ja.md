@@ -12,6 +12,47 @@
 | byte equality | Stage 2/3のWasmが完全一致 | 同上 |
 | 回帰検証 | Rust 8件、Node 38件、lint成功 | `pnpm run test:seed && pnpm run lint` |
 
+## 2026-09-25 制御式と文書 frontend の自己ホスト化
+
+Rust seed、TypeScript、Matra compiler source に制御式、基本形の丸括弧と省略形、明示 child spread を実装した。
+文書 frontend は compiler Wasm 内で構文解析と Wasm emission を行い、JavaScript host は暫定値 ABI のみを担当する。
+共通 fixture を各 Stage で compile・実行し、bootstrap の byte equality とは別に確認する。
+
+追加 source を Stage 2 へ渡した際、以下の層で停止した。
+
+- parser: 関数先頭の byte_set/array_set が local body に dispatch されず expected return になった。
+  parse_function と function_body_kind_of を同時に修正した。
+- parser: while 本体の call 引数で負数を拒否した。既存の再帰的 parse_loop_value を使用した。
+- emitter の境界解析: parse_local_return_conditional と他の conditional parser の対応範囲が異なり、
+  入れ子の条件の解析失敗を次の文の位置として使っていた。local_body_length が同じ位置を反復し、180秒で停止した。
+  一時的な進捗 probe で unified_keyword の条件文を特定し、conditional parser を共通経路へ統合した。
+  probe は製品 source と生成物には残していない。
+- emitter: while 条件の array_get を通常の関数 call として出力し、存在しない function index を生成した。
+  length/writer の両方を value_expression の共通処理へ移し、intrinsic と引数式の扱いを揃えた。
+- host: CLI の従来のメモリ確保量では文書 frontend の buffer が不足した。
+  workspace_pages export と共通の host 確保処理を追加し、CLI の実行テストを追加した。
+
+条件式修正後の cache 未使用実測は Stage 2 が32.1秒、Stage 3 が34.3秒で byte-identical。
+各 Stage の文書実行・拒否テスト54件も成功した。その後の境界例追加は共通 fixture と通常の回帰 suite で検証する。
+生成 Wasm や cache の直接修正、旧 parser への fallback は使用していない。
+
+2026-09-26 の最終文法検証では Stage 2 が31.8秒、Stage 3 が34.8秒で byte-identical。
+各 Stage の共通文法テスト57件（空 source、予約語の property 名、重複 parameter の拒否を含む）も成功した。
+conditional block の文解析は parse_do_body_statement と共有し、括弧付き let/set の互換性も確認した。
+
+## 2026-09-24 統一文法への compiler source 移行
+
+compiler source を `compiler.matra` fence と丸括弧付き条件へ移行した。
+最初の Stage 2 停止は `if (value.length != 6)` の `(` で `expected integer` だった。
+`parse_local_return_conditional` が条件の最初と末尾の丸括弧を認識せず、他の parser と
+length/writer が使う `condition_left` / `condition_block_open` を通していなかった。
+
+両 helper を適用し、local body の length/writer が括弧の有無で異なる statement 経路へ
+分岐する処理も揃えた。括弧付き scalar 条件を古い簡易 emitter へ送る経路は return/else を
+扱えず、最初の中間実装では Stage 2 が進まなかった。括弧にかかわらず既存の return 対応経路を使う。
+local count/index の trailing while も同じ条件境界 helper を使用する。
+変更後は Rust seed、Stage 1、Stage 2、Stage 3 が成功し、Stage 2/3 の byte equality を確認した。
+
 ## 2026-09-16 性能改善完了: local slot 型検索の範囲縮小
 
 下記の metadata cache 仮説よりも先に、Worker の CPU profile で実際の hot path を確認した。

@@ -32,6 +32,11 @@ export function parseMath(source: string): MathJson {
 
 function expressionToMathJson(expression: UnifiedExpression): MathJson {
   if (expression.kind === "literal") return expression.value
+  // 統一文法では負数の符号が unary AST になるため、数値 operand を復元する。
+  if (expression.kind === "unary" && expression.operator === "-" &&
+      expression.operand.kind === "literal" && typeof expression.operand.value === "number") {
+    return -expression.operand.value
+  }
   if (expression.kind === "array") return expression.items.map(expressionToMathJson) as MathJson
   if (expression.kind === "reference") return expression.name
   if (expression.kind === "call" && expression.callee.kind === "reference") {
