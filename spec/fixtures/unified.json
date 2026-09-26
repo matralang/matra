@@ -263,6 +263,56 @@
           2
         ]
       }
+    },
+    {
+      "name": "relational precedence before equality",
+      "source": "false == 2 < 1",
+      "value": true
+    },
+    {
+      "name": "left associative arithmetic",
+      "source": "[10 - 3 - 2, 20 / 2 / 2]",
+      "value": [
+        5,
+        5
+      ]
+    },
+    {
+      "name": "last duplicate attribute and object entry wins",
+      "source": "p(title=\"first\", title=\"last\") { {key: 1, key: 2} }",
+      "value": {
+        "tag": "p",
+        "props": {
+          "title": "last"
+        },
+        "children": [
+          {
+            "key": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "shorthand overrides explicit class",
+      "source": "p.card.wide.card(class=\"explicit\") {}",
+      "value": {
+        "tag": "p",
+        "props": {
+          "class": "card wide"
+        },
+        "children": []
+      }
+    },
+    {
+      "name": "explicit class without shorthand",
+      "source": "p(class=\"explicit\") {}",
+      "value": {
+        "tag": "p",
+        "props": {
+          "class": "explicit"
+        },
+        "children": []
+      }
     }
   ],
   "reject": [

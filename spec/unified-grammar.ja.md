@@ -1,13 +1,16 @@
-# Matra 統一文法 v0.3 draft
+# Matra 統一文法 v0.3
 
 [English](./unified-grammar.md) | [索引](./README.ja.md)
 
 ## 状態と互換性
 
-一般の `.matra` と compiler source の両方を対象とする次期仕様である。
+一般の `.matra` と compiler source の両方を対象とする正式な v0.3 文法仕様である。
+本書の規則と共通テストを適合性の基準とする。旧 source の互換性は保証しない。
+文法の正式化は、パッケージのリリースや Wasm ABI の安定化を意味しない。
 v0.x の破壊的変更として、旧 Core v0.2 の関数ノード構文、selector の `#id`、
 backtick／tilde text、`$root`、`= expr`、if/for の暗黙 child 展開を廃止する。
-旧 `.matra.program` は互換入口として維持する。compiler source は `compiler.matra` fence を使う。
+旧 `.matra.program` の入口は実装に残るが、v0.3 の適合要件ではない。
+compiler source は `compiler.matra` fence を使う。
 移行対象は core/seed の parser・評価系・テスト、document.matra、Playground の手続き例、seed README。
 
 TypeScript の `parse()` と Rust seed は統一構文を解析する。`evaluateStatic()` は静的文書を取得し、
@@ -59,7 +62,10 @@ node 構築は body を持つ `tag.classes(attributes) { node-items }` とする
 `=` は属性、`:` は object entry を区切る。class は最初の出現順を保って重複を除去する。
 属性名・object key・member 名・class 名では予約語も使用できる（例: `label(for="x") {}`）。
 変数・関数・parameter 名では予約語を拒否する。
-通常の関数へ後置 block を渡す構文は今回の対象外とする。
+属性と object entry はソース順に評価し、同じ key は最後の値で上書きする。
+class shorthand があれば、重複除去した名前を空白で結合し、明示した class 属性を上書きする。
+shorthand がなければ明示した class 属性をそのまま保持する。
+通常の関数へ後置 block を渡す構文は v0.3 では受理しない。
 
 ```matra
 fn rational(n, d) { {numerator: n, denominator: d} }
@@ -68,8 +74,9 @@ a.link(href="/") { value.numerator }
 ```
 
 式は literal、reference、array、object、member access、call、node、制御式から成る。
-演算子の優先順位は高い順に grouping `(...)`、prefix `!`/`-`、`*`/`/`、`+`/`-`、
-比較 `==`/`!=`/`<`/`<=`/`>`/`>=`、`&&`、`||`。`&&`/`||` は短絡する。
+演算子の優先順位は高い順に grouping `(...)`、member access／call、prefix `!`/`-`、`*`/`/`、`+`/`-`、
+大小比較 `<`/`<=`/`>`/`>=`、等値比較 `==`/`!=`、`&&`、`||`。
+二項演算子は同じ優先順位では左結合する。`&&`/`||` は短絡する。
 number literal は符号を含まず、負数は prefix `-` として解析する。
 
 if は選択した block の値を返し、else がなく条件が偽なら null。
@@ -96,6 +103,14 @@ let label = if (true) { "yes" } else { "no" }
 `p { "a" "b" }`、body のない属性指定 `p(href="/")`。
 `if ready {}` の ready は変数参照であり、node 構築とは解釈しない。
 受理・拒否・境界・実行結果の共通テストは [fixtures/unified.json](./fixtures/unified.json) に置く。
+
+## parse と値モデル
+
+文書 profile の `parse()`／`parseUnified()` は source 全体を消費し、宣言と式を保持する
+`UnifiedModule` を返す。単一 root node は要求しない。構文エラーで部分的な成功結果を返さない。
+`evaluateStatic()`／`evaluateUnified()` は module を受け取り、上記の source の結果を返す。
+node 値は `{tag, props, children}` で表し、構文木と評価済みの文書値は区別する。
+この正式化では parser、構文木、lowering/runtime、diagnostic の実装変更は不要である。
 
 ## 静的取得
 
@@ -148,7 +163,8 @@ export table `__functions` の `(scope, arguments) -> value` 関数を呼ぶ。s
 host の値と scope は instance の寿命まで保持する。長時間の実行向け GC は未実装。
 メンバー参照は自身の property のみを許可し、prototype chain は参照しない。
 
-## 保留事項
+## v0.3 の対象外
 
-文書 profile の module/import 解決、文字列 escape／複数行文字列、明示 class 属性と shorthand の結合、
-重複属性の統一規則、型推論、一般の後置 block call、括弧外の改行継続、安定版 Wasm 値表現は保留する。
+文書 profile の module/import 解決、文字列 escape／複数行文字列、型推論、一般の後置 block call、
+括弧外の改行継続は v0.3 に含めない。これらの追加は将来の仕様変更として扱う。
+安定版 Wasm 値表現は文法とは独立した課題であり、上記 ABI は引き続き experimental とする。

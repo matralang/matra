@@ -1,13 +1,16 @@
-# Matra unified grammar v0.3 draft
+# Matra unified grammar v0.3
 
 [日本語](./unified-grammar.ja.md) | [Index](./README.md)
 
 ## Status and compatibility
 
-This proposed specification covers both general `.matra` programs and compiler source.
+This is the finalized v0.3 grammar specification for both general `.matra` programs and compiler source.
+Its rules and shared tests define conformance. Compatibility with old source is not guaranteed.
+Finalizing the grammar does not constitute a package release or stabilize the Wasm ABI.
 As a breaking v0.x change, it removes Core v0.2 function nodes, selector `#id`, backtick/tilde text,
 `$root`, `= expr`, and implicit child expansion by if/for.
-Legacy `.matra.program` remains a compatibility entry point. Compiler source uses the `compiler.matra` fence.
+The legacy `.matra.program` entry point remains implemented but is not a v0.3 conformance requirement.
+Compiler source uses the `compiler.matra` fence.
 Migration covers core/seed parsers, evaluators, tests, document.matra, the procedural Playground example, and seed READMEs.
 
 TypeScript `parse()` and Rust seed parse the unified syntax. `evaluateStatic()` retrieves static documents;
@@ -59,7 +62,10 @@ Node construction requires a body: `tag.classes(attributes) { node-items }`.
 `=` separates attributes; `:` separates object entries. Classes are deduplicated in first-occurrence order.
 Attribute names, object keys, member names, and class names may use reserved words, e.g. `label(for="x") {}`.
 Variable, function, and parameter names reject reserved words.
-Passing a trailing block to an ordinary function is outside this change.
+Attributes and object entries are evaluated in source order; the last value for a duplicate key wins.
+When class shorthand is present, its deduplicated names joined by spaces overwrite an explicit class attribute.
+Without shorthand, the explicit class attribute is retained unchanged.
+Passing a trailing block to an ordinary function is not accepted in v0.3.
 
 ```matra
 fn rational(n, d) { {numerator: n, denominator: d} }
@@ -68,8 +74,9 @@ a.link(href="/") { value.numerator }
 ```
 
 Expressions include literals, references, arrays, objects, member access, calls, nodes, and control expressions.
-Operator precedence, highest first: grouping `(...)`, prefix `!`/`-`, `*`/`/`, `+`/`-`,
-comparisons `==`/`!=`/`<`/`<=`/`>`/`>=`, `&&`, then `||`. `&&` and `||` short-circuit.
+Operator precedence, highest first: grouping `(...)`, member access/calls, prefix `!`/`-`, `*`/`/`, `+`/`-`,
+relational comparisons `<`/`<=`/`>`/`>=`, equality `==`/`!=`, `&&`, then `||`.
+Binary operators of equal precedence associate to the left. `&&` and `||` short-circuit.
 Number literals exclude their sign; negative values parse as prefix `-` expressions.
 
 If returns the selected block's value, or null when false without an else.
@@ -98,6 +105,14 @@ Rejected: a condition continued after `if x +` on the next line, `let (x = 1`, `
 `p { "a" "b" }`, and attributes without a body, such as `p(href="/")`.
 In `if ready {}`, ready is a variable reference, not a node constructor.
 Shared acceptance, rejection, boundary, and execution tests live in [fixtures/unified.json](./fixtures/unified.json).
+
+## Parsing and value model
+
+For the document profile, `parse()`/`parseUnified()` consume the entire source and return a `UnifiedModule`
+retaining declarations and expressions. A single root node is not required. Syntax errors never return partial success.
+`evaluateStatic()`/`evaluateUnified()` accept a module and return the source result defined above.
+Node values use `{tag, props, children}`; syntax trees are distinct from evaluated document values.
+This finalization requires no implementation changes to parsers, syntax trees, lowering/runtime, or diagnostics.
 
 ## Static retrieval
 
@@ -149,8 +164,8 @@ Truthy/length/index use raw i32; other operands use value handles.
 Values and scopes live for the instance lifetime; long-running garbage collection is not implemented.
 Member access only reads own properties, never the prototype chain.
 
-## Deferred decisions
+## Outside v0.3
 
-Document module/import resolution, string escapes/multiline strings, combining explicit class attributes with shorthand,
-a unified duplicate-attribute rule, type inference, general trailing-block calls, continuation outside parentheses,
-and a stable Wasm value representation remain deferred.
+Document module/import resolution, string escapes/multiline strings, type inference, general trailing-block calls,
+and continuation outside parentheses are not part of v0.3. Adding them requires a future specification change.
+A stable Wasm value representation is independent of the grammar; the ABI above remains experimental.

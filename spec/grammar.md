@@ -3,7 +3,7 @@
 [English](./grammar.md) | [日本語](./grammar.ja.md) | [Index](./README.md)
 
 This is the historical Core v0.2 grammar. The authoritative grammar for general
-`.matra` source is now the [Unified grammar v0.3 draft](./unified-grammar.md).
+`.matra` source is now the [Unified grammar v0.3](./unified-grammar.md).
 New source and parser implementations must not use the rules below.
 
 ## Source text

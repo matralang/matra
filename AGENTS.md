@@ -30,7 +30,7 @@
 ### 変更前に確認すること
 
 - 変更対象がMatra Programの文法、Matra compiler sourceの文法、または両方のどれかを明示する。
-- 仕様の正本を確認する。一般のMatra Programは`spec/grammar.ja.md`と`spec/grammar.md`、
+- 仕様の正本を確認する。一般のMatra Programは`spec/unified-grammar.ja.md`と`spec/unified-grammar.md`、
   compiler sourceは`crates/matra-seed/examples/compiler.md`とそのbootstrap検証を対象とする。
 - 変更する構文の現在のparse結果、data model、実行結果、diagnosticを確認する。
 - v0.xの破壊的変更か、既存sourceを受理し続ける互換変更かを明示する。破壊的変更では、

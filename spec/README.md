@@ -1,4 +1,4 @@
-# Matra Specification v0.2
+# Matra Specification
 
 [English](./README.md) | [日本語](./README.ja.md)
 
@@ -8,18 +8,21 @@ versions are independent of this language specification version.
 The key words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** express normative
 requirements.
 
+The current source grammar is v0.3. The v0.2 Data Model/AST documents describe document values;
+the old Parser contract is historical. The unified grammar is authoritative for syntax and evaluation.
+
 ## Specifications
 
 1. [Data Model](./data-model.md) — abstract values represented by Matra
 2. [AST](./ast.md) — object-shaped in-memory representation
-3. [Unified Grammar v0.3 draft](./unified-grammar.md) — unified `.matra` source and syntax
+3. [Unified Grammar v0.3](./unified-grammar.md) — unified `.matra` source and syntax
 4. [Parser](./parser.md) — parsing interface, output, modes, and errors
 5. [Matra Program](./program.md) — draft executable profile for WebAssembly
 
 Each English document is named `name.md`; its Japanese counterpart is named
 `name.ja.md`. Both versions have the same normative meaning.
 
-Unimplemented proposal: [Matra Program for syntax](./for-loop-proposal.md).
+Historical proposal (not the current specification): [Matra Program for syntax](./for-loop-proposal.md).
 
 ## Scope
 
