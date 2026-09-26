@@ -67,6 +67,35 @@ const examples: Record<string, string> = {
   ul { li { a(href="/docs/") { "Docs" } }; li { a(href="/examples/") { "Examples" } }; li { a(href="/play/") { "Playground" } } }
 }`),
   article: markdown("article.matra", `main { article { header { h1 { "Structure is a way of seeing." } }; section { h2 { "Start with the outline" }; p { "Names, attributes, and children make the hierarchy visible." } } } }`),
+  "document-toc": markdown("document-toc.matra", `// 文書を値として保存し、見出しから目次を作ります。
+let document = article {
+  h1 { "Matraで文書を扱う" }
+  h2(id="structure") { "文書を組み立てる" }
+  p { "要素・属性・子要素を持つ文書を、変数に保存できます。" }
+  h2(id="inspect") { "文書を読み取る" }
+  p { "tag、props、childrenを参照して、見出しを取り出します。" }
+  h2(id="reuse") { "文書を再利用する" }
+  p { "生成した目次と元の本文を組み合わせて表示します。" }
+}
+
+// 本文直下のh2だけを目次にします。
+fn tableOfContents(document) {
+  return nav(aria-label="目次") {
+    h2 { "目次" }
+    ol {
+      ...for (child in document.children) {
+        if (child.tag == "h2") {
+          li { a(href="#" + child.props.id) { ...child.children } }
+        }
+      }
+    }
+  }
+}
+
+main {
+  tableOfContents(document)
+  document
+}`),
   dynamic: markdown("dynamic-list.matra", `fn label(value) {
   if (value == "stable") { return "Stable API" } else { return "Experimental" }
 }

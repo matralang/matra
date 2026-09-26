@@ -133,6 +133,17 @@ section.playground-page {
               "A complete document"
             }
           }
+          button.example-button(type="button", data-example="document-toc", aria-pressed="false") {
+            span.example-kind {
+              "HTML"
+            }
+            strong {
+              "Document TOC"
+            }
+            small {
+              "文書から目次を生成"
+            }
+          }
           button.example-button(type="button", data-example="dynamic", aria-pressed="false") {
             span.example-kind {
               "HTML"
