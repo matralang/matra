@@ -24,7 +24,8 @@ for (const page of pageSources) {
 const pageMarkdown = await Promise.all(pageSources.map(page => readFile(page, "utf8")))
 const matraTypeScriptPages = pageMarkdown.filter(source => source.includes(".matra.ts"))
 const nativeMatraPages = pageMarkdown.filter(source => source.includes("```page.matra\n"))
-assert.equal(matraTypeScriptPages.length, 3)
+assert.equal(matraTypeScriptPages.length, 0)
+assert.equal(pageMarkdown.filter(source => source.includes("```page.program.matra\n")).length, 3)
 assert.equal(nativeMatraPages.length, 8)
 for (const source of nativeMatraPages) {
   assert.match(source, /^---\ntitle: .+\ndescription: .+\nlayout: (?:site|specification)\n---/)
@@ -95,6 +96,18 @@ assert.match(examples, /@matra\/graphics/)
 assert.doesNotMatch(examples, /matra:render-/)
 assert.match(spec, /<title>Matra Specification v0.2<\/title>/)
 assert.match(spec, /Data Model/)
+for (const [document, links] of [
+  [docs, ["/spec", "/play", "/examples", "/packages"]],
+  [packages, ["core", "command", "html", "graphics"].map(name =>
+    `https://github.com/matralang/matra/tree/main/packages/${name}`)],
+  [spec, ["/spec/data-model", "/spec/ast", "/spec/grammar", "/spec/parser"]],
+]) {
+  const cards = [...document.matchAll(/<a href="([^"]+)" class="docs-card">\s*<span>(\d{2})<\/span>\s*<div>\s*<h2>([^<]+)<\/h2>\s*<p>([^<]+)<\/p>/g)]
+  assert.equal(cards.length, 4)
+  assert.deepEqual(cards.map(card => card[1]), links)
+  assert.deepEqual(cards.map(card => card[2]), ["01", "02", "03", "04"])
+}
+
 for (const page of specPages) {
   assert.match(page, /<aside class="docs-nav">/)
   assert.match(page, /<div class="shell docs-shell">/)

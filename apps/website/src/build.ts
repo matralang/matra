@@ -8,7 +8,7 @@ import { cachedCompiler } from "../../../crates/matra-seed/host/bootstrap-compil
 // Declare the Node `process` global when @types/node is not installed.
 declare const process: any;
 
-import { evaluateStatic, extractMarkdownFences, extractMatraMarkdown, parse, staticValueToAST } from "@matra/core"
+import { evaluateStatic, evaluateUnified, extractMarkdownFences, extractMatraMarkdown, parse, staticValueToAST } from "@matra/core"
 import { toHTML } from "@matra/html"
 import { pageLayout } from "./layouts/page.js"
 
@@ -18,10 +18,10 @@ type PageMetadata = {
   layout: "site" | "specification"
 }
 
-function parseStaticDocument(source: string, sourceId = "Matra source") {
+function parseWebsiteDocument(source: string, sourceId = "Matra source", execute = false) {
   let value
   try {
-    value = evaluateStatic(parse(source))
+    value = (execute ? evaluateUnified : evaluateStatic)(parse(source))
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     throw new SyntaxError(`${sourceId}: ${message}`, { cause: error })
@@ -30,7 +30,7 @@ function parseStaticDocument(source: string, sourceId = "Matra source") {
   return staticValueToAST(value)
 }
 
-const siteHeader = parseStaticDocument(`
+const siteHeader = parseWebsiteDocument(`
   header.site-header {
     div.shell.nav-shell {
       a.brand(href="/") { span.brand-mark { "M" }; span { "Matra" } }
@@ -44,7 +44,7 @@ const siteHeader = parseStaticDocument(`
   }
 `)
 
-const siteFooter = parseStaticDocument(`
+const siteFooter = parseWebsiteDocument(`
   footer.site-footer {
     div.shell.footer-grid {
       div { strong { "Matra" }; p { "Structure first. Domain later." } }
@@ -53,7 +53,7 @@ const siteFooter = parseStaticDocument(`
   }
 `)
 
-const specificationNavigation = parseStaticDocument(`
+const specificationNavigation = parseWebsiteDocument(`
   aside.docs-nav {
     p { "SPECIFICATION 0.2" }
     nav(aria-label="仕様書") {
@@ -65,17 +65,17 @@ const specificationNavigation = parseStaticDocument(`
   }
 `)
 
-const googleTagManagerBody = parseStaticDocument(`
+const googleTagManagerBody = parseWebsiteDocument(`
   noscript {
     iframe(src="https://www.googletagmanager.com/ns.html?id=GTM-T8JD7GH9", height="0", width="0", style="display:none;visibility:hidden") {}
   }
 `)
 
-const googleTagManagerHead = parseStaticDocument(`
+const googleTagManagerHead = parseWebsiteDocument(`
   script { "(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-T8JD7GH9');" }
 `)
 
-const sharedHeadNodes = parseStaticDocument(`
+const sharedHeadNodes = parseWebsiteDocument(`
   head {
     link(rel="icon", href="/favicon.ico", sizes="any") {}
     link(rel="icon", href="/favicon.svg", type="image/svg+xml") {}
@@ -379,9 +379,9 @@ async function handler() {
 
   await Promise.all(pageFiles.map(async (filePath: string) => {
     const markdown = fs.readFileSync(filePath, "utf8")
-    const pageEntry = extractMarkdownFences(markdown).some(fence => fence.filename === "page.matra.ts")
-      ? "page.matra.ts"
-      : "page.matra"
+    const fences = extractMarkdownFences(markdown)
+    const pageEntry = ["page.matra.ts", "page.program.matra", "page.matra"]
+      .find(entry => fences.some(fence => fence.filename === entry)) ?? "page.matra"
     const document = extractMatraMarkdown(markdown, { entry: pageEntry })
     const metadata = document.kind === "matra"
       ? extractPageMetadata(markdown, filePath)
@@ -396,10 +396,11 @@ async function handler() {
       fs.mkdirSync(outDir, { recursive: true })
     }
 
+    const pageAst = parseWebsiteDocument(source, path.relative(process.cwd(), filePath), pageEntry === "page.program.matra")
     const ast = normalizeInternalLinks(applySpecificationLayout(
       applySiteChrome(
         injectMarkdownCode(
-          parseStaticDocument(source, path.relative(process.cwd(), filePath)),
+          pageAst,
           markdown,
           filePath,
         ),
