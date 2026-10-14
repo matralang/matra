@@ -9,6 +9,7 @@ import { cachedCompiler } from "../../../crates/matra-seed/host/bootstrap-compil
 declare const process: any;
 
 import { evaluateStatic, evaluateUnified, extractMarkdownFences, extractMatraMarkdown, parse, staticValueToAST } from "@matra/core"
+import type { MatraAST, StaticToASTNode } from "@matra/core"
 import { toHTML } from "@matra/html"
 import { pageLayout } from "./layouts/page.js"
 
@@ -238,7 +239,7 @@ function hasNode(nodes: unknown[], tag: string, prop?: [string, string]): boolea
   )
 }
 
-function normalizeInternalLinks(ast: ReturnType<typeof parse>) {
+function normalizeInternalLinks(ast: StaticToASTNode) {
   const normalize = (nodes: unknown[]) => {
     for (const node of nodes) {
       if (!isNode(node)) continue
@@ -256,7 +257,7 @@ function normalizeInternalLinks(ast: ReturnType<typeof parse>) {
   return ast
 }
 
-function applySiteChrome(ast: ReturnType<typeof parse>, canonicalUrl: string, basePath: string) {
+function applySiteChrome(ast: StaticToASTNode, canonicalUrl: string, basePath: string) {
   const head = ast.children.find(node => isNode(node) && node.tag === "head")
   const body = ast.children.find(node => isNode(node) && node.tag === "body")
   if (!isNode(head) || !isNode(body)) return ast
@@ -290,7 +291,7 @@ function applySiteChrome(ast: ReturnType<typeof parse>, canonicalUrl: string, ba
   return ast
 }
 
-function applySpecificationLayout(ast: ReturnType<typeof parse>, layout: PageMetadata["layout"]) {
+function applySpecificationLayout(ast: StaticToASTNode, layout: PageMetadata["layout"]) {
   if (layout !== "specification") return ast
 
   const body = ast.children.find(node => isNode(node) && node.tag === "body")
@@ -311,7 +312,7 @@ function applySpecificationLayout(ast: ReturnType<typeof parse>, layout: PageMet
   return ast
 }
 
-function injectMarkdownCode(ast: ReturnType<typeof parse>, markdown: string, filePath: string) {
+function injectMarkdownCode(ast: StaticToASTNode, markdown: string, filePath: string) {
   const fences = new Map(extractMarkdownFences(markdown).map(fence => [fence.filename, fence.source]))
 
   const inject = (nodes: unknown[]) => {
@@ -412,7 +413,7 @@ async function handler() {
         ? "specification"
         : "site"),
     ))
-    const htmlContent = `${DOCTYPE}\n${toHTML(ast, { basePath, pretty: true })}\n`
+    const htmlContent = `${DOCTYPE}\n${toHTML(ast as MatraAST, { basePath, pretty: true })}\n`
 
     fs.writeFileSync(outputPath, htmlContent)
     console.log(`Generated HTML file at: ${outputPath}`)
