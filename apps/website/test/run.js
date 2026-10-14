@@ -15,7 +15,7 @@ async function collectMarkdownPages(directory) {
 }
 
 const pageSources = await collectMarkdownPages(fileURLToPath(new URL("../src/pages", import.meta.url)))
-assert.equal(pageSources.length, 11)
+assert.equal(pageSources.length, 12)
 assert.ok(pageSources.every(page => page.endsWith(".md")))
 for (const page of pageSources) {
   const source = await readFile(page, "utf8")
@@ -26,7 +26,7 @@ const matraTypeScriptPages = pageMarkdown.filter(source => source.includes(".mat
 const nativeMatraPages = pageMarkdown.filter(source => source.includes("```page.matra\n"))
 assert.equal(matraTypeScriptPages.length, 0)
 assert.equal(pageMarkdown.filter(source => source.includes("```page.program.matra\n")).length, 3)
-assert.equal(nativeMatraPages.length, 8)
+assert.equal(nativeMatraPages.length, 9)
 for (const source of nativeMatraPages) {
   assert.match(source, /^---\ntitle: .+\ndescription: .+\nlayout: (?:site|specification)\n---/)
   assert.doesNotMatch(source, /```page\.matra\nhtml\b/)
@@ -51,7 +51,9 @@ const specPages = await Promise.all([
   "parser",
 ].map(page => readFile(new URL(`../dist/spec/${page}.html`, import.meta.url), "utf8")))
 const playground = await readFile(new URL("../dist/play.html", import.meta.url), "utf8")
+const mathNotebook = await readFile(new URL("../dist/math.html", import.meta.url), "utf8")
 const playgroundBundle = await readFile(new URL("../dist/assets/playground.js", import.meta.url), "utf8")
+const mathNotebookBundle = await readFile(new URL("../dist/assets/math-notebook.js", import.meta.url), "utf8")
 const playgroundWorker = await readFile(new URL("../dist/assets/matra-worker.js", import.meta.url), "utf8")
 const playgroundSource = await readFile(new URL("../src/client/playground.ts", import.meta.url), "utf8")
 
@@ -62,6 +64,7 @@ for (const page of [
   "index.html",
   "packages.html",
   "play.html",
+  "math.html",
   "spec.html",
   "spec/data-model.html",
   "spec/ast.html",
@@ -118,6 +121,12 @@ assert.match(specPages[2], /spec\/unified-grammar\.ja\.md/)
 assert.doesNotMatch(specPages[2], /p`Body`/)
 assert.doesNotMatch(specPages[2], /p\\`Body\\`/)
 assert.match(playground, /<title>Playground — Matra/)
+assert.match(mathNotebook, /<title>Math Notebook — Matra/)
+assert.match(mathNotebook, /id="notebook-cells"/)
+assert.match(mathNotebook, /id="reference-panel"/)
+assert.match(mathNotebook, /assets\/math-notebook\.js/)
+assert.match(mathNotebookBundle, /Factorial/)
+assert.match(playground, /Math Notebook/)
 assert.match(playground, /id="matra-source"/)
 assert.match(playground, /<textarea[^>]*># Card/)
 assert.doesNotMatch(playground, /matra:playground\.md/)
@@ -159,10 +168,12 @@ execFileSync("pnpm", ["run", "build"], {
 
 const pagesIndex = await readFile(new URL("../dist/index.html", import.meta.url), "utf8")
 const pagesPlayground = await readFile(new URL("../dist/play.html", import.meta.url), "utf8")
+const pagesMath = await readFile(new URL("../dist/math.html", import.meta.url), "utf8")
 
 assert.match(pagesIndex, /href="\/website\/app\.css"/)
 assert.match(pagesIndex, /href="\/website\/docs"/)
 assert.match(pagesPlayground, /src="\/website\/assets\/playground\.js"/)
+assert.match(pagesMath, /src="\/website\/assets\/math-notebook\.js"/)
 assert.doesNotMatch(pagesIndex, /href="\/(?!website\/)/)
 
 console.log("site build test passed")

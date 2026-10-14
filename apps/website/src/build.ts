@@ -38,6 +38,7 @@ const siteHeader = parseWebsiteDocument(`
         a(href="/docs/") { "Docs" }
         a(href="/spec/") { "Specification" }
         a(href="/play/") { "Playground" }
+        a(href="/math/") { "Math" }
         a(href="https://github.com/matralang/matra") { "GitHub" }
       }
     }
@@ -430,6 +431,7 @@ async function handler() {
   await build({
     entryPoints: {
       playground: path.join(process.cwd(), "src", "client", "playground.ts"),
+      "math-notebook": path.join(process.cwd(), "src", "client", "math-notebook.ts"),
       "matra-worker": path.join(process.cwd(), "src", "client", "matra-worker.ts"),
       "matra-program-worker": path.join(process.cwd(), "src", "client", "matra-program-worker.ts"),
     },

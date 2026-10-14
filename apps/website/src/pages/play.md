@@ -18,6 +18,9 @@ section.playground-page {
     p {
       "Markdown内のMatra code blockを編集すると、rendererに応じたpreview・AST・出力をその場で更新します。"
     }
+      a.button.secondary(href="/math/") {
+        "Math Notebook"
+      }
   }
   div.playground-workspace {
     section.editor-panel(aria-label="Markdown editor") {
