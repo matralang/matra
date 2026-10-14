@@ -272,12 +272,30 @@ pre.result-view { min-height: 592px; padding: 28px; white-space: pre-wrap; overf
 .reference-search { width: 100%; min-height: 34px; margin: 4px 0 10px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 3px; color: var(--ink); background: white; font: 11px "DM Mono", monospace; }
 .reference-command-list { display: block; }
 .reference-empty { color: var(--muted); font-size: 12px; }
+.reference-category-grid { display: grid; gap: 7px; padding: 5px 0 10px; }
+.reference-category-grid[hidden] { display: none; }
+.reference-category { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 12px; border: 1px solid #dfe2d9; text-align: left; color: var(--ink); background: #fff; cursor: pointer; }
+.reference-category:hover { border-color: #668675; background: #f8faf6; }
+.reference-category strong { font: 600 11px/1.4 "DM Mono", monospace; }
+.reference-category small { color: var(--muted); font-size: 10px; line-height: 1.4; }
+.reference-category > span { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: #527965; font: 11px "DM Mono", monospace; }
+.reference-back { margin: 4px 0 12px; padding: 6px 0; border: 0; color: #527965; background: transparent; font: 11px "DM Mono", monospace; cursor: pointer; }
+.reference-category-title, .reference-detail-title { margin: 0 0 12px; font-size: 16px; line-height: 1.4; overflow-wrap: anywhere; }
+.reference-detail-section { padding: 10px 0 12px; border-top: 1px solid #dfe2d9; }
+.reference-detail-section h3 { margin: 0 0 6px; color: #536259; font: 600 10px "DM Mono", monospace; }
+.reference-detail-section p { margin: 0; color: #28372d; font-size: 11px; line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; }
+.reference-example-code { display: block; overflow-wrap: anywhere; color: #284c39; font: 11px/1.6 "DM Mono", monospace; }
+.reference-insert { margin-top: 8px; padding: 5px 8px; border: 1px solid #bdc9bf; color: #355c45; background: white; font: 10px "DM Mono", monospace; cursor: pointer; }
+.reference-insert:hover, .reference-related-item:hover { border-color: #527965; background: #edf2e9; }
+.reference-related-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.reference-related-item { padding: 5px 7px; border: 1px solid #dfe2d9; color: #355c45; background: white; font: 10px "DM Mono", monospace; cursor: pointer; }
 .reference-group { margin: 12px 0 8px; color: #647168; font: 10px "DM Mono", monospace; letter-spacing: .08em; text-transform: uppercase; }
 .reference-item { width: 100%; display: block; padding: 10px 0; border: 0; border-bottom: 1px solid #dfe2d9; text-align: left; background: transparent; cursor: pointer; }
 .reference-item:hover strong { color: #47705b; }
 .reference-item strong { display: block; margin-bottom: 4px; font: 12px "DM Mono", monospace; }
 .reference-item code { display: block; color: #405448; font-size: 10px; overflow-wrap: anywhere; }
 .reference-item small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.reference-item .reference-summary-example { font: 10px/1.45 "DM Mono", monospace; }
 @keyframes notebook-cell-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 800px) {

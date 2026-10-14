@@ -18,6 +18,39 @@ type MathCell = {
   completionIndex: number
 }
 
+type ReferenceCategory = {
+  id: string
+  title: string
+  description: string
+}
+
+const referenceCategories: ReferenceCategory[] = [
+  { id: "core", title: "コアとなる言語と構成", description: "式、関数、論理・制御構造" },
+  { id: "data", title: "データの操作と解析", description: "集合、統計、行列など" },
+  { id: "graphics", title: "可視化とグラフィックス", description: "色、フラクタルなど" },
+  { id: "symbolic", title: "記号・数値計算", description: "算術、代数、微積分、物理" },
+  { id: "text", title: "文字列とテキスト", description: "文字列とテキストの処理" },
+]
+
+const referenceProperties: Record<string, string> = {
+  associative: "結合的",
+  commutative: "可換",
+  idempotent: "冪等",
+}
+
+const curatedExamples: Record<string, string> = {
+  Add: "Add(x, 2, 3)",
+  Subtract: "Subtract(x, 3)",
+  Multiply: "Multiply(x, 2, 3)",
+  Divide: "Divide(x, 3)",
+  Power: "Power(x, 2)",
+  Complex: "Complex(1, 2)",
+  Sin: "Sin(Divide(Pi, 6))",
+  Cos: "Cos(Divide(Pi, 3))",
+  Factorial: "Factorial(5)",
+  Mandelbrot: "Mandelbrot(0, 20)",
+}
+
 const commands = listStandardMathCommands()
 
 const notebook = required<HTMLElement>("notebook-cells")
@@ -326,27 +359,105 @@ function renderReference(): void {
   const search = document.createElement("input")
   search.type = "search"
   search.className = "reference-search"
-  search.placeholder = "Filter functions and constants"
-  search.setAttribute("aria-label", "Filter function reference")
+  search.placeholder = "関数・定数を検索"
+  search.setAttribute("aria-label", "関数と定数を検索")
+  const categories = document.createElement("div")
+  categories.className = "reference-category-grid"
   const list = document.createElement("div")
   list.className = "reference-command-list"
-  referencePanel.replaceChildren(search, list)
+  list.hidden = true
+  const detail = document.createElement("div")
+  detail.className = "reference-detail"
+  detail.hidden = true
+  referencePanel.replaceChildren(search, categories, list, detail)
 
-  const update = () => renderReferenceCommands(list, search.value)
+  let currentCommands: MathCommand[] = []
+  const browseCategory = (categoryId: string) => {
+    currentCommands = commands.filter(command => referenceCategoryId(command) === categoryId)
+    categories.hidden = true
+    detail.hidden = true
+    list.hidden = false
+    renderReferenceCommands(list, currentCommands, referenceCategories.find(category => category.id === categoryId)?.title ?? "Reference", () => {
+      search.value = ""
+      list.hidden = true
+      categories.hidden = false
+      renderReferenceCategories(categories, browseCategory)
+    }, command => showCommandDetails(command))
+  }
+  const showCommandDetails = (command: MathCommand) => {
+    list.hidden = true
+    categories.hidden = true
+    detail.hidden = false
+    renderCommandDetails(detail, command, currentCommands, () => {
+      detail.hidden = true
+      list.hidden = false
+    }, showCommandDetails)
+  }
+  renderReferenceCategories(categories, browseCategory)
+
+  const update = () => {
+    const query = search.value.trim().toLowerCase()
+    detail.hidden = true
+    if (!query) {
+      list.hidden = true
+      categories.hidden = false
+      renderReferenceCategories(categories, browseCategory)
+      return
+    }
+    categories.hidden = true
+    list.hidden = false
+    currentCommands = commands.filter(command =>
+      `${command.name} ${command.category} ${command.description} ${command.signature ?? ""}`
+        .toLowerCase()
+        .includes(query),
+    )
+    renderReferenceCommands(list, currentCommands, "検索結果", () => {
+      search.value = ""
+      update()
+    }, showCommandDetails)
+  }
   search.addEventListener("input", update)
-  update()
 }
 
-function renderReferenceCommands(list: HTMLElement, filter: string): void {
+function renderReferenceCategories(container: HTMLElement, onSelect: (categoryId: string) => void): void {
+  container.replaceChildren()
+  for (const category of referenceCategories) {
+    const items = commands.filter(command => referenceCategoryId(command) === category.id)
+    const button = document.createElement("button")
+    button.type = "button"
+    button.className = "reference-category"
+    const title = document.createElement("strong")
+    title.textContent = category.title
+    const description = document.createElement("small")
+    description.textContent = category.description
+    const count = document.createElement("span")
+    count.textContent = String(items.length)
+    button.append(title, description, count)
+    button.addEventListener("click", () => onSelect(category.id))
+    container.append(button)
+  }
+}
+
+function renderReferenceCommands(
+  list: HTMLElement,
+  items: MathCommand[],
+  title: string,
+  onBack: () => void,
+  onSelect: (command: MathCommand) => void,
+): void {
   list.replaceChildren()
-  const query = filter.trim().toLowerCase()
-  const matches = commands.filter(command =>
-    !query || `${command.name} ${command.category} ${command.description} ${command.signature ?? ""}`
-      .toLowerCase()
-      .includes(query),
-  )
+  const back = document.createElement("button")
+  back.type = "button"
+  back.className = "reference-back"
+  back.textContent = "← 分類へ戻る"
+  back.addEventListener("click", onBack)
+  const heading = document.createElement("h2")
+  heading.className = "reference-category-title"
+  heading.textContent = `${title} (${items.length})`
+  list.append(back, heading)
+
   let currentGroup = ""
-  for (const command of matches) {
+  for (const command of items) {
     if (command.category !== currentGroup) {
       currentGroup = command.category
       const heading = document.createElement("h2")
@@ -357,29 +468,253 @@ function renderReferenceCommands(list: HTMLElement, filter: string): void {
     const item = document.createElement("button")
     item.type = "button"
     item.className = "reference-item"
-    item.setAttribute("aria-label", `Insert ${command.name}`)
+    item.setAttribute("aria-label", `詳細を表示: ${command.name}`)
     const name = document.createElement("strong")
     name.textContent = command.name
     const expression = document.createElement("code")
     expression.textContent = command.signature ?? command.name
-    const description = document.createElement("small")
-    description.textContent = command.description
-    item.append(name, expression, description)
-    item.addEventListener("click", () => insertCommandFromReference(command))
+    const example = document.createElement("small")
+    example.className = "reference-summary-example"
+    example.textContent = `例: ${commandExample(command)}`
+    item.append(name, expression, example)
+    item.addEventListener("click", () => onSelect(command))
     list.append(item)
   }
-  if (matches.length === 0) {
+  if (items.length === 0) {
     const empty = document.createElement("p")
     empty.className = "reference-empty"
-    empty.textContent = "No matching commands"
+    empty.textContent = "該当する項目がありません"
     list.append(empty)
   }
 }
 
-function insertCommandFromReference(command: MathCommand): void {
-  if (!activeCell) activeCell = createCell()
-  activeCell.input.focus()
-  insertCommand(activeCell, command)
+function renderCommandDetails(
+  container: HTMLElement,
+  command: MathCommand,
+  candidates: MathCommand[],
+  onBack: () => void,
+  onSelectRelated: (command: MathCommand) => void,
+): void {
+  container.replaceChildren()
+  const back = document.createElement("button")
+  back.type = "button"
+  back.className = "reference-back"
+  back.textContent = "← 項目一覧へ戻る"
+  back.addEventListener("click", onBack)
+  const title = document.createElement("h2")
+  title.className = "reference-detail-title"
+  title.textContent = command.name
+  container.append(back, title)
+
+  appendReferenceSection(container, "詳細", command.description)
+  const exampleSection = createReferenceSection(container, "例題")
+  const example = commandExample(command)
+  const code = document.createElement("code")
+  code.className = "reference-example-code"
+  code.textContent = example
+  const insert = document.createElement("button")
+  insert.type = "button"
+  insert.className = "reference-insert"
+  insert.textContent = "Notebookへ入力"
+  insert.addEventListener("click", () => insertReference(example))
+  exampleSection.append(code, insert)
+
+  appendReferenceSection(container, "スコープ", [
+    command.kind === "constant" ? "定数" : "関数",
+    `Compute Engine library: ${command.category}`,
+    command.signature ? `Signature: ${command.signature}` : "引数を取らないsymbolです。",
+  ].join("\n"))
+  appendReferenceSection(container, "一般化と拡張", generalizationDescription(command))
+  appendReferenceSection(container, "特性と関係", characteristicsDescription(command))
+  appendReferenceSection(container, "考えられる問題", potentialIssuesDescription(command))
+
+  const relatedSection = createReferenceSection(container, "関連項目")
+  const related = relatedCommands(command, candidates)
+  if (related.length === 0) {
+    relatedSection.append(document.createTextNode("関連項目はありません。"))
+  } else {
+    const list = document.createElement("div")
+    list.className = "reference-related-list"
+    for (const item of related) {
+      const button = document.createElement("button")
+      button.type = "button"
+      button.className = "reference-related-item"
+      button.textContent = item.name
+      button.addEventListener("click", () => onSelectRelated(item))
+      list.append(button)
+    }
+    relatedSection.append(list)
+  }
+}
+
+function createReferenceSection(container: HTMLElement, title: string): HTMLElement {
+  const section = document.createElement("section")
+  section.className = "reference-detail-section"
+  const heading = document.createElement("h3")
+  heading.textContent = title
+  section.append(heading)
+  container.append(section)
+  return section
+}
+
+function appendReferenceSection(container: HTMLElement, title: string, body: string): void {
+  const section = createReferenceSection(container, title)
+  const text = document.createElement("p")
+  text.textContent = body
+  section.append(text)
+}
+
+function commandExample(command: MathCommand): string {
+  if (command.kind === "constant") return command.name
+  const curated: Record<string, string> = {
+    Add: "Add(x, 2, 3)",
+    Subtract: "Subtract(x, 3)",
+    Multiply: "Multiply(x, 2, 3)",
+    Divide: "Divide(x, 3)",
+    Power: "Power(x, 2)",
+    Complex: "Complex(1, 2)",
+    Sin: "Sin(Divide(Pi, 6))",
+    Cos: "Cos(Divide(Pi, 3))",
+    Factorial: "Factorial(5)",
+    Mandelbrot: "Mandelbrot(0, 20)",
+  }
+  if (curated[command.name]) return curated[command.name]
+  const signature = command.signature?.match(/^\((.*)\)\s*->/s)?.[1]
+  if (signature === undefined) return `${command.name}()`
+  const args = splitSignature(signature)
+    .map(sampleArgument)
+    .filter((argument): argument is string => argument !== undefined)
+  return `${command.name}(${args.join(", ")})`
+}
+
+function splitSignature(signature: string): string[] {
+  const parts: string[] = []
+  let start = 0
+  let depth = 0
+  for (let index = 0; index < signature.length; index += 1) {
+    const character = signature[index]
+    if (character === "(" || character === "<" || character === "[") depth += 1
+    else if (character === ")" || character === ">" || character === "]") depth -= 1
+    else if (character === "," && depth === 0) {
+      parts.push(signature.slice(start, index).trim())
+      start = index + 1
+    }
+  }
+  if (signature.slice(start).trim()) parts.push(signature.slice(start).trim())
+  return parts
+}
+
+function sampleArgument(parameter: string): string | undefined {
+  const source = parameter.replace(/^\w+\s*:\s*/, "").trim()
+  if (source.endsWith("?")) return undefined
+  const type = source.replace(/[+*?]$/, "").toLowerCase()
+  if (type.includes("boolean")) return "True"
+  if (type.includes("string")) return '"text"'
+  if (type.includes("matrix")) return "Matrix(Vector(1, 2), Vector(3, 4))"
+  if (type.includes("vector")) return "Vector(1, 2)"
+  if (type.includes("list") || type.includes("collection")) return "List(1, 2)"
+  if (type.includes("symbol")) return "x"
+  if (type.includes("function")) return "Sin"
+  if (type.includes("expression") || type.includes("any") || type.includes("value")) return "x"
+  if (type.includes("integer")) return "2"
+  if (type.includes("number") || type.includes("real")) return "1"
+  if (source.endsWith("+") || source.endsWith("*")) return "x"
+  return "x"
+}
+
+function generalizationDescription(command: MathCommand): string {
+  const signature = command.signature ?? ""
+  const notes: string[] = []
+  if (signature.includes("+")) notes.push("`+`は1個以上の可変個引数を表します。")
+  if (signature.includes("*")) notes.push("`*`は0個以上の可変個引数を表します。")
+  if (signature.includes("?")) notes.push("`?`の引数は省略できます。")
+  if (command.kind === "constant") notes.push("定数は他の式のoperandとして合成できます。")
+  if (command.category === "arithmetic" || command.category === "trigonometry") {
+    notes.push("他のMathJSON式を引数に取って再帰的に合成できます。")
+  }
+  return notes.length > 0 ? notes.join("\n") : "Compute Engineのsignatureに定義された引数形式に従います。"
+}
+
+function characteristicsDescription(command: MathCommand): string {
+  const properties = command.properties.map(property => referenceProperties[property] ?? property)
+  if (command.complexity !== undefined) properties.push(`CE complexity: ${command.complexity}`)
+  if (command.wikidata) properties.push(`Wikidata: ${command.wikidata}`)
+  return properties.length > 0 ? properties.join(" / ") : "CE標準定義に追加の代数属性はありません。"
+}
+
+function potentialIssuesDescription(command: MathCommand): string {
+  const signature = command.signature ?? ""
+  const knownIssues: Record<string, string> = {
+    Divide: "分母が0の場合、有限な数値結果は定義されません。分母を確認してください。",
+    Log: "実数結果を期待する場合は、真数を正、底を正かつ1以外にしてください。",
+    Ln: "実数結果を期待する場合は、引数を正にしてください。負の入力は複素数領域で評価されます。",
+    Sqrt: "負の実数入力は実数ではなく複素数の主値になります。",
+    Root: "偶数次の負の実数根は複素数の主値になる場合があります。",
+    Tan: "極はπ/2 + kπ（kは整数）です。極付近の数値近似に注意してください。",
+    Factorial: "Factorialの引数は非負整数を指定してください。",
+  }
+  if (knownIssues[command.name]) return knownIssues[command.name]
+  if (signature.includes("matrix") || signature.includes("vector")) {
+    return "行列・vectorのshapeと各行の次元が演算の条件を満たすか確認してください。"
+  }
+  return "引数の型・個数はsignatureを確認してください。評価できない式はErrorまたは未評価の記号式として返る場合があります。"
+}
+
+function relatedCommands(command: MathCommand, candidates: MathCommand[]): MathCommand[] {
+  return candidates
+    .filter(candidate => candidate.name !== command.name)
+    .map(candidate => {
+      const commonPrefix = candidate.name.slice(0, commonPrefixLength(candidate.name, command.name)).length
+      const sameNameStem = commandStem(candidate.name) === commandStem(command.name)
+      const sharedProperties = candidate.properties.filter(property => command.properties.includes(property)).length
+      const commandTypes = signatureTypes(command)
+      const sharedTypes = [...signatureTypes(candidate)].filter(type => commandTypes.has(type)).length
+      const sameCategory = candidate.category === command.category ? 1 : 0
+      const sameKind = candidate.kind === command.kind ? 1 : 0
+      const score = (sameNameStem ? 100 : 0) +
+        (commonPrefix >= 3 ? commonPrefix * 3 : 0) +
+        sharedProperties * 5 +
+        sharedTypes * 2 +
+        sameCategory +
+        sameKind
+      return { candidate, score }
+    })
+    .filter(item => item.score >= 3)
+    .sort((left, right) => right.score - left.score || left.candidate.name.localeCompare(right.candidate.name))
+    .slice(0, 5)
+    .map(item => item.candidate)
+}
+
+function commandStem(name: string): string {
+  return name.replace(/\d+$/, "")
+}
+
+function signatureTypes(command: MathCommand): Set<string> {
+  if (!command.signature) return new Set()
+  const open = command.signature.indexOf("(")
+  const close = command.signature.indexOf(")", open + 1)
+  if (open < 0 || close < 0) return new Set()
+  const parameters = splitSignature(command.signature.slice(open + 1, close))
+    .map(parameter => parameter.replace(/^\w+\s*:\s*/, "").replace(/[+*?]$/, "").toLowerCase())
+  const result = command.signature.slice(close + 1).split("->")[1]?.trim().toLowerCase()
+  if (result) parameters.push(result)
+  return new Set(parameters.filter(type => /^[a-z][a-z0-9_<>, ]*$/.test(type)))
+}
+
+function commonPrefixLength(left: string, right: string): number {
+  let index = 0
+  while (index < left.length && index < right.length && left[index] === right[index]) index += 1
+  return index
+}
+
+function referenceCategoryId(command: MathCommand): string {
+  const nameAndSignature = `${command.name} ${command.signature ?? ""}`.toLowerCase()
+  if (command.category === "core" && /string|text/.test(nameAndSignature)) return "text"
+  if (["core", "control-structures"].includes(command.category)) return "core"
+  if (["collections", "statistics", "linear-algebra", "number-theory", "polynomials"].includes(command.category)) return "data"
+  if (["colors", "fractals"].includes(command.category)) return "graphics"
+  if (command.category === "strings") return "text"
+  return "symbolic"
 }
 
 function renderExamples(): void {

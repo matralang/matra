@@ -6,6 +6,9 @@ export interface MathCommandInfo {
   category: string
   signature?: string
   description: string
+  properties: string[]
+  complexity?: number
+  wikidata?: string
 }
 
 type RawDefinition = {
@@ -14,6 +17,11 @@ type RawDefinition = {
   isConstant?: unknown
   value?: unknown
   type?: unknown
+  associative?: unknown
+  commutative?: unknown
+  idempotent?: unknown
+  complexity?: unknown
+  wikidata?: unknown
 }
 
 type RawLibrary = {
@@ -53,6 +61,10 @@ function buildStandardMathCommands(): MathCommandInfo[] {
         description: typeof definition.description === "string"
           ? definition.description
           : signature ?? `Compute Engine ${library.name} symbol`,
+        properties: ["associative", "commutative", "idempotent"]
+          .filter(property => definition[property as keyof RawDefinition] === true),
+        complexity: typeof definition.complexity === "number" ? definition.complexity : undefined,
+        wikidata: typeof definition.wikidata === "string" ? definition.wikidata : undefined,
       }
       const previous = commands.get(name)
       if (!previous || (previous.kind === "constant" && command.kind === "function")) {
