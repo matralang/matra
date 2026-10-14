@@ -33,3 +33,82 @@ evaluateMatra("Add(1, 2, 3)") // 6
 
 Keeping this adapter separate allows `@matra/math` to define syntax and data
 without requiring a particular symbolic computation implementation.
+
+## Mathematical representation policy
+
+Both packages will follow this shared implementation policy:
+
+1. Content MathML is the authoritative standard for mathematical representation.
+2. Strict Content MathML is the semantic normal form.
+3. Custom mathematical objects and operations are defined by OpenMath Content Dictionaries (CDs).
+
+The implementation baseline is [MathML 3.0 Second Edition](https://www.w3.org/TR/MathML3/).
+Content MathML is normalized to Strict Content MathML using the rewrite rules in
+[Content Markup](https://www.w3.org/TR/MathML3/chapter4.html). This normal form
+standardizes semantic structure; it does not guarantee algebraic simplification
+or decide mathematical equivalence. Presentation MathML is a separate display representation.
+
+`@matra/math` owns the mathematical data model, validation, normalization,
+input/output, and CD symbol identity. `@matra/math-compute-engine` maps supported
+symbols to Cortex Compute Engine and maps results back to the shared semantic
+representation. MathJSON is an engine interchange format, not the authoritative
+specification of mathematical meaning.
+
+Prefer existing [OpenMath CDs](https://openmath.org/cd/) for standard objects.
+Identify custom CDs by stable `cdbase`, CD name, and symbol name, and document
+meaning, arguments, applicability, version, and compatibility policy. Manage CD
+definitions separately from engine support. Unsupported symbols must not silently
+acquire a different meaning: preserve their identity where possible, and report
+explicit diagnostics where lossless conversion or computation is unavailable.
+
+Prepare for [MathML 4](https://www.w3.org/TR/mathml4/) by separating version-specific
+acceptance, validation, and input/output from the shared semantic model. As of
+October 14, 2026, MathML 4 is a Working Draft; track MathML 3 conformance separately
+from experimental MathML 4 support. Migration must review numbers, symbol identity,
+binding, attributes, error locations, and CD references, with regression tests
+for round trips and preservation of meaning.
+
+Adopting this policy changes neither existing APIs nor Matra Program/compiler
+source grammar. Any replacement of existing APIs must separately document its
+impact and migration as a v0.x breaking change.
+
+### Content MathML MVP
+
+The first implementation is limited to MathML 3 Content MathML expression trees.
+The public APIs are `parseContentMathML(source)`,
+`normalizeContentMathML(source)`, `serializeContentMathML(expression)`,
+`contentMathMLToMathJson(expression)`, and
+`mathJsonToContentMathML(expression)`. Parsing retains expressions as a tree with
+Content Dictionary symbol identities; serialization emits Strict Content MathML
+inside a `math` element in the MathML namespace. Normalization implements the
+MathML 3 Content-to-Strict rewrites only for the constructs listed here.
+
+Accepted expressions are `ci`, integer/real/double `cn`, `csymbol`, `apply`, and
+the following operator and constant elements inside `apply`:
+
+- `arith1`: `plus`, `times`, `minus` (one argument becomes `unary_minus`), `divide`, `power`, `root`, `abs`
+- `transc1`: `sin`, `cos`, `tan`, `exp`, `ln`
+- `relation1`: `eq`, `neq`, `lt`, `gt`, `leq`, `geq`
+- `nums1`: `pi`, `e`, `i`, `infinity`
+- `logic1`: `true`, `false`
+
+`cn type="rational"` is rewritten as an application of `nums1.rational`.
+Operator and constant elements normalize to `csymbol` elements with their
+corresponding OpenMath CD identities. Unknown CD symbols are preserved in the
+expression tree and Strict output with the standard `cdbase`, CD name, and symbol
+name. MathML 3 `cdgroup` resolution is not implemented, so documents using the
+`cdgroup` attribute or requiring a non-standard `cdbase` are explicitly rejected.
+Their definitions are not validated and they cannot be converted to MathJSON.
+Unsupported elements, attributes, qualifiers, Presentation MathML, bindings,
+shared references, malformed numbers, and invalid operand counts are rejected
+with diagnostics. This is not conformance to all MathML 3 Content Markup, and it
+does not include MathML 4 support.
+
+The `INF`, `-INF`, and `NaN` values of `cn type="double"` are preserved in XML
+input/output, but rejected at the finite-number MathJSON boundary.
+
+MathJSON conversion is an engine-interchange boundary that maps only known
+symbols to existing MathJSON operation names. Unknown CD symbols and numbers that
+MathJSON cannot represent are rejected explicitly rather than losing identity.
+The reverse conversion likewise maps only supported MathJSON symbols back to
+Content Dictionary identities.

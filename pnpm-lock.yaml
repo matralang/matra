@@ -118,6 +118,9 @@ importers:
       '@matra/core':
         specifier: workspace:^
         version: link:../core
+      '@xmldom/xmldom':
+        specifier: ^0.9.12
+        version: 0.9.12
     devDependencies:
       '@types/node':
         specifier: ^22.20.0
@@ -545,6 +548,10 @@ packages:
 
   '@types/unist@2.0.11':
     resolution: {integrity: sha512-CmBKiL6NNo/OqgmMn95Fk9Whlp2mtvIv+KNpQKN2F4SjvrEesubTRWGYSg+BnWZOnlCaSTU1sMpsBOzgbYhnsA==}
+
+  '@xmldom/xmldom@0.9.12':
+    resolution: {integrity: sha512-5AXjrcMClTryPe9LgZrygpB1lj7s0S9E0+W+AHaVKAVyHanafK86iPSvG5xHVSp/jC+VH1UXu0TAEmY279xH7A==}
+    engines: {node: '>=14.6'}
 
   '@zeit/schemas@2.36.0':
     resolution: {integrity: sha512-7kjMwcChYEzMKjeex9ZFXkt1AyNov9R5HZtjBKVsmVpw7pa7ZtlCGvCBC2vnnXctaYN+aRI61HjIqeetZW5ROg==}
@@ -1575,6 +1582,8 @@ snapshots:
       undici-types: 6.21.0
 
   '@types/unist@2.0.11': {}
+
+  '@xmldom/xmldom@0.9.12': {}
 
   '@zeit/schemas@2.36.0': {}
 

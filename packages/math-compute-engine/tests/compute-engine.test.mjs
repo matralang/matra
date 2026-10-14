@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import {
   evaluate,
+  evaluateContentMathML,
   evaluateMatra,
   numericEvaluateMatra,
   numericEvaluateProps,
@@ -13,6 +14,13 @@ const call = (tag, ...children) => ({ tag, props: {}, children })
 describe("Cortex Compute Engine adapter", () => {
   it("evaluates MathJSON without going through the Matra parser", () => {
     assert.equal(evaluate(["Add", 1, 2, 3]), 6)
+  })
+
+  it("evaluates Content MathML and returns the CD-aware semantic form", () => {
+    assert.deepEqual(
+      evaluateContentMathML('<math xmlns="http://www.w3.org/1998/Math/MathML"><apply><plus/><cn>1</cn><cn>2</cn></apply></math>'),
+      { kind: "number", type: "integer", value: "3" },
+    )
   })
 
   it("evaluates Matra syntax through @matra/math", () => {

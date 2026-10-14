@@ -19,6 +19,6 @@
     "url": "git+https://github.com/matralang/matra.git",
     "directory": "packages/math"
   },
-  "dependencies": { "@matra/core": "workspace:^" },
+  "dependencies": { "@matra/core": "workspace:^", "@xmldom/xmldom": "^0.9.12" },
   "devDependencies": { "@types/node": "^22.20.0", "typescript": "^5.9.3" }
 }

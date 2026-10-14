@@ -1,6 +1,13 @@
 import { evaluate as computeEvaluate, N, simplify as computeSimplify } from "@cortex-js/compute-engine"
 import { evaluatePropExpressions, type MatraAST, type MatraValue } from "@matra/core"
-import { astToMathJson, parseMath, type MathJson } from "@matra/math"
+import {
+  astToMathJson,
+  contentMathMLToMathJson,
+  mathJsonToContentMathML,
+  parseContentMathML,
+  parseMath,
+  type MathJson,
+} from "@matra/math"
 
 export type MathScope = Readonly<Record<string, MathJson>>
 
@@ -32,6 +39,12 @@ export function simplifyMatra(source: string, scope: MathScope = {}): unknown {
 /** Parse Matra syntax and numerically approximate it. */
 export function numericEvaluateMatra(source: string, scope: MathScope = {}): unknown {
   return numericEvaluate(bind(parseMath(source), scope))
+}
+
+/** Evaluate supported Content MathML and return a CD-aware semantic expression. */
+export function evaluateContentMathML(source: string) {
+  const expression = contentMathMLToMathJson(parseContentMathML(source))
+  return mathJsonToContentMathML(evaluate(expression) as MathJson)
 }
 
 /**

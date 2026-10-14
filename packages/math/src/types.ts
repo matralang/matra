@@ -7,6 +7,36 @@ export interface MathJsonFunction extends Array<MathJson> {
   0: string
 }
 
+export type ContentMathMLExpression =
+  | ContentMathMLIdentifier
+  | ContentMathMLNumber
+  | ContentMathMLSymbol
+  | ContentMathMLApplication
+
+export interface ContentMathMLIdentifier {
+  kind: "identifier"
+  name: string
+}
+
+export interface ContentMathMLNumber {
+  kind: "number"
+  type: "integer" | "real" | "double"
+  value: string
+}
+
+export interface ContentMathMLSymbol {
+  kind: "symbol"
+  cdbase: string
+  cd: string
+  name: string
+}
+
+export interface ContentMathMLApplication {
+  kind: "application"
+  operator: ContentMathMLExpression
+  operands: ContentMathMLExpression[]
+}
+
 export type MathExpression = MathJson | MathObjectForm
 export type MathExpressionList = MathExpression | MathExpression[]
 
