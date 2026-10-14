@@ -8,7 +8,7 @@
 | `matra-math-json.ts` | `src/math-json.ts` | migrated first |
 | exact `Expr` algebra | future `@matra/math` modules | retain after semantic tests are characterized |
 | TeX parser/printer | optional adapter | keep outside Core |
-| Morphion forms | experimental math layer | specify invariants before public export |
+| Morphion forms | optional Compute Engine adapter | multivariate Morphion invariants are documented in the README; legacy `Expr` conversion remains unmigrated |
 | Compute Engine calls | `../math-compute-engine` | keep vendor dependency out of the base bridge |
 
 Core feedback discovered during the first migration: JSON-compatible Matra

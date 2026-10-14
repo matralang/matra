@@ -15,7 +15,7 @@ section.math-notebook-page {
         "Math Notebook"
       }
       p.math-notebook-lede {
-        "数式を入力し、記号的な変形と数値結果を並べて確認できます。"
+        "数式を入力し、計算・簡約・近似とMorphion正規形を並べて確認できます。"
       }
     }
     div.notebook-actions {

@@ -1,16 +1,14 @@
 import {
   evaluateMatra,
+  listStandardMathCommands,
+  morphionize,
   numericEvaluateMatra,
   simplifyMatra,
 } from "@matra/math-compute-engine"
+import { parseMath } from "@matra/math"
+import type { MathCommandInfo } from "@matra/math-compute-engine"
 
-type MathCommand = {
-  name: string
-  kind: "function" | "constant"
-  group: string
-  description: string
-  example: string
-}
+type MathCommand = MathCommandInfo
 
 type MathCell = {
   id: number
@@ -20,27 +18,7 @@ type MathCell = {
   completionIndex: number
 }
 
-const commands: MathCommand[] = [
-  { name: "Add", kind: "function", group: "Arithmetic", description: "Add two or more expressions", example: "Add(2, 3, 5)" },
-  { name: "Subtract", kind: "function", group: "Arithmetic", description: "Subtract the second value from the first", example: "Subtract(10, 4)" },
-  { name: "Multiply", kind: "function", group: "Arithmetic", description: "Multiply two or more expressions", example: "Multiply(3, 7)" },
-  { name: "Divide", kind: "function", group: "Arithmetic", description: "Divide the first value by the second", example: "Divide(22, 7)" },
-  { name: "Power", kind: "function", group: "Arithmetic", description: "Raise a value to a power", example: "Power(2, 10)" },
-  { name: "Root", kind: "function", group: "Arithmetic", description: "Extract a root by degree", example: "Root(27, 3)" },
-  { name: "Sqrt", kind: "function", group: "Arithmetic", description: "Square root", example: "Sqrt(81)" },
-  { name: "Factorial", kind: "function", group: "Arithmetic", description: "Factorial of a non-negative integer", example: "Factorial(6)" },
-  { name: "Abs", kind: "function", group: "Arithmetic", description: "Absolute value", example: "Abs(-12)" },
-  { name: "Complex", kind: "function", group: "Complex", description: "Construct a complex number from real and imaginary parts", example: "Complex(1, 2)" },
-  { name: "ImaginaryUnit", kind: "constant", group: "Complex", description: "The imaginary unit i", example: "Power(ImaginaryUnit, 2)" },
-  { name: "Sin", kind: "function", group: "Functions", description: "Sine in radians", example: "Sin(Divide(Pi, 6))" },
-  { name: "Cos", kind: "function", group: "Functions", description: "Cosine in radians", example: "Cos(Divide(Pi, 3))" },
-  { name: "Tan", kind: "function", group: "Functions", description: "Tangent in radians", example: "Tan(Divide(Pi, 4))" },
-  { name: "Exp", kind: "function", group: "Functions", description: "Exponential function", example: "Exp(1)" },
-  { name: "Log", kind: "function", group: "Functions", description: "Logarithm with an optional base", example: "Log(100, 10)" },
-  { name: "Ln", kind: "function", group: "Functions", description: "Natural logarithm", example: "Ln(Exp(2))" },
-  { name: "Pi", kind: "constant", group: "Constants", description: "The circle constant pi", example: "Multiply(2, Pi)" },
-  { name: "ExponentialE", kind: "constant", group: "Constants", description: "Euler's number e", example: "Power(ExponentialE, 2)" },
-]
+const commands = listStandardMathCommands()
 
 const notebook = required<HTMLElement>("notebook-cells")
 const status = required<HTMLElement>("math-page-status")
@@ -140,6 +118,7 @@ function evaluateCell(cell: MathCell): void {
     evaluateResult("Evaluate", () => evaluateMatra(expression)),
     evaluateResult("Simplify", () => simplifyMatra(expression)),
     evaluateResult("Numeric", () => numericEvaluateMatra(expression), true),
+    evaluateResult("Morphion", () => morphionize(parseMath(expression))),
   ]
   const grid = document.createElement("div")
   grid.className = "notebook-result-grid"
@@ -344,15 +323,36 @@ function insertReference(expression: string): void {
 }
 
 function renderReference(): void {
-  referencePanel.replaceChildren()
+  const search = document.createElement("input")
+  search.type = "search"
+  search.className = "reference-search"
+  search.placeholder = "Filter functions and constants"
+  search.setAttribute("aria-label", "Filter function reference")
+  const list = document.createElement("div")
+  list.className = "reference-command-list"
+  referencePanel.replaceChildren(search, list)
+
+  const update = () => renderReferenceCommands(list, search.value)
+  search.addEventListener("input", update)
+  update()
+}
+
+function renderReferenceCommands(list: HTMLElement, filter: string): void {
+  list.replaceChildren()
+  const query = filter.trim().toLowerCase()
+  const matches = commands.filter(command =>
+    !query || `${command.name} ${command.category} ${command.description} ${command.signature ?? ""}`
+      .toLowerCase()
+      .includes(query),
+  )
   let currentGroup = ""
-  for (const command of commands) {
-    if (command.group !== currentGroup) {
-      currentGroup = command.group
+  for (const command of matches) {
+    if (command.category !== currentGroup) {
+      currentGroup = command.category
       const heading = document.createElement("h2")
       heading.className = "reference-group"
-      heading.textContent = currentGroup
-      referencePanel.append(heading)
+      heading.textContent = currentGroup.replaceAll("-", " ")
+      list.append(heading)
     }
     const item = document.createElement("button")
     item.type = "button"
@@ -361,13 +361,25 @@ function renderReference(): void {
     const name = document.createElement("strong")
     name.textContent = command.name
     const expression = document.createElement("code")
-    expression.textContent = command.example
+    expression.textContent = command.signature ?? command.name
     const description = document.createElement("small")
     description.textContent = command.description
     item.append(name, expression, description)
-    item.addEventListener("click", () => insertReference(command.example))
-    referencePanel.append(item)
+    item.addEventListener("click", () => insertCommandFromReference(command))
+    list.append(item)
   }
+  if (matches.length === 0) {
+    const empty = document.createElement("p")
+    empty.className = "reference-empty"
+    empty.textContent = "No matching commands"
+    list.append(empty)
+  }
+}
+
+function insertCommandFromReference(command: MathCommand): void {
+  if (!activeCell) activeCell = createCell()
+  activeCell.input.focus()
+  insertCommand(activeCell, command)
 }
 
 function renderExamples(): void {
@@ -380,6 +392,7 @@ function renderExamples(): void {
     { title: "Complex addition", source: "Add(Complex(1, 2), Complex(3, -4))" },
     { title: "Complex multiplication", source: "Multiply(Complex(1, 2), Complex(3, 4))" },
     { title: "Imaginary unit", source: "Power(ImaginaryUnit, 2)" },
+    { title: "Morphion basis", source: "Add(Sin(x), Cos(x), Power(x, 2))" },
   ]
   for (const example of examples) {
     const item = document.createElement("button")

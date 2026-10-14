@@ -12,6 +12,11 @@ simplify(["Add", "x", "x"]) // ["Multiply", 2, "x"]
 numericEvaluateMatra("Multiply(radius, Cos(angle))", { radius: 10, angle: 0 }) // 10
 ```
 
+Math Notebookなどのtoolingでは、`listStandardMathCommands()`で導入済みCompute Engineの
+標準libraryにある関数・定数名、signature、descriptionを取得できます。MathJSONは
+`morphionize(expression)`で多変数Morphion正規形へ変換できます。関数適用はbasis atomとして
+保持し、算術式は係数と整数冪vectorへ集約します。
+
 Graphicsやdocument treeのpropsに埋め込まれたmath expressionも評価できます。
 
 ```ts

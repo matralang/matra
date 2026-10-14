@@ -13,6 +13,13 @@ simplify(["Add", "x", "x"]) // ["Multiply", 2, "x"]
 numericEvaluateMatra("Multiply(radius, Cos(angle))", { radius: 10, angle: 0 }) // 10
 ```
 
+Tooling can retrieve the installed Compute Engine standard library catalog via
+`listStandardMathCommands()`, including command names, signatures, and
+descriptions. MathJSON expressions can be normalized to the multivariate
+Morphion form with `morphionize(expression)`: function applications remain basis
+atoms while arithmetic is collected into coefficients and integer exponent
+vectors.
+
 Math expressions embedded in props can be evaluated across a graphics or
 document tree:
 

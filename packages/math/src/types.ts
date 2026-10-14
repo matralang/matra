@@ -7,6 +7,19 @@ export interface MathJsonFunction extends Array<MathJson> {
   0: string
 }
 
+export interface MorphionTerm {
+  key: number[]
+  coeff: MathJson
+}
+
+export interface MorphionForm {
+  head: "MorphionForm"
+  attributes: {
+    bases: MathJson[]
+    terms: MorphionTerm[]
+  }
+}
+
 export type ContentMathMLExpression =
   | ContentMathMLIdentifier
   | ContentMathMLNumber

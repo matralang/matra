@@ -251,7 +251,7 @@ pre.result-view { min-height: 592px; padding: 28px; white-space: pre-wrap; overf
 .notebook-input { width: 100%; min-height: 62px; display: block; resize: vertical; padding: 15px 16px; outline: 0; border: 0; color: #17221b; background: white; font: 14px/1.75 "DM Mono", monospace; tab-size: 2; }
 .notebook-output { border-top: 1px solid #e5e7df; background: #f6f6f0; }
 .notebook-output[hidden] { display: none; }
-.notebook-result-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.notebook-result-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .notebook-result { min-width: 0; padding: 11px 13px 14px; border-right: 1px solid #e0e2da; }
 .notebook-result:last-child { border-right: 0; }
 .notebook-result-label { display: block; margin-bottom: 7px; color: #647168; font: 10px "DM Mono", monospace; }
@@ -263,12 +263,15 @@ pre.result-view { min-height: 592px; padding: 28px; white-space: pre-wrap; overf
 .completion-option:hover, .completion-option.active { background: #edf2e9; }
 .completion-option code { color: #244f3a; font: 12px "DM Mono", monospace; }
 .completion-option span { color: var(--muted); font-size: 11px; line-height: 1.4; }
-.reference-dock { min-width: 0; border-left: 1px solid var(--line); background: #f5f5ef; }
+.reference-dock { position: sticky; top: 88px; align-self: start; min-width: 0; max-height: calc(100vh - 104px); display: flex; flex-direction: column; border-left: 1px solid var(--line); background: #f5f5ef; }
 .reference-tabs { min-height: 48px; display: flex; border-bottom: 1px solid var(--line); }
 .reference-tab { padding: 0 16px; border: 0; border-bottom: 2px solid transparent; color: var(--muted); background: transparent; font: 11px "DM Mono", monospace; cursor: pointer; }
 .reference-tab.active { border-bottom-color: #3e795a; color: var(--ink); }
-.reference-panel { padding: 8px 16px 18px; }
+.reference-panel { min-height: 0; overflow-y: auto; padding: 8px 16px 18px; }
 .reference-panel[hidden] { display: none; }
+.reference-search { width: 100%; min-height: 34px; margin: 4px 0 10px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 3px; color: var(--ink); background: white; font: 11px "DM Mono", monospace; }
+.reference-command-list { display: block; }
+.reference-empty { color: var(--muted); font-size: 12px; }
 .reference-group { margin: 12px 0 8px; color: #647168; font: 10px "DM Mono", monospace; letter-spacing: .08em; text-transform: uppercase; }
 .reference-item { width: 100%; display: block; padding: 10px 0; border: 0; border-bottom: 1px solid #dfe2d9; text-align: left; background: transparent; cursor: pointer; }
 .reference-item:hover strong { color: #47705b; }
@@ -281,8 +284,8 @@ pre.result-view { min-height: 592px; padding: 28px; white-space: pre-wrap; overf
   .math-notebook-heading { align-items: flex-start; flex-direction: column; }
   .math-notebook-layout { grid-template-columns: 1fr; }
   .reference-dock { border-top: 1px solid var(--line); border-left: 0; }
-  .reference-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; }
-  .reference-panel[hidden] { display: none; }
+  .reference-dock { position: static; max-height: none; }
+  .reference-panel { display: block; }
 }
 
 @media (max-width: 520px) {
@@ -290,7 +293,7 @@ pre.result-view { min-height: 592px; padding: 28px; white-space: pre-wrap; overf
   .math-notebook-heading h1 { font-size: 38px; }
   .math-notebook-layout, .math-page-status { width: calc(100% - 28px); }
   .notebook-column { padding: 12px; }
-  .notebook-result-grid, .reference-panel { grid-template-columns: 1fr; }
+  .notebook-result-grid { grid-template-columns: 1fr; }
   .notebook-result { border-right: 0; border-bottom: 1px solid #e0e2da; }
   .site-nav a:nth-child(2), .site-nav a:last-child { display: none; }
 }

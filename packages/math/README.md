@@ -34,6 +34,41 @@ evaluateMatra("Add(1, 2, 3)") // 6
 Keeping this adapter separate allows `@matra/math` to define syntax and data
 without requiring a particular symbolic computation implementation.
 
+### Morphion
+
+The Math Notebook's Morphion view generalizes the legacy single-base form to a
+multivariate form. It normalizes an expression to a finite sum:
+
+```text
+sum(coefficient * product(basis[i] ^ exponent[i]))
+```
+
+Morphion's benefit is that every expanded term can be handled as a coefficient
+and an exponent vector. Consumers can combine like terms, select terms by basis,
+or inspect coefficients and degrees without repeatedly traversing nested
+MathJSON. Exponents are explicit for multivariate expressions, while functions
+such as `Sin(x)` remain opaque basis atoms. This makes it useful for inspecting
+term structure or feeding coefficient-oriented follow-up operations without
+changing the Compute Engine result.
+
+MathJSON identifiers, constants, and function applications are retained as
+basis atoms. `Add` and `Subtract` combine terms with the same exponent vector;
+`Multiply` distributes and combines factors. Integer powers add to exponent
+vectors. Complex values split into real and imaginary parts, with
+`ImaginaryUnit` as the imaginary basis. Coefficient arithmetic and reduction
+are delegated to the Compute Engine. Basis ordering uses lexicographic order of
+the stable JSON representation; terms use a stable basis order.
+
+General expressions containing function applications remain representable by
+keeping each application as a basis atom. Non-integer powers and divisions by
+sums are kept as one atom instead of being expanded; negative integer powers
+remain exponents. Expressions whose distribution would exceed 256 terms are
+rejected to avoid explosive expansion. This form does not replace MathJSON
+semantics or assert expression identity or mathematical equivalence.
+Morphion is an additional derived representation and has a conversion cost. Use
+Evaluate/Simplify/Numeric directly when term structure is not needed; if the
+256-term limit is exceeded, only the Morphion view should be omitted.
+
 ## Mathematical representation policy
 
 Both packages will follow this shared implementation policy:

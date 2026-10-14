@@ -8,7 +8,7 @@
 | `matra-math-json.ts` | `src/math-json.ts` | 最初に移行する |
 | exact `Expr` algebra | 将来の`@matra/math` modules | semantic testで性質をcharacterizeした後に保持する |
 | TeX parser/printer | optional adapter | Coreの外に置く |
-| Morphion forms | experimental math layer | public export前にinvariantを仕様化する |
+| Morphion forms | optional Compute Engine adapter | 多変数Morphion invariantをREADMEで仕様化。legacy `Expr` converterは未移行 |
 | Compute Engine calls | `../math-compute-engine` | vendor dependencyをbase bridgeの外に置く |
 
 最初の移行で見つかったCoreへのfeedback: JSON-compatibleなMatra syntaxには、signed number、decimal、exponent、`null` literalが必要です。これらはmath-domain semanticsではないため、Coreに属します。
