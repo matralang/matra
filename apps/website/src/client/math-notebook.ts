@@ -30,6 +30,8 @@ const commands: MathCommand[] = [
   { name: "Sqrt", kind: "function", group: "Arithmetic", description: "Square root", example: "Sqrt(81)" },
   { name: "Factorial", kind: "function", group: "Arithmetic", description: "Factorial of a non-negative integer", example: "Factorial(6)" },
   { name: "Abs", kind: "function", group: "Arithmetic", description: "Absolute value", example: "Abs(-12)" },
+  { name: "Complex", kind: "function", group: "Complex", description: "Construct a complex number from real and imaginary parts", example: "Complex(1, 2)" },
+  { name: "ImaginaryUnit", kind: "constant", group: "Complex", description: "The imaginary unit i", example: "Power(ImaginaryUnit, 2)" },
   { name: "Sin", kind: "function", group: "Functions", description: "Sine in radians", example: "Sin(Divide(Pi, 6))" },
   { name: "Cos", kind: "function", group: "Functions", description: "Cosine in radians", example: "Cos(Divide(Pi, 3))" },
   { name: "Tan", kind: "function", group: "Functions", description: "Tangent in radians", example: "Tan(Divide(Pi, 4))" },
@@ -170,6 +172,9 @@ function evaluateResult(label: string, run: () => unknown, numeric = false): { l
 }
 
 function formatValue(value: unknown, numeric = false): string {
+  if (Array.isArray(value) && value[0] === "Complex" && value.length === 3) {
+    return formatComplex(value[1], value[2], numeric)
+  }
   if (Array.isArray(value) && value[0] === "Rational" && typeof value[1] === "number" && typeof value[2] === "number") {
     return formatRational(BigInt(value[1]), BigInt(value[2]), numeric)
   }
@@ -188,6 +193,32 @@ function formatValue(value: unknown, numeric = false): string {
     return value
   }
   return JSON.stringify(value, null, 2) ?? String(value)
+}
+
+function formatComplex(real: unknown, imaginary: unknown, numeric: boolean): string {
+  const realPart = signedPart(real, numeric)
+  const imaginaryPart = signedPart(imaginary, numeric)
+  if (imaginaryPart.text === "0") return `${realPart.negative ? "-" : ""}${realPart.text}`
+
+  const imaginaryTerm = imaginaryPart.text === "1" ? "i" : `${imaginaryPart.text}i`
+  if (realPart.text === "0") return `${imaginaryPart.negative ? "-" : ""}${imaginaryTerm}`
+  return `${realPart.negative ? "-" : ""}${realPart.text} ${imaginaryPart.negative ? "-" : "+"} ${imaginaryTerm}`
+}
+
+function signedPart(value: unknown, numeric: boolean): { negative: boolean; text: string } {
+  if (typeof value === "number") {
+    return { negative: value < 0, text: formatValue(Math.abs(value), numeric) }
+  }
+  if (Array.isArray(value) && value[0] === "Rational" && typeof value[1] === "number" && typeof value[2] === "number") {
+    return {
+      negative: value[1] < 0,
+      text: formatRational(BigInt(Math.abs(value[1])), BigInt(value[2]), numeric),
+    }
+  }
+  if (typeof value === "string" && value.startsWith("-")) {
+    return { negative: true, text: value.slice(1) }
+  }
+  return { negative: false, text: formatValue(value, numeric) }
 }
 
 function formatRational(numerator: bigint, denominator: bigint, numeric: boolean): string {
@@ -346,6 +377,9 @@ function renderExamples(): void {
     { title: "Trigonometry", source: "Sin(Divide(Pi, 6))" },
     { title: "Symbolic expression", source: "Add(Power(x, 2), Multiply(2, x), 1)" },
     { title: "Simplification", source: "Add(Multiply(x, y), Multiply(x, y))" },
+    { title: "Complex addition", source: "Add(Complex(1, 2), Complex(3, -4))" },
+    { title: "Complex multiplication", source: "Multiply(Complex(1, 2), Complex(3, 4))" },
+    { title: "Imaginary unit", source: "Power(ImaginaryUnit, 2)" },
   ]
   for (const example of examples) {
     const item = document.createElement("button")
