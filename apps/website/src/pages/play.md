@@ -18,9 +18,9 @@ section.playground-page {
     p {
       "Markdown内のMatra code blockを編集すると、rendererに応じたpreview・AST・出力をその場で更新します。"
     }
-      a.button.secondary(href="/math/") {
-        "Math Notebook"
-      }
+    a.button.secondary(href="/math/") {
+      "Math Notebook"
+    }
   }
   div.playground-workspace {
     section.editor-panel(aria-label="Markdown editor") {
@@ -253,64 +253,64 @@ section.playground-page {
       }
       textarea(id="matra-source", spellcheck="false", aria-describedby="playground-status", src="matra:playground.md"){}
       footer.editor-footer {
-              span(id="playground-status", role="status", aria-live="polite") {
-                "Ready"
-              }
-              span(id="source-stats") {
-                "0 chars"
-              }
-            }
+        span(id="playground-status", role="status", aria-live="polite") {
+          "Ready"
+        }
+        span(id="source-stats") {
+          "0 chars"
+        }
+      }
+    }
+    section.result-panel(aria-label="Playground result") {
+      div.result-tabs(role="tablist", aria-label="Output") {
+        button.result-tab.active(id="tab-preview", type="button", role="tab", aria-selected="true", data-panel="preview") {
+          "Preview"
+        }
+        button.result-tab(id="tab-ast", type="button", role="tab", aria-selected="false", data-panel="ast") {
+          "AST"
+        }
+        button.result-tab(id="tab-matra-json", type="button", role="tab", aria-selected="false", data-panel="matra-json") {
+          "MatraJSON"
+        }
+        button.result-tab(id="tab-output", type="button", role="tab", aria-selected="false", data-panel="output") {
+          "Output"
+        }
+        button.copy-button(id="download-output", type="button") {
+          "Download"
+        }
+        button.copy-button(id="copy-output", type="button") {
+          "Copy"
+        }
+      }
+      div.result-body {
+        div.result-view.active(id="panel-preview", role="tabpanel", aria-labelledby="tab-preview") {
+          iframe(id="preview-frame", title="Rendered Matra preview", sandbox=""){}
+        }
+        pre.result-view(id="panel-ast", role="tabpanel", aria-labelledby="tab-ast") {
+          code(id="ast-output") {
           }
-          section.result-panel(aria-label="Playground result") {
-            div.result-tabs(role="tablist", aria-label="Output") {
-              button.result-tab.active(id="tab-preview", type="button", role="tab", aria-selected="true", data-panel="preview") {
-                "Preview"
-              }
-              button.result-tab(id="tab-ast", type="button", role="tab", aria-selected="false", data-panel="ast") {
-                "AST"
-              }
-              button.result-tab(id="tab-matra-json", type="button", role="tab", aria-selected="false", data-panel="matra-json") {
-                "MatraJSON"
-              }
-              button.result-tab(id="tab-output", type="button", role="tab", aria-selected="false", data-panel="output") {
-                "Output"
-              }
-              button.copy-button(id="download-output", type="button") {
-                "Download"
-              }
-              button.copy-button(id="copy-output", type="button") {
-                "Copy"
-              }
-            }
-            div.result-body {
-              div.result-view.active(id="panel-preview", role="tabpanel", aria-labelledby="tab-preview") {
-                iframe(id="preview-frame", title="Rendered Matra preview", sandbox=""){}
-              }
-              pre.result-view(id="panel-ast", role="tabpanel", aria-labelledby="tab-ast") {
-                code(id="ast-output") {
-                }
-              }
-              pre.result-view(id="panel-matra-json", role="tabpanel", aria-labelledby="tab-matra-json") {
-                code(id="matra-json-output") {
-                }
-              }
-              pre.result-view(id="panel-output", role="tabpanel", aria-labelledby="tab-output") {
-                code(id="renderer-output") {
-                }
-              }
-              div.error-card(id="playground-error", hidden="true") {
-                strong {
-                  "Parse error"
-                }
-                pre(id="playground-error-message") {
-                }
-              }
-            }
+        }
+        pre.result-view(id="panel-matra-json", role="tabpanel", aria-labelledby="tab-matra-json") {
+          code(id="matra-json-output") {
+          }
+        }
+        pre.result-view(id="panel-output", role="tabpanel", aria-labelledby="tab-output") {
+          code(id="renderer-output") {
+          }
+        }
+        div.error-card(id="playground-error", hidden="true") {
+          strong {
+            "Parse error"
+          }
+          pre(id="playground-error-message") {
           }
         }
       }
-      script(type="module", src="/assets/playground.js") {
-      }
+    }
+  }
+  script(type="module", src="/assets/playground.js") {
+  }
+}
 ````
 
 ````playground.md
