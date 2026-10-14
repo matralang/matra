@@ -3,6 +3,7 @@ import { readdir, readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { execFileSync } from "node:child_process"
+import { parseMath } from "@matra/math"
 
 async function collectMarkdownPages(directory) {
   const entries = await readdir(directory, { withFileTypes: true })
@@ -22,11 +23,21 @@ for (const page of pageSources) {
   assert.match(source, /^```+[^\n]*\.matra(?:\.ts)?\n/m, page)
 }
 const pageMarkdown = await Promise.all(pageSources.map(page => readFile(page, "utf8")))
+const examplesSource = await readFile(new URL("../src/pages/examples.md", import.meta.url), "utf8")
 const matraTypeScriptPages = pageMarkdown.filter(source => source.includes(".matra.ts"))
 const nativeMatraPages = pageMarkdown.filter(source => source.includes("```page.matra\n"))
 assert.equal(matraTypeScriptPages.length, 0)
 assert.equal(pageMarkdown.filter(source => source.includes("```page.program.matra\n")).length, 3)
 assert.equal(nativeMatraPages.length, 9)
+const mathDataSource = examplesSource.match(/```math-data\.matra\n([\s\S]*?)\n```/)?.[1]
+assert.ok(mathDataSource)
+assert.deepEqual(parseMath(mathDataSource), [
+  "Dataset",
+  ["Field", "rational_sequence", [["Rational", 1, 2], ["Rational", 2, 3], ["Rational", 3, 4]]],
+  ["Field", "complex_sequence", [["Complex", 1, 2], ["Complex", 0, -1], ["Complex", 3, 0]]],
+  ["Field", "constant_sequence", ["Pi", "ExponentialE", ["Divide", "Pi", 2], ["Add", "Pi", "ExponentialE"]]],
+  ["Field", "arrays", [[1, 2, 3], [4, 5, 6]]],
+])
 for (const source of nativeMatraPages) {
   assert.match(source, /^---\ntitle: .+\ndescription: .+\nlayout: (?:site|specification)\n---/)
   assert.doesNotMatch(source, /```page\.matra\nhtml\b/)
@@ -96,6 +107,11 @@ const examples = await readFile(new URL("../dist/examples.html", import.meta.url
 assert.match(examples, /render-html\.ts/)
 assert.match(examples, /render-svg\.ts/)
 assert.match(examples, /transform\.ts/)
+assert.match(examples, /math-data\.ts/)
+assert.match(examples, /math-data\.matra/)
+assert.match(examples, /Rational\(1, 2\)/)
+assert.match(examples, /Complex\(1, 2\)/)
+assert.match(examples, /ExponentialE/)
 assert.match(examples, /@matra\/graphics/)
 assert.doesNotMatch(examples, /matra:render-/)
 assert.match(spec, /<title>Matra Specification v0.2<\/title>/)

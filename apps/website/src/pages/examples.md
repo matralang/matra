@@ -153,6 +153,47 @@ section.examples-section {
             }
           }
         }
+        article.example-row {
+          div.example-meta {
+            span.example-index {
+              "04"
+            }
+            h2 {
+              "数学データを記述する"
+            }
+            p {
+              "有理数・複素数・πやeを含む列、入れ子の配列を、意味を保つ構造として記述してMathJSONへ変換できます。"
+            }
+          }
+          div.example-code-pair {
+            div.code-window.example-code(aria-label="TypeScript structured math data example") {
+              div.window-bar {
+                span.window-label {
+                  "TS"
+                }
+                small {
+                  "math-data.ts"
+                }
+              }
+              pre {
+                code(src="matra:math-data.ts"){}
+              }
+            }
+            div.code-window.example-code(aria-label="Matra structured math data") {
+              div.window-bar {
+                span.window-label {
+                  "MATRA"
+                }
+                small {
+                  "math-data.matra"
+                }
+              }
+              pre {
+                code(src="matra:math-data.matra"){}
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -226,5 +267,27 @@ const normalized = transform(ast, node =>
 menu(
   item(href="/docs/", "Docs"),
   item(href="/play/", "Playground")
+)
+```
+
+```math-data.ts
+import { parseMath } from "@matra/math"
+
+const data = parseMath(`Dataset(
+  Field("rational_sequence", [Rational(1, 2), Rational(2, 3), Rational(3, 4)]),
+  Field("complex_sequence", [Complex(1, 2), Complex(0, -1), Complex(3, 0)]),
+  Field("constant_sequence", [Pi, ExponentialE, Divide(Pi, 2), Add(Pi, ExponentialE)]),
+  Field("arrays", [[1, 2, 3], [4, 5, 6]])
+)`)
+
+console.log(JSON.stringify(data, null, 2))
+```
+
+```math-data.matra
+Dataset(
+  Field("rational_sequence", [Rational(1, 2), Rational(2, 3), Rational(3, 4)]),
+  Field("complex_sequence", [Complex(1, 2), Complex(0, -1), Complex(3, 0)]),
+  Field("constant_sequence", [Pi, ExponentialE, Divide(Pi, 2), Add(Pi, ExponentialE)]),
+  Field("arrays", [[1, 2, 3], [4, 5, 6]])
 )
 ```
