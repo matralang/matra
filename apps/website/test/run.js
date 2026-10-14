@@ -35,7 +35,7 @@ assert.deepEqual(parseMath(mathDataSource), [
   "Dataset",
   ["Field", "rational_sequence", [["Rational", 1, 2], ["Rational", 2, 3], ["Rational", 3, 4]]],
   ["Field", "complex_sequence", [["Complex", 1, 2], ["Complex", 0, -1], ["Complex", 3, 0]]],
-  ["Field", "constant_sequence", ["Pi", "ExponentialE", ["Divide", "Pi", 2], ["Add", "Pi", "ExponentialE"]]],
+  ["Field", "constant_sequence", ["Pi", "ExponentialE", ["Multiply", "Pi", 2], ["Add", "Pi", "ExponentialE"]]],
   ["Field", "arrays", [[1, 2, 3], [4, 5, 6]]],
 ])
 for (const source of nativeMatraPages) {
@@ -109,8 +109,8 @@ assert.match(examples, /render-svg\.ts/)
 assert.match(examples, /transform\.ts/)
 assert.match(examples, /math-data\.ts/)
 assert.match(examples, /math-data\.matra/)
-assert.match(examples, /Rational\(1, 2\)/)
-assert.match(examples, /Complex\(1, 2\)/)
+assert.match(examples, /rational_sequence/)
+assert.match(examples, /complex_sequence/)
 assert.match(examples, /ExponentialE/)
 assert.match(examples, /@matra\/graphics/)
 assert.doesNotMatch(examples, /matra:render-/)
