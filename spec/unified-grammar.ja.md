@@ -42,7 +42,7 @@ function = "fn", identifier, "(", [ identifier, { ",", identifier } ], ")", bloc
 return = "return", expression ;
 break = "break" ;
 block = "{", source, "}" ;
-if = "if", header, block, [ "else", block ] ;
+if = "if", header, block, { "else_if", header, block }, [ "else", block ] ;
 while = "while", header, block ;
 header = "(", expression, ")" | bare-expression ;
 for = "for", ( "(", iteration, ")" | bare-iteration ), block ;
@@ -80,6 +80,33 @@ a.link(href="/") { value.numerator }
 number literal は符号を含まず、負数は prefix `-` として解析する。
 
 if は選択した block の値を返し、else がなく条件が偽なら null。
+`else_if` は直前の `if` / `else_if` に接続し、`else` は連鎖を終了する。
+接続の間には空白・改行・line comment だけを許し、別の文や `;` は許さない。
+条件は先頭から評価し、最初に成立した body だけを実行する。後続条件は評価しない。
+連鎖全体は一つの式で、どの条件も成立せず `else` もなければ null。
+`else_if` の header は `if` と同じ括弧・改行・delimiter 規則を使う。
+孤立した `else_if` / `else`、`else` 後の追加分岐、空条件や body の欠落は拒否し、
+構文エラーは次 token または EOF を指す。
+AST は else body に既存の if 式を入れ子にして表し、実行時の判定状態を追加しない。
+
+```matra
+let (label = if (score >= 80) {
+  "high"
+}
+else_if (score >= 50) {
+  "middle"
+}
+else {
+  "low"
+})
+```
+
+この拡張は一般の Matra Program と native compiler source の両方を対象とする。
+既存の分岐は維持するが、`else_if` を変数・関数・parameter・node tag として使う source は
+予約語の追加による v0.x の破壊的変更となる。これらの名前は変更する。
+属性・object key・member・class 名では引き続き使用できる。
+既存 examples・tests・README での同名 identifier の使用はない。
+
 for は完了した各反復の block の値を配列にして返す。反復ゼロなら空配列で、break した反復は追加しない。
 while/do-until の値は null。block/source の最後が式ならその値、空または最後が宣言・代入なら null。
 

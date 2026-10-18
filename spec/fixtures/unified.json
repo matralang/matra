@@ -1,6 +1,51 @@
 {
   "accept": [
     {
+      "name": "else_if selects first matching branch",
+      "source": "if (false) { 1 } else_if (true) { 2 } else_if (true) { 3 } else { 4 }",
+      "value": 2
+    },
+    {
+      "name": "else_if expression result and fallback",
+      "source": "let (x = if false { 1 } else_if false { 2 } else { 3 })\nx + 1",
+      "value": 4
+    },
+    {
+      "name": "else_if no match and empty body",
+      "source": "[if false { 1 } else_if false { 2 }, if false { 1 } else_if true {}]",
+      "value": [null, null]
+    },
+    {
+      "name": "else_if skips unreachable conditions",
+      "source": "[if true { 1 } else_if unknown() { 2 }, if false { 1 } else_if true { 2 } else_if unknown() { 3 }]",
+      "value": [1, 2]
+    },
+    {
+      "name": "else_if condition side effects run once in order",
+      "source": "let n = 0\nfn check(value) { n = n * 10 + value; value == 2 }\nlet x = if check(1) { 10 } else_if check(2) { 20 } else_if check(3) { 30 }\n[x, n]",
+      "value": [20, 12]
+    },
+    {
+      "name": "else_if comments multiline headers and nested branches",
+      "source": "if (false) { 1 }\n// branch\nelse_if ( // header\n true // condition\n) {\n if false { 2 } else_if true { 3 } else { 4 }\n}\n// fallback\nelse { 5 }",
+      "value": 3
+    },
+    {
+      "name": "else_if return and break",
+      "source": "fn f() { if false { return 1 } else_if true { return 2 }; 3 }\nlet rows = for x in [1, 2, 3] { if x == 0 { 0 } else_if x == 2 { break } else { x } }\n[f(), rows]",
+      "value": [2, [1]]
+    },
+    {
+      "name": "else_if node child and lexical scope",
+      "source": "let x = 1\np { if false { 0 } else_if true { let x = 2; x }; x }",
+      "value": {"tag": "p", "props": {}, "children": [2, 1]}
+    },
+    {
+      "name": "else_if reserved property names",
+      "source": "p.else_if(else_if=1) { {else_if: 2}.else_if }",
+      "value": {"tag": "p", "props": {"else_if": 1, "class": "else_if"}, "children": [2]}
+    },
+    {
       "name": "parenthesized binding",
       "source": "let (x = 3)\nx",
       "value": 3
@@ -315,7 +360,57 @@
       }
     }
   ],
+  "native": [
+    {
+      "name": "native else_if return chain",
+      "source": "module branch\nfn choose(x: i32) -> i32 {\n  if (x == 1) { return 10 }\n  // next branch\n  else_if (x == 2) { return 20 }\n  else_if (x == 3) { return 30 }\n  else { return 40 }\n  return 0\n}\nexport fn answer() -> i32 {\n  let a = choose(1)\n  let b = choose(2)\n  let c = choose(3)\n  let d = choose(4)\n  return a + b + c + d\n}",
+      "value": 100
+    },
+    {
+      "name": "native else_if call conditions and short circuit",
+      "source": "module branch\nfn check(values: [i32], value: i32) -> i32 {\n  array_set(values, 0, array_get(values, 0) * 10 + value)\n  return value\n}\nexport fn answer() -> i32 {\n  let values = allocate_i32_array(1)\n  let result = 0\n  if (check(values, 1) == 0) { result = 10 }\n  else_if (check(values, 2) == 2) { result = 20 }\n  else_if (check(values, 3) == 3) { result = 30 }\n  else { result = 40 }\n  let calls = array_get(values, 0)\n  return result + calls\n}",
+      "value": 32
+    },
+    {
+      "name": "native else_if break depth and nested branches",
+      "source": "module branch\nexport fn answer() -> i32 {\n  let n = 0\n  let result = 0\n  while (n < 4) {\n    n = n + 1\n    if (n == 0) { result = 100 }\n    else_if (n == 1) { result = result + 10 }\n    else_if (n == 3) { break }\n    else { if (n == 0) { result = 200 } else_if (n == 2) { result = result + 20 } }\n  }\n  do {\n    if (n == 0) { result = 300 }\n    else_if (n == 3) { break }\n    result = 400\n  } until (n == 3)\n  return result\n}",
+      "value": 30
+    },
+    {
+      "name": "native else_if struct return",
+      "source": "module branch\nstruct pair {\nleft: i32\nright: i32\n}\nfn choose(n: i32) -> pair {\n  if (n == 0) { return pair(1, 2) }\n  else_if (n == 1) { return pair(20, 22) }\n  else { return pair(3, 4) }\n  return pair(0, 0)\n}\nexport fn answer() -> i32 {\n  let result = choose(1)\n  return result.left + result.right\n}",
+      "value": 42
+    }
+  ],
+  "nativeReject": [
+    "module branch\nexport fn answer() -> i32 {\nelse_if (1 == 1) { return 1 }\nreturn 0\n}",
+    "module branch\nexport fn answer() -> i32 {\nif (1 == 1) {} else {} else_if (1 == 1) {}\nreturn 0\n}",
+    "module branch\nexport fn answer() -> i32 {\nlet n = 0\nif (n == 1) {} else {} else_if (n == 1) {}\nreturn 0\n}",
+    "module branch\nexport fn answer() -> i32 {\nif (1 == 1) {}; else_if (1 == 1) {}\nreturn 0\n}",
+    "module branch\nexport fn answer() -> i32 {\nif (1 == 1) {} else_if () {}\nreturn 0\n}",
+    "module branch\nexport fn answer() -> i32 { if (1 == 1) {} else_if (1 == 1) return 1 }",
+    "module branch\nexport fn else_if() -> i32 { return 1 }",
+    "module branch\nexport fn answer(else_if: i32) -> i32 { return 1 }",
+    "module branch\nexport fn answer() -> i32 {\nlet else_if = 1\nreturn 1\n}",
+    "module branch\nexport fn answer(n: i32) -> i32 {\nif (n == 0) { let else_if = 1 }\nreturn 1\n}",
+    "module branch\nexport fn answer(n: i32) -> i32 {\nif (n == 0) {} else { let else_if = 1 }\nreturn 1\n}",
+    "module branch\nexport fn answer(n: i32) -> i32 {\nif (n == 0) {} else_if (n == 1) { let else_if = 1 }\nreturn 1\n}"
+  ],
   "reject": [
+    "else_if (true) {}",
+    "else {}",
+    "if true {}; else_if true {}",
+    "if true {}\n1\nelse_if true {}",
+    "if true {} else {} else_if true {}",
+    "if true {} else {} else {}",
+    "if false {} else_if () {}",
+    "if false {} else_if (true {}",
+    "if false {} else_if (true)",
+    "if false {} else_if (true) {",
+    "if false {} else_if true +\n1 {}",
+    "let else_if = 1",
+    "fn else_if() {}",
+    "fn f(else_if) {}",
     "let (x = 1",
     "if x +\n1 {}",
     "for x in\n[] {}",

@@ -195,7 +195,7 @@ function isStaticNode(value: StaticValue): value is StaticNode {
 }
 
 type Token = { value: string, offset: number, kind: "word" | "number" | "string" | "symbol" | "newline" | "eof" }
-const reserved = new Set("let fn if else for in while do until return break module import export struct set true false null".split(" "))
+const reserved = new Set("let fn if else else_if for in while do until return break module import export struct set true false null".split(" "))
 class UnifiedParser {
   private index = 0
   private enclosed = false
@@ -290,13 +290,16 @@ class UnifiedParser {
     }
     return value
   }
+  private ifExpression(): UnifiedExpression {
+    const condition = this.header(() => this.expression()); const thenBody = this.block()
+    const checkpoint = this.index; this.inline()
+    const elseBody: UnifiedStatement[] = this.consume("else_if")
+      ? [{ kind: "expression", expression: this.ifExpression() }]
+      : this.consume("else") ? this.block() : (this.index = checkpoint, [])
+    return { kind: "if", condition, thenBody, elseBody }
+  }
   private primary(): UnifiedExpression {
-    if (this.consume("if")) {
-      const condition = this.header(() => this.expression()); const thenBody = this.block()
-      const checkpoint = this.index; this.inline()
-      const elseBody = this.consume("else") ? this.block() : (this.index = checkpoint, [])
-      return { kind: "if", condition, thenBody, elseBody }
-    }
+    if (this.consume("if")) return this.ifExpression()
     if (this.consume("for")) {
       const { name, iterable } = this.header(() => {
         const name = this.word("Expected a loop variable"); this.trivia(); this.expect("in")

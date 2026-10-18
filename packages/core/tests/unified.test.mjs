@@ -62,6 +62,19 @@ else {
 }`)), "selected")
   })
 
+  it("represents else_if using existing nested if expressions", () => {
+    assert.deepEqual(
+      parseUnified("if a { 1 } else_if b { 2 } else { 3 }"),
+      parseUnified("if a { 1 } else { if b { 2 } else { 3 } }"),
+    )
+  })
+
+  it("reports missing else_if delimiters at the next token or EOF", () => {
+    const prefix = "if false {} else_if (true"
+    assert.throws(() => parseUnified(`${prefix} {}`), new RegExp(`at offset ${prefix.length + 1}\\.$`))
+    assert.throws(() => parseUnified(`${prefix})`), new RegExp(`at offset ${prefix.length + 1}\\.$`))
+  })
+
   it("evaluates arithmetic and comparison operators by precedence", () => {
     assert.equal(evaluateUnified(parseUnified("1 + 2 * 3 == 7")), true)
     assert.equal(evaluateUnified(parseUnified("5 - 2 == 3")), true)

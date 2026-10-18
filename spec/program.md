@@ -47,7 +47,7 @@ export fn answer(input: i32) -> i32 {
 }
 ```
 
-Use `snake_case` for identifiers. `fn`, `let`, `set`, `if`, `else`, `while`,
+Use `snake_case` for identifiers. `fn`, `let`, `set`, `if`, `else_if`, `else`, `while`,
 `do`, `until`, `return`, `break`, `module`, `import`, and `export` are reserved
 words.
 
@@ -94,7 +94,7 @@ set        = "set", "(", identifier, "=", expression, ")" ;
 assignment = identifier, "=", expression ;
 byte_set   = "byte_set", "(", expression, ",", expression, ",", expression, ")" ;
 condition  = "(", expression, ")" | expression ;
-if         = "if", condition, block, [ "else", block ] ;
+if         = "if", condition, block, { "else_if", condition, block }, [ "else", block ] ;
 while      = "while", condition, block ;
 do-until   = "do", block, "until", "(", expression, ")" ;
 break      = "break" ;
@@ -130,6 +130,13 @@ New source SHOULD parenthesize conditions as `if (condition)` and
 `if condition` and `while condition` as equivalent control statements.
 Conditions use the normal expression syntax without an additional delimiter
 such as `$`.
+
+`else_if (condition) { ... }` attaches to the preceding `if` / `else_if`, with an optional final `else`.
+Only the first matching branch executes; subsequent conditions are skipped.
+Only whitespace, newlines, and line comments may intervene.
+Orphan branches and branches following else are rejected.
+See the [unified grammar](./unified-grammar.md) for compatibility, including the new reserved word
+`else_if`, and diagnostic rules.
 
 A `do` block executes once before its `until` condition is evaluated. If the
 condition is `0`, the block executes again; a nonzero condition continues with

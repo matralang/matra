@@ -9,6 +9,11 @@ bodyを1回実行してから条件を評価し、0なら反復します。`brea
 parse・length・writerは同じstatement境界を使い、Wasmでは `block` / `loop` の2 frameを使います。
 条件は既存の整数式、またはその比較を受理します。`until` と条件の丸括弧は必須です。
 
+`if` の直後には複数の `else_if (condition) { ... }` と最後の `else { ... }` を置けます。
+間には空白・改行・line comment だけを許し、最初に成立した分岐だけを実行します。
+`else_if` は予約語です。既存の if/else と同じ入れ子の分岐へ直接出力し、
+判定状態の保存や ABI の変更は行いません。
+
 ```compiler.matra
 module compiler
 
@@ -314,6 +319,16 @@ fn is_else_keyword(source: bytes, value: token) -> i32 {
   if (byte_at(source, value.start + 3) != 101) {
     return 0
   }
+  return 1
+}
+
+fn is_else_if_keyword(source: bytes, value: token) -> i32 {
+  if (value.length != 7) { return 0 }
+  let prefix = token(value.kind, value.start, 4)
+  if (is_else_keyword(source, prefix) == 0) { return 0 }
+  if (byte_at(source, value.start + 4) != 95) { return 0 }
+  if (byte_at(source, value.start + 5) != 105) { return 0 }
+  if (byte_at(source, value.start + 6) != 102) { return 0 }
   return 1
 }
 
@@ -1089,6 +1104,9 @@ fn parse_conditional_statement(source: bytes, offset: i32, parameter: token) -> 
         } else {
           let assignment = current
           let assignment_name_token = assignment_name(source, assignment)
+          if (is_else_if_keyword(source, assignment_name_token) == 1) {
+            return function_definition(0, 0, 0, 0, offset, assignment_name_token.start, 2)
+          }
           if (is_set_keyword(source, assignment) == 1) {
             let set_open = next_token(source, assignment.start + assignment.length)
             if (is_symbol(source, set_open, 40) == 0) {
@@ -1125,6 +1143,9 @@ fn parse_conditional_statement(source: bytes, offset: i32, parameter: token) -> 
       }
     }
     let after_then = next_token(source, current.start + current.length)
+    if (is_else_if_keyword(source, after_then) == 1) {
+      return parse_loop_conditional_if(source, after_then)
+    }
     if (is_else_keyword(source, after_then) == 1) {
       let else_open = next_token(source, after_then.start + after_then.length)
       if (is_symbol(source, else_open, 123) == 0) {
@@ -1171,6 +1192,9 @@ fn parse_conditional_statement(source: bytes, offset: i32, parameter: token) -> 
             }
             if (is_let_keyword(source, else_current) == 1) {
               else_current = next_token(source, else_current.start + else_current.length)
+            }
+            if (is_else_if_keyword(source, else_current) == 1) {
+              return function_definition(0, 0, 0, 0, offset, else_current.start, 2)
             }
             let else_assignment_equals = next_token(source, else_current.start + else_current.length)
             if (is_symbol(source, else_assignment_equals, 61) == 0) {
@@ -1295,7 +1319,7 @@ fn parse_loop_conditional_while(source: bytes, statement: token) -> function_def
 }
 
 // 条件の左右式と block 内の文を分離し、let/set の括弧と入れ子を全経路で共有する。
-fn parse_conditional_block(source: bytes, open: token) -> function_definition {
+fn parse_conditional_body_end(source: bytes, open: token) -> function_definition {
   let current = next_token(source, open.start + open.length)
   while (is_symbol(source, current, 125) == 0) {
     if (current.kind == 0) { return function_definition(0, 0, 0, 0, open.start, current.start, 15) }
@@ -1304,13 +1328,22 @@ fn parse_conditional_block(source: bytes, open: token) -> function_definition {
     if (parsed.position <= current.start) { return function_definition(0, 0, 0, 0, open.start, current.start, 12) }
     current = next_token(source, parsed.position)
   }
-  let after = next_token(source, current.start + current.length)
+  return function_definition(1, 0, 0, 0, current.start + current.length, 0, 0)
+}
+
+fn parse_conditional_block(source: bytes, open: token) -> function_definition {
+  let body = parse_conditional_body_end(source, open)
+  if (body.status == 0) { return body }
+  let after = next_token(source, body.position)
+  if (is_else_if_keyword(source, after) == 1) {
+    return parse_loop_conditional_if(source, after)
+  }
   if (is_else_keyword(source, after) == 1) {
     let other = next_token(source, after.start + after.length)
     if (is_symbol(source, other, 123) == 0) { return function_definition(0, 0, 0, 0, open.start, other.start, 10) }
-    return parse_conditional_block(source, other)
+    return parse_conditional_body_end(source, other)
   }
-  return function_definition(1, 0, 0, 0, current.start + current.length, 0, 0)
+  return body
 }
 
 fn parse_loop_conditional(source: bytes, offset: i32) -> function_definition {
@@ -1567,6 +1600,7 @@ fn parse_do_body_statement(source: bytes, statement: token) -> function_definiti
     return function_definition(0, 0, 0, 0, statement.start, statement.start, 13)
   }
   let name = assignment_name(source, statement)
+  if (is_else_if_keyword(source, name) == 1) { return function_definition(0, 0, 0, 0, statement.start, name.start, 2) }
   if (name.kind != 1) { return function_definition(0, 0, 0, 0, statement.start, name.start, 2) }
   let equals = next_token(source, name.start + name.length)
   if (is_symbol(source, equals, 61) == 0) {
@@ -1823,6 +1857,9 @@ fn parse_local_body(source: bytes, offset: i32, name: token) -> function_definit
         }
       }
       if (local_name.kind != 1) {
+        return function_definition(0, 0, 0, 0, offset, local_name.start, 2)
+      }
+      if (is_else_if_keyword(source, local_name) == 1) {
         return function_definition(0, 0, 0, 0, offset, local_name.start, 2)
       }
       let equals = next_token(source, local_name.start + local_name.length)
@@ -2106,6 +2143,7 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
     return function_definition(0, 0, 0, 0, offset, keyword.start, 3)
   }
   let name = next_token(source, keyword.start + keyword.length)
+  if (is_else_if_keyword(source, name) == 1) { return function_definition(0, 0, 0, 0, offset, name.start, 2) }
   if (name.kind != 1) {
     return function_definition(0, 0, 0, 0, offset, name.start, 2)
   }
@@ -2118,6 +2156,7 @@ fn parse_function(source: bytes, offset: i32) -> function_definition {
   if (is_symbol(source, parameter, 41) == 0) {
     let current_parameter = parameter
     while (is_symbol(source, close, 41) == 0) {
+      if (is_else_if_keyword(source, current_parameter) == 1) { return function_definition(0, 0, 0, 0, offset, current_parameter.start, 5) }
       if (current_parameter.kind != 1) {
         return function_definition(0, 0, 0, 0, offset, current_parameter.start, 5)
       }
@@ -3815,6 +3854,10 @@ fn conditional_statement_length(source: bytes, table: [i32], function: function_
     }
     }
   }
+  let after_then = next_token(source, current.start + current.length)
+  if (is_else_if_keyword(source, after_then) == 1) {
+    return length + 1 + branch_conditional_length(source, table, function, after_then)
+  }
   return length
 }
 
@@ -3882,6 +3925,11 @@ fn write_conditional_statement(buffer: bytes, index: i32, source: bytes, table: 
     }
   }
   }
+  }
+  let after_then = next_token(source, current.start + current.length)
+  if (is_else_if_keyword(source, after_then) == 1) {
+    byte_set(buffer, position, 5)
+    position = write_branch_conditional(buffer, position + 1, source, table, function, after_then, 1)
   }
   byte_set(buffer, position, 11)
   return position + 1
@@ -4078,6 +4126,15 @@ fn do_until_statement_length(source: bytes, table: [i32], function: function_def
   return length + left_length + right_length + 6
 }
 
+fn branch_conditional_length(source: bytes, table: [i32], function: function_definition, statement: token) -> i32 {
+  let left = condition_left(source, statement)
+  let after_left = next_token(source, left.start + left.length)
+  if (is_symbol(source, after_left, 40) == 1) {
+    return loop_conditional_length(source, table, function, statement)
+  }
+  return loop_local_conditional_length(source, table, function, statement)
+}
+
 fn loop_conditional_length(source: bytes, table: [i32], function: function_definition, statement: token) -> i32 {
   let called = condition_left(source, statement)
   let length = 4 + value_operand_length(source, table, function, called)
@@ -4131,6 +4188,9 @@ fn loop_conditional_length(source: bytes, table: [i32], function: function_defin
     }
   }
   let after_then = next_token(source, current.start + current.length)
+  if (is_else_if_keyword(source, after_then) == 1) {
+    return length + 1 + branch_conditional_length(source, table, function, after_then)
+  }
   if (is_else_keyword(source, after_then) == 1) {
     length = length + 1
     let else_open = next_token(source, after_then.start + after_then.length)
@@ -4251,6 +4311,9 @@ fn loop_local_conditional_length(source: bytes, table: [i32], function: function
     }
   }
   let after_then = next_token(source, current.start + current.length)
+  if (is_else_if_keyword(source, after_then) == 1) {
+    return length + 1 + branch_conditional_length(source, table, function, after_then)
+  }
   if (is_else_keyword(source, after_then) == 1) {
     length = length + 1
     let else_open = next_token(source, after_then.start + after_then.length)
@@ -5183,6 +5246,15 @@ fn write_do_until_statement(buffer: bytes, index: i32, source: bytes, table: [i3
   return position + 5
 }
 
+fn write_branch_conditional(buffer: bytes, index: i32, source: bytes, table: [i32], function: function_definition, statement: token, break_depth: i32) -> i32 {
+  let left = condition_left(source, statement)
+  let after_left = next_token(source, left.start + left.length)
+  if (is_symbol(source, after_left, 40) == 1) {
+    return write_loop_conditional(buffer, index, source, table, function, statement, break_depth)
+  }
+  return write_loop_local_conditional(buffer, index, source, table, function, statement, break_depth)
+}
+
 fn write_loop_conditional(buffer: bytes, index: i32, source: bytes, table: [i32], function: function_definition, statement: token, break_depth: i32) -> i32 {
   let position = index
   let called = condition_left(source, statement)
@@ -5243,6 +5315,12 @@ fn write_loop_conditional(buffer: bytes, index: i32, source: bytes, table: [i32]
     }
   }
   let after_then = next_token(source, current.start + current.length)
+  if (is_else_if_keyword(source, after_then) == 1) {
+    byte_set(buffer, position, 5)
+    position = write_branch_conditional(buffer, position + 1, source, table, function, after_then, break_depth + 1)
+    byte_set(buffer, position, 11)
+    return position + 1
+  }
   if (is_else_keyword(source, after_then) == 1) {
     byte_set(buffer, position, 5)
     position = position + 1
@@ -5384,6 +5462,12 @@ fn write_loop_local_conditional(buffer: bytes, index: i32, source: bytes, table:
     }
   }
   let after_then = next_token(source, current.start + current.length)
+  if (is_else_if_keyword(source, after_then) == 1) {
+    byte_set(buffer, position, 5)
+    position = write_branch_conditional(buffer, position + 1, source, table, function, after_then, break_depth + 1)
+    byte_set(buffer, position, 11)
+    return position + 1
+  }
   if (is_else_keyword(source, after_then) == 1) {
     byte_set(buffer, position, 5)
     position = position + 1
@@ -6876,21 +6960,7 @@ fn unified_primary(source: bytes, state: [i32], nodes: [i32]) -> i32 {
   }
   let keyword = unified_keyword(source, state)
   if (keyword == 5) {
-    ignored = unified_next(source, state)
-    let condition = unified_condition(source, state, nodes)
-    let yes = unified_body(source, state, nodes, 0)
-    let cursor = array_get(state, 2)
-    ignored = unified_inline(source, state)
-    let no = 0
-    if (unified_keyword(source, state) == 6) {
-      ignored = unified_next(source, state)
-      no = unified_body(source, state, nodes, 0)
-    }
-    else {
-      array_set(state, 0, cursor)
-      ignored = unified_next(source, state)
-    }
-    return unified_node(state, nodes, 10, condition, yes, no, 0)
+    return unified_if(source, state, nodes)
   }
   if (keyword == 7) {
     ignored = unified_next(source, state)
@@ -7041,12 +7111,36 @@ fn unified_primary(source: bytes, state: [i32], nodes: [i32]) -> i32 {
   return name_2
 }
 
+fn unified_if(source: bytes, state: [i32], nodes: [i32]) -> i32 {
+  let ignored = unified_next(source, state)
+  let condition = unified_condition(source, state, nodes)
+  let yes = unified_body(source, state, nodes, 0)
+  let cursor = array_get(state, 2)
+  ignored = unified_inline(source, state)
+  let no = 0
+  if (unified_keyword(source, state) == 21) {
+    let nested = unified_if(source, state, nodes)
+    no = unified_node(state, nodes, 20, nested, 0, 0, 0)
+  } else_if (unified_keyword(source, state) == 6) {
+    ignored = unified_next(source, state)
+    no = unified_body(source, state, nodes, 0)
+  } else {
+    array_set(state, 0, cursor)
+    ignored = unified_next(source, state)
+  }
+  return unified_node(state, nodes, 10, condition, yes, no, 0)
+}
+
 fn unified_keyword(source: bytes, state: [i32]) -> i32 {
   if (array_get(state, 1) != 1) {
     return 0
   }
   let start = array_get(state, 2)
   let size = array_get(state, 3)
+  if (size == 7) {
+    let current = token(1, start, size)
+    if (is_else_if_keyword(source, current) == 1) { return 21 }
+  }
   if (size == 3) {
     let matches_1 = 1
     if (byte_at(source, start + 0) != 108) {

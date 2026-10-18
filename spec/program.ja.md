@@ -45,7 +45,7 @@ export fn answer(input: i32) -> i32 {
 }
 ```
 
-identifierには`snake_case`を使用します。`fn`、`let`、`set`、`if`、`else`、`while`、
+identifierには`snake_case`を使用します。`fn`、`let`、`set`、`if`、`else_if`、`else`、`while`、
 `do`、`until`、`return`、`break`、`module`、`import`、`export`はreserved wordです。
 
 `()`はexpressionのgrouping、functionのdeclarationとcallに使用します。`[]`は
@@ -90,7 +90,7 @@ set        = "set", "(", identifier, "=", expression, ")" ;
 assignment = identifier, "=", expression ;
 byte_set   = "byte_set", "(", expression, ",", expression, ",", expression, ")" ;
 condition  = "(", expression, ")" | expression ;
-if         = "if", condition, block, [ "else", block ] ;
+if         = "if", condition, block, { "else_if", condition, block }, [ "else", block ] ;
 while      = "while", condition, block ;
 do-until   = "do", block, "until", "(", expression, ")" ;
 break      = "break" ;
@@ -121,6 +121,11 @@ let (count = 1
 新しいsourceは`if (condition)`と`while (condition)`のように条件を丸括弧で囲むべきです
 （SHOULD）。移行期間中は`if condition`と`while condition`も同じ制御構文として受理します
 （MAY）。条件内では通常のexpression構文を使用し、`$`などの追加delimiterは使用しません。
+
+`else_if (condition) { ... }` は直前の `if` / `else_if` に接続し、最後に `else` を置けます。
+最初に成立した分岐だけを実行し、後続条件は評価しません。間には空白・改行・line comment だけを
+許します。孤立した分岐や `else` 後の追加分岐は拒否します。`else_if` の予約語化を含む
+互換性と診断の規則は[統一文法](./unified-grammar.ja.md)を参照してください。
 
 `do` blockは必ず1回実行され、その後に`until` conditionを評価します。conditionが`0`なら
 blockを再実行し、nonzeroなら後続statementへ進みます。`break`はconditionを評価せずに

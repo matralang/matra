@@ -42,7 +42,7 @@ function = "fn", identifier, "(", [ identifier, { ",", identifier } ], ")", bloc
 return = "return", expression ;
 break = "break" ;
 block = "{", source, "}" ;
-if = "if", header, block, [ "else", block ] ;
+if = "if", header, block, { "else_if", header, block }, [ "else", block ] ;
 while = "while", header, block ;
 header = "(", expression, ")" | bare-expression ;
 for = "for", ( "(", iteration, ")" | bare-iteration ), block ;
@@ -80,6 +80,33 @@ Binary operators of equal precedence associate to the left. `&&` and `||` short-
 Number literals exclude their sign; negative values parse as prefix `-` expressions.
 
 If returns the selected block's value, or null when false without an else.
+`else_if` attaches to the immediately preceding `if` / `else_if`; `else` ends the chain.
+Only whitespace, newlines, and line comments may intervene, not another statement or `;`.
+Conditions are evaluated in order. Only the first matching body executes; subsequent conditions are skipped.
+The entire chain is one expression, returning null if no condition matches and there is no else.
+An `else_if` header follows the same parentheses, newline, and delimiter rules as an `if` header.
+Orphan `else_if` / `else`, branches following else, empty conditions, and missing bodies are rejected.
+Syntax errors point to the next token or EOF.
+The AST nests existing if expressions in else bodies, without introducing runtime branch state.
+
+```matra
+let (label = if (score >= 80) {
+  "high"
+}
+else_if (score >= 50) {
+  "middle"
+}
+else {
+  "low"
+})
+```
+
+This extension covers both general Matra Programs and native compiler source.
+Existing branches remain supported, but reserving `else_if` is a v0.x breaking change for sources using it
+as a variable, function, parameter, or node tag; rename these identifiers.
+Attribute, object key, member, and class names may still use it.
+Existing examples, tests, and READMEs do not use this identifier.
+
 For returns an array of completed iteration block values. Zero iterations yield an empty array;
 an iteration exited by break contributes no value. While/do-until return null.
 A block/source returns its final expression's value, or null when empty or ending in a declaration/assignment.

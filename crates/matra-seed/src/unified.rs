@@ -287,6 +287,7 @@ impl Parser<'_> {
                     | "fn"
                     | "if"
                     | "else"
+                    | "else_if"
                     | "for"
                     | "in"
                     | "return"
@@ -571,20 +572,25 @@ impl Parser<'_> {
         }
         Ok(result)
     }
+    fn if_expression(&mut self) -> Result<Expr, CompileError> {
+        let condition = self.condition()?;
+        let yes = self.block()?;
+        let checkpoint = self.index;
+        self.inline();
+        let no = if self.take("else_if") {
+            vec![Stmt::Expression(self.if_expression()?)]
+        } else if self.take("else") {
+            self.block()?
+        } else {
+            self.index = checkpoint;
+            vec![]
+        };
+        Ok(Expr::If(Box::new(condition), yes, no))
+    }
     fn primary(&mut self) -> Result<Expr, CompileError> {
         self.trivia();
         if self.take("if") {
-            let condition = self.condition()?;
-            let yes = self.block()?;
-            let checkpoint = self.index;
-            self.inline();
-            let no = if self.take("else") {
-                self.block()?
-            } else {
-                self.index = checkpoint;
-                vec![]
-            };
-            return Ok(Expr::If(Box::new(condition), yes, no));
+            return self.if_expression();
         }
         if self.take("while") {
             let condition = self.condition()?;
@@ -875,6 +881,22 @@ mod tests {
             "for (x of xs) {}",
         ] {
             assert!(parse(source).is_err(), "accepted {source}");
+        }
+    }
+
+    #[test]
+    fn else_if_reuses_nested_if_and_reports_missing_delimiters() {
+        assert_eq!(
+            parse("if a { 1 } else_if b { 2 } else { 3 }").unwrap(),
+            parse("if a { 1 } else { if b { 2 } else { 3 } }").unwrap()
+        );
+        let prefix = "if false {} else_if (true";
+        for source in [format!("{prefix} {{}}"), format!("{prefix})")] {
+            let error = parse(&source).unwrap_err().to_string();
+            assert!(
+                error.contains(&format!("offset {}", prefix.len() + 1)),
+                "{error}"
+            );
         }
     }
 

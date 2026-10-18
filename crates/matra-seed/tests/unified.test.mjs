@@ -143,6 +143,26 @@ export fn answer() -> i32 {
 
 
 const conformance = JSON.parse(await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"))
+for (const fixture of conformance.native) {
+  test(`native conformance: ${fixture.name}`, async () => {
+    for (const [source, extension] of [
+      [fixture.source, "matra"],
+      [`\`\`\`entry.matra.program\n${fixture.source}\n\`\`\``, "md"],
+    ]) {
+      const { instance } = await WebAssembly.instantiate(await compile(source, extension))
+      assert.equal(instance.exports.answer(), fixture.value)
+    }
+    for (const source of conformance.nativeReject) {
+      test(`native rejects: ${source}`, async () => {
+        await assert.rejects(() => compile(source), error => {
+          assert.match(error.message, /offset|Reserved word/)
+          assert.doesNotMatch(error.message, /panicked|unreachable|out of bounds/i)
+          return true
+        })
+      })
+    }
+  })
+}
 for (const fixture of conformance.accept) {
   test(`unified conformance: ${fixture.name}`, async () => {
     assert.deepEqual(await run(fixture.source), fixture.value)

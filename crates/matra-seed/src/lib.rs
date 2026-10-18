@@ -475,14 +475,7 @@ impl<'a> Parser<'a> {
             return Ok(Statement::Break);
         }
         if self.consume_keyword("if") {
-            let condition = self.expression()?;
-            let then_body = self.block()?;
-            let else_body = if self.consume_keyword("else") {
-                self.block()?
-            } else {
-                Vec::new()
-            };
-            return Ok(Statement::If(condition, then_body, else_body));
+            return self.if_statement();
         }
         if self.consume_keyword("while") {
             let condition = self.expression()?;
@@ -656,6 +649,19 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn if_statement(&mut self) -> Result<Statement, CompileError> {
+        let condition = self.expression()?;
+        let then_body = self.block()?;
+        let else_body = if self.consume_keyword("else_if") {
+            vec![self.if_statement()?]
+        } else if self.consume_keyword("else") {
+            self.block()?
+        } else {
+            Vec::new()
+        };
+        Ok(Statement::If(condition, then_body, else_body))
+    }
+
     fn identifier(&mut self) -> Result<String, CompileError> {
         let identifier = self.raw_identifier()?;
         if is_reserved_word(&identifier) {
@@ -786,6 +792,7 @@ fn is_reserved_word(identifier: &str) -> bool {
             | "set"
             | "if"
             | "else"
+            | "else_if"
             | "while"
             | "do"
             | "until"

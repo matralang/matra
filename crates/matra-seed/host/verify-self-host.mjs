@@ -140,6 +140,17 @@ function elapsedSeconds(started) {
 // bootstrap の一致だけでなく、各段階の compiler が統一文法を実行可能な Wasm にすることを確認する。
 async function verifyUnified(name, compiler) {
   const fixtures = JSON.parse(await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"))
+  for (const fixture of fixtures.native) {
+    const result = await compile(compiler, new TextEncoder().encode(fixture.source))
+    assert.ok(result.output, `${name}: ${fixture.name}: ${result.diagnostic}`)
+    const { instance } = await WebAssembly.instantiate(result.output)
+    assert.equal(instance.exports.answer(), fixture.value, `${name}: ${fixture.name}`)
+  }
+  for (const source of fixtures.nativeReject) {
+    const result = await compile(compiler, new TextEncoder().encode(source))
+    assert.equal(result.output, undefined, `${name}: unexpected native acceptance: ${source}`)
+    assert.doesNotMatch(result.diagnostic, /exceeded|unreachable|out of bounds|Generated WebAssembly is invalid/i)
+  }
   for (const fixture of fixtures.accept) {
     const result = await compile(compiler, new TextEncoder().encode(fixture.source))
     assert.ok(result.output, `${name}: ${fixture.name}: ${result.diagnostic}`)
@@ -179,5 +190,5 @@ export fn answer() -> i32 {
   assert.ok(native.output, `${name}: native statement regression: ${native.diagnostic}`)
   const { instance } = await WebAssembly.instantiate(native.output)
   assert.equal(instance.exports.answer(), -1)
-  console.log(`${name}: unified grammar conformance (${fixtures.accept.length + fixtures.reject.length} cases).`)
+  console.log(`${name}: unified grammar conformance (${fixtures.accept.length + fixtures.reject.length} document cases, ${fixtures.native.length + fixtures.nativeReject.length} native cases).`)
 }
