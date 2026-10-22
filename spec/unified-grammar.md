@@ -133,6 +133,55 @@ Rejected: a condition continued after `if x +` on the next line, `let (x = 1`, `
 In `if ready {}`, ready is a variable reference, not a node constructor.
 Shared acceptance, rejection, boundary, and execution tests live in [fixtures/unified.json](./fixtures/unified.json).
 
+## XML-style markup
+
+The document profile of ordinary Matra Programs adds XML-style markup expressions.
+This is a compatible extension preserving `tag(attrs) { ... }`, calls, comparisons, and division.
+The native compiler-source grammar and ABI are unchanged.
+
+```matra
+let image = <img src="image.png" />
+<p>Hello <strong>Matra</strong>!</p>
+```
+
+```ebnf
+markup = "<", markup-name, { markup-space, markup-attribute }, [ markup-space ],
+         ( "/>" | ">", { markup-text | markup }, "</", markup-name, [ markup-space ], ">" ) ;
+markup-attribute = markup-name, [ markup-space ], "=", [ markup-space ], markup-string ;
+markup-space = ( " " | tab | CR | LF ), { " " | tab | CR | LF } ;
+```
+
+The character ranges and decoding rules for `markup-name`, quoted `markup-string`, and `markup-text`
+are defined below.
+
+`<tag />` and `<tag></tag>` construct the same empty node. Opening and closing names must match,
+including case. Markup normalizes to the existing node AST without adding a runtime value kind.
+Names match `[A-Za-z_:][A-Za-z0-9_.:-]*`, including reserved words. Namespace names and `xmlns`
+attributes are retained without URI resolution. This is a basic XML syntax subset, not full XML conformance.
+
+Attributes require separating space/tab/CR/LF; these characters are also allowed around `=`.
+Values are single- or double-quoted strings without type inference or expression evaluation.
+Duplicate attributes are rejected. Content consists of text and child elements; quotes, `{}`, `//`,
+and newlines are ordinary text. Whitespace, newlines, and indentation are retained without normalization.
+Contiguous text and character references form one string child; empty text children are omitted.
+Matra expressions are not interpolated inside markup.
+
+Text and attributes decode the five entities `amp`, `lt`, `gt`, `quot`, `apos` and decimal/hexadecimal
+character references. References and literal characters must belong to the XML 1.0 character ranges:
+tab/LF/CR, U+0020–D7FF, U+E000–FFFD, U+10000–10FFFF. Unknown or incomplete references,
+literal `<` in attributes, and `]]>` in text are rejected.
+
+Comments, CDATA, processing instructions, XML declarations, DOCTYPE, external entities, and HTML
+tree-repair rules are initially unsupported and produce syntax errors. `<br>`, boolean/unquoted attributes,
+omitted closing tags, `tag /`, and `<tag(attrs) />` are not accepted. `script`/`style` use ordinary
+XML-style content rules. Adjacent markup expressions still require statement separators:
+`<a /><b />` does not implicitly construct a fragment.
+
+Diagnostics point at the first invalid character, a reference's `&`, a duplicate attribute name,
+or the start of a mismatched closing name. Missing delimiters point at the next invalid character or EOF.
+Parsing never falls back to another syntax. Shared fixtures verify execution through TypeScript,
+Rust seed, and compiler Stages 1/2/3.
+
 ## Parsing and value model
 
 For the document profile, `parse()`/`parseUnified()` consume the entire source and return a `UnifiedModule`

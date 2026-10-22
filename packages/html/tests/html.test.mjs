@@ -26,6 +26,14 @@ describe("@matra/html", () => {
     assert.equal(toHTML(parseStaticDocument('p { "Hello" }')), "<p>Hello</p>")
   })
 
+  it("renders markup nodes with decoded text and HTML void semantics", () => {
+    const source = '<article><p title="A &amp; B">Hello <strong>Matra</strong> &lt;3</p><img src="image.png" /></article>'
+    assert.equal(
+      toHTML(parseStaticDocument(source)),
+      '<article><p title="A &amp; B">Hello <strong>Matra</strong> &lt;3</p><img src="image.png"></article>',
+    )
+  })
+
   it("preserves inline script content", () => {
     assert.equal(
       toHTML(parseStaticDocument('script { "window.dataLayer = window.dataLayer || [];" }')),

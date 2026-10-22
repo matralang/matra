@@ -12,6 +12,23 @@
 | byte equality | Stage 2/3のWasmが完全一致 | 同上 |
 | 回帰検証 | Rust 8件、Node 38件、lint成功 | `pnpm run test:seed && pnpm run lint` |
 
+## 2026-10-22 XML-style markup
+
+文書 profile に XML-style markup を追加し、既存 node AST と値 ABI に正規化した。
+本文は program lexer を通さず raw UTF-8 として読み、文字参照・属性・終了 tag を検証する。
+TypeScript と Rust seed は遅延 token 化にし、比較演算子 `<` と markup 開始を式の位置で区別する。
+
+最初の Stage 2 では、追加した `return -1` が native parser の単純 return 経路で拒否された。
+EOF の読み取りは XML で禁止された NUL と同じエラー境界に統一し、外部へ部分成功を返さない。
+次に native emitter が `if (value > 1114111 / base)` の右辺を扱えず、無効な local index を生成した。
+`markup_character` 単体へ縮小して再現し、右辺を先行する local 計算に分離した。
+compiler source は既存 native subset を使用し、新たな native 文法は追加していない。
+
+最終検証は Stage 2 が36.5秒、Stage 3 が37.7秒で byte-identical。
+各 Stage の共通 fixtures（文書137件、native 16件、markup 診断位置10件）で
+markup の生成値と拒否、既存の比較・call・node 構文を検証した。
+生成 Wasm の直接編集や parse fallback は使用していない。
+
 ## 2026-09-25 制御式と文書 frontend の自己ホスト化
 
 Rust seed、TypeScript、Matra compiler source に制御式、基本形の丸括弧と省略形、明示 child spread を実装した。

@@ -5,6 +5,7 @@ import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { Worker } from "node:worker_threads"
 import { fileURLToPath } from "node:url"
 import { cachedCompiler, CommandError } from "./bootstrap-compiler.mjs"
+import { sourcePosition } from "./compiler-host.mjs"
 
 const compilerSourcePath = fileURLToPath(new URL("../examples/compiler.md", import.meta.url))
 const artifactCacheDirectory = fileURLToPath(new URL("../target/bootstrap/self-host", import.meta.url))
@@ -140,6 +141,14 @@ function elapsedSeconds(started) {
 // bootstrap の一致だけでなく、各段階の compiler が統一文法を実行可能な Wasm にすることを確認する。
 async function verifyUnified(name, compiler) {
   const fixtures = JSON.parse(await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"))
+  for (const fixture of fixtures.markupDiagnostics) {
+    const source = new TextEncoder().encode(fixture.source)
+    const result = await compile(compiler, source)
+    assert.equal(result.output, undefined, `${name}: unexpected markup acceptance: ${fixture.source}`)
+    const offset = Buffer.byteLength(fixture.source.slice(0, fixture.offset))
+    const { line, column } = sourcePosition(source, offset)
+    assert.ok(result.diagnostic.includes(`:${line}:${column}: parse error`), `${name}: ${result.diagnostic}`)
+  }
   for (const fixture of fixtures.native) {
     const result = await compile(compiler, new TextEncoder().encode(fixture.source))
     assert.ok(result.output, `${name}: ${fixture.name}: ${result.diagnostic}`)

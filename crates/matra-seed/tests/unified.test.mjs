@@ -143,6 +143,15 @@ export fn answer() -> i32 {
 
 
 const conformance = JSON.parse(await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"))
+test("unified seed reports markup diagnostic byte offsets", async () => {
+  for (const { source, offset } of conformance.markupDiagnostics) {
+    const byteOffset = Buffer.byteLength(source.slice(0, offset))
+    await assert.rejects(() => compile(source), error => {
+      assert.match(error.message, new RegExp(`offset ${byteOffset}\\b`), source)
+      return true
+    })
+  }
+})
 for (const fixture of conformance.native) {
   test(`native conformance: ${fixture.name}`, async () => {
     for (const [source, extension] of [

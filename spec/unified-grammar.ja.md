@@ -131,6 +131,51 @@ let label = if (true) { "yes" } else { "no" }
 `if ready {}` の ready は変数参照であり、node 構築とは解釈しない。
 受理・拒否・境界・実行結果の共通テストは [fixtures/unified.json](./fixtures/unified.json) に置く。
 
+## XML-style markup
+
+一般の Matra Program の文書 profile に、式として XML-style markup を追加する。
+既存の `tag(attrs) { ... }`、call、比較・除算は維持する互換拡張である。
+native compiler source の文法・ABI は変更しない。
+
+```matra
+let image = <img src="image.png" />
+<p>Hello <strong>Matra</strong>!</p>
+```
+
+```ebnf
+markup = "<", markup-name, { markup-space, markup-attribute }, [ markup-space ],
+         ( "/>" | ">", { markup-text | markup }, "</", markup-name, [ markup-space ], ">" ) ;
+markup-attribute = markup-name, [ markup-space ], "=", [ markup-space ], markup-string ;
+markup-space = ( " " | tab | CR | LF ), { " " | tab | CR | LF } ;
+```
+
+`markup-name`、引用符付き `markup-string`、`markup-text` の文字範囲と復号は以下で定義する。
+
+`<tag />` と `<tag></tag>` は同じ空 node を構築する。開始・終了 tag は大文字小文字も含めて
+一致しなければならない。markup は既存の node AST に正規化し、runtime に別種の値を追加しない。
+名前は `[A-Za-z_:][A-Za-z0-9_.:-]*` とし、予約語も使用できる。名前空間の名前と `xmlns` 属性は
+そのまま保持し、URI 解決は行わない。これは XML 全体への適合ではなく、基本構文の subset である。
+
+属性間には space/tab/CR/LF が必要で、`=` の前後にもこれらの空白を許す。値は単一または
+二重引用符で囲む string とし、型の推測・式評価は行わない。同名属性は拒否する。
+本文は text と子要素の列で、引用符、`{}`、`//`、改行は通常の text である。
+空白・改行・字下げは変換せず保持する。連続した text と文字参照は一つの string child にする。
+空の text child は作らない。markup 内で Matra 式を補間しない。
+
+本文と属性では `amp`、`lt`、`gt`、`quot`、`apos` の entity と十進・十六進の数値文字参照を
+復号する。数値は XML 1.0 の文字範囲（tab/LF/CR、U+0020–D7FF、U+E000–FFFD、
+U+10000–10FFFF）に限る。literal の文字にも同じ範囲を適用する。未定義・不完全な参照、
+属性内の literal `<`、本文内の `]]>` は拒否する。
+
+コメント、CDATA、処理命令、XML 宣言、DOCTYPE、外部 entity、HTML の補正規則は初期範囲外で、
+遭遇した場合は構文エラーにする。`<br>`、boolean 属性、引用符なし属性、終了 tag の省略、
+`tag /`、`<tag(attrs) />` は受理しない。`script`/`style` も通常の XML-style 本文として扱う。
+隣接する markup 式には既存の文区切りが必要で、`<a /><b />` を暗黙 fragment にはしない。
+
+診断は最初の不正文字・参照の `&`・重複属性名・一致しない終了名の開始位置を指す。
+不足 delimiter は次の不正文字または EOF を指す。別の構文への fallback はしない。
+共通 fixtures は TypeScript、Rust seed、Stage 1/2/3 の実行結果まで検証する。
+
 ## parse と値モデル
 
 文書 profile の `parse()`／`parseUnified()` は source 全体を消費し、宣言と式を保持する

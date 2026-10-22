@@ -22,6 +22,21 @@ Matraはpnpm workspaceのmonorepoとして管理されています。公開パ�
 各パッケージは、Coreが定義するツリー表現とparser / renderer境界を共有しながら、
 HTML、Math、Graphics、実行環境統合などのdomain-specificな責務を分担します。
 
+## XML-style markup
+
+文書ノードは XML-style markup としても記述できます。属性は文字列、本文は text と子要素として
+解釈し、空白を保持します。既存の `tag(attrs) { ... }` も引き続き使用できます。
+
+```matra
+<article>
+  <p>Hello <strong>Matra</strong>!</p>
+  <img src="image.png" />
+</article>
+```
+
+XML 全体や HTML の省略・補正規則には対応しません。範囲と制約は
+[統一文法](spec/unified-grammar.ja.md#xml-style-markup)を参照してください。
+
 ## Compiler bootstrap
 
 Rust seed compilerとMatra製bootstrap compilerの開発状況は

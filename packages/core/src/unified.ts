@@ -55,7 +55,7 @@ class Returned { constructor(readonly value: any) {} }
 class Broken {}
 
 export function parseUnified(source: string): UnifiedModule {
-  return new UnifiedParser(tokenize(source)).module()
+  return new UnifiedParser(source).module()
 }
 export function evaluateStatic(module: UnifiedModule): StaticValue | undefined {
   return new Evaluator(true).run(module.statements, new Scope())
@@ -197,13 +197,15 @@ function isStaticNode(value: StaticValue): value is StaticNode {
 type Token = { value: string, offset: number, kind: "word" | "number" | "string" | "symbol" | "newline" | "eof" }
 const reserved = new Set("let fn if else else_if for in while do until return break module import export struct set true false null".split(" "))
 class UnifiedParser {
+  private readonly tokens: Token[] = []
+  private lexer: Generator<Token>
   private index = 0
   private enclosed = false
   private bareHeader = false
   private nodeBody = false
   private functions = 0
   private loops = 0
-  constructor(private readonly tokens: Token[]) {}
+  constructor(private readonly source: string) { this.lexer = tokenize(source) }
   module(): UnifiedModule { const statements = this.statements("eof"); this.expect("eof"); return { kind: "module", statements } }
   private statements(end: string): UnifiedStatement[] {
     const result: UnifiedStatement[] = []; this.separators()
@@ -299,6 +301,13 @@ class UnifiedParser {
     return { kind: "if", condition, thenBody, elseBody }
   }
   private primary(): UnifiedExpression {
+    if (this.at("<")) {
+      const markup = new MarkupParser(this.source, this.peek().offset)
+      const value = markup.node()
+      this.tokens.length = this.index
+      this.lexer = tokenize(this.source, markup.offset)
+      return value
+    }
     if (this.consume("if")) return this.ifExpression()
     if (this.consume("for")) {
       const { name, iterable } = this.header(() => {
@@ -334,15 +343,16 @@ class UnifiedParser {
     while (this.consume(".")) classes.push(this.word("Expected a class name", true))
     let cursor = this.index
     if (this.at("(")) {
-      let depth = 0
-      while (cursor < this.tokens.length) {
-        const current = this.tokens[cursor++]
-        if (current.kind !== "symbol") continue
-        if (current.value === "(") depth++
-        if (current.value === ")" && --depth === 0) break
+      cursor++
+      while (this.token(cursor).kind === "newline") cursor++
+      if (this.token(cursor).value === ")" && this.token(cursor).kind === "symbol") cursor++
+      else if (this.token(cursor).kind === "word") {
+        let next = cursor + 1
+        while (this.token(next).kind === "newline") next++
+        if (this.token(next).kind === "symbol" && this.token(next).value === "=") cursor = -1
       }
     }
-    if (!this.bareHeader && this.tokens[cursor]?.kind === "symbol" && this.tokens[cursor].value === "{") {
+    if (!this.bareHeader && (cursor === -1 || this.token(cursor).kind === "symbol" && this.token(cursor).value === "{")) {
       const attributes = this.consume("(") ? this.list(")", () => {
         const key = this.word("Expected an attribute name", true); this.trivia(); this.expect("=")
         return { key, value: this.expression() }
@@ -370,18 +380,24 @@ class UnifiedParser {
   private consume(value: string): boolean { if (!this.at(value)) return false; this.next(); return true }
   private expect(value: string): void { if (!this.consume(value)) this.fail(`Expected '${value}'`) }
   private at(value: string): boolean { const token = this.peek(); return value === "eof" ? token.kind === "eof" : value === "newline" ? token.kind === "newline" : token.kind !== "string" && token.value === value }
-  private peek(lookahead = 0): Token { return this.tokens[this.index + lookahead] ?? this.tokens.at(-1)! }
-  private next(): Token { return this.tokens[this.index++] }
+  private token(index: number): Token {
+    while (index >= this.tokens.length) {
+      const token = this.lexer.next().value
+      if (!token) return this.tokens.at(-1)!
+      this.tokens.push(token)
+    }
+    return this.tokens[index]
+  }
+  private peek(lookahead = 0): Token { return this.token(this.index + lookahead) }
+  private next(): Token { const token = this.peek(); this.index++; return token }
   private fail(message: string): never { throw new UnifiedSyntaxError(`${message} at offset ${this.peek().offset}.`) }
 }
 
-function tokenize(source: string): Token[] {
-  const tokens: Token[] = []
-  let index = 0
+function* tokenize(source: string, index = 0): Generator<Token> {
   while (index < source.length) {
     const offset = index; const char = source[index]
     if (char === " " || char === "\t" || char === "\r") { index++; continue }
-    if (char === "\n") { tokens.push({ kind: "newline", value: "\n", offset }); index++; continue }
+    if (char === "\n") { index++; yield { kind: "newline", value: "\n", offset }; continue }
     if (source.startsWith("//", index)) { while (index < source.length && source[index] !== "\n") index++; continue }
     if (char === '"') {
       index++; let value = ""
@@ -390,17 +406,102 @@ function tokenize(source: string): Token[] {
         value += source[index++]
       }
       if (source[index] !== '"') throw new UnifiedSyntaxError(`Unterminated string at offset ${offset}.`)
-      index++; tokens.push({ kind: "string", value, offset }); continue
+      index++; yield { kind: "string", value, offset }; continue
     }
     const number = source.slice(index).match(/^(?:\d+\.?\d*|\.\d+)/)
-    if (number) { index += number[0].length; tokens.push({ kind: "number", value: number[0], offset }); continue }
+    if (number) { index += number[0].length; yield { kind: "number", value: number[0], offset }; continue }
     const word = source.slice(index).match(/^[A-Za-z_][A-Za-z0-9_-]*/)
-    if (word) { index += word[0].length; tokens.push({ kind: "word", value: word[0], offset }); continue }
+    if (word) { index += word[0].length; yield { kind: "word", value: word[0], offset }; continue }
     const operator = source.slice(index).match(/^(\.\.\.|\|\||&&|==|!=|<=|>=)/)
-    if (operator) { tokens.push({ kind: "symbol", value: operator[0], offset }); index += operator[0].length; continue }
-    if ("{}[](),.:=;!+-*/<>".includes(char)) { tokens.push({ kind: "symbol", value: char, offset }); index++; continue }
+    if (operator) { index += operator[0].length; yield { kind: "symbol", value: operator[0], offset }; continue }
+    if ("{}[](),.:=;!+-*/<>".includes(char)) { index++; yield { kind: "symbol", value: char, offset }; continue }
     throw new UnifiedSyntaxError(`Unexpected '${char}' at offset ${offset}.`)
   }
-  tokens.push({ kind: "eof", value: "", offset: source.length })
-  return tokens
+  yield { kind: "eof", value: "", offset: source.length }
+}
+
+class MarkupParser {
+  constructor(private readonly source: string, public offset: number) {}
+  node(): UnifiedExpression {
+    this.expect("<")
+    const tag = this.name()
+    const attributes: { key: string, value: UnifiedExpression }[] = []
+    const keys = new Set<string>()
+    while (true) {
+      const separated = this.whitespace()
+      if (this.take("/>")) return { kind: "node", tag, classes: [], attributes, body: [] }
+      if (this.take(">")) break
+      if (!separated) this.fail("Expected whitespace or tag delimiter")
+      const start = this.offset
+      const key = this.name()
+      if (keys.has(key)) this.fail("Duplicate markup attribute", start)
+      keys.add(key)
+      this.whitespace(); this.expect("="); this.whitespace()
+      const quote = this.source[this.offset]
+      if (quote !== '"' && quote !== "'") this.fail("Expected a quoted attribute")
+      this.offset++
+      const value = this.text(quote)
+      this.expect(quote)
+      attributes.push({ key, value: { kind: "literal", value } })
+    }
+    const body: UnifiedStatement[] = []
+    while (!this.take("</")) {
+      if (this.offset === this.source.length) this.fail(`Expected closing tag '${tag}'`)
+      const expression = this.source[this.offset] === "<" ? this.node() : { kind: "literal" as const, value: this.text("<") }
+      body.push({ kind: "expression", expression })
+    }
+    const start = this.offset
+    if (this.name() !== tag) this.fail(`Expected closing tag '${tag}'`, start)
+    this.whitespace(); this.expect(">")
+    return { kind: "node", tag, classes: [], attributes, body }
+  }
+  private text(end: string): string {
+    let value = ""
+    while (this.offset < this.source.length && this.source[this.offset] !== end) {
+      const start = this.offset
+      if (this.source[start] === "&") {
+        const reference = this.source.slice(start).match(/^&(?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9a-fA-F]+);/)
+        if (!reference) this.fail("Invalid character reference")
+        const name = reference[0].slice(1, -1)
+        const entities: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" }
+        if (name.startsWith("#")) {
+          const code = name[1] === "x" ? Number.parseInt(name.slice(2), 16) : Number(name.slice(1))
+          this.character(code)
+          value += String.fromCodePoint(code)
+        } else value += entities[name]
+        this.offset += reference[0].length
+      } else {
+        if (end !== "<" && this.source[start] === "<") this.fail("Unexpected '<' in attribute")
+        if (end === "<" && this.source.startsWith("]]>", start)) this.fail("Unexpected ']]>' in text")
+        const code = this.source.codePointAt(start)!
+        this.character(code)
+        const character = String.fromCodePoint(code)
+        value += character
+        this.offset += character.length
+      }
+    }
+    return value
+  }
+  private character(code: number): void {
+    if (!(code === 9 || code === 10 || code === 13 || code >= 0x20 && code <= 0xd7ff ||
+      code >= 0xe000 && code <= 0xfffd || code >= 0x10000 && code <= 0x10ffff)) this.fail("Invalid XML character")
+  }
+  private name(): string {
+    const name = this.source.slice(this.offset).match(/^[A-Za-z_:][A-Za-z0-9_.:-]*/)
+    if (!name) this.fail("Expected a markup name")
+    this.offset += name[0].length
+    return name[0]
+  }
+  private whitespace(): boolean {
+    const start = this.offset
+    while (/[ \t\r\n]/.test(this.source[this.offset] ?? "") && this.offset < this.source.length) this.offset++
+    return this.offset !== start
+  }
+  private take(value: string): boolean {
+    if (!this.source.startsWith(value, this.offset)) return false
+    this.offset += value.length
+    return true
+  }
+  private expect(value: string): void { if (!this.take(value)) this.fail(`Expected '${value}'`) }
+  private fail(message: string, offset = this.offset): never { throw new UnifiedSyntaxError(`${message} at offset ${offset}.`) }
 }

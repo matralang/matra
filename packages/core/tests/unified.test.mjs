@@ -1,8 +1,28 @@
 import assert from "node:assert/strict"
+import { readFile } from "node:fs/promises"
 import { describe, it } from "node:test"
 import { EvaluationRequiredError, evaluateStatic, evaluateUnified, parse, parseUnified } from "../dist/index.js"
 
+const conformance = JSON.parse(await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"))
+
 describe("unified Matra parser", () => {
+  it("normalizes markup to existing node syntax and retrieves it statically", () => {
+    const markup = parseUnified('<p title="A &amp; B">Hello <strong>Matra</strong>!</p>')
+    assert.deepEqual(markup, parseUnified('p(title="A & B") { "Hello "; strong { "Matra" }; "!" }'))
+    assert.deepEqual(evaluateStatic(markup), evaluateUnified(markup))
+  })
+
+  it("reports markup failures at the offending source offset", () => {
+    for (const { source, offset } of conformance.markupDiagnostics) {
+      assert.throws(() => parseUnified(source), new RegExp(`at offset ${offset}\\.$`), source)
+    }
+  })
+
+  it("keeps multiline Matra attributes distinct from calls", () => {
+    assert.deepEqual(evaluateStatic(parseUnified('p(\n title\n = "ok"\n) {}')), {
+      tag: "p", props: { title: "ok" }, children: [],
+    })
+  })
   it("uses the unified grammar through the default parser", () => {
     assert.deepEqual(parse('p { "Hello" }'), parseUnified('p { "Hello" }'))
   })
@@ -87,8 +107,6 @@ else {
 })
 
 
-const { readFile } = await import("node:fs/promises")
-const conformance = JSON.parse(await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"))
 for (const fixture of conformance.accept) {
   it(`unified conformance: ${fixture.name}`, () => {
     assert.deepEqual(evaluateUnified(parseUnified(fixture.source)), fixture.value)

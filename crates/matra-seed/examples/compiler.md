@@ -6953,10 +6953,309 @@ fn unified_unary(source: bytes, state: [i32], nodes: [i32]) -> i32 {
   return value_2
 }
 
+// markup の内部では program lexer を使わず、元の UTF-8 bytes を読む。
+fn markup_byte(source: bytes, position: i32) -> i32 {
+  if (position >= byte_length(source)) { return 0 }
+  return byte_at(source, position)
+}
+
+fn markup_error(state: [i32], position: i32) -> i32 {
+  array_set(state, 2, position)
+  return unified_error(state)
+}
+
+fn markup_space(source: bytes, state: [i32]) -> i32 {
+  let start = array_get(state, 0)
+  let position = start
+  let scanning = 1
+  while (scanning == 1) {
+    let character = markup_byte(source, position)
+    scanning = 0
+    if (character == 32) { scanning = 1 }
+    if (character == 9) { scanning = 1 }
+    if (character == 10) { scanning = 1 }
+    if (character == 13) { scanning = 1 }
+    if (scanning == 1) { position = position + 1 }
+  }
+  array_set(state, 0, position)
+  return position - start
+}
+
+fn markup_expect(source: bytes, state: [i32], character: i32) -> i32 {
+  let position = array_get(state, 0)
+  if (markup_byte(source, position) != character) { return markup_error(state, position) }
+  array_set(state, 0, position + 1)
+  return 1
+}
+
+fn markup_name(source: bytes, state: [i32], nodes: [i32]) -> i32 {
+  let start = array_get(state, 0)
+  let character = markup_byte(source, start)
+  let accepted = is_identifier(character)
+  if (character == 58) { accepted = 1 }
+  if (accepted == 0) { return markup_error(state, start) }
+  let position = start + 1
+  let scanning = 1
+  while (scanning == 1) {
+    character = markup_byte(source, position)
+    scanning = is_identifier(character)
+    if (is_digit(character) == 1) { scanning = 1 }
+    if (character == 58) { scanning = 1 }
+    if (character == 45) { scanning = 1 }
+    if (character == 46) { scanning = 1 }
+    if (scanning == 1) { position = position + 1 }
+  }
+  array_set(state, 0, position)
+  return unified_node(state, nodes, 2, start, position - start, 0, 0)
+}
+
+fn markup_entity(source: bytes, start: i32, size: i32) -> i32 {
+  let a = markup_byte(source, start)
+  let b = markup_byte(source, start + 1)
+  if (size == 2) {
+    if (b == 116) {
+      if (a == 108) { return 60 }
+      if (a == 103) { return 62 }
+    }
+  }
+  let c = markup_byte(source, start + 2)
+  if (size == 3) {
+    if (a == 97) {
+      if (b == 109) {
+        if (c == 112) { return 38 }
+      }
+    }
+  }
+  let d = markup_byte(source, start + 3)
+  if (size == 4) {
+    if (a == 113) {
+      if (b == 117) {
+        if (c == 111) {
+          if (d == 116) { return 34 }
+        }
+      }
+    }
+    if (a == 97) {
+      if (b == 112) {
+        if (c == 111) {
+          if (d == 115) { return 39 }
+        }
+      }
+    }
+  }
+  return 0
+}
+
+fn markup_character(source: bytes, state: [i32]) -> i32 {
+  let start = array_get(state, 0)
+  let position = start
+  let value = markup_byte(source, position)
+  position = position + 1
+  if (value == 38) {
+    let begin = position
+    if (markup_byte(source, position) == 35) {
+      position = position + 1
+      let base = 10
+      if (markup_byte(source, position) == 120) {
+        base = 16
+        position = position + 1
+      }
+      let digits = position
+      value = 0
+      while (markup_byte(source, position) != 59) {
+        let digit = 16
+        let numeric = markup_byte(source, position)
+        if (numeric >= 48) {
+          if (numeric <= 57) { digit = numeric - 48 }
+        }
+        if (base == 16) {
+          let letter = markup_byte(source, position)
+          if (letter >= 65) {
+            if (letter <= 70) { digit = letter - 55 }
+          }
+          if (letter >= 97) {
+            if (letter <= 102) { digit = letter - 87 }
+          }
+        }
+        if (digit < 0) { return markup_error(state, start) }
+        if (digit >= base) { return markup_error(state, start) }
+        let limit = 1114111 / base
+        if (value > limit) { return markup_error(state, start) }
+        value = value * base + digit
+        position = position + 1
+      }
+      if (position == digits) { return markup_error(state, start) }
+    } else {
+      while (markup_byte(source, position) != 59) {
+        let letter_2 = markup_byte(source, position)
+        if (letter_2 < 97) { return markup_error(state, start) }
+        if (letter_2 > 122) { return markup_error(state, start) }
+        position = position + 1
+      }
+      value = markup_entity(source, begin, position - begin)
+    }
+    position = position + 1
+  } else {
+    if (value >= 128) {
+      let remaining = 0
+      let minimum = 0
+      if (value >= 194) {
+        if (value <= 223) {
+          remaining = 1
+          minimum = 128
+          value = value - 192
+        } else_if (value <= 239) {
+          remaining = 2
+          minimum = 2048
+          value = value - 224
+        } else_if (value <= 244) {
+          remaining = 3
+          minimum = 65536
+          value = value - 240
+        }
+      }
+      if (remaining == 0) { return markup_error(state, start) }
+      while (remaining > 0) {
+        let continuation = markup_byte(source, position)
+        if (continuation < 128) { return markup_error(state, start) }
+        if (continuation > 191) { return markup_error(state, start) }
+        value = value * 64 + continuation - 128
+        position = position + 1
+        remaining = remaining - 1
+      }
+      if (value < minimum) { return markup_error(state, start) }
+    }
+  }
+  let valid = 0
+  if (value == 9) { valid = 1 }
+  if (value == 10) { valid = 1 }
+  if (value == 13) { valid = 1 }
+  if (value >= 32) {
+    if (value <= 55295) { valid = 1 }
+  }
+  if (value >= 57344) {
+    if (value <= 65533) { valid = 1 }
+  }
+  if (value >= 65536) {
+    if (value <= 1114111) { valid = 1 }
+  }
+  if (valid == 0) { return markup_error(state, start) }
+  array_set(state, 0, position)
+  return value
+}
+
+fn markup_text(source: bytes, state: [i32], nodes: [i32], end: i32) -> i32 {
+  let start = array_get(state, 0)
+  while (array_get(state, 9) == 0) {
+    let position = array_get(state, 0)
+    let character = markup_byte(source, position)
+    if (character == 0) { break }
+    if (character == end) { break }
+    if (character == 60) { return markup_error(state, position) }
+    if (end == 60) {
+      if (character == 93) {
+        if (markup_byte(source, position + 1) == 93) {
+          if (markup_byte(source, position + 2) == 62) { return markup_error(state, position) }
+        }
+      }
+    }
+    let ignored = markup_character(source, state)
+  }
+  let finish = array_get(state, 0)
+  return unified_node(state, nodes, 15, start, finish - start, 0, 0)
+}
+
+fn markup_node(source: bytes, state: [i32], nodes: [i32]) -> i32 {
+  let ignored = markup_expect(source, state, 60)
+  let name = markup_name(source, state, nodes)
+  let attributes = 0
+  let tail = 0
+  let empty = 0
+  while (array_get(state, 9) == 0) {
+    let separated = markup_space(source, state)
+    let position = array_get(state, 0)
+    let character = markup_byte(source, position)
+    if (character == 47) {
+      array_set(state, 0, position + 1)
+      ignored = markup_expect(source, state, 62)
+      empty = 1
+      break
+    }
+    if (character == 62) {
+      array_set(state, 0, position + 1)
+      break
+    }
+    if (separated == 0) { return markup_error(state, position) }
+    let key = markup_name(source, state, nodes)
+    if (array_get(state, 9) != 0) { return 0 }
+    let current = attributes
+    while (current != 0) {
+      let previous = unified_get(nodes, current, 1)
+      if (unified_same_name(source, nodes, key, previous) == 1) {
+        return markup_error(state, position)
+      }
+      current = unified_get(nodes, current, 5)
+    }
+    ignored = markup_space(source, state)
+    ignored = markup_expect(source, state, 61)
+    ignored = markup_space(source, state)
+    let quote_position = array_get(state, 0)
+    let quote = markup_byte(source, quote_position)
+    if (quote != 34) {
+      if (quote != 39) { return markup_error(state, quote_position) }
+    }
+    array_set(state, 0, quote_position + 1)
+    let value = markup_text(source, state, nodes, quote)
+    ignored = markup_expect(source, state, quote)
+    let entry = unified_node(state, nodes, 14, key, value, 0, 0)
+    if (attributes == 0) { attributes = entry }
+    else { array_set(nodes, tail * 8 + 5, entry) }
+    tail = entry
+  }
+  let body = 0
+  let body_tail = 0
+  if (empty == 0) {
+    while (array_get(state, 9) == 0) {
+      let content_position = array_get(state, 0)
+      let content_byte = markup_byte(source, content_position)
+      if (content_byte == 0) { return markup_error(state, content_position) }
+      if (content_byte == 60) {
+        if (markup_byte(source, content_position + 1) == 47) {
+          array_set(state, 0, content_position + 2)
+          let closing = markup_name(source, state, nodes)
+          if (array_get(state, 9) != 0) { return 0 }
+          if (unified_same_name(source, nodes, name, closing) == 0) {
+            return markup_error(state, content_position + 2)
+          }
+          ignored = markup_space(source, state)
+          ignored = markup_expect(source, state, 62)
+          break
+        }
+      }
+      let child = 0
+      if (content_byte == 60) { child = markup_node(source, state, nodes) }
+      else { child = markup_text(source, state, nodes, 60) }
+      let statement = unified_node(state, nodes, 20, child, 0, 0, 0)
+      if (body == 0) { body = statement }
+      else { array_set(nodes, body_tail * 8 + 5, statement) }
+      body_tail = statement
+    }
+  }
+  return unified_node(state, nodes, 9, name, 0, attributes, body)
+}
+
 fn unified_primary(source: bytes, state: [i32], nodes: [i32]) -> i32 {
   let ignored = unified_trivia(source, state)
   if (array_get(state, 9) != 0) {
     return 0
+  }
+  if (unified_symbol(source, state) == 60) {
+    let markup_start = array_get(state, 2)
+    array_set(state, 0, markup_start)
+    let markup = markup_node(source, state, nodes)
+    if (array_get(state, 9) != 0) { return 0 }
+    ignored = unified_next(source, state)
+    return markup
   }
   let keyword = unified_keyword(source, state)
   if (keyword == 5) {
@@ -7070,32 +7369,23 @@ fn unified_primary(source: bytes, state: [i32], nodes: [i32]) -> i32 {
     tail = item
   }
   let attributes_start = array_get(state, 2)
-  if (unified_take(source, state, 40) == 1) {
-    let depth = 1
-    while (depth > 0) {
-      if (array_get(state, 1) == 0) {
-        ignored = unified_error(state)
-        break
-      }
-      if (array_get(state, 9) != 0) {
-        break
-      }
-      let symbol = unified_symbol(source, state)
-      if (symbol == 40) {
-        depth = depth + 1
-      }
-      if (symbol == 41) {
-        depth = depth - 1
-      }
-      ignored = unified_next(source, state)
-    }
-  }
   let document = 0
-  if (array_get(state, 5) == 0) {
-    if (unified_symbol(source, state) == 123) {
-      document = 1
+  let body_candidate = 1
+  if (unified_take(source, state, 40) == 1) {
+    ignored = unified_inline(source, state)
+    if (unified_take(source, state, 41) == 0) {
+      body_candidate = 0
+      if (array_get(state, 1) == 1) {
+        ignored = unified_next(source, state)
+        ignored = unified_inline(source, state)
+        if (unified_symbol(source, state) == 61) { document = 1 }
+      }
     }
   }
+  if (body_candidate == 1) {
+    if (unified_symbol(source, state) == 123) { document = 1 }
+  }
+  if (array_get(state, 5) != 0) { document = 0 }
   if (document == 1) {
     array_set(state, 0, attributes_start)
     ignored = unified_next(source, state)
@@ -7811,6 +8101,49 @@ fn unified_emit_statements(source: bytes, data: bytes, code: bytes, state: [i32]
   return 0
 }
 
+fn markup_json_character(data: bytes, position: i32, value: i32) -> i32 {
+  byte_set(data, position, 92)
+  byte_set(data, position + 1, 117)
+  let divisor = 4096
+  let remaining = value
+  let index = position + 2
+  while (divisor > 0) {
+    let digit = remaining / divisor
+    remaining = remaining - digit * divisor
+    let character = digit + 48
+    if (digit > 9) { character = digit + 87 }
+    byte_set(data, index, character)
+    index = index + 1
+    divisor = divisor / 16
+  }
+  return index
+}
+
+fn markup_emit_text(source: bytes, data: bytes, code: bytes, state: [i32], start: i32, size: i32) -> i32 {
+  let saved = array_get(state, 0)
+  array_set(state, 0, start)
+  let begin = array_get(state, 20)
+  let position = begin + 1
+  let finish = start + size
+  byte_set(data, begin, 34)
+  while (array_get(state, 0) < finish) {
+    let value = markup_character(source, state)
+    if (value > 65535) {
+      let supplementary = value - 65536
+      position = markup_json_character(data, position, 55296 + supplementary / 1024)
+      value = 56320 + supplementary - supplementary / 1024 * 1024
+    }
+    position = markup_json_character(data, position, value)
+  }
+  array_set(state, 0, saved)
+  byte_set(data, position, 34)
+  position = position + 1
+  array_set(state, 20, position)
+  let ignored = unified_ins(code, state, 65, begin)
+  ignored = unified_ins(code, state, 65, position - begin)
+  return unified_ins(code, state, 16, 0)
+}
+
 fn unified_emit_expression(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], node: i32) -> i32 {
   let kind = unified_get(nodes, node, 0)
   let a = unified_get(nodes, node, 1)
@@ -7818,6 +8151,9 @@ fn unified_emit_expression(source: bytes, data: bytes, code: bytes, state: [i32]
   let c = unified_get(nodes, node, 3)
   let d = unified_get(nodes, node, 4)
   let ignored = 0
+  if (kind == 15) {
+    return markup_emit_text(source, data, code, state, a, b)
+  }
   if (kind == 1) {
     return unified_emit_name(source, data, code, state, nodes, node)
   }

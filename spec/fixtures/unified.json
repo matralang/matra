@@ -1,5 +1,72 @@
 {
+  "markupDiagnostics": [
+    {"source":"<p></P>","offset":5},
+    {"source":"<p a='1' a='2'/>","offset":9},
+    {"source":"<p>&missing;</p>","offset":3},
+    {"source":"<p a='<'/>","offset":6},
+    {"source":"<p>]]></p>","offset":3},
+    {"source":"<p>","offset":3},
+    {"source":"<p a='x","offset":7},
+    {"source":"<p>\u0000</p>","offset":3},
+    {"source":"<p>日本語😀&bad;</p>","offset":8},
+    {"source":"<p>\n  <b></wrong></p>","offset":11}
+  ],
   "accept": [
+    {
+      "name": "markup empty and paired nodes",
+      "source": "[<hr />, <hr></hr>, hr {}]",
+      "value": [{"tag":"hr","props":{},"children":[]},{"tag":"hr","props":{},"children":[]},{"tag":"hr","props":{},"children":[]}]
+    },
+    {
+      "name": "markup quoted string attributes",
+      "source": "<img src=\"image.png\" width = '640' enabled=\"true\" empty='' />",
+      "value": {"tag":"img","props":{"src":"image.png","width":"640","enabled":"true","empty":""},"children":[]}
+    },
+    {
+      "name": "markup mixed content and whitespace",
+      "source": "<p>Hello <strong>Matra</strong> !\n  <br />\r\n</p>",
+      "value": {"tag":"p","props":{},"children":["Hello ",{"tag":"strong","props":{},"children":["Matra"]}," !\n  ",{"tag":"br","props":{},"children":[]},"\r\n"]}
+    },
+    {
+      "name": "markup content is not program syntax",
+      "source": "<p>if (ready) { run() }; // text\n\"quotes\" 'single' \\ backslash 日本語 😀</p>",
+      "value": {"tag":"p","props":{},"children":["if (ready) { run() }; // text\n\"quotes\" 'single' \\ backslash 日本語 😀"]}
+    },
+    {
+      "name": "markup entities and numeric references",
+      "source": "<p title='&quot;&apos;&lt;&gt;&amp;'>&amp;&lt;&gt;&quot;&apos;&#65;&#x41;&#x1F600;&#9;&#10;&#13;</p>",
+      "value": {"tag":"p","props":{"title":"\"'<>&"},"children":["&<>\"'AA😀\t\n\r"]}
+    },
+    {
+      "name": "markup names namespaces and case",
+      "source": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><use xlink:href=\"#shape\" /><custom-element data-id=\"1\" /><if /><a.b /><_x:y /></svg>",
+      "value": {"tag":"svg","props":{"xmlns":"http://www.w3.org/2000/svg","viewBox":"0 0 10 10"},"children":[{"tag":"use","props":{"xlink:href":"#shape"},"children":[]},{"tag":"custom-element","props":{"data-id":"1"},"children":[]},{"tag":"if","props":{},"children":[]},{"tag":"a.b","props":{},"children":[]},{"tag":"_x:y","props":{},"children":[]}]}
+    },
+    {
+      "name": "markup expressions in calls attributes and arrays",
+      "source": "fn identity(x) { x }\nlet x = identity(<p>(arbitrary) text</p>)\nwrapper(content=<img src='x' />) { x; ...[<hr/>, <br/>] }",
+      "value": {"tag":"wrapper","props":{"content":{"tag":"img","props":{"src":"x"},"children":[]}},"children":[{"tag":"p","props":{},"children":["(arbitrary) text"]},{"tag":"hr","props":{},"children":[]},{"tag":"br","props":{},"children":[]}]}
+    },
+    {
+      "name": "markup and program operator boundaries",
+      "source": "let a = 2\nlet b = 4\n[a<b, a <= b, b>a, b/a, if a<b { <p>yes</p> } else { <p>no</p> }, <p/> == null]",
+      "value": [true,true,true,2,{"tag":"p","props":{},"children":["yes"]},false]
+    },
+    {
+      "name": "markup multiline attributes preserve literal whitespace",
+      "source": "<p\n a\t=\r\n'one\t two\r\nthree'\n>text</p \n>",
+      "value": {"tag":"p","props":{"a":"one\t two\r\nthree"},"children":["text"]}
+    },
+    {
+      "name": "markup reference validity boundaries",
+      "source": "<p>&#32;&#xD7FF;&#xE000;&#xFFFD;&#x10000;&#x10FFFF;</p>",
+      "value": {"tag":"p","props":{},"children":[" ퟿�𐀀􏿿"]}
+    },
+    {
+      "name": "markup prototype shaped names",
+      "source": "<__proto__ __proto__='safe' constructor='data' />",
+      "value": {"tag":"__proto__","props":{"__proto__":"safe","constructor":"data"},"children":[]}
+    },
     {
       "name": "else_if selects first matching branch",
       "source": "if (false) { 1 } else_if (true) { 2 } else_if (true) { 3 } else { 4 }",
@@ -397,6 +464,47 @@
     "module branch\nexport fn answer(n: i32) -> i32 {\nif (n == 0) {} else_if (n == 1) { let else_if = 1 }\nreturn 1\n}"
   ],
   "reject": [
+    "<p>",
+    "<p></P>",
+    "<p><b></p></b>",
+    "<p a='1' a='2' />",
+    "<p a=1 />",
+    "<input disabled />",
+    "<p a='1'b='2' />",
+    "<p / >",
+    "<p a='unterminated",
+    "<p a='<' />",
+    "<p>&unknown;</p>",
+    "<p>&amp</p>",
+    "<p>&#;</p>",
+    "<p>&#x;</p>",
+    "<p>&#X41;</p>",
+    "<p>&#x:;</p>",
+    "<p>&#x?;</p>",
+    "<p>&#-1;</p>",
+    "<p>&#x-1;</p>",
+    "<p>&#xFFFF;</p>",
+    "<p>&#0;</p>",
+    "<p>&#xD800;</p>",
+    "<p>&#xFFFE;</p>",
+    "<p>&#x110000;</p>",
+    "<p>&#99999999999999999999999;</p>",
+    "<p>&#xFFFFFFFFFFFFFFFF;</p>",
+    "<p>\u0000</p>",
+    "<p a='\u0001' />",
+    "<p>]]></p>",
+    "<p><!--comment--></p>",
+    "<p><![CDATA[text]]></p>",
+    "<?xml version='1.0'?><p />",
+    "<!DOCTYPE p><p />",
+    "<p(attrs) />",
+    "<a /><b />",
+    "<br>",
+    "hr /",
+    "<p></p extra>",
+    "<p>1 < 2</p>",
+    "<p a='&unknown;' />",
+    "<1p />",
     "else_if (true) {}",
     "else {}",
     "if true {}; else_if true {}",
