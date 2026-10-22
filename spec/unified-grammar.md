@@ -136,28 +136,45 @@ Shared acceptance, rejection, boundary, and execution tests live in [fixtures/un
 ## XML-style markup
 
 The document profile of ordinary Matra Programs adds XML-style markup expressions.
-This is a compatible extension preserving `tag(attrs) { ... }`, calls, comparisons, and division.
+Existing `tag(attrs) { ... }`, calls, comparisons, and division remain supported.
+The `<>` delimiters make Matra node boundaries explicit; consistency with Matra takes priority over XML compatibility.
 The native compiler-source grammar and ABI are unchanged.
 
 ```matra
 let image = <img src="image.png" />
 <p>Hello <strong>Matra</strong>!</p>
+<a.matra-button href="/spec/">Read the spec</a>
 ```
 
 ```ebnf
-markup = "<", markup-name, { markup-space, markup-attribute }, [ markup-space ],
-         ( "/>" | ">", { markup-text | markup }, "</", markup-name, [ markup-space ], ">" ) ;
+markup = "<", markup-tag, { ".", markup-class }, { markup-space, markup-attribute }, [ markup-space ],
+         ( "/>" | ">", { markup-text | markup }, "</", markup-tag, [ markup-space ], ">" ) ;
 markup-attribute = markup-name, [ markup-space ], "=", [ markup-space ], markup-string ;
 markup-space = ( " " | tab | CR | LF ), { " " | tab | CR | LF } ;
 ```
 
-The character ranges and decoding rules for `markup-name`, quoted `markup-string`, and `markup-text`
+The character ranges and decoding rules for names, quoted `markup-string`, and `markup-text`
 are defined below.
 
 `<tag />` and `<tag></tag>` construct the same empty node. Opening and closing names must match,
 including case. Markup normalizes to the existing node AST without adding a runtime value kind.
-Names match `[A-Za-z_:][A-Za-z0-9_.:-]*`, including reserved words. Namespace names and `xmlns`
-attributes are retained without URI resolution. This is a basic XML syntax subset, not full XML conformance.
+`markup-tag` matches `[A-Za-z_:][A-Za-z0-9_:-]*`, `markup-class` matches `[A-Za-z_][A-Za-z0-9_-]*`,
+and attribute `markup-name` matches `[A-Za-z_:][A-Za-z0-9_.:-]*`; reserved words are allowed.
+Namespace names and `xmlns` attributes are retained without URI resolution.
+
+Opening names support the existing Matra `.class` shorthand. Whitespace, newlines, and comments
+are not allowed between a tag and its classes or around `.`. Closing tags contain only the tag name:
+`</a>`. Self-closing `<hr.divider />` is also accepted. Classes are deduplicated in first-occurrence
+order and joined with spaces, overriding an explicit `class` attribute. Without shorthand, that attribute
+is preserved. For example, `<a.button.primary.button class="other">Link</a>` has class `"button primary"`.
+Shorthand is stored in the existing AST `classes` field and uses existing lowering/runtime behavior.
+
+This is a v0.x breaking change. Previously `<a.b />` had tag `"a.b"`; it now has tag `"a"` and class `"b"`.
+`<a.b></a.b>` is rejected; closing names never select an alternative interpretation.
+Literal dotted tag names cannot be expressed in markup; use MatraJSON or another representation.
+Dots in attribute names are unchanged. Full XML subset/superset compatibility is not guaranteed.
+Affected surfaces are dotted-tag shared fixtures, markup parsers, READMEs, and document examples;
+the native compiler-source grammar and historical archives are unchanged.
 
 Attributes require separating space/tab/CR/LF; these characters are also allowed around `=`.
 Values are single- or double-quoted strings without type inference or expression evaluation.
@@ -179,6 +196,7 @@ XML-style content rules. Adjacent markup expressions still require statement sep
 
 Diagnostics point at the first invalid character, a reference's `&`, a duplicate attribute name,
 or the start of a mismatched closing name. Missing delimiters point at the next invalid character or EOF.
+An empty/invalid class points at the expected class name; `.class` in a closing tag points at its `.`.
 Parsing never falls back to another syntax. Shared fixtures verify execution through TypeScript,
 Rust seed, and compiler Stages 1/2/3.
 

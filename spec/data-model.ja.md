@@ -85,7 +85,9 @@ ASTでは、object形式のnodeとして保持します。
 統一文法の XML-style markup も同じ node を構築します。`<hr />`、`<hr></hr>`、
 `hr {}` は等価です。markup 属性は string、本文は string と子 node になり、文字参照は
 復号します。引用符の種類や自己終了の表記は保持しません。名前空間の名前は string として
-保持し、URI 解決は行いません。詳細は[統一文法](./unified-grammar.ja.md)を参照してください。
+保持し、URI 解決は行いません。`<a.button>Link</a>` の `.button` は tag 名の一部ではなく
+class shorthand で、`a.button { "Link" }` と等価です。
+詳細は[統一文法](./unified-grammar.ja.md)を参照してください。
 
 2つのMatra文書は、tag、propertyのkeyとvalue、child value、childの順序が
 再帰的に等しい場合にdata model上で等価です。propertyのserialize順序は

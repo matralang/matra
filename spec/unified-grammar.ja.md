@@ -134,27 +134,44 @@ let label = if (true) { "yes" } else { "no" }
 ## XML-style markup
 
 一般の Matra Program の文書 profile に、式として XML-style markup を追加する。
-既存の `tag(attrs) { ... }`、call、比較・除算は維持する互換拡張である。
+既存の `tag(attrs) { ... }`、call、比較・除算は維持する。
+`<>` は Matra node の境界を明示するための補助記法であり、XML 互換性より Matra との一貫性を優先する。
 native compiler source の文法・ABI は変更しない。
 
 ```matra
 let image = <img src="image.png" />
 <p>Hello <strong>Matra</strong>!</p>
+<a.matra-button href="/spec/">Read the spec</a>
 ```
 
 ```ebnf
-markup = "<", markup-name, { markup-space, markup-attribute }, [ markup-space ],
-         ( "/>" | ">", { markup-text | markup }, "</", markup-name, [ markup-space ], ">" ) ;
+markup = "<", markup-tag, { ".", markup-class }, { markup-space, markup-attribute }, [ markup-space ],
+         ( "/>" | ">", { markup-text | markup }, "</", markup-tag, [ markup-space ], ">" ) ;
 markup-attribute = markup-name, [ markup-space ], "=", [ markup-space ], markup-string ;
 markup-space = ( " " | tab | CR | LF ), { " " | tab | CR | LF } ;
 ```
 
-`markup-name`、引用符付き `markup-string`、`markup-text` の文字範囲と復号は以下で定義する。
+名前、引用符付き `markup-string`、`markup-text` の文字範囲と復号は以下で定義する。
 
 `<tag />` と `<tag></tag>` は同じ空 node を構築する。開始・終了 tag は大文字小文字も含めて
 一致しなければならない。markup は既存の node AST に正規化し、runtime に別種の値を追加しない。
-名前は `[A-Za-z_:][A-Za-z0-9_.:-]*` とし、予約語も使用できる。名前空間の名前と `xmlns` 属性は
-そのまま保持し、URI 解決は行わない。これは XML 全体への適合ではなく、基本構文の subset である。
+`markup-tag` は `[A-Za-z_:][A-Za-z0-9_:-]*`、`markup-class` は `[A-Za-z_][A-Za-z0-9_-]*`、
+属性名 `markup-name` は `[A-Za-z_:][A-Za-z0-9_.:-]*` とし、予約語も使用できる。
+名前空間の名前と `xmlns` 属性はそのまま保持し、URI 解決は行わない。
+
+開始 tag の `.class` は既存の Matra と同じ class shorthand で、tag と class の間や
+`.` の前後に空白・改行・comment は許可しない。終了 tag は class を含めず `</a>` とする。
+`<hr.divider />` も受理する。class は最初の出現順を保って重複除去し、空白で連結して
+明示した `class` 属性を上書きする。shorthand がなければ明示属性を保持する。
+たとえば `<a.button.primary.button class="other">Link</a>` は class が `"button primary"` になる。
+AST の `classes` に shorthand を保持し、既存の lowering/runtime を使う。
+
+これは v0.x の破壊的変更である。以前の `<a.b />` は tag `"a.b"` だったが、
+今後は tag `"a"`、class `"b"` となる。`<a.b></a.b>` は拒否し、終了名から解釈を推測しない。
+literal なドット付き tag 名は markup で表現できず、MatraJSON などを使用する。
+属性名のドットは変更しない。完全な XML subset / superset であることは保証しない。
+影響範囲は共通 fixtures のドット付き tag、markup parser、README・文書例で、
+native compiler source の文法や過去の archive は変更しない。
 
 属性間には space/tab/CR/LF が必要で、`=` の前後にもこれらの空白を許す。値は単一または
 二重引用符で囲む string とし、型の推測・式評価は行わない。同名属性は拒否する。
@@ -173,6 +190,7 @@ U+10000–10FFFF）に限る。literal の文字にも同じ範囲を適用す�
 隣接する markup 式には既存の文区切りが必要で、`<a /><b />` を暗黙 fragment にはしない。
 
 診断は最初の不正文字・参照の `&`・重複属性名・一致しない終了名の開始位置を指す。
+空・不正な class は class 名を期待する位置、終了 tag の `.class` は `.` を指す。
 不足 delimiter は次の不正文字または EOF を指す。別の構文への fallback はしない。
 共通 fixtures は TypeScript、Rust seed、Stage 1/2/3 の実行結果まで検証する。
 
