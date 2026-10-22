@@ -113,11 +113,15 @@ MatraJSON変換時にpositionは除外します。
 HTMLレンダリングは、独立したworkspaceパッケージから提供します。
 
 ```ts
-import { parse } from "@matra/core"
+import { evaluateStatic, parse, staticValueToAST } from "@matra/core"
 import { toHTML } from "@matra/html"
 
-toHTML(parse('p(class="lead", "Hello")'))
+const ast = staticValueToAST(evaluateStatic(parse('<p.lead>Hello</p>')))
+toHTML(ast)
 ```
+
+静的な文書には markup、式を評価してノードを組み立てる箇所には `tag(attrs) { ... }` を使えます。
+属性型と本文の空白の違いは [HTML パッケージの例](../html/README.ja.md)を参照してください。
 
 関数形式の構文では、propsをPython風のキーワード引数で記述します。
 

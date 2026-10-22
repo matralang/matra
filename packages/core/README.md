@@ -121,11 +121,15 @@ Positions are omitted when converting to MatraJSON.
 HTML rendering is provided by the separate workspace package:
 
 ```ts
-import { parse } from "@matra/core"
+import { evaluateStatic, parse, staticValueToAST } from "@matra/core"
 import { toHTML } from "@matra/html"
 
-toHTML(parse('p(class="lead", "Hello")'))
+const ast = staticValueToAST(evaluateStatic(parse('<p.lead>Hello</p>')))
+toHTML(ast)
 ```
+
+Use markup for static documents and `tag(attrs) { ... }` to construct nodes from expressions.
+See the [HTML package examples](../html/README.md) for differences in attribute types and text whitespace.
 
 Function-style syntax uses Python-like keyword arguments for props:
 

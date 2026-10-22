@@ -318,11 +318,11 @@ section.playground-page {
 
 ```card.matra
 article.matra-frame {
-  p.eyebrow { "MATRA" }
-  h2 { "Structure first." }
-  p { "Edit this source and watch it render." }
-  a.matra-button(href="/spec/") { "Read the spec" }
-  hr{}
+  <p.eyebrow>MATRA</p>
+  <h2>Structure first.</h2>
+  <p>Edit this source and watch it render.</p>
+  <a.matra-button href="/spec/">Read the spec</a>
+  <hr />
 }
 ```
 ````

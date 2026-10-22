@@ -23,10 +23,11 @@ Matra is maintained as a pnpm workspace monorepo. Published packages keep the
 
 Document nodes can also use XML-style markup. Attributes are strings; content consists of text
 and child elements with whitespace preserved. Existing `tag(attrs) { ... }` remains supported.
+The `<>` delimiters make Matra node boundaries explicit and also support `.class` shorthand.
 
 ```matra
 <article>
-  <p>Hello <strong>Matra</strong>!</p>
+  <p.lead>Hello <strong>Matra</strong>!</p>
   <img src="image.png" />
 </article>
 ```

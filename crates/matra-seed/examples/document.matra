@@ -1,7 +1,7 @@
 fn label(value) { return value + "!" }
-let title = "Matra"
+let heading = <h1>Matra</h1>
 article.card.card(lang="ja") {
-  h1 { title }
+  heading
   ul {
     ...for (item in ["文書", "関数", "Wasm"]) {
       li { label(item) }

@@ -26,10 +26,11 @@ HTML、Math、Graphics、実行環境統合などのdomain-specificな責務を�
 
 文書ノードは XML-style markup としても記述できます。属性は文字列、本文は text と子要素として
 解釈し、空白を保持します。既存の `tag(attrs) { ... }` も引き続き使用できます。
+`<>` は Matra node の境界を明示する補助記法で、`.class` shorthand も使用できます。
 
 ```matra
 <article>
-  <p>Hello <strong>Matra</strong>!</p>
+  <p.lead>Hello <strong>Matra</strong>!</p>
   <img src="image.png" />
 </article>
 ```
