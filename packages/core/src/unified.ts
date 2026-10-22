@@ -341,18 +341,7 @@ class UnifiedParser {
     const name = this.word("Expected an expression")
     const checkpoint = this.index; const classes: string[] = []
     while (this.consume(".")) classes.push(this.word("Expected a class name", true))
-    let cursor = this.index
-    if (this.at("(")) {
-      cursor++
-      while (this.token(cursor).kind === "newline") cursor++
-      if (this.token(cursor).value === ")" && this.token(cursor).kind === "symbol") cursor++
-      else if (this.token(cursor).kind === "word") {
-        let next = cursor + 1
-        while (this.token(next).kind === "newline") next++
-        if (this.token(next).kind === "symbol" && this.token(next).value === "=") cursor = -1
-      }
-    }
-    if (!this.bareHeader && (cursor === -1 || this.token(cursor).kind === "symbol" && this.token(cursor).value === "{")) {
+    if (this.startsNode()) {
       const attributes = this.consume("(") ? this.list(")", () => {
         const key = this.word("Expected an attribute name", true); this.trivia(); this.expect("=")
         return { key, value: this.expression() }
@@ -361,6 +350,25 @@ class UnifiedParser {
     }
     this.index = checkpoint
     return { kind: "reference", name }
+  }
+  private startsNode(): boolean {
+    if (this.bareHeader) return false
+    if (this.at("{")) return true
+    if (!this.at("(")) return false
+
+    let cursor = this.index + 1
+    while (this.token(cursor).kind === "newline") cursor++
+    const first = this.token(cursor)
+    if (first.kind === "symbol" && first.value === ")") {
+      const following = this.token(cursor + 1)
+      return following.kind === "symbol" && following.value === "{"
+    }
+    if (first.kind !== "word") return false
+
+    cursor++
+    while (this.token(cursor).kind === "newline") cursor++
+    const following = this.token(cursor)
+    return following.kind === "symbol" && following.value === "="
   }
   private list<T>(end: string, item: () => T): T[] {
     return this.nested(() => {
@@ -424,12 +432,17 @@ class MarkupParser {
   constructor(private readonly source: string, public offset: number) {}
   node(): UnifiedExpression {
     this.expect("<")
-    const tag = this.name()
+    const tag = this.name("tag")
+    const classes: string[] = []
+    while (this.take(".")) {
+      const name = this.name("class")
+      if (!classes.includes(name)) classes.push(name)
+    }
     const attributes: { key: string, value: UnifiedExpression }[] = []
     const keys = new Set<string>()
     while (true) {
       const separated = this.whitespace()
-      if (this.take("/>")) return { kind: "node", tag, classes: [], attributes, body: [] }
+      if (this.take("/>")) return { kind: "node", tag, classes, attributes, body: [] }
       if (this.take(">")) break
       if (!separated) this.fail("Expected whitespace or tag delimiter")
       const start = this.offset
@@ -451,9 +464,9 @@ class MarkupParser {
       body.push({ kind: "expression", expression })
     }
     const start = this.offset
-    if (this.name() !== tag) this.fail(`Expected closing tag '${tag}'`, start)
+    if (this.name("tag") !== tag) this.fail(`Expected closing tag '${tag}'`, start)
     this.whitespace(); this.expect(">")
-    return { kind: "node", tag, classes: [], attributes, body }
+    return { kind: "node", tag, classes, attributes, body }
   }
   private text(end: string): string {
     let value = ""
@@ -486,8 +499,10 @@ class MarkupParser {
     if (!(code === 9 || code === 10 || code === 13 || code >= 0x20 && code <= 0xd7ff ||
       code >= 0xe000 && code <= 0xfffd || code >= 0x10000 && code <= 0x10ffff)) this.fail("Invalid XML character")
   }
-  private name(): string {
-    const name = this.source.slice(this.offset).match(/^[A-Za-z_:][A-Za-z0-9_.:-]*/)
+  private name(kind: "tag" | "class" | "attribute" = "attribute"): string {
+    const pattern = kind === "tag" ? /^[A-Za-z_:][A-Za-z0-9_:-]*/ :
+      kind === "class" ? /^[A-Za-z_][A-Za-z0-9_-]*/ : /^[A-Za-z_:][A-Za-z0-9_.:-]*/
+    const name = this.source.slice(this.offset).match(pattern)
     if (!name) this.fail("Expected a markup name")
     this.offset += name[0].length
     return name[0]

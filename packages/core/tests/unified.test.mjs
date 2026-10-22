@@ -6,6 +6,15 @@ import { EvaluationRequiredError, evaluateStatic, evaluateUnified, parse, parseU
 const conformance = JSON.parse(await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"))
 
 describe("unified Matra parser", () => {
+  it("normalizes markup class shorthand to existing Matra node syntax", () => {
+    const markup = parseUnified('<a.button.primary.button class="other" href="/spec/">Link</a>')
+    assert.deepEqual(markup, parseUnified('a.button.primary.button(class="other", href="/spec/") { "Link" }'))
+    assert.deepEqual(evaluateStatic(markup), {
+      tag: "a", props: { class: "button primary", href: "/spec/" }, children: ["Link"],
+    })
+    assert.deepEqual(parseUnified("<hr.divider />"), parseUnified("hr.divider {}"))
+  })
+
   it("normalizes markup to existing node syntax and retrieves it statically", () => {
     const markup = parseUnified('<p title="A &amp; B">Hello <strong>Matra</strong>!</p>')
     assert.deepEqual(markup, parseUnified('p(title="A & B") { "Hello "; strong { "Matra" }; "!" }'))
@@ -21,6 +30,37 @@ describe("unified Matra parser", () => {
   it("keeps multiline Matra attributes distinct from calls", () => {
     assert.deepEqual(evaluateStatic(parseUnified('p(\n title\n = "ok"\n) {}')), {
       tag: "p", props: { title: "ok" }, children: [],
+    })
+
+    it("keeps node-header lookahead out of markup content", () => {
+      const module = parseUnified(`fn identity(x) { x }
+[
+    identity(<p>unbalanced ( and // text</p>),
+    wrapper(
+      content
+      = <p>unbalanced ) and "text"</p>
+    ) {},
+    empty() {},
+    if true { <hr /> }
+]`)
+      assert.deepEqual(evaluateUnified(module), [
+        { tag: "p", props: {}, children: ["unbalanced ( and // text"] },
+        { tag: "wrapper", props: { content: { tag: "p", props: {}, children: ['unbalanced ) and "text"'] } }, children: [] },
+        { tag: "empty", props: {}, children: [] },
+        { tag: "hr", props: {}, children: [] },
+      ])
+    })
+
+    it("preserves the executable document example after markup refinement", async () => {
+      const source = await readFile(new URL("../../../crates/matra-seed/examples/document.matra", import.meta.url), "utf8")
+      assert.deepEqual(evaluateUnified(parseUnified(source)), {
+        tag: "article", props: { lang: "ja", class: "card" }, children: [
+          { tag: "h1", props: {}, children: ["Matra"] },
+          { tag: "ul", props: {}, children: ["文書", "関数", "Wasm"].map(value => ({
+            tag: "li", props: {}, children: [`${value}!`],
+          })) },
+        ],
+      })
     })
   })
   it("uses the unified grammar through the default parser", () => {

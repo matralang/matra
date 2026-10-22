@@ -6988,11 +6988,14 @@ fn markup_expect(source: bytes, state: [i32], character: i32) -> i32 {
   return 1
 }
 
-fn markup_name(source: bytes, state: [i32], nodes: [i32]) -> i32 {
+// mode: 0 は属性名、1 は tag、2 は class shorthand。
+fn markup_name(source: bytes, state: [i32], nodes: [i32], mode: i32) -> i32 {
   let start = array_get(state, 0)
   let character = markup_byte(source, start)
   let accepted = is_identifier(character)
-  if (character == 58) { accepted = 1 }
+  if (mode != 2) {
+    if (character == 58) { accepted = 1 }
+  }
   if (accepted == 0) { return markup_error(state, start) }
   let position = start + 1
   let scanning = 1
@@ -7000,9 +7003,13 @@ fn markup_name(source: bytes, state: [i32], nodes: [i32]) -> i32 {
     character = markup_byte(source, position)
     scanning = is_identifier(character)
     if (is_digit(character) == 1) { scanning = 1 }
-    if (character == 58) { scanning = 1 }
+    if (mode != 2) {
+      if (character == 58) { scanning = 1 }
+    }
     if (character == 45) { scanning = 1 }
-    if (character == 46) { scanning = 1 }
+    if (mode == 0) {
+      if (character == 46) { scanning = 1 }
+    }
     if (scanning == 1) { position = position + 1 }
   }
   array_set(state, 0, position)
@@ -7167,7 +7174,18 @@ fn markup_text(source: bytes, state: [i32], nodes: [i32], end: i32) -> i32 {
 
 fn markup_node(source: bytes, state: [i32], nodes: [i32]) -> i32 {
   let ignored = markup_expect(source, state, 60)
-  let name = markup_name(source, state, nodes)
+  let name = markup_name(source, state, nodes, 1)
+  let classes = 0
+  let class_tail = 0
+  while (array_get(state, 9) == 0) {
+    let class_position = array_get(state, 0)
+    if (markup_byte(source, class_position) != 46) { break }
+    array_set(state, 0, class_position + 1)
+    let class_name = markup_name(source, state, nodes, 2)
+    if (classes == 0) { classes = class_name }
+    else { array_set(nodes, class_tail * 8 + 5, class_name) }
+    class_tail = class_name
+  }
   let attributes = 0
   let tail = 0
   let empty = 0
@@ -7186,7 +7204,7 @@ fn markup_node(source: bytes, state: [i32], nodes: [i32]) -> i32 {
       break
     }
     if (separated == 0) { return markup_error(state, position) }
-    let key = markup_name(source, state, nodes)
+    let key = markup_name(source, state, nodes, 0)
     if (array_get(state, 9) != 0) { return 0 }
     let current = attributes
     while (current != 0) {
@@ -7222,7 +7240,7 @@ fn markup_node(source: bytes, state: [i32], nodes: [i32]) -> i32 {
       if (content_byte == 60) {
         if (markup_byte(source, content_position + 1) == 47) {
           array_set(state, 0, content_position + 2)
-          let closing = markup_name(source, state, nodes)
+          let closing = markup_name(source, state, nodes, 1)
           if (array_get(state, 9) != 0) { return 0 }
           if (unified_same_name(source, nodes, name, closing) == 0) {
             return markup_error(state, content_position + 2)
@@ -7241,7 +7259,7 @@ fn markup_node(source: bytes, state: [i32], nodes: [i32]) -> i32 {
       body_tail = statement
     }
   }
-  return unified_node(state, nodes, 9, name, 0, attributes, body)
+  return unified_node(state, nodes, 9, name, classes, attributes, body)
 }
 
 fn unified_primary(source: bytes, state: [i32], nodes: [i32]) -> i32 {

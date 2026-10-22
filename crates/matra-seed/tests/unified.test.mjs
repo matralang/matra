@@ -22,6 +22,18 @@ async function compile(source, extension = "matra", entry) {
 }
 async function run(source) { return (await instantiateUnified(await compile(source))).run() }
 
+test("unified seed preserves the mixed markup document example", async () => {
+  const source = await readFile(new URL("../examples/document.matra", import.meta.url), "utf8")
+  assert.deepEqual(await run(source), {
+    tag: "article", props: { lang: "ja", class: "card" }, children: [
+      { tag: "h1", props: {}, children: ["Matra"] },
+      { tag: "ul", props: {}, children: ["文書", "関数", "Wasm"].map(value => ({
+        tag: "li", props: {}, children: [`${value}!`],
+      })) },
+    ],
+  })
+})
+
 test("unified seed executes documents, member access, classes and data", async () => {
   assert.deepEqual(await run(`let page = {title: "日本語", url: "/"}
 article.card.card(lang="ja", options={theme: "dark"}, series=[10, 20]) {

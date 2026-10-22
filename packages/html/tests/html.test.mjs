@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { readFile } from "node:fs/promises"
 import { describe, it } from "node:test"
 import { evaluateStatic, parse, staticValueToAST } from "@matra/core"
 
@@ -32,6 +33,31 @@ describe("@matra/html", () => {
       toHTML(parseStaticDocument(source)),
       '<article><p title="A &amp; B">Hello <strong>Matra</strong> &lt;3</p><img src="image.png"></article>',
     )
+  })
+
+  it("renders class shorthand through the existing node semantics", () => {
+    assert.equal(
+      toHTML(parseStaticDocument('<a.matra-button.primary.matra-button href="/spec/" class="ignored">Read the spec</a>')),
+      '<a href="/spec/" class="matra-button primary">Read the spec</a>',
+    )
+    assert.equal(toHTML(parseStaticDocument("<hr.divider />")), '<hr class="divider">')
+  })
+
+  it("preserves the Playground card AST and output after markup refinement", async () => {
+    const markdown = await readFile(new URL("../../../apps/website/src/pages/play.md", import.meta.url), "utf8")
+    const source = markdown.match(/```card\.matra\n([\s\S]*?)\n```/)?.[1]
+    assert.ok(source)
+    const previous = `article.matra-frame {
+  p.eyebrow { "MATRA" }
+  h2 { "Structure first." }
+  p { "Edit this source and watch it render." }
+  a.matra-button(href="/spec/") { "Read the spec" }
+  hr {}
+}`
+    assert.deepEqual(parseStaticDocument(source), parseStaticDocument(previous))
+    for (const options of [{}, { pretty: true }, { basePath: "/website/" }]) {
+      assert.equal(toHTML(parseStaticDocument(source), options), toHTML(parseStaticDocument(previous), options))
+    }
   })
 
   it("preserves inline script content", () => {

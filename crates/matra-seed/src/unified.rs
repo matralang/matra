@@ -121,6 +121,12 @@ enum Kind {
     End,
     Invalid,
 }
+#[derive(Clone, Copy, PartialEq)]
+enum MarkupName {
+    Tag,
+    Class,
+    Attribute,
+}
 #[derive(Debug, Clone)]
 struct Token {
     kind: Kind,
@@ -756,20 +762,21 @@ impl Parser<'_> {
         Ok(())
     }
 
-    fn markup_name(&self, offset: &mut usize) -> Result<String, CompileError> {
+    fn markup_name(&self, offset: &mut usize, kind: MarkupName) -> Result<String, CompileError> {
         let start = *offset;
         let bytes = self.source.as_bytes();
-        if !bytes
-            .get(*offset)
-            .is_some_and(|b| b.is_ascii_alphabetic() || matches!(b, b'_' | b':'))
-        {
+        if !bytes.get(*offset).is_some_and(|b| {
+            b.is_ascii_alphabetic() || *b == b'_' || *b == b':' && kind != MarkupName::Class
+        }) {
             return Err(error(self.source, *offset, "Expected a markup name"));
         }
         *offset += 1;
-        while bytes
-            .get(*offset)
-            .is_some_and(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b':' | b'.' | b'-'))
-        {
+        while bytes.get(*offset).is_some_and(|b| {
+            b.is_ascii_alphanumeric()
+                || matches!(b, b'_' | b'-')
+                || *b == b':' && kind != MarkupName::Class
+                || *b == b'.' && kind == MarkupName::Attribute
+        }) {
             *offset += 1;
         }
         Ok(self.source[start..*offset].into())
@@ -826,7 +833,15 @@ impl Parser<'_> {
 
     fn markup(&self, offset: &mut usize) -> Result<Expr, CompileError> {
         self.markup_expect(offset, "<")?;
-        let tag = self.markup_name(offset)?;
+        let tag = self.markup_name(offset, MarkupName::Tag)?;
+        let mut classes = Vec::new();
+        while self.source[*offset..].starts_with('.') {
+            *offset += 1;
+            let name = self.markup_name(offset, MarkupName::Class)?;
+            if !classes.contains(&name) {
+                classes.push(name);
+            }
+        }
         let mut attributes = Vec::new();
         let mut names = std::collections::HashSet::new();
         let empty = loop {
@@ -847,7 +862,7 @@ impl Parser<'_> {
                 ));
             }
             let start = *offset;
-            let name = self.markup_name(offset)?;
+            let name = self.markup_name(offset, MarkupName::Attribute)?;
             if !names.insert(name.clone()) {
                 return Err(error(self.source, start, "Duplicate markup attribute"));
             }
@@ -882,7 +897,7 @@ impl Parser<'_> {
                 if rest.starts_with("</") {
                     *offset += 2;
                     let start = *offset;
-                    if self.markup_name(offset)? != tag {
+                    if self.markup_name(offset, MarkupName::Tag)? != tag {
                         return Err(error(self.source, start, "Mismatched closing markup name"));
                     }
                     self.markup_space(offset);
@@ -912,7 +927,7 @@ impl Parser<'_> {
         }
         Ok(Expr::Node {
             tag,
-            classes: Vec::new(),
+            classes,
             attributes,
             body,
         })
@@ -1035,16 +1050,16 @@ mod tests {
     fn markup_preserves_raw_text_and_decodes_attributes_and_children() {
         let text = " \r\n\t\"'{} // 日本語\\ @ ` $ ";
         let source = format!(
-            "<ns:if.a-b _x = '1' xmlns:ns=\"urn:x\" class='a' q=\"&quot;&apos;&amp;&lt;&gt;&#65;&#x1F600;\">{text}<:child/>tail&amp;&#13;&#10;</ns:if.a-b>"
+            "<ns:if.a-b _x = '1' xmlns:ns=\"urn:x\" class='a' q=\"&quot;&apos;&amp;&lt;&gt;&#65;&#x1F600;\">{text}<:child/>tail&amp;&#13;&#10;</ns:if>"
         );
         assert_eq!(
             static_value(&source),
             Value::Node {
-                tag: "ns:if.a-b".into(),
+                tag: "ns:if".into(),
                 props: vec![
                     ("_x".into(), Value::String("1".into())),
                     ("xmlns:ns".into(), Value::String("urn:x".into())),
-                    ("class".into(), Value::String("a".into())),
+                    ("class".into(), Value::String("a-b".into())),
                     ("q".into(), Value::String("\"'&<>A😀".into())),
                 ],
                 children: vec![
@@ -1069,6 +1084,40 @@ mod tests {
         );
         let valid = "\t\n\r \u{D7FF}\u{E000}\u{FFFD}\u{10000}\u{10FFFF}";
         assert!(parse(&format!("<p>{valid}</p>")).is_ok());
+    }
+
+    #[test]
+    fn markup_classes_reuse_existing_ast_and_static_semantics() {
+        assert_eq!(
+            parse("<a.button.primary.button class='other'>Link</a>").unwrap(),
+            parse("a.button.primary.button(class=\"other\") { \"Link\" }").unwrap()
+        );
+        assert_eq!(
+            static_value("<a.button.primary.button class='other'>Link</a>"),
+            Value::Node {
+                tag: "a".into(),
+                props: vec![("class".into(), Value::String("button primary".into()))],
+                children: vec![Value::String("Link".into())],
+            }
+        );
+        assert_eq!(
+            parse("<hr.divider />").unwrap(),
+            parse("hr.divider {}").unwrap()
+        );
+        for (source, offset) in [
+            ("<a. />", 3),
+            ("<a..button />", 3),
+            ("<a.1button />", 3),
+            ("<a.button></a.button>", 13),
+            ("<a .button />", 3),
+            ("<a.button></b>", 12),
+        ] {
+            let diagnostic = parse(source).unwrap_err().to_string();
+            assert!(
+                diagnostic.contains(&format!("offset {offset} ")),
+                "{source}: {diagnostic}"
+            );
+        }
     }
 
     #[test]

@@ -1,5 +1,13 @@
 {
   "markupDiagnostics": [
+    {"source":"<a. />","offset":3},
+    {"source":"<a..button />","offset":3},
+    {"source":"<a.1button />","offset":3},
+    {"source":"<a.button></a.button>","offset":13},
+    {"source":"<a .button />","offset":3},
+    {"source":"<a.button></b>","offset":12},
+    {"source":"<a.button","offset":9},
+    {"source":"<a.\nbutton />","offset":3},
     {"source":"<p></P>","offset":5},
     {"source":"<p a='1' a='2'/>","offset":9},
     {"source":"<p>&missing;</p>","offset":3},
@@ -12,6 +20,31 @@
     {"source":"<p>\n  <b></wrong></p>","offset":11}
   ],
   "accept": [
+    {
+      "name": "markup Matra class shorthand and base closing tag",
+      "source": "<a.matra-button href=\"/spec/\">Read the spec</a>",
+      "value": {"tag":"a","props":{"href":"/spec/","class":"matra-button"},"children":["Read the spec"]}
+    },
+    {
+      "name": "markup class deduplication and explicit class precedence",
+      "source": "[<a.button.primary.button class='other'>Link</a>, <a class='other'>Link</a>, a.button.primary.button(class=\"other\") { \"Link\" }]",
+      "value": [{"tag":"a","props":{"class":"button primary"},"children":["Link"]},{"tag":"a","props":{"class":"other"},"children":["Link"]},{"tag":"a","props":{"class":"button primary"},"children":["Link"]}]
+    },
+    {
+      "name": "markup nested and empty shorthand with namespaces",
+      "source": "<svg:svg.canvas viewBox='0 0 10 10'><svg:circle.dot r='2'/><hr.divider/><p.if.else_if._private.A1.a-b>text</p></svg:svg>",
+      "value": {"tag":"svg:svg","props":{"viewBox":"0 0 10 10","class":"canvas"},"children":[{"tag":"svg:circle","props":{"r":"2","class":"dot"},"children":[]},{"tag":"hr","props":{"class":"divider"},"children":[]},{"tag":"p","props":{"class":"if else_if _private A1 a-b"},"children":["text"]}]}
+    },
+    {
+      "name": "markup dotted attributes remain literal and class order is retained",
+      "source": "<p.z.a.z.A data.value='1' class='ignored' xlink:href='#x' />",
+      "value": {"tag":"p","props":{"data.value":"1","class":"z a A","xlink:href":"#x"},"children":[]}
+    },
+    {
+      "name": "markup shorthand does not change text or attribute values",
+      "source": "fn identity(value) { value }\nlet node = identity(<p.note title='a.b'>a.b <em.strong>c.d</em></p>)\n[node, 1 < 2, 4 / 2]",
+      "value": [{"tag":"p","props":{"title":"a.b","class":"note"},"children":["a.b ",{"tag":"em","props":{"class":"strong"},"children":["c.d"]}]},true,2]
+    },
     {
       "name": "markup empty and paired nodes",
       "source": "[<hr />, <hr></hr>, hr {}]",
@@ -40,7 +73,7 @@
     {
       "name": "markup names namespaces and case",
       "source": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><use xlink:href=\"#shape\" /><custom-element data-id=\"1\" /><if /><a.b /><_x:y /></svg>",
-      "value": {"tag":"svg","props":{"xmlns":"http://www.w3.org/2000/svg","viewBox":"0 0 10 10"},"children":[{"tag":"use","props":{"xlink:href":"#shape"},"children":[]},{"tag":"custom-element","props":{"data-id":"1"},"children":[]},{"tag":"if","props":{},"children":[]},{"tag":"a.b","props":{},"children":[]},{"tag":"_x:y","props":{},"children":[]}]}
+      "value": {"tag":"svg","props":{"xmlns":"http://www.w3.org/2000/svg","viewBox":"0 0 10 10"},"children":[{"tag":"use","props":{"xlink:href":"#shape"},"children":[]},{"tag":"custom-element","props":{"data-id":"1"},"children":[]},{"tag":"if","props":{},"children":[]},{"tag":"a","props":{"class":"b"},"children":[]},{"tag":"_x:y","props":{},"children":[]}]}
     },
     {
       "name": "markup expressions in calls attributes and arrays",
@@ -464,6 +497,21 @@
     "module branch\nexport fn answer(n: i32) -> i32 {\nif (n == 0) {} else_if (n == 1) { let else_if = 1 }\nreturn 1\n}"
   ],
   "reject": [
+    "<a.button></a.button>",
+    "<a.b></a.c>",
+    "<a. />",
+    "<a..button />",
+    "<a.1button />",
+    "<a.-button />",
+    "<a.:button />",
+    "<a.button:other />",
+    "<a .button />",
+    "<a.button .primary />",
+    "<a.\nbutton />",
+    "<a.//comment\nbutton />",
+    "<a.button></b>",
+    "<a.button",
+    "<a.button class='x' class='y' />",
     "<p>",
     "<p></P>",
     "<p><b></p></b>",
