@@ -51,4 +51,7 @@ Matra bootstrap compiler status.
 pnpm install
 pnpm run build
 pnpm test
+pnpm run lint
 ```
+
+Biome formats JavaScript, TypeScript, JSON, and CSS files. Run `pnpm run format` to format them.

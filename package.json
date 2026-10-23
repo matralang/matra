@@ -8,13 +8,16 @@
     "bootstrap:artifact": "node crates/matra-seed/host/materialize.mjs",
     "bootstrap:verify": "node crates/matra-seed/host/verify-self-host.mjs",
     "check": "pnpm run build && pnpm -r --if-present run check",
-    "lint": "pnpm run check && pnpm run lint:markdown",
+    "lint": "pnpm run check && pnpm run lint:biome && pnpm run lint:markdown",
+    "lint:biome": "biome lint .",
     "lint:markdown": "markdownlint-cli2 '**/*.md'",
+    "format": "biome format --write .",
     "test": "pnpm -r --if-present run test && pnpm run test:seed",
     "test:seed": "cargo test --manifest-path crates/matra-seed/Cargo.toml && node --test crates/matra-seed/tests/*.test.mjs",
     "typecheck": "pnpm -r --if-present run check"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.6.2",
     "markdownlint-cli2": "^0.23.2"
   }
 }

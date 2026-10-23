@@ -54,6 +54,8 @@ Rust seed compilerとMatra製bootstrap compilerの開発状況は
 pnpm install
 pnpm run build
 pnpm test
+pnpm run lint
 ```
 
 英語文書は`name.md`、対応する日本語文書は`name.ja.md`とします。
+JavaScript / TypeScriptなどのformatにはBiomeを使用します。`pnpm run format`でformatできます。
