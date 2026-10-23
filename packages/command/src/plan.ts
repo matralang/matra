@@ -212,7 +212,16 @@ function topologicalSort(commands: CommandSpec[]): CommandSpec[] {
       )
     if (current === "visited") return
     state.set(command.id, "visiting")
-    for (const dependency of command.requires) visit(byName.get(dependency)!)
+    for (const dependency of command.requires) {
+      const dependencyCommand = byName.get(dependency)
+      if (!dependencyCommand) {
+        throw new CommandValidationError(
+          `Unknown dependency ${dependency} required by ${command.id}`,
+          command.position,
+        )
+      }
+      visit(dependencyCommand)
+    }
     state.set(command.id, "visited")
     output.push(command)
   }

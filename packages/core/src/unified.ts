@@ -649,7 +649,11 @@ class UnifiedParser {
   private token(index: number): Token {
     while (index >= this.tokens.length) {
       const token = this.lexer.next().value
-      if (!token) return this.tokens.at(-1)!
+      if (!token) {
+        const lastToken = this.tokens.at(-1)
+        if (lastToken) return lastToken
+        throw new Error("Lexer ended before producing a token")
+      }
       this.tokens.push(token)
     }
     return this.tokens[index]
@@ -804,7 +808,8 @@ class MarkupParser {
         if (end !== "<" && this.source[start] === "<") this.fail("Unexpected '<' in attribute")
         if (end === "<" && this.source.startsWith("]]>", start))
           this.fail("Unexpected ']]>' in text")
-        const code = this.source.codePointAt(start)!
+        const code = this.source.codePointAt(start)
+        if (code === undefined) this.fail("Unexpected end of input")
         this.character(code)
         const character = String.fromCodePoint(code)
         value += character

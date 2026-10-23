@@ -411,10 +411,13 @@ async function handler() {
       const document = extractMatraMarkdown(markdown, { entry: pageEntry })
       const metadata =
         document.kind === "matra" ? extractPageMetadata(markdown, filePath) : undefined
-      const source =
-        document.kind === "matra.ts"
-          ? await executeMatraModule(document.source, filePath)
-          : pageLayout({ ...metadata!, content: document.source })
+      let source: string
+      if (document.kind === "matra.ts") {
+        source = await executeMatraModule(document.source, filePath)
+      } else {
+        if (!metadata) throw new Error(`Page metadata is required for ${filePath}`)
+        source = pageLayout({ ...metadata, content: document.source })
+      }
       const outRel = toOutputPath(pagesDir, filePath)
       const outputPath = path.join(outputDir, outRel)
       const outDir = path.dirname(outputPath)
