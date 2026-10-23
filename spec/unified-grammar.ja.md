@@ -67,6 +67,28 @@ class shorthand があれば、重複除去した名前を空白で結合し、�
 shorthand がなければ明示した class 属性をそのまま保持する。
 通常の関数へ後置 block を渡す構文は v0.3 では受理しない。
 
+ノードの丸括弧内の属性は、カンマに加えて空白・改行でも区切れる。
+これは一般の Matra Program の文書 profile を対象とする互換拡張であり、native compiler source は変更しない。
+属性値は文字列に限らず従来の完全な式として解析し、次の `属性名 =` が次属性を開始する。
+カンマ省略時は次属性名の直前に space/tab/CR/LF が必要で、属性名と `=` の間には
+空白・改行・line comment を許す。line comment の後の LF も属性の区切りに使える。
+カンマと空白区切りは混在可能だが、末尾カンマは引き続き拒否する。
+関数引数・parameter・array・object のカンマは省略できず、markup 属性の規則も変更しない。
+
+```ebnf
+node-attributes = attribute, { ( "," | attribute-space ), attribute } ;
+attribute = identifier, "=", expression ;
+attribute-space = ( " " | tab | CR | LF ), { " " | tab | CR | LF } ;
+```
+
+EBNF の whitespace は通常の token 間の trivia と併せて解釈する。
+受理例: `img(src="image.png" alt="画像") {}`、
+`p(title="Hello " + name lang="ja", count=1 + 2) {}`。
+拒否例: `p(a="x"b="y") {}`、`p(a=1 2) {}`、`f(1 2)`、`[1 2]`、`{a: 1 b: 2}`。
+空白のない次属性は属性名の開始、値のない属性は次 token または EOF を指す構文エラーとする。
+AST・属性の評価順・重複 key の後勝ち・class 優先規則・値モデルは変更しない。
+共通 fixtures で受理・拒否・式と属性の境界・実行結果を全 Stage で検証する。
+
 ```matra
 fn rational(n, d) { {numerator: n, denominator: d} }
 let (value = rational(3, 5))

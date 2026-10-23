@@ -67,6 +67,29 @@ When class shorthand is present, its deduplicated names joined by spaces overwri
 Without shorthand, the explicit class attribute is retained unchanged.
 Passing a trailing block to an ordinary function is not accepted in v0.3.
 
+Parenthesized node attributes may be separated by whitespace/newlines as well as commas.
+This compatible extension applies to the document profile of ordinary Matra Programs;
+the native compiler-source grammar is unchanged. Values remain complete expressions, not just strings.
+The next `attribute-name =` starts the next attribute. When omitting a comma, space/tab/CR/LF must
+immediately precede the next attribute name. Whitespace, newlines, and line comments are allowed between
+the name and `=`. The LF after a line comment may separate attributes.
+Comma and whitespace separators may be mixed; trailing commas remain rejected.
+Commas remain required in calls, parameters, arrays, and objects. Markup attributes are unchanged.
+
+```ebnf
+node-attributes = attribute, { ( "," | attribute-space ), attribute } ;
+attribute = identifier, "=", expression ;
+attribute-space = ( " " | tab | CR | LF ), { " " | tab | CR | LF } ;
+```
+
+Interpret EBNF whitespace together with ordinary inter-token trivia.
+Accepted: `img(src="image.png" alt="image") {}`,
+`p(title="Hello " + name lang="ja", count=1 + 2) {}`.
+Rejected: `p(a="x"b="y") {}`, `p(a=1 2) {}`, `f(1 2)`, `[1 2]`, `{a: 1 b: 2}`.
+A missing separator points at the next attribute name; a missing value points at the next token or EOF.
+The AST, evaluation order, last-key-wins behavior, class precedence, and value model are unchanged.
+Shared fixtures verify acceptance, rejection, expression boundaries, and execution across all Stages.
+
 ```matra
 fn rational(n, d) { {numerator: n, denominator: d} }
 let (value = rational(3, 5))

@@ -21,6 +21,41 @@
   ],
   "accept": [
     {
+      "name": "node attributes use HTML-like whitespace separators",
+      "source": "img(src=\"image.png\" alt=\"画像\" width=640 enabled=true missing=null) {}",
+      "value": {"tag":"img","props":{"src":"image.png","alt":"画像","width":640,"enabled":true,"missing":null},"children":[]}
+    },
+    {
+      "name": "node attributes mix commas whitespace and multiline equals",
+      "source": "p(\n a\n = 1\tb=2,\n c=3\r\n d // equals\n = 4 // separator\n e=5) {}",
+      "value": {"tag":"p","props":{"a":1,"b":2,"c":3,"d":4,"e":5},"children":[]}
+    },
+    {
+      "name": "node attribute values consume complete expressions",
+      "source": "fn label(x) { \"Hello \" + x }\nlet name = \"Matra\"\nlet page = {url: \"/spec/\"}\na(title=\"Hello \" + name href=page.url count=1 + 2 * 3 label=label(name) ready=1 < 2 && true) {}",
+      "value": {"tag":"a","props":{"title":"Hello Matra","href":"/spec/","count":7,"label":"Hello Matra","ready":true},"children":[]}
+    },
+    {
+      "name": "node attribute delimiters preserve nested JSON and markup",
+      "source": "p(options={title: \"Matra\", tags: [\"HTML\", \"JSON\"]} rows=[1, 2] child=<a.button href='/'>Hi</a> nested=span(title=\"x\" lang=\"ja\") {}) {}",
+      "value": {"tag":"p","props":{"options":{"title":"Matra","tags":["HTML","JSON"]},"rows":[1,2],"child":{"tag":"a","props":{"href":"/","class":"button"},"children":["Hi"]},"nested":{"tag":"span","props":{"title":"x","lang":"ja"},"children":[]}},"children":[]}
+    },
+    {
+      "name": "node attribute evaluation order duplicates and class precedence",
+      "source": "let n=0\nfn next() { n=n+1; n }\np.card(a=next() a=next() b=next() class=\"other\") { n }",
+      "value": {"tag":"p","props":{"a":2,"b":3,"class":"card"},"children":[3]}
+    },
+    {
+      "name": "node attributes include control expressions and reserved names",
+      "source": "p(for=if true { \"yes\" } else { \"no\" } if=for x in [1, 2] { x * 2 } title=\"x\") {}",
+      "value": {"tag":"p","props":{"for":"yes","if":[2,4],"title":"x"},"children":[]}
+    },
+    {
+      "name": "node attributes separate after grouping unary and empty calls",
+      "source": "fn f() { 3 }\np(a=(1 + 2) b=-2 c=!false d=f()) {}",
+      "value": {"tag":"p","props":{"a":3,"b":-2,"c":true,"d":3},"children":[]}
+    },
+    {
       "name": "markup Matra class shorthand and base closing tag",
       "source": "<a.matra-button href=\"/spec/\">Read the spec</a>",
       "value": {"tag":"a","props":{"href":"/spec/","class":"matra-button"},"children":["Read the spec"]}
@@ -497,6 +532,27 @@
     "module branch\nexport fn answer(n: i32) -> i32 {\nif (n == 0) {} else_if (n == 1) { let else_if = 1 }\nreturn 1\n}"
   ],
   "reject": [
+    "p(a=\"x\"b=\"y\") {}",
+    "p(a=1b=2) {}",
+    "p(a=[1]b=2) {}",
+    "p(a={}b=2) {}",
+    "p(a=<hr/>b=2) {}",
+    "p(a=1 2) {}",
+    "p(a=1 b) {}",
+    "p(a=1 b=) {}",
+    "p(a=1 b=",
+    "p(a=1,) {}",
+    "p(a=1 b=2,) {}",
+    "p(a=1; b=2) {}",
+    "p(a=1 + b=2) {}",
+    "p(a=1 b=2)",
+    "fn f(a b) { a }",
+    "fn f(a, b) { a }; f(1 2)",
+    "[1 2]",
+    "{a: 1 b: 2}",
+    "p(a=[1 2] b=3) {}",
+    "p(a={x: 1 y: 2} b=3) {}",
+    "<p a='1', b='2'/>",
     "<a.button></a.button>",
     "<a.b></a.c>",
     "<a. />",

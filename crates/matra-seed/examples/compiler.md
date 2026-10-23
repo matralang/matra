@@ -6808,6 +6808,26 @@ fn unified_statement(source: bytes, state: [i32], nodes: [i32]) -> i32 {
   return unified_node(state, nodes, 20, value_4, 0, 0, 0)
 }
 // list mode: 0 は式、1 は object entry、2 は parameter、3 は node attribute。
+fn unified_attribute_boundary(source: bytes, state: [i32]) -> i32 {
+  if (array_get(state, 1) != 1) { return 0 }
+  let position = array_get(state, 2)
+  if (position == 0) { return 0 }
+  let previous = byte_at(source, position - 1)
+  let whitespace = 0
+  if (previous == 32) { whitespace = 1 }
+  if (previous == 9) { whitespace = 1 }
+  if (previous == 13) { whitespace = 1 }
+  if (previous == 10) { whitespace = 1 }
+  if (whitespace == 0) { return 0 }
+  let ignored = unified_next(source, state)
+  ignored = unified_inline(source, state)
+  let result = 0
+  if (unified_symbol(source, state) == 61) { result = 1 }
+  array_set(state, 0, position)
+  ignored = unified_next(source, state)
+  return result
+}
+
 fn unified_list(source: bytes, state: [i32], nodes: [i32], end: i32, mode: i32) -> i32 {
   let enclosed = array_get(state, 4)
   let bare = array_get(state, 5)
@@ -6871,7 +6891,9 @@ fn unified_list(source: bytes, state: [i32], nodes: [i32], end: i32, mode: i32) 
       if (unified_take(source, state, end) == 1) {
         break
       }
-      ignored = unified_expect(source, state, 44)
+      let optional_separator = 0
+      if (mode == 3) { optional_separator = unified_attribute_boundary(source, state) }
+      if (optional_separator == 0) { ignored = unified_expect(source, state, 44) }
     }
   }
   array_set(state, 4, enclosed)

@@ -345,7 +345,7 @@ class UnifiedParser {
       const attributes = this.consume("(") ? this.list(")", () => {
         const key = this.word("Expected an attribute name", true); this.trivia(); this.expect("=")
         return { key, value: this.expression() }
-      }) : []
+      }, true) : []
       return { kind: "node", tag: name, classes: [...new Set(classes)], attributes, body: this.block(true) }
     }
     this.index = checkpoint
@@ -370,16 +370,25 @@ class UnifiedParser {
     const following = this.token(cursor)
     return following.kind === "symbol" && following.value === "="
   }
-  private list<T>(end: string, item: () => T): T[] {
+  private list<T>(end: string, item: () => T, attributes = false): T[] {
     return this.nested(() => {
       const values: T[] = []
       if (this.consume(end)) return values
       while (true) {
         this.inline(); values.push(item()); this.inline()
         if (this.consume(end)) return values
+        if (attributes && this.startsAttribute()) continue
         this.expect(",")
       }
     }, false)
+  }
+  private startsAttribute(): boolean {
+    const token = this.peek()
+    if (token.kind !== "word" || !/[ \t\r\n]/.test(this.source[token.offset - 1] ?? "")) return false
+    let cursor = this.index + 1
+    while (this.token(cursor).kind === "newline") cursor++
+    const following = this.token(cursor)
+    return following.kind === "symbol" && following.value === "="
   }
   private trivia(): void { if (this.enclosed) this.inline() }
   private separators(): boolean { const start = this.index; while (this.at("newline") || this.at(";")) this.next(); return this.index !== start }

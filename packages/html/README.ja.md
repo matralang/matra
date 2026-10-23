@@ -20,10 +20,12 @@ markup 属性は文字列で、本文中の空白・改行も child として保
 `<a.button.primary>` の `.class` は既存の Matra と同じ shorthand です。終了 tag は `</a>` とし、
 class は繰り返しません。重複を除去して空白で連結し、明示した `class` 属性を上書きします。
 式・数値属性・boolean 属性が必要な箇所は既存のノード構築を使い、混在できます。
+丸括弧内のノード属性も HTML のように空白・改行で区切れます。従来のカンマも使用可能です。
+関数引数・array・object のカンマは省略しません。
 
 ```matra
 let title = "Matra"
-article.card {
+article.card(lang="ja" title=title) {
   h1 { title }
   <p.lead>Structure first. <strong>Domain later.</strong></p>
   <hr />

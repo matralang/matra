@@ -528,6 +528,14 @@ impl Parser<'_> {
     fn list<T>(
         &mut self,
         end: &str,
+        item: impl FnMut(&mut Self) -> Result<T, CompileError>,
+    ) -> Result<Vec<T>, CompileError> {
+        self.separated_list(end, false, item)
+    }
+    fn separated_list<T>(
+        &mut self,
+        end: &str,
+        attributes: bool,
         mut item: impl FnMut(&mut Self) -> Result<T, CompileError>,
     ) -> Result<Vec<T>, CompileError> {
         let saved = (self.enclosed, self.bare_header);
@@ -547,8 +555,29 @@ impl Parser<'_> {
                 (self.enclosed, self.bare_header) = saved;
                 return Ok(result);
             }
+            if attributes && self.starts_attribute() {
+                continue;
+            }
             self.expect(",")?;
         }
+    }
+    fn starts_attribute(&self) -> bool {
+        let token = self.token();
+        if token.kind != Kind::Word
+            || !self
+                .source
+                .as_bytes()
+                .get(token.offset.wrapping_sub(1))
+                .is_some_and(|b| matches!(b, b' ' | b'\t' | b'\r' | b'\n'))
+        {
+            return false;
+        }
+        let mut cursor = self.index + 1;
+        while self.token_at(cursor).kind == Kind::Newline {
+            cursor += 1;
+        }
+        let following = self.token_at(cursor);
+        following.kind == Kind::Symbol && following.text == "="
     }
     fn expression(&mut self, min: u8) -> Result<Expr, CompileError> {
         self.trivia();
@@ -713,17 +742,24 @@ impl Parser<'_> {
             }
         }
         // 属性の代入は call には現れないため、本文まで先読みせず node と判定できる。
+        let mut attribute_equals = attribute_start + 1;
+        if !self.bare_header && self.at("(") {
+            while self.token_at(attribute_equals).kind == Kind::Newline {
+                attribute_equals += 1;
+            }
+        }
         let node_body = self.at("{")
             || (self.at("(")
                 && !self.bare_header
                 && ((self.token_at(attribute_start).kind == Kind::Word
-                    && self.token_at(attribute_start + 1).text == "=")
+                    && self.token_at(attribute_equals).text == "=")
                     || (self.token_at(attribute_start).text == ")"
                         && self.token_at(attribute_start + 1).text == "{")));
         if !self.bare_header && node_body {
             let attributes = if self.take("(") {
-                self.list(")", |p| {
+                self.separated_list(")", true, |p| {
                     let key = p.property_word()?;
+                    p.trivia();
                     p.expect("=")?;
                     Ok((key, p.expression(1)?))
                 })?
@@ -1041,6 +1077,25 @@ fn put(props: &mut Vec<(String, Value)>, key: String, value: Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn node_attribute_whitespace_preserves_ast_values_and_diagnostics() {
+        let source = "p(title=\"Matra\" options={tags: [\"HTML\", \"JSON\"]}\n child=<hr />) {}";
+        let comma = "p(title=\"Matra\", options={tags: [\"HTML\", \"JSON\"]}, child=<hr />) {}";
+        assert_eq!(parse(source).unwrap(), parse(comma).unwrap());
+        assert_eq!(static_value(source), static_value(comma));
+        for (source, offset) in [
+            ("p(a=\"x\"b=\"y\") {}", 7),
+            ("p(a=1 b=) {}", 8),
+            ("p(a=1 b=", 8),
+        ] {
+            let diagnostic = parse(source).unwrap_err().to_string();
+            assert!(
+                diagnostic.contains(&format!("offset {offset} ")),
+                "{diagnostic}"
+            );
+        }
+    }
 
     fn static_value(source: &str) -> Value {
         evaluate_static(&parse(source).unwrap()).unwrap().unwrap()

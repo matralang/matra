@@ -6,6 +6,22 @@ import { EvaluationRequiredError, evaluateStatic, evaluateUnified, parse, parseU
 const conformance = JSON.parse(await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"))
 
 describe("unified Matra parser", () => {
+  it("normalizes whitespace-separated node attributes to comma-separated AST", () => {
+    const source = 'p(title="Matra" options={tags: ["HTML", "JSON"]}\n child=<hr />) {}'
+    const comma = 'p(title="Matra", options={tags: ["HTML", "JSON"]}, child=<hr />) {}'
+    assert.deepEqual(parseUnified(source), parseUnified(comma))
+    assert.deepEqual(evaluateStatic(parseUnified(source)), evaluateStatic(parseUnified(comma)))
+  })
+
+  it("reports missing attribute separators and values at the offending token", () => {
+    for (const [source, offset] of [
+      ['p(a="x"b="y") {}', 7],
+      ["p(a=1 b=) {}", 8],
+      ["p(a=1 b=", 8],
+    ]) {
+      assert.throws(() => parseUnified(source), new RegExp(`at offset ${offset}\\.$`))
+    }
+  })
   it("normalizes markup class shorthand to existing Matra node syntax", () => {
     const markup = parseUnified('<a.button.primary.button class="other" href="/spec/">Link</a>')
     assert.deepEqual(markup, parseUnified('a.button.primary.button(class="other", href="/spec/") { "Link" }'))

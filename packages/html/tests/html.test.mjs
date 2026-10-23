@@ -8,6 +8,13 @@ const { toHTML } = htmlSource
 const parseStaticDocument = source => staticValueToAST(evaluateStatic(parse(source)))
 
 describe("@matra/html", () => {
+  it("renders whitespace-separated Matra attributes with unchanged value types", () => {
+    const source = 'a.button(href="/spec/" title="Matra" hidden=true count=3) { "Read" }'
+    assert.equal(
+      toHTML(parseStaticDocument(source)),
+      '<a href="/spec/" title="Matra" hidden count="3" class="button">Read</a>',
+    )
+  })
   it("renders AST using HTML semantics", () => {
     const ast = {
       tag: "div",
