@@ -378,9 +378,6 @@ pre {
   margin: 0;
   color: var(--muted);
 }
-.docs-card:hover h2 {
-  color: #5b7100;
-}
 .definition-list {
   border-top: 1px solid var(--line);
 }
@@ -482,6 +479,9 @@ code {
   font-size: 28px;
   line-height: 1.15;
   letter-spacing: -0.025em;
+}
+.docs-card:hover h2 {
+  color: #5b7100;
 }
 .example-meta p {
   color: var(--muted);
@@ -1072,9 +1072,6 @@ pre.result-view {
     12px / 1.65 "DM Mono",
     monospace;
 }
-.notebook-result.is-error code {
-  color: #b83f2b;
-}
 .completion-list {
   position: absolute;
   z-index: 5;
@@ -1313,9 +1310,6 @@ pre.result-view {
   background: transparent;
   cursor: pointer;
 }
-.reference-item:hover strong {
-  color: #47705b;
-}
 .reference-item strong {
   display: block;
   margin-bottom: 4px;
@@ -1328,6 +1322,12 @@ pre.result-view {
   color: #405448;
   font-size: 10px;
   overflow-wrap: anywhere;
+}
+.reference-item:hover strong {
+  color: #47705b;
+}
+.notebook-result.is-error code {
+  color: #b83f2b;
 }
 .reference-item small {
   display: block;
