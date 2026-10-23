@@ -97,7 +97,7 @@ circleElmArr.push([
   }),
 ])
 
-Array.from({ length: 9 }).map((_, i) => {
+Array.from({ length: 9 }).forEach((_, i) => {
   const outer = polarOffset(innerR, i, 4, -0.5)
   const inner = polarOffset(innerRIn, i, 8, -0.5)
   const dx = calculate("Add(outer, inner)", { outer: outer[0], inner: inner[0] })
@@ -116,10 +116,6 @@ Array.from({ length: 9 }).map((_, i) => {
 
   dxPrev = dx
   dyPrev = dy
-
-  if (i > 24) {
-    return null
-  }
 
   fill(flkmArr[2].lightCol)
   strokeStyle(flkmArr[2].normalCol)

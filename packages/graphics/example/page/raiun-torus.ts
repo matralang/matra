@@ -83,7 +83,7 @@ circleElmArr.push([
   }),
 ])
 
-Array.from({ length: 9 }).map((_, i) => {
+Array.from({ length: 9 }).forEach((_, i) => {
   const [dx, dy] = polarOffset(outerR, i, 8, -0.5)
 
   strokeStyle(flkmArr[2].col)
