@@ -1,10 +1,10 @@
-export type SvgTag = 'svg' | 'g' | 'circle' | 'rect' | 'path' | 'line' | 'ellipse' | 'polygon' | 'polyline' | 'text' | 'title' | 'desc';
+export type SvgTag = "svg" | "g" | "circle" | "rect" | "path" | "line" | "ellipse" | "polygon" | "polyline" | "text" | "title" | "desc";
 export type PropValue = string | number | boolean | null | undefined;
 export type PropObj = Record<string, PropValue>;
 export type MatraElm = [SvgTag | null, PropObj | null, string | MatraElm[] | null];
 export type Matrast = MatraElm[];
-export type CanvasTextAlign = 'start' | 'end' | 'left' | 'right' | 'center';
-export type CanvasTextBaseline = 'auto' | 'middle' | 'central' | 'hanging' | 'text-top' | 'text-bottom' | 'alphabetic' | 'ideographic';
+export type CanvasTextAlign = "start" | "end" | "left" | "right" | "center";
+export type CanvasTextBaseline = "auto" | "middle" | "central" | "hanging" | "text-top" | "text-bottom" | "alphabetic" | "ideographic";
 export type Context = {
     cvsW: number;
     cvsH: number;

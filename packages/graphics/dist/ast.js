@@ -1,4 +1,4 @@
-import { SVG_TAGS } from './types.js';
+import { SVG_TAGS } from "./types.js";
 /** Pure AST builder used by Matra and JavaScript callers alike. */
 export function svgNode(tag, props = {}, children = []) {
     return { tag, props: { ...props }, children: [...children] };

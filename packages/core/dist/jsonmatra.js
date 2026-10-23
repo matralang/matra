@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { isMatraTemplateStrings, matra as matraTemplate } from "./template.js";
 import { isMatraAST, isMatraJSON, matraJSONToAST } from "./ast/convert.js";
+import { isMatraTemplateStrings, matra as matraTemplate } from "./template.js";
 export async function loadMatra(path) {
     if (path.endsWith(".matra.json")) {
         return normalizeMatra(JSON.parse(await readFile(path, "utf8")));
@@ -59,9 +59,7 @@ export function normalizeMatra(input) {
     }
     throw new TypeError(`Unsupported Matra value: ${typeof input}`);
 }
-export const matra = Object.assign((input, ...values) => isMatraTemplateStrings(input)
-    ? matraTemplate(input, ...values)
-    : normalizeMatra(input), {
+export const matra = Object.assign((input, ...values) => isMatraTemplateStrings(input) ? matraTemplate(input, ...values) : normalizeMatra(input), {
     doc(strings, ...values) {
         return { kind: "MatraDocumentSource", source: templateSource(strings, values) };
     },
@@ -103,8 +101,7 @@ function normalizeObject(input) {
 }
 function isSourceNode(input) {
     return (isRecord(input) &&
-        (input.kind === "MatraDocumentSource" ||
-            input.kind === "MatraExpressionSource") &&
+        (input.kind === "MatraDocumentSource" || input.kind === "MatraExpressionSource") &&
         typeof input.source === "string");
 }
 function isRecord(input) {

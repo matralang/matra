@@ -1,5 +1,5 @@
-import { evaluateStatic, parse, renderWith, staticValueToAST } from '@matra/core';
-import { svgRenderer } from './render.js';
+import { evaluateStatic, parse, renderWith, staticValueToAST } from "@matra/core";
+import { svgRenderer } from "./render.js";
 /** Compile Matra source directly to an SVG document. */
 export function compile(source, options = {}) {
     const value = evaluateStatic(parse(source));

@@ -1,6 +1,6 @@
-import type { MatraAST, MatraProps } from '@matra/core';
+import type { MatraAST, MatraProps } from "@matra/core";
 export declare const SVG_TAGS: readonly ["svg", "g", "defs", "symbol", "use", "title", "desc", "circle", "ellipse", "rect", "line", "polyline", "polygon", "path", "text", "tspan", "textPath", "image", "foreignObject", "linearGradient", "radialGradient", "stop", "clipPath", "mask", "pattern", "marker", "filter", "feBlend", "feColorMatrix", "feComponentTransfer", "feComposite", "feConvolveMatrix", "feDiffuseLighting", "feDisplacementMap", "feDistantLight", "feDropShadow", "feFlood", "feFuncA", "feFuncB", "feFuncG", "feFuncR", "feGaussianBlur", "feImage", "feMerge", "feMergeNode", "feMorphology", "feOffset", "fePointLight", "feSpecularLighting", "feSpotLight", "feTile", "feTurbulence"];
-export type SvgTag = typeof SVG_TAGS[number];
+export type SvgTag = (typeof SVG_TAGS)[number];
 export interface SvgNode extends MatraAST {
     tag: SvgTag;
     props: MatraProps;

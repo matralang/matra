@@ -1,5 +1,5 @@
-import { type MatraRawSource } from "./template.js";
 import type { SourcePosition } from "./ast/types.js";
+import { type MatraRawSource } from "./template.js";
 export type JSONMatraPrimitive = string | number | boolean | null | bigint | undefined;
 export type MatraDocumentSource = {
     kind: "MatraDocumentSource";
