@@ -8,6 +8,7 @@
   "files": {
     "includes": [
       "**/*.{js,jsx,ts,tsx,mjs,cjs,json,jsonc,css}",
+      "!**/dist",
       "!packages/core/src/parser/generated.mjs",
       "!packages/math/legacy",
       "!spec/archive"
@@ -28,6 +29,9 @@
   "linter": {
     "rules": {
       "preset": "recommended",
+      "style": {
+        "useTemplate": "off"
+      },
       "suspicious": {
         "useIterableCallbackReturn": "warn",
         "noShadowRestrictedNames": "warn",
