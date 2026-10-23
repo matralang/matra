@@ -23,7 +23,17 @@
     {
       "name": "node attributes use HTML-like whitespace separators",
       "source": "img(src=\"image.png\" alt=\"画像\" width=640 enabled=true missing=null) {}",
-      "value": { "tag": "img", "props": { "src": "image.png", "alt": "画像", "width": 640, "enabled": true, "missing": null }, "children": [] }
+      "value": {
+        "tag": "img",
+        "props": {
+          "src": "image.png",
+          "alt": "画像",
+          "width": 640,
+          "enabled": true,
+          "missing": null
+        },
+        "children": []
+      }
     },
     {
       "name": "node attributes mix commas whitespace and multiline equals",
@@ -33,12 +43,31 @@
     {
       "name": "node attribute values consume complete expressions",
       "source": "fn label(x) { \"Hello \" + x }\nlet name = \"Matra\"\nlet page = {url: \"/spec/\"}\na(title=\"Hello \" + name href=page.url count=1 + 2 * 3 label=label(name) ready=1 < 2 && true) {}",
-      "value": { "tag": "a", "props": { "title": "Hello Matra", "href": "/spec/", "count": 7, "label": "Hello Matra", "ready": true }, "children": [] }
+      "value": {
+        "tag": "a",
+        "props": {
+          "title": "Hello Matra",
+          "href": "/spec/",
+          "count": 7,
+          "label": "Hello Matra",
+          "ready": true
+        },
+        "children": []
+      }
     },
     {
       "name": "node attribute delimiters preserve nested JSON and markup",
       "source": "p(options={title: \"Matra\", tags: [\"HTML\", \"JSON\"]} rows=[1, 2] child=<a.button href='/'>Hi</a> nested=span(title=\"x\" lang=\"ja\") {}) {}",
-      "value": { "tag": "p", "props": { "options": { "title": "Matra", "tags": ["HTML", "JSON"] }, "rows": [1, 2], "child": { "tag": "a", "props": { "href": "/", "class": "button" }, "children": ["Hi"] }, "nested": { "tag": "span", "props": { "title": "x", "lang": "ja" }, "children": [] } }, "children": [] }
+      "value": {
+        "tag": "p",
+        "props": {
+          "options": { "title": "Matra", "tags": ["HTML", "JSON"] },
+          "rows": [1, 2],
+          "child": { "tag": "a", "props": { "href": "/", "class": "button" }, "children": ["Hi"] },
+          "nested": { "tag": "span", "props": { "title": "x", "lang": "ja" }, "children": [] }
+        },
+        "children": []
+      }
     },
     {
       "name": "node attribute evaluation order duplicates and class precedence",
@@ -58,12 +87,20 @@
     {
       "name": "markup Matra class shorthand and base closing tag",
       "source": "<a.matra-button href=\"/spec/\">Read the spec</a>",
-      "value": { "tag": "a", "props": { "href": "/spec/", "class": "matra-button" }, "children": ["Read the spec"] }
+      "value": {
+        "tag": "a",
+        "props": { "href": "/spec/", "class": "matra-button" },
+        "children": ["Read the spec"]
+      }
     },
     {
       "name": "markup class deduplication and explicit class precedence",
       "source": "[<a.button.primary.button class='other'>Link</a>, <a class='other'>Link</a>, a.button.primary.button(class=\"other\") { \"Link\" }]",
-      "value": [{ "tag": "a", "props": { "class": "button primary" }, "children": ["Link"] }, { "tag": "a", "props": { "class": "other" }, "children": ["Link"] }, { "tag": "a", "props": { "class": "button primary" }, "children": ["Link"] }]
+      "value": [
+        { "tag": "a", "props": { "class": "button primary" }, "children": ["Link"] },
+        { "tag": "a", "props": { "class": "other" }, "children": ["Link"] },
+        { "tag": "a", "props": { "class": "button primary" }, "children": ["Link"] }
+      ]
     },
     {
       "name": "markup nested and empty shorthand with namespaces",
@@ -71,38 +108,76 @@
       "value": {
         "tag": "svg:svg",
         "props": { "viewBox": "0 0 10 10", "class": "canvas" },
-        "children": [{ "tag": "svg:circle", "props": { "r": "2", "class": "dot" }, "children": [] }, { "tag": "hr", "props": { "class": "divider" }, "children": [] }, { "tag": "p", "props": { "class": "if else_if _private A1 a-b" }, "children": ["text"] }]
+        "children": [
+          { "tag": "svg:circle", "props": { "r": "2", "class": "dot" }, "children": [] },
+          { "tag": "hr", "props": { "class": "divider" }, "children": [] },
+          { "tag": "p", "props": { "class": "if else_if _private A1 a-b" }, "children": ["text"] }
+        ]
       }
     },
     {
       "name": "markup dotted attributes remain literal and class order is retained",
       "source": "<p.z.a.z.A data.value='1' class='ignored' xlink:href='#x' />",
-      "value": { "tag": "p", "props": { "data.value": "1", "class": "z a A", "xlink:href": "#x" }, "children": [] }
+      "value": {
+        "tag": "p",
+        "props": { "data.value": "1", "class": "z a A", "xlink:href": "#x" },
+        "children": []
+      }
     },
     {
       "name": "markup shorthand does not change text or attribute values",
       "source": "fn identity(value) { value }\nlet node = identity(<p.note title='a.b'>a.b <em.strong>c.d</em></p>)\n[node, 1 < 2, 4 / 2]",
-      "value": [{ "tag": "p", "props": { "title": "a.b", "class": "note" }, "children": ["a.b ", { "tag": "em", "props": { "class": "strong" }, "children": ["c.d"] }] }, true, 2]
+      "value": [
+        {
+          "tag": "p",
+          "props": { "title": "a.b", "class": "note" },
+          "children": ["a.b ", { "tag": "em", "props": { "class": "strong" }, "children": ["c.d"] }]
+        },
+        true,
+        2
+      ]
     },
     {
       "name": "markup empty and paired nodes",
       "source": "[<hr />, <hr></hr>, hr {}]",
-      "value": [{ "tag": "hr", "props": {}, "children": [] }, { "tag": "hr", "props": {}, "children": [] }, { "tag": "hr", "props": {}, "children": [] }]
+      "value": [
+        { "tag": "hr", "props": {}, "children": [] },
+        { "tag": "hr", "props": {}, "children": [] },
+        { "tag": "hr", "props": {}, "children": [] }
+      ]
     },
     {
       "name": "markup quoted string attributes",
       "source": "<img src=\"image.png\" width = '640' enabled=\"true\" empty='' />",
-      "value": { "tag": "img", "props": { "src": "image.png", "width": "640", "enabled": "true", "empty": "" }, "children": [] }
+      "value": {
+        "tag": "img",
+        "props": { "src": "image.png", "width": "640", "enabled": "true", "empty": "" },
+        "children": []
+      }
     },
     {
       "name": "markup mixed content and whitespace",
       "source": "<p>Hello <strong>Matra</strong> !\n  <br />\r\n</p>",
-      "value": { "tag": "p", "props": {}, "children": ["Hello ", { "tag": "strong", "props": {}, "children": ["Matra"] }, " !\n  ", { "tag": "br", "props": {}, "children": [] }, "\r\n"] }
+      "value": {
+        "tag": "p",
+        "props": {},
+        "children": [
+          "Hello ",
+          { "tag": "strong", "props": {}, "children": ["Matra"] },
+          " !\n  ",
+          { "tag": "br", "props": {}, "children": [] },
+          "\r\n"
+        ]
+      }
     },
     {
       "name": "markup content is not program syntax",
       "source": "<p>if (ready) { run() }; // text\n\"quotes\" 'single' \\ backslash 日本語 😀</p>",
-      "value": { "tag": "p", "props": {}, "children": ["if (ready) { run() }; // text\n\"quotes\" 'single' \\ backslash 日本語 😀"] }
+      "value": {
+        "tag": "p",
+        "props": {},
+        "children": ["if (ready) { run() }; // text\n\"quotes\" 'single' \\ backslash 日本語 😀"]
+      }
     },
     {
       "name": "markup entities and numeric references",
@@ -115,13 +190,27 @@
       "value": {
         "tag": "svg",
         "props": { "xmlns": "http://www.w3.org/2000/svg", "viewBox": "0 0 10 10" },
-        "children": [{ "tag": "use", "props": { "xlink:href": "#shape" }, "children": [] }, { "tag": "custom-element", "props": { "data-id": "1" }, "children": [] }, { "tag": "if", "props": {}, "children": [] }, { "tag": "a", "props": { "class": "b" }, "children": [] }, { "tag": "_x:y", "props": {}, "children": [] }]
+        "children": [
+          { "tag": "use", "props": { "xlink:href": "#shape" }, "children": [] },
+          { "tag": "custom-element", "props": { "data-id": "1" }, "children": [] },
+          { "tag": "if", "props": {}, "children": [] },
+          { "tag": "a", "props": { "class": "b" }, "children": [] },
+          { "tag": "_x:y", "props": {}, "children": [] }
+        ]
       }
     },
     {
       "name": "markup expressions in calls attributes and arrays",
       "source": "fn identity(x) { x }\nlet x = identity(<p>(arbitrary) text</p>)\nwrapper(content=<img src='x' />) { x; ...[<hr/>, <br/>] }",
-      "value": { "tag": "wrapper", "props": { "content": { "tag": "img", "props": { "src": "x" }, "children": [] } }, "children": [{ "tag": "p", "props": {}, "children": ["(arbitrary) text"] }, { "tag": "hr", "props": {}, "children": [] }, { "tag": "br", "props": {}, "children": [] }] }
+      "value": {
+        "tag": "wrapper",
+        "props": { "content": { "tag": "img", "props": { "src": "x" }, "children": [] } },
+        "children": [
+          { "tag": "p", "props": {}, "children": ["(arbitrary) text"] },
+          { "tag": "hr", "props": {}, "children": [] },
+          { "tag": "br", "props": {}, "children": [] }
+        ]
+      }
     },
     {
       "name": "markup and program operator boundaries",
@@ -141,7 +230,11 @@
     {
       "name": "markup prototype shaped names",
       "source": "<__proto__ __proto__='safe' constructor='data' />",
-      "value": { "tag": "__proto__", "props": { "__proto__": "safe", "constructor": "data" }, "children": [] }
+      "value": {
+        "tag": "__proto__",
+        "props": { "__proto__": "safe", "constructor": "data" },
+        "children": []
+      }
     },
     {
       "name": "else_if selects first matching branch",

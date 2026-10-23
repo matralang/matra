@@ -1,4 +1,10 @@
-import { isMatraAST, parse, type MatraAST, type MatraASTChild, type UnifiedExpression } from "@matra/core"
+import {
+  isMatraAST,
+  parse,
+  type MatraAST,
+  type MatraASTChild,
+  type UnifiedExpression,
+} from "@matra/core"
 import type { MathJson } from "./types.js"
 
 /** Convert a Core AST into the canonical recursive MathJSON representation. */
@@ -33,14 +39,20 @@ export function parseMath(source: string): MathJson {
 function expressionToMathJson(expression: UnifiedExpression): MathJson {
   if (expression.kind === "literal") return expression.value
   // 統一文法では負数の符号が unary AST になるため、数値 operand を復元する。
-  if (expression.kind === "unary" && expression.operator === "-" && expression.operand.kind === "literal" && typeof expression.operand.value === "number") {
+  if (
+    expression.kind === "unary" &&
+    expression.operator === "-" &&
+    expression.operand.kind === "literal" &&
+    typeof expression.operand.value === "number"
+  ) {
     return -expression.operand.value
   }
   if (expression.kind === "array") return expression.items.map(expressionToMathJson) as MathJson
   if (expression.kind === "reference") return expression.name
   if (expression.kind === "call" && expression.callee.kind === "reference") {
     if (expression.callee.name === "Formula") {
-      if (expression.arguments.length !== 1) throw new TypeError("Formula expects exactly one expression")
+      if (expression.arguments.length !== 1)
+        throw new TypeError("Formula expects exactly one expression")
       return expressionToMathJson(expression.arguments[0])
     }
     return [expression.callee.name, ...expression.arguments.map(expressionToMathJson)]
@@ -65,7 +77,13 @@ export function mathJsonToAST(expression: MathJson): MatraAST {
 
 function childToMathJson(child: MatraASTChild): MathJson {
   if (isMatraAST(child)) return astToMathJson(child)
-  if (child === null || typeof child === "string" || typeof child === "number" || typeof child === "boolean") return child
+  if (
+    child === null ||
+    typeof child === "string" ||
+    typeof child === "number" ||
+    typeof child === "boolean"
+  )
+    return child
   throw new TypeError("MathJSON operands must be scalar values or Matra nodes")
 }
 

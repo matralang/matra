@@ -48,17 +48,31 @@ function toForm(expression: MathJson, depth: number): Form {
   if (typeof head !== "string") return atom(expression)
   if (head === "Rational" && operands.length === 2) return constant(expression)
   if (head === "Complex" && operands.length === 2) {
-    return addForms(toForm(operands[0], depth + 1), multiplyForms(toForm(operands[1], depth + 1), atom(IMAGINARY_UNIT)))
+    return addForms(
+      toForm(operands[0], depth + 1),
+      multiplyForms(toForm(operands[1], depth + 1), atom(IMAGINARY_UNIT)),
+    )
   }
-  if (head === "Add") return operands.reduce<Form>((result, operand) => addForms(result, toForm(operand, depth + 1)), new Map())
+  if (head === "Add")
+    return operands.reduce<Form>(
+      (result, operand) => addForms(result, toForm(operand, depth + 1)),
+      new Map(),
+    )
   if (head === "Subtract") {
     if (operands.length === 0) return atom(expression)
     const [first, ...rest] = operands
-    return rest.reduce<Form>((result, operand) => addForms(result, scaleForm(toForm(operand, depth + 1), -1)), toForm(first, depth + 1))
+    return rest.reduce<Form>(
+      (result, operand) => addForms(result, scaleForm(toForm(operand, depth + 1), -1)),
+      toForm(first, depth + 1),
+    )
   }
-  if (head === "Negate" && operands.length === 1) return scaleForm(toForm(operands[0], depth + 1), -1)
+  if (head === "Negate" && operands.length === 1)
+    return scaleForm(toForm(operands[0], depth + 1), -1)
   if (head === "Multiply") {
-    return operands.reduce<Form>((result, operand) => multiplyForms(result, toForm(operand, depth + 1)), constant(ONE))
+    return operands.reduce<Form>(
+      (result, operand) => multiplyForms(result, toForm(operand, depth + 1)),
+      constant(ONE),
+    )
   }
   if (head === "Divide" && operands.length === 2) {
     const denominator = toForm(operands[1], depth + 1)
@@ -153,7 +167,8 @@ function powerMonomial(term: Term, exponent: number): Form {
   const factors = new Map<string, Factor>()
   for (const [key, factor] of term.factors) {
     const power = factor.exponent * exponent
-    if (!Number.isSafeInteger(power)) throw new RangeError("Morphion exponent exceeds the safe integer range")
+    if (!Number.isSafeInteger(power))
+      throw new RangeError("Morphion exponent exceeds the safe integer range")
     if (power !== 0) factors.set(key, { base: factor.base, exponent: power })
   }
   return singleton({ coeff: powerCoefficient(term.coeff, exponent), factors })
@@ -166,7 +181,9 @@ function invertMonomial(term: Term): Form {
 function mergeTerm(target: Form, term: Term): void {
   const key = monomialKey(term.factors)
   const previous = target.get(key)
-  const coeff = previous ? addCoefficients(previous.coeff, term.coeff) : normalizeCoefficient(term.coeff)
+  const coeff = previous
+    ? addCoefficients(previous.coeff, term.coeff)
+    : normalizeCoefficient(term.coeff)
   if (isZero(coeff)) target.delete(key)
   else target.set(key, { coeff, factors: new Map(term.factors) })
   if (target.size > MAX_MORPHION_TERMS) {
@@ -204,18 +221,28 @@ function recurringDecimalToRational(value: string): MathJson | undefined {
   const scale = 10n ** BigInt(nonRepeating.length)
   const cycle = 10n ** BigInt(repeating.length) - 1n
   const denominator = scale * cycle
-  let numerator = BigInt(wholePart || "0") * denominator + BigInt(nonRepeating || "0") * cycle + BigInt(repeating)
+  let numerator =
+    BigInt(wholePart || "0") * denominator + BigInt(nonRepeating || "0") * cycle + BigInt(repeating)
   if (sign === "-") numerator = -numerator
   const divisor = greatestCommonDivisor(numerator, denominator)
   numerator /= divisor
   const reducedDenominator = denominator / divisor
-  if (!Number.isSafeInteger(Number(numerator)) || !Number.isSafeInteger(Number(reducedDenominator))) return undefined
-  return reducedDenominator === 1n ? Number(numerator) : (["Rational", Number(numerator), Number(reducedDenominator)] as MathJsonFunction)
+  if (!Number.isSafeInteger(Number(numerator)) || !Number.isSafeInteger(Number(reducedDenominator)))
+    return undefined
+  return reducedDenominator === 1n
+    ? Number(numerator)
+    : (["Rational", Number(numerator), Number(reducedDenominator)] as MathJsonFunction)
 }
 
 function integerValue(value: MathJson): number | undefined {
   if (typeof value === "number" && Number.isSafeInteger(value)) return value
-  if (Array.isArray(value) && value[0] === "Rational" && value.length === 3 && value[2] === 1 && Number.isSafeInteger(value[1])) {
+  if (
+    Array.isArray(value) &&
+    value[0] === "Rational" &&
+    value.length === 3 &&
+    value[2] === 1 &&
+    Number.isSafeInteger(value[1])
+  ) {
     return value[1] as number
   }
   return undefined
@@ -228,11 +255,17 @@ function isZero(value: MathJson): boolean {
 
 function isOne(value: MathJson): boolean {
   if (value === 1) return true
-  return Array.isArray(value) && value[0] === "Rational" && value.length === 3 && value[1] === value[2]
+  return (
+    Array.isArray(value) && value[0] === "Rational" && value.length === 3 && value[1] === value[2]
+  )
 }
 
 function monomialKey(factors: Map<string, Factor>): string {
-  return JSON.stringify([...factors.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([key, factor]) => [key, factor.exponent]))
+  return JSON.stringify(
+    [...factors.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, factor]) => [key, factor.exponent]),
+  )
 }
 
 function keyOf(expression: MathJson): string {

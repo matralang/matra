@@ -54,7 +54,9 @@ describe("Matra AST", () => {
     visit(ast, node => tags.push(node.tag))
     assert.deepEqual(tags, ["doc", "p"])
 
-    const changed = transform(ast, node => (node.tag === "p" ? { ...node, tag: "paragraph" } : undefined))
+    const changed = transform(ast, node =>
+      node.tag === "p" ? { ...node, tag: "paragraph" } : undefined,
+    )
     assert.deepEqual(changed, {
       tag: "doc",
       props: {},

@@ -1,4 +1,17 @@
-import { setCanvasSize, strokeWeight, strokeStyle, fill, circle, svgLayout, g, line, text, textAnchor, textBaseline, textSize } from "../../module.js"
+import {
+  setCanvasSize,
+  strokeWeight,
+  strokeStyle,
+  fill,
+  circle,
+  svgLayout,
+  g,
+  line,
+  text,
+  textAnchor,
+  textBaseline,
+  textSize,
+} from "../../module.js"
 import { calculate, fibonacciDigit, polarOffset, polarOffsetFormula } from "../math.js"
 
 const cvsSize = 256
@@ -32,7 +45,13 @@ circleElmArr.push([
     .map((_, j) => {
       return Array.from({ length: 25 }).map((_, i) => {
         const outer = polarOffset(outerR, i, 12, -0.5)
-        const inner = polarOffsetFormula("Add(Divide(j, 3), Divide(i, 24))", { i, j }, outerRIn, 1, -0.5)
+        const inner = polarOffsetFormula(
+          "Add(Divide(j, 3), Divide(i, 24))",
+          { i, j },
+          outerRIn,
+          1,
+          -0.5,
+        )
         const dx = calculate("Add(outer, inner)", { outer: outer[0], inner: inner[0] })
         const dy = calculate("Add(outer, inner)", { outer: outer[1], inner: inner[1] })
 

@@ -5,8 +5,13 @@ import { renderWith } from "@matra/core"
 import { compile, svgNode, svgRenderer, toSVG } from "../src/index.ts"
 
 test("renders a Matra graphics AST as SVG", () => {
-  const ast = svgNode("svg", { width: 100, height: 80 }, [svgNode("circle", { cx: 50, cy: 40, r: 20, fill: "tomato" })])
-  assert.equal(toSVG(ast), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80" width="100" height="80"><circle cx="50" cy="40" r="20" fill="tomato"></circle></svg>')
+  const ast = svgNode("svg", { width: 100, height: 80 }, [
+    svgNode("circle", { cx: 50, cy: 40, r: 20, fill: "tomato" }),
+  ])
+  assert.equal(
+    toSVG(ast),
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80" width="100" height="80"><circle cx="50" cy="40" r="20" fill="tomato"></circle></svg>',
+  )
 })
 
 test("compiles Matra source to SVG", () => {
@@ -35,7 +40,14 @@ test("rejects non-SVG Matra elements", () => {
 
 test("wraps a Matra document fragment in an SVG root", () => {
   const result = toSVG(
-    { tag: "$root", props: {}, children: [svgNode("circle", { cx: 10, cy: 10, r: 5 }), svgNode("rect", { x: 20, y: 20, width: 10, height: 10 })] },
+    {
+      tag: "$root",
+      props: {},
+      children: [
+        svgNode("circle", { cx: 10, cy: 10, r: 5 }),
+        svgNode("rect", { x: 20, y: 20, width: 10, height: 10 }),
+      ],
+    },
     {
       width: 40,
       height: 40,
@@ -60,7 +72,9 @@ test("supports richer SVG elements, camel-case attributes, and style objects", (
 })
 
 test("can format SVG for source views", () => {
-  const result = compile("svg(width=10, height=10) { circle(cx=5, cy=5, r=4) {} }", { pretty: true })
+  const result = compile("svg(width=10, height=10) { circle(cx=5, cy=5, r=4) {} }", {
+    pretty: true,
+  })
   assert.match(result, /<svg[^>]*>\n  <circle/)
   assert.match(result, /\n<\/svg>$/)
 })

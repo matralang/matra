@@ -23,10 +23,16 @@ describe("Matra browser nodejs adapter", () => {
   })
 
   it("rejects execution when Web Workers are unavailable", async () => {
-    await assert.rejects(executeNodejsBlock(nodejs({}, "return 1")), /Web Worker execution is not available/)
+    await assert.rejects(
+      executeNodejsBlock(nodejs({}, "return 1")),
+      /Web Worker execution is not available/,
+    )
   })
 
   it("rejects process-oriented props in browser blocks", () => {
-    assert.throws(() => prepareNodejsBlock(nodejs({ cwd: "/tmp" }, "return 1")), /Unsupported browser nodejs prop: cwd/)
+    assert.throws(
+      () => prepareNodejsBlock(nodejs({ cwd: "/tmp" }, "return 1")),
+      /Unsupported browser nodejs prop: cwd/,
+    )
   })
 })

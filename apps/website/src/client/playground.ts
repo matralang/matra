@@ -1,8 +1,20 @@
-import { astToMatraJSON, evaluateUnified, extractMatraMarkdown, parse, printJSON, staticValueToAST } from "@matra/core"
+import {
+  astToMatraJSON,
+  evaluateUnified,
+  extractMatraMarkdown,
+  parse,
+  printJSON,
+  staticValueToAST,
+} from "@matra/core"
 import { toSVG } from "@matra/graphics"
 import { toHTML } from "@matra/html"
 import { parseMath } from "@matra/math"
-import { evaluateMatra, numericEvaluateMatra, numericEvaluateProps, simplifyMatra } from "@matra/math-compute-engine"
+import {
+  evaluateMatra,
+  numericEvaluateMatra,
+  numericEvaluateProps,
+  simplifyMatra,
+} from "@matra/math-compute-engine"
 import matraStyles from "../../../../packages/styles/matra.css"
 
 const source = required<HTMLTextAreaElement>("matra-source")
@@ -26,9 +38,16 @@ type MatraFence = { filename: string; kind: "matra" | "matra.ts" | "matra.progra
 type MatraRenderer = ResultMode | "auto"
 type MatraDocument = MatraFence & { renderer: MatraRenderer; title?: string; stylesheet?: string }
 
-function markdown(filename: string, source: string, renderer: MatraRenderer = "html", frontMatter = true): string {
+function markdown(
+  filename: string,
+  source: string,
+  renderer: MatraRenderer = "html",
+  frontMatter = true,
+): string {
   const title = filename.replace(/\.matra(?:\.ts)?$/, "").replace(/[-_]/g, " ")
-  const metadata = frontMatter ? `---\nmatra:\n  entry: ${filename}\n  renderer: ${renderer}\n---\n\n` : ""
+  const metadata = frontMatter
+    ? `---\nmatra:\n  entry: ${filename}\n  renderer: ${renderer}\n---\n\n`
+    : ""
   return `${metadata}# ${title}\n\n\`\`\`${filename}\n${source}\n\`\`\``
 }
 
@@ -73,7 +92,10 @@ const examples: Record<string, string> = {
   ul { li { a(href="/docs/") { "Docs" } }; li { a(href="/examples/") { "Examples" } }; li { a(href="/play/") { "Playground" } } }
 }`,
   ),
-  article: markdown("article.matra", `main { article { header { h1 { "Structure is a way of seeing." } }; section { h2 { "Start with the outline" }; p { "Names, attributes, and children make the hierarchy visible." } } } }`),
+  article: markdown(
+    "article.matra",
+    `main { article { header { h1 { "Structure is a way of seeing." } }; section { h2 { "Start with the outline" }; p { "Names, attributes, and children make the hierarchy visible." } } } }`,
+  ),
   "document-toc": markdown(
     "document-toc.matra",
     `// 文書を値として保存し、見出しから目次を作ります。
@@ -180,7 +202,11 @@ text(x=48, y=70, fill="#ffffff", font-size=20) { "GENERATED / TS" }\`)
 export default matra\`svg(width=560, height=360) { rect(x=0, y=0, width=560, height=360, fill="#101814") {}; \${dots} }\``,
     "svg",
   ),
-  "compute-engine": markdown("formula.matra", "Add(Power(2, 10), Factorial(5), Sin(Divide(Pi, 2)))", "math"),
+  "compute-engine": markdown(
+    "formula.matra",
+    "Add(Power(2, 10), Factorial(5), Sin(Divide(Pi, 2)))",
+    "math",
+  ),
   program: `# Program compiler\n\n\`\`\`answer.matra.program\nmodule playground\n\nexport fn answer() -> i32 {\n  let (value = 40)\n  while (value < 42) {\n    set (value = value + 1)\n  }\n  return value\n}\n\`\`\``,
 }
 
@@ -203,7 +229,10 @@ async function render(): Promise<void> {
       await renderMatraProgram(document, version)
       return
     }
-    const programResult = document.kind === "matra.ts" ? await runMatraTypeScriptProgram(document.source) : { source: document.source }
+    const programResult =
+      document.kind === "matra.ts"
+        ? await runMatraTypeScriptProgram(document.source)
+        : { source: document.source }
     if (version !== renderVersion) return
     value = programResult.source
     const selectedStylesheet = document.stylesheet ?? stylesheet.value
@@ -213,20 +242,44 @@ async function render(): Promise<void> {
     }
     const parsedModule = parse(value)
     const evaluatedValue = evaluateUnified(parsedModule)
-    if (evaluatedValue === undefined) throw new TypeError("A preview requires an output expression.")
+    if (evaluatedValue === undefined)
+      throw new TypeError("A preview requires an output expression.")
     const parsedAst = staticValueToAST(evaluatedValue)
-    const mode = document.renderer === "auto" && renderMode.value === "auto" ? (parsedAst.tag === "svg" || (parsedAst.tag === "$root" && parsedAst.children.some(child => isNode(child) && child.tag === "svg")) ? "svg" : "html") : document.renderer === "auto" ? (renderMode.value as OutputMode) : document.renderer
-    const ast = mode === "svg" ? numericEvaluateProps(parsedAst) : document.title ? injectDocumentTitle(parsedAst, document.title) : parsedAst
+    const mode =
+      document.renderer === "auto" && renderMode.value === "auto"
+        ? parsedAst.tag === "svg" ||
+          (parsedAst.tag === "$root" &&
+            parsedAst.children.some(child => isNode(child) && child.tag === "svg"))
+          ? "svg"
+          : "html"
+        : document.renderer === "auto"
+          ? (renderMode.value as OutputMode)
+          : document.renderer
+    const ast =
+      mode === "svg"
+        ? numericEvaluateProps(parsedAst)
+        : document.title
+          ? injectDocumentTitle(parsedAst, document.title)
+          : parsedAst
     setExpressionTabLabel("MatraJSON")
     const matraJSON = printJSON(astToMatraJSON(ast), { pretty: true })
     const html = mode === "html" ? toHTML(ast) : ""
     const svg = mode === "svg" ? toSVG(ast, { pretty: true }) : ""
     latestMode = mode
-    latestOutputs = { ast: JSON.stringify(ast, null, 2), matraJSON, renderer: mode === "svg" ? svg : html }
+    latestOutputs = {
+      ast: JSON.stringify(ast, null, 2),
+      matraJSON,
+      renderer: mode === "svg" ? svg : html,
+    }
     astOutput.textContent = latestOutputs.ast
     matraJSONOutput.textContent = matraJSON
     rendererOutput.textContent = latestOutputs.renderer
-    preview.srcdoc = previewDocument(mode === "svg" ? svg : html, mode, document.title, selectedStylesheet)
+    preview.srcdoc = previewDocument(
+      mode === "svg" ? svg : html,
+      mode,
+      document.title,
+      selectedStylesheet,
+    )
     errorCard.hidden = true
     status.textContent = `Valid ${document.filename} · ${mode.toUpperCase()} · ${stylesheetLabel(selectedStylesheet)}`
     status.classList.remove("is-error")
@@ -260,12 +313,28 @@ async function renderMatraProgram(document: MatraDocument, version: number): Pro
 }
 
 function renderMath(program: string, filename: string, selectedStylesheet: string): void {
-  const ast = parse(program, { locations: true, sourceId: "playground.matra", syntaxMode: "application" })
+  const ast = parse(program, {
+    locations: true,
+    sourceId: "playground.matra",
+    syntaxMode: "application",
+  })
   const mathJSON = parseMath(program)
   const evaluated = evaluateMatra(program)
   const simplified = simplifyMatra(program)
   const numeric = numericEvaluateMatra(program)
-  const result = ["Input", program, "", "Evaluate", formatValue(evaluated), "", "Simplify", formatValue(simplified), "", "Numeric", formatValue(numeric)].join("\n")
+  const result = [
+    "Input",
+    program,
+    "",
+    "Evaluate",
+    formatValue(evaluated),
+    "",
+    "Simplify",
+    formatValue(simplified),
+    "",
+    "Numeric",
+    formatValue(numeric),
+  ].join("\n")
 
   latestMode = "math"
   latestOutputs = {
@@ -350,7 +419,10 @@ downloadButton.addEventListener("click", () => {
   }
   const content = latestOutputs.renderer
   const extension = latestMode === "svg" ? "svg" : latestMode === "math" ? "txt" : "html"
-  const blob = new Blob([content], { type: latestMode === "svg" ? "image/svg+xml" : latestMode === "math" ? "text/plain" : "text/html" })
+  const blob = new Blob([content], {
+    type:
+      latestMode === "svg" ? "image/svg+xml" : latestMode === "math" ? "text/plain" : "text/html",
+  })
   const link = document.createElement("a")
   link.href = URL.createObjectURL(blob)
   link.download = `matra-output.${extension}`
@@ -365,15 +437,25 @@ function outputForPanel(panel: string): string {
   return latestOutputs.renderer
 }
 
-function previewDocument(output: string, mode: ResultMode, title = "Matra Playground", selectedStylesheet = "matra"): string {
+function previewDocument(
+  output: string,
+  mode: ResultMode,
+  title = "Matra Playground",
+  selectedStylesheet = "matra",
+): string {
   const stylesheetTag = previewStylesheet(selectedStylesheet)
   const utilityStyles = `.graphics-preview{min-height:calc(100vh - 64px);display:grid;place-items:center}.graphics-preview svg{display:block;max-width:100%;height:auto;max-height:calc(100vh - 64px);filter:drop-shadow(0 18px 36px #10181422)}.math-preview{max-width:680px;margin:0;padding:28px;white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace}`
   return `<!doctype html><html><head><title>${escapeHTML(title)}</title>${stylesheetTag}<style>${utilityStyles}</style></head><body>${mode === "svg" ? `<main class="graphics-preview">${output}</main>` : mode === "math" || mode === "program" ? `<pre class="math-preview">${escapeHTML(output)}</pre>` : output}</body></html>`
 }
 
-async function compileMatraProgram(source: string, filename: string): Promise<{ output: string; result: string; bytes: number }> {
+async function compileMatraProgram(
+  source: string,
+  filename: string,
+): Promise<{ output: string; result: string; bytes: number }> {
   const id = ++workerSequence
-  const worker = new Worker(new URL("./matra-program-worker.js", import.meta.url), { type: "module" })
+  const worker = new Worker(new URL("./matra-program-worker.js", import.meta.url), {
+    type: "module",
+  })
   return new Promise((resolve, reject) => {
     const timeout = window.setTimeout(() => {
       worker.terminate()
@@ -384,18 +466,28 @@ async function compileMatraProgram(source: string, filename: string): Promise<{ 
       worker.terminate()
     }
     worker.addEventListener("message", event => {
-      const response = event.data as { id: number; output?: ArrayBuffer; result?: string; error?: string }
+      const response = event.data as {
+        id: number
+        output?: ArrayBuffer
+        result?: string
+        error?: string
+      }
       if (response.id !== id) return
       finish()
       if (response.error) reject(new Error(response.error))
-      else if (!response.output) reject(new Error("Matra Program compiler did not return WebAssembly output."))
+      else if (!response.output)
+        reject(new Error("Matra Program compiler did not return WebAssembly output."))
       else {
         const bytes = new Uint8Array(response.output)
         let binary = ""
         bytes.forEach(byte => {
           binary += String.fromCharCode(byte)
         })
-        resolve({ output: btoa(binary), result: response.result ?? "Compiled successfully.", bytes: bytes.length })
+        resolve({
+          output: btoa(binary),
+          result: response.result ?? "Compiled successfully.",
+          bytes: bytes.length,
+        })
       }
     })
     worker.addEventListener("error", () => {
@@ -417,7 +509,10 @@ function previewStylesheet(value: string): string {
   const normalized = value.trim().toLowerCase() || "matra"
   if (normalized === "matra") return `<style>${matraStyles}</style>`
   const href = stylesheetPresets[normalized] ?? validatedStylesheetURL(value)
-  if (!href) throw new SyntaxError("Stylesheet must be matra, water.css, simple.css, pico.css, or an HTTPS CSS URL.")
+  if (!href)
+    throw new SyntaxError(
+      "Stylesheet must be matra, water.css, simple.css, pico.css, or an HTTPS CSS URL.",
+    )
   return `<link rel="stylesheet" href="${escapeHTML(href)}">`
 }
 
@@ -436,7 +531,8 @@ function validatedStylesheetURL(value: string): string | undefined {
 
 function formatValue(value: unknown): string {
   if (typeof value === "string") return value
-  if (typeof value === "number" || typeof value === "boolean" || value === null) return String(value)
+  if (typeof value === "number" || typeof value === "boolean" || value === null)
+    return String(value)
   return printJSON(value, { pretty: true })
 }
 
@@ -457,7 +553,9 @@ function isNode(value: unknown): value is { tag: string } {
   return typeof value === "object" && value !== null && "tag" in value
 }
 
-async function runMatraTypeScriptProgram(program: string): Promise<{ source: string; mode?: OutputMode }> {
+async function runMatraTypeScriptProgram(
+  program: string,
+): Promise<{ source: string; mode?: OutputMode }> {
   const id = ++workerSequence
   const worker = new Worker(new URL("./matra-worker.js", import.meta.url), { type: "module" })
   return new Promise((resolve, reject) => {
@@ -487,10 +585,20 @@ async function runMatraTypeScriptProgram(program: string): Promise<{ source: str
 function extractMatraDocument(markdown: string): MatraDocument {
   const { entry, renderer, title, stylesheet } = parseMatraFrontMatter(markdown)
   const fence = extractMatraMarkdown(markdown, { entry })
-  return { ...fence, renderer, title: title === false ? undefined : (title ?? extractMarkdownTitle(markdown)), stylesheet }
+  return {
+    ...fence,
+    renderer,
+    title: title === false ? undefined : (title ?? extractMarkdownTitle(markdown)),
+    stylesheet,
+  }
 }
 
-function parseMatraFrontMatter(markdown: string): { entry?: string; renderer: MatraRenderer; title?: string | false; stylesheet?: string } {
+function parseMatraFrontMatter(markdown: string): {
+  entry?: string
+  renderer: MatraRenderer
+  title?: string | false
+  stylesheet?: string
+} {
   const frontMatter = markdown.match(/^---[ \t]*\n([\s\S]*?)\n---[ \t]*(?:\n|$)/)
   if (!frontMatter) return { renderer: "html" }
   const matra = frontMatter[1].match(/^matra:\s*\n((?:^[ \t]+.*(?:\n|$))*)/m)
@@ -499,7 +607,12 @@ function parseMatraFrontMatter(markdown: string): { entry?: string; renderer: Ma
   const rawRenderer = matra[1].match(/^[ \t]+renderer:\s*(\S+)\s*$/m)?.[1] ?? "html"
   const rawTitle = matra[1].match(/^[ \t]+title:\s*(.+?)\s*$/m)?.[1]
   const rawStylesheet = matra[1].match(/^[ \t]+stylesheet:\s*(.+?)\s*$/m)?.[1]
-  if (rawRenderer !== "auto" && rawRenderer !== "html" && rawRenderer !== "svg" && rawRenderer !== "math") {
+  if (
+    rawRenderer !== "auto" &&
+    rawRenderer !== "html" &&
+    rawRenderer !== "svg" &&
+    rawRenderer !== "math"
+  ) {
     throw new SyntaxError("matra.renderer must be one of auto, html, svg, or math.")
   }
   const title = rawTitle === "false" ? false : rawTitle?.replace(/^['"]|['"]$/g, "")

@@ -17,7 +17,9 @@ async function collectMarkdownPages(directory) {
   return files.flat()
 }
 
-const pageSources = await collectMarkdownPages(fileURLToPath(new URL("../src/pages", import.meta.url)))
+const pageSources = await collectMarkdownPages(
+  fileURLToPath(new URL("../src/pages", import.meta.url)),
+)
 assert.equal(pageSources.length, 12)
 assert.ok(pageSources.every(page => page.endsWith(".md")))
 for (const page of pageSources) {
@@ -53,7 +55,11 @@ assert.deepEqual(parseMath(mathDataSource), [
       ["Complex", 3, 0],
     ],
   ],
-  ["Field", "constant_sequence", ["Pi", "ExponentialE", ["Multiply", "Pi", 2], ["Add", "Pi", "ExponentialE"]]],
+  [
+    "Field",
+    "constant_sequence",
+    ["Pi", "ExponentialE", ["Multiply", "Pi", 2], ["Add", "Pi", "ExponentialE"]],
+  ],
   [
     "Field",
     "arrays",
@@ -80,16 +86,48 @@ const index = await readFile(new URL("../dist/index.html", import.meta.url), "ut
 const docs = await readFile(new URL("../dist/docs.html", import.meta.url), "utf8")
 const packages = await readFile(new URL("../dist/packages.html", import.meta.url), "utf8")
 const spec = await readFile(new URL("../dist/spec.html", import.meta.url), "utf8")
-const specPages = await Promise.all(["data-model", "ast", "grammar", "parser"].map(page => readFile(new URL(`../dist/spec/${page}.html`, import.meta.url), "utf8")))
+const specPages = await Promise.all(
+  ["data-model", "ast", "grammar", "parser"].map(page =>
+    readFile(new URL(`../dist/spec/${page}.html`, import.meta.url), "utf8"),
+  ),
+)
 const playground = await readFile(new URL("../dist/play.html", import.meta.url), "utf8")
 const mathNotebook = await readFile(new URL("../dist/math.html", import.meta.url), "utf8")
-const playgroundBundle = await readFile(new URL("../dist/assets/playground.js", import.meta.url), "utf8")
-const mathNotebookBundle = await readFile(new URL("../dist/assets/math-notebook.js", import.meta.url), "utf8")
-const mathNotebookSource = await readFile(new URL("../src/client/math-notebook.ts", import.meta.url), "utf8")
-const playgroundWorker = await readFile(new URL("../dist/assets/matra-worker.js", import.meta.url), "utf8")
-const playgroundSource = await readFile(new URL("../src/client/playground.ts", import.meta.url), "utf8")
+const playgroundBundle = await readFile(
+  new URL("../dist/assets/playground.js", import.meta.url),
+  "utf8",
+)
+const mathNotebookBundle = await readFile(
+  new URL("../dist/assets/math-notebook.js", import.meta.url),
+  "utf8",
+)
+const mathNotebookSource = await readFile(
+  new URL("../src/client/math-notebook.ts", import.meta.url),
+  "utf8",
+)
+const playgroundWorker = await readFile(
+  new URL("../dist/assets/matra-worker.js", import.meta.url),
+  "utf8",
+)
+const playgroundSource = await readFile(
+  new URL("../src/client/playground.ts", import.meta.url),
+  "utf8",
+)
 
-for (const page of ["blog.html", "docs.html", "examples.html", "index.html", "packages.html", "play.html", "math.html", "spec.html", "spec/data-model.html", "spec/ast.html", "spec/grammar.html", "spec/parser.html"]) {
+for (const page of [
+  "blog.html",
+  "docs.html",
+  "examples.html",
+  "index.html",
+  "packages.html",
+  "play.html",
+  "math.html",
+  "spec.html",
+  "spec/data-model.html",
+  "spec/ast.html",
+  "spec/grammar.html",
+  "spec/parser.html",
+]) {
   const document = await readFile(new URL(`../dist/${page}`, import.meta.url), "utf8")
   assert.match(document, /^<!DOCTYPE html>\n<html/, page)
   assert.match(document, /<header class="site-header">/, page)
@@ -102,7 +140,10 @@ assert.match(index, /^<!DOCTYPE html>/)
 assert.match(index, /<title>Matra — Structure first/)
 assert.match(index, /https:\/\/www\.googletagmanager\.com\/gtm\.js\?id=/)
 assert.match(index, /GTM-T8JD7GH9/)
-assert.match(index, /<noscript>\s*<iframe src="https:\/\/www\.googletagmanager\.com\/ns\.html\?id=GTM-T8JD7GH9"/)
+assert.match(
+  index,
+  /<noscript>\s*<iframe src="https:\/\/www\.googletagmanager\.com\/ns\.html\?id=GTM-T8JD7GH9"/,
+)
 assert.match(index, /意味より先に、構造を書く/)
 assert.match(index, /hello\.matra/)
 assert.doesNotMatch(index, /hello\.matra\.ts/)
@@ -125,10 +166,19 @@ assert.match(spec, /<title>Matra Specification v0.2<\/title>/)
 assert.match(spec, /Data Model/)
 for (const [document, links] of [
   [docs, ["/spec", "/play", "/examples", "/packages"]],
-  [packages, ["core", "command", "html", "graphics"].map(name => `https://github.com/matralang/matra/tree/main/packages/${name}`)],
+  [
+    packages,
+    ["core", "command", "html", "graphics"].map(
+      name => `https://github.com/matralang/matra/tree/main/packages/${name}`,
+    ),
+  ],
   [spec, ["/spec/data-model", "/spec/ast", "/spec/grammar", "/spec/parser"]],
 ]) {
-  const cards = [...document.matchAll(/<a href="([^"]+)" class="docs-card">\s*<span>(\d{2})<\/span>\s*<div>\s*<h2>([^<]+)<\/h2>\s*<p>([^<]+)<\/p>/g)]
+  const cards = [
+    ...document.matchAll(
+      /<a href="([^"]+)" class="docs-card">\s*<span>(\d{2})<\/span>\s*<div>\s*<h2>([^<]+)<\/h2>\s*<p>([^<]+)<\/p>/g,
+    ),
+  ]
   assert.equal(cards.length, 4)
   assert.deepEqual(
     cards.map(card => card[1]),
@@ -196,8 +246,13 @@ assert.match(playgroundBundle, /matra-worker\.js/)
 assert.match(playgroundBundle, /matra-program-worker\.js/)
 assert.match(playgroundBundle, /Matra TypeScript execution timed out/)
 assert.match(playgroundWorker, /self\.addEventListener/)
-const programWorker = await readFile(new URL("../dist/assets/matra-program-worker.js", import.meta.url), "utf8")
-const programCompiler = await readFile(new URL("../dist/assets/matra-program-compiler.wasm", import.meta.url))
+const programWorker = await readFile(
+  new URL("../dist/assets/matra-program-worker.js", import.meta.url),
+  "utf8",
+)
+const programCompiler = await readFile(
+  new URL("../dist/assets/matra-program-compiler.wasm", import.meta.url),
+)
 assert.match(programWorker, /WebAssembly\.instantiate/)
 assert.ok(WebAssembly.validate(programCompiler))
 assert.match(playgroundSource, /export default matra\\`/)

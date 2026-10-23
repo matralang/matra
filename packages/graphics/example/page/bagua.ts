@@ -1,4 +1,16 @@
-import { setCanvasSize, strokeWeight, strokeStyle, fill, circle, svgLayout, g, text, textAnchor, textBaseline, textSize } from "../../module.js"
+import {
+  setCanvasSize,
+  strokeWeight,
+  strokeStyle,
+  fill,
+  circle,
+  svgLayout,
+  g,
+  text,
+  textAnchor,
+  textBaseline,
+  textSize,
+} from "../../module.js"
 import taijitsu from "../mixin/taijitu.js"
 import { polarOffset } from "../math.js"
 
@@ -37,6 +49,9 @@ const circleElmArr = kamomiArr.map(({ col, name }, i) => {
   return gElm
 })
 
-const matraElmArr = [...circleElmArr, ...taijitsu(cvsW / 2 - elmSize / 2, cvsH / 2 - elmSize / 2, elmSize)]
+const matraElmArr = [
+  ...circleElmArr,
+  ...taijitsu(cvsW / 2 - elmSize / 2, cvsH / 2 - elmSize / 2, elmSize),
+]
 
 export default svgLayout(matraElmArr, cvsW, cvsH)

@@ -22,7 +22,8 @@ export class MatraKernel {
   }
 
   async start() {
-    const { ip, transport, shell_port, control_port, stdin_port, iopub_port, hb_port } = this.connection
+    const { ip, transport, shell_port, control_port, stdin_port, iopub_port, hb_port } =
+      this.connection
     const address = port => `${transport}://${ip}:${port}`
     Object.assign(this.sockets, {
       shell: new Router(),
@@ -31,8 +32,18 @@ export class MatraKernel {
       iopub: new Publisher(),
       heartbeat: new Reply(),
     })
-    await Promise.all([this.sockets.shell.bind(address(shell_port)), this.sockets.control.bind(address(control_port)), this.sockets.stdin.bind(address(stdin_port)), this.sockets.iopub.bind(address(iopub_port)), this.sockets.heartbeat.bind(address(hb_port))])
-    await Promise.all([this.serve(this.sockets.shell, "shell"), this.serve(this.sockets.control, "control"), this.heartbeat()])
+    await Promise.all([
+      this.sockets.shell.bind(address(shell_port)),
+      this.sockets.control.bind(address(control_port)),
+      this.sockets.stdin.bind(address(stdin_port)),
+      this.sockets.iopub.bind(address(iopub_port)),
+      this.sockets.heartbeat.bind(address(hb_port)),
+    ])
+    await Promise.all([
+      this.serve(this.sockets.shell, "shell"),
+      this.serve(this.sockets.control, "control"),
+      this.heartbeat(),
+    ])
   }
 
   async serve(socket, channel) {
@@ -105,7 +116,12 @@ export class MatraKernel {
   }
 
   async execute(socket, request) {
-    const { code = "", silent = false, store_history = true, user_expressions = {} } = request.content
+    const {
+      code = "",
+      silent = false,
+      store_history = true,
+      user_expressions = {},
+    } = request.content
     if (!silent && store_history) {
       this.executionCount += 1
       this.history.push([0, this.executionCount, code])
@@ -151,7 +167,16 @@ export class MatraKernel {
   }
 
   frames(identities, request, msgType, content) {
-    return encode({ identities, header: makeHeader(msgType, this.session), parentHeader: request.header, content }, this.connection.key, this.connection.signature_scheme)
+    return encode(
+      {
+        identities,
+        header: makeHeader(msgType, this.session),
+        parentHeader: request.header,
+        content,
+      },
+      this.connection.key,
+      this.connection.signature_scheme,
+    )
   }
 
   stop() {

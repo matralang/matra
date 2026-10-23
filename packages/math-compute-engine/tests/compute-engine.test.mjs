@@ -1,6 +1,15 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { evaluate, evaluateContentMathML, evaluateMatra, listStandardMathCommands, numericEvaluateMatra, numericEvaluateProps, morphionize, simplifyMatra } from "../dist/index.js"
+import {
+  evaluate,
+  evaluateContentMathML,
+  evaluateMatra,
+  listStandardMathCommands,
+  numericEvaluateMatra,
+  numericEvaluateProps,
+  morphionize,
+  simplifyMatra,
+} from "../dist/index.js"
 
 const call = (tag, ...children) => ({ tag, props: {}, children })
 
@@ -79,7 +88,10 @@ describe("Cortex Compute Engine adapter", () => {
 
   it("rejects Morphion expansion beyond the configured term limit", () => {
     const sumOfBases = ["Add", ...Array.from({ length: 24 }, (_, index) => `x${index}`)]
-    assert.throws(() => morphionize(["Power", sumOfBases, 2]), /Morphion expansion exceeds 256 terms/)
+    assert.throws(
+      () => morphionize(["Power", sumOfBases, 2]),
+      /Morphion expansion exceeds 256 terms/,
+    )
   })
 
   it("evaluates MathJSON without going through the Matra parser", () => {
@@ -87,7 +99,12 @@ describe("Cortex Compute Engine adapter", () => {
   })
 
   it("evaluates Content MathML and returns the CD-aware semantic form", () => {
-    assert.deepEqual(evaluateContentMathML('<math xmlns="http://www.w3.org/1998/Math/MathML"><apply><plus/><cn>1</cn><cn>2</cn></apply></math>'), { kind: "number", type: "integer", value: "3" })
+    assert.deepEqual(
+      evaluateContentMathML(
+        '<math xmlns="http://www.w3.org/1998/Math/MathML"><apply><plus/><cn>1</cn><cn>2</cn></apply></math>',
+      ),
+      { kind: "number", type: "integer", value: "3" },
+    )
   })
 
   it("evaluates Matra syntax through @matra/math", () => {
@@ -110,7 +127,11 @@ describe("Cortex Compute Engine adapter", () => {
   it("evaluates math expressions embedded in props", () => {
     assert.deepEqual(
       numericEvaluateProps(
-        { tag: "circle", props: { cx: call("Cos", "theta"), r: call("Divide", 3, 8) }, children: [] },
+        {
+          tag: "circle",
+          props: { cx: call("Cos", "theta"), r: call("Divide", 3, 8) },
+          children: [],
+        },
         {
           theta: ["Divide", "Pi", 3],
         },
@@ -127,10 +148,17 @@ describe("Cortex Compute Engine adapter", () => {
   })
 
   it("falls back to approximation when an exact expression is not scalar", () => {
-    assert.deepEqual(numericEvaluateProps({ tag: "circle", props: { cx: call("Sqrt", 4), cy: call("Sqrt", 3) }, children: [] }), {
-      tag: "circle",
-      props: { cx: 2, cy: "1.73205080756887729353" },
-      children: [],
-    })
+    assert.deepEqual(
+      numericEvaluateProps({
+        tag: "circle",
+        props: { cx: call("Sqrt", 4), cy: call("Sqrt", 3) },
+        children: [],
+      }),
+      {
+        tag: "circle",
+        props: { cx: 2, cy: "1.73205080756887729353" },
+        children: [],
+      },
+    )
   })
 })

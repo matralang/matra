@@ -27,7 +27,13 @@ export interface JSONMatraNode {
   position?: SourcePosition
 }
 
-export type JSONMatraValue = JSONMatraPrimitive | JSONMatraValue[] | { [key: string]: JSONMatraValue } | JSONMatraNode | MatraDocumentSource | MatraExpressionSource
+export type JSONMatraValue =
+  | JSONMatraPrimitive
+  | JSONMatraValue[]
+  | { [key: string]: JSONMatraValue }
+  | JSONMatraNode
+  | MatraDocumentSource
+  | MatraExpressionSource
 
 type TemplateInput = TemplateStringsArray | string
 
@@ -78,14 +84,23 @@ export function normalizeMatra(input: unknown): JSONMatraValue {
       return {
         tag: input.tag,
         props: isRecord(input.props) ? normalizeObject(input.props) : {},
-        children: Array.isArray(input.children) ? input.children.map(child => normalizeMatra(child)) : [],
+        children: Array.isArray(input.children)
+          ? input.children.map(child => normalizeMatra(child))
+          : [],
       }
     }
 
     return normalizeObject(input)
   }
 
-  if (input === null || input === undefined || typeof input === "string" || typeof input === "number" || typeof input === "boolean" || typeof input === "bigint") {
+  if (
+    input === null ||
+    input === undefined ||
+    typeof input === "string" ||
+    typeof input === "number" ||
+    typeof input === "boolean" ||
+    typeof input === "bigint"
+  ) {
     return input as JSONMatraPrimitive
   }
 
@@ -102,25 +117,29 @@ export interface MatraFactory {
   raw(source: string): MatraRawSource
 }
 
-export const matra = Object.assign((input: unknown, ...values: unknown[]) => (isMatraTemplateStrings(input) ? matraTemplate(input, ...values) : normalizeMatra(input)), {
-  doc(strings: TemplateInput, ...values: unknown[]): MatraDocumentSource {
-    return { kind: "MatraDocumentSource", source: templateSource(strings, values) }
-  },
+export const matra = Object.assign(
+  (input: unknown, ...values: unknown[]) =>
+    isMatraTemplateStrings(input) ? matraTemplate(input, ...values) : normalizeMatra(input),
+  {
+    doc(strings: TemplateInput, ...values: unknown[]): MatraDocumentSource {
+      return { kind: "MatraDocumentSource", source: templateSource(strings, values) }
+    },
 
-  expr(strings: TemplateInput, ...values: unknown[]): MatraExpressionSource {
-    return { kind: "MatraExpressionSource", source: templateSource(strings, values) }
-  },
+    expr(strings: TemplateInput, ...values: unknown[]): MatraExpressionSource {
+      return { kind: "MatraExpressionSource", source: templateSource(strings, values) }
+    },
 
-  ast(input: unknown): JSONMatraValue {
-    return normalizeMatra(input)
-  },
+    ast(input: unknown): JSONMatraValue {
+      return normalizeMatra(input)
+    },
 
-  tuple(tag: string, props: unknown = {}, children: unknown[] = []): JSONMatraNode {
-    return normalizeMatra([tag, props, children]) as JSONMatraNode
-  },
+    tuple(tag: string, props: unknown = {}, children: unknown[] = []): JSONMatraNode {
+      return normalizeMatra([tag, props, children]) as JSONMatraNode
+    },
 
-  raw: matraTemplate.raw,
-}) as MatraFactory
+    raw: matraTemplate.raw,
+  },
+) as MatraFactory
 
 function parseJSONMSource(source: string, path: string): JSONMatraValue {
   const doc = parseTaggedSource(source, "doc")
@@ -129,7 +148,10 @@ function parseJSONMSource(source: string, path: string): JSONMatraValue {
   const expr = parseTaggedSource(source, "expr")
   if (expr !== undefined) return matra.expr(expr)
 
-  throw new Error(`.jsonm parsing is not implemented for this syntax: ${path}. ` + "Only matra.doc`...` and matra.expr`...` placeholders are supported.")
+  throw new Error(
+    `.jsonm parsing is not implemented for this syntax: ${path}. ` +
+      "Only matra.doc`...` and matra.expr`...` placeholders are supported.",
+  )
 }
 
 function parseTaggedSource(source: string, tag: "doc" | "expr"): string | undefined {
@@ -146,11 +168,17 @@ function templateSource(strings: TemplateInput, values: unknown[]): string {
 }
 
 function normalizeObject(input: Record<string, unknown>): Record<string, JSONMatraValue> {
-  return Object.fromEntries(Object.entries(input).map(([key, value]) => [key, normalizeMatra(value)]))
+  return Object.fromEntries(
+    Object.entries(input).map(([key, value]) => [key, normalizeMatra(value)]),
+  )
 }
 
 function isSourceNode(input: unknown): input is MatraDocumentSource | MatraExpressionSource {
-  return isRecord(input) && (input.kind === "MatraDocumentSource" || input.kind === "MatraExpressionSource") && typeof input.source === "string"
+  return (
+    isRecord(input) &&
+    (input.kind === "MatraDocumentSource" || input.kind === "MatraExpressionSource") &&
+    typeof input.source === "string"
+  )
 }
 
 function isRecord(input: unknown): input is Record<string, any> {

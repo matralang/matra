@@ -8,7 +8,9 @@ import { cachedCompiler, CommandError } from "./bootstrap-compiler.mjs"
 import { sourcePosition } from "./compiler-host.mjs"
 
 const compilerSourcePath = fileURLToPath(new URL("../examples/compiler.md", import.meta.url))
-const artifactCacheDirectory = fileURLToPath(new URL("../target/bootstrap/self-host", import.meta.url))
+const artifactCacheDirectory = fileURLToPath(
+  new URL("../target/bootstrap/self-host", import.meta.url),
+)
 
 try {
   const markdown = await readFile(compilerSourcePath, "utf8")
@@ -91,7 +93,10 @@ async function compile(compilerBytes, source) {
       clearTimeout(timer)
       clearInterval(heartbeat)
       worker.terminate()
-      resolve({ output: result.output ? Buffer.from(result.output) : undefined, diagnostic: result.diagnostic })
+      resolve({
+        output: result.output ? Buffer.from(result.output) : undefined,
+        diagnostic: result.diagnostic,
+      })
     })
     worker.once("error", error => {
       clearTimeout(timer)
@@ -140,14 +145,23 @@ function elapsedSeconds(started) {
 
 // bootstrap の一致だけでなく、各段階の compiler が統一文法を実行可能な Wasm にすることを確認する。
 async function verifyUnified(name, compiler) {
-  const fixtures = JSON.parse(await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"))
+  const fixtures = JSON.parse(
+    await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"),
+  )
   for (const fixture of fixtures.markupDiagnostics) {
     const source = new TextEncoder().encode(fixture.source)
     const result = await compile(compiler, source)
-    assert.equal(result.output, undefined, `${name}: unexpected markup acceptance: ${fixture.source}`)
+    assert.equal(
+      result.output,
+      undefined,
+      `${name}: unexpected markup acceptance: ${fixture.source}`,
+    )
     const offset = Buffer.byteLength(fixture.source.slice(0, fixture.offset))
     const { line, column } = sourcePosition(source, offset)
-    assert.ok(result.diagnostic.includes(`:${line}:${column}: parse error`), `${name}: ${result.diagnostic}`)
+    assert.ok(
+      result.diagnostic.includes(`:${line}:${column}: parse error`),
+      `${name}: ${result.diagnostic}`,
+    )
   }
   for (const fixture of fixtures.native) {
     const result = await compile(compiler, new TextEncoder().encode(fixture.source))
@@ -158,7 +172,10 @@ async function verifyUnified(name, compiler) {
   for (const source of fixtures.nativeReject) {
     const result = await compile(compiler, new TextEncoder().encode(source))
     assert.equal(result.output, undefined, `${name}: unexpected native acceptance: ${source}`)
-    assert.doesNotMatch(result.diagnostic, /exceeded|unreachable|out of bounds|Generated WebAssembly is invalid/i)
+    assert.doesNotMatch(
+      result.diagnostic,
+      /exceeded|unreachable|out of bounds|Generated WebAssembly is invalid/i,
+    )
   }
   for (const fixture of fixtures.accept) {
     const result = await compile(compiler, new TextEncoder().encode(fixture.source))
@@ -169,7 +186,10 @@ async function verifyUnified(name, compiler) {
   for (const source of fixtures.reject) {
     const result = await compile(compiler, new TextEncoder().encode(source))
     if (!result.output) {
-      assert.doesNotMatch(result.diagnostic, /exceeded|unreachable|out of bounds|Generated WebAssembly is invalid/i)
+      assert.doesNotMatch(
+        result.diagnostic,
+        /exceeded|unreachable|out of bounds|Generated WebAssembly is invalid/i,
+      )
       continue
     }
     const instance = await instantiateUnified(result.output)
@@ -206,5 +226,7 @@ export fn answer() -> i32 {
   assert.ok(native.output, `${name}: native statement regression: ${native.diagnostic}`)
   const { instance } = await WebAssembly.instantiate(native.output)
   assert.equal(instance.exports.answer(), -1)
-  console.log(`${name}: unified grammar conformance (${fixtures.accept.length + fixtures.reject.length} document cases, ${fixtures.native.length + fixtures.nativeReject.length} native cases).`)
+  console.log(
+    `${name}: unified grammar conformance (${fixtures.accept.length + fixtures.reject.length} document cases, ${fixtures.native.length + fixtures.nativeReject.length} native cases).`,
+  )
 }

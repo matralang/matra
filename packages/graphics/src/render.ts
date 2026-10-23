@@ -1,4 +1,10 @@
-import type { MatraAST, MatraASTChild, MatraPropValue, MatraRenderer, MatraValue } from "@matra/core"
+import type {
+  MatraAST,
+  MatraASTChild,
+  MatraPropValue,
+  MatraRenderer,
+  MatraValue,
+} from "@matra/core"
 import { isSvgNode, svgNode } from "./ast.js"
 import type { SVGRenderOptions } from "./types.js"
 
@@ -71,14 +77,17 @@ function serializeNode(node: MatraAST, indent: number, depth: number): string {
   }
   const padding = " ".repeat(indent * (depth + 1))
   const closingPadding = " ".repeat(indent * depth)
-  const children = node.children.map(child => `${padding}${serializeChild(child, indent, depth + 1)}`).join("\n")
+  const children = node.children
+    .map(child => `${padding}${serializeChild(child, indent, depth + 1)}`)
+    .join("\n")
   return `<${node.tag}${attributes}>\n${children}\n${closingPadding}</${node.tag}>`
 }
 
 function serializeChild(child: MatraASTChild, indent: number, depth: number): string {
   if (isAst(child)) return serializeNode(child, indent, depth)
   if (child === null) return ""
-  if (typeof child === "object") throw new TypeError("SVG children must be elements or scalar values")
+  if (typeof child === "object")
+    throw new TypeError("SVG children must be elements or scalar values")
   return escapeXML(child)
 }
 
@@ -163,7 +172,12 @@ function serializeStyle(style: Record<string, MatraValue>): string {
 }
 
 function escapeXML(value: Attribute): string {
-  return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;")
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;")
 }
 
 function scalarNumber(value: MatraPropValue | undefined): number | undefined {

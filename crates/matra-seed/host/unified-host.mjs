@@ -6,7 +6,8 @@ export async function instantiateUnified(bytes) {
     return values.length - 1
   }
   const value = handle => {
-    if (!Number.isInteger(handle) || handle < 0 || handle >= values.length) throw new RangeError("Invalid Matra value handle")
+    if (!Number.isInteger(handle) || handle < 0 || handle >= values.length)
+      throw new RangeError("Invalid Matra value handle")
     return values[handle]
   }
   const scopes = [undefined]
@@ -22,7 +23,12 @@ export async function instantiateUnified(bytes) {
     throw new ReferenceError(`Unknown name: ${name}`)
   }
   const own = (object, name, item) => {
-    Object.defineProperty(object, name, { value: item, enumerable: true, configurable: true, writable: true })
+    Object.defineProperty(object, name, {
+      value: item,
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    })
     return object
   }
   const array = handle => {
@@ -34,7 +40,13 @@ export async function instantiateUnified(bytes) {
   const imports = {
     matra: {
       literal(pointer, length) {
-        return intern(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(new Uint8Array(instance.exports.memory.buffer, pointer, length))))
+        return intern(
+          JSON.parse(
+            new TextDecoder("utf-8", { fatal: true }).decode(
+              new Uint8Array(instance.exports.memory.buffer, pointer, length),
+            ),
+          ),
+        )
       },
       scope(parent) {
         scopes.push({ parent: parent ? scope(parent) : undefined, bindings: new Map() })
@@ -75,7 +87,8 @@ export async function instantiateUnified(bytes) {
       member(target, key) {
         const object = value(target)
         const name = value(key)
-        if (object == null || !Object.hasOwn(Object(object), name)) throw new ReferenceError(`Unknown member: ${name}`)
+        if (object == null || !Object.hasOwn(Object(object), name))
+          throw new ReferenceError(`Unknown member: ${name}`)
         return intern(object[name])
       },
       unary(op, operand) {
@@ -84,7 +97,18 @@ export async function instantiateUnified(bytes) {
       binary(op, left, right) {
         const a = value(left)
         const b = value(right)
-        const operators = { "+": () => a + b, "-": () => a - b, "*": () => a * b, "/": () => a / b, "==": () => a === b, "!=": () => a !== b, "<": () => a < b, "<=": () => a <= b, ">": () => a > b, ">=": () => a >= b }
+        const operators = {
+          "+": () => a + b,
+          "-": () => a - b,
+          "*": () => a * b,
+          "/": () => a / b,
+          "==": () => a === b,
+          "!=": () => a !== b,
+          "<": () => a < b,
+          "<=": () => a <= b,
+          ">": () => a > b,
+          ">=": () => a >= b,
+        }
         const operation = operators[value(op)]
         if (!operation) throw new TypeError("Unknown binary operator")
         return intern(operation())
@@ -93,7 +117,9 @@ export async function instantiateUnified(bytes) {
         return Number(Boolean(value(item)))
       },
       function(index, env) {
-        return intern((...args) => value(instance.exports.__functions.get(index)(env, intern(args))))
+        return intern((...args) =>
+          value(instance.exports.__functions.get(index)(env, intern(args))),
+        )
       },
       call(callee, args) {
         const fn = value(callee)

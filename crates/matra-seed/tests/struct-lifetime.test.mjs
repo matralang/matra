@@ -16,7 +16,11 @@ async function seed(source) {
     const input = join(directory, "input.md")
     const output = join(directory, "output.wasm")
     await writeFile(input, "```compiler.matra.program\n" + source + "\n```\n")
-    const result = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output], { cwd: root, encoding: "utf8" })
+    const result = spawnSync(
+      "cargo",
+      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output],
+      { cwd: root, encoding: "utf8" },
+    )
     assert.equal(result.status, 0, result.stderr)
     return await readFile(output)
   } finally {
@@ -34,8 +38,16 @@ async function bootstrap(source) {
   new Uint8Array(compiler.memory.buffer, pointer, bytes.length).set(bytes)
   const result = compiler.compile(pointer, bytes.length)
   const record = new DataView(compiler.memory.buffer, result, 36)
-  assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(bytes, compiler.memory, result))
-  return new Uint8Array(compiler.memory.buffer, record.getInt32(4, true), record.getInt32(8, true)).slice()
+  assert.equal(
+    record.getInt32(0, true),
+    0,
+    formatCompilerDiagnostic(bytes, compiler.memory, result),
+  )
+  return new Uint8Array(
+    compiler.memory.buffer,
+    record.getInt32(4, true),
+    record.getInt32(8, true),
+  ).slice()
 }
 
 for (const [name, compile] of [
@@ -184,7 +196,10 @@ export fn probe(source: bytes, selected: i32) -> token {
     } = await WebAssembly.instantiate(await compile(source))
     const bytes = new TextEncoder().encode("module compiler\n\nstruct")
     new Uint8Array(generated.memory.buffer, 4096, bytes.length).set(bytes)
-    const fields = pointer => [0, 4, 8].map(offset => new DataView(generated.memory.buffer).getInt32(pointer + offset, true))
+    const fields = pointer =>
+      [0, 4, 8].map(offset =>
+        new DataView(generated.memory.buffer).getInt32(pointer + offset, true),
+      )
     const pointers = [0, 1, 2].map(selected => generated.probe(4096, bytes.length, selected))
     assert.deepEqual(pointers.map(fields), [
       [1, 0, 6],
@@ -225,7 +240,8 @@ export fn escape() -> i32 { let temporary = make(7) return allocate_result() }
     const initial = e.heap()
     for (let value = 0; value < 20000; value++) assert.equal(e.scalar(value), value * 2 + 3)
     assert.equal(e.heap(), initial)
-    const fields = address => [0, 4].map(offset => new DataView(e.memory.buffer).getInt32(address + offset, true))
+    const fields = address =>
+      [0, 4].map(offset => new DataView(e.memory.buffer).getInt32(address + offset, true))
     const nested = e.nested()
     assert.deepEqual(fields(nested), [21, 41])
     assert.equal(e.heap(), initial + 8)

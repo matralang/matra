@@ -9,8 +9,19 @@ export type UnifiedExpression =
   | { kind: "call"; callee: UnifiedExpression; arguments: UnifiedExpression[] }
   | { kind: "binary"; operator: string; left: UnifiedExpression; right: UnifiedExpression }
   | { kind: "unary"; operator: string; operand: UnifiedExpression }
-  | { kind: "node"; tag: string; classes: string[]; attributes: { key: string; value: UnifiedExpression }[]; body: UnifiedStatement[] }
-  | { kind: "if"; condition: UnifiedExpression; thenBody: UnifiedStatement[]; elseBody: UnifiedStatement[] }
+  | {
+      kind: "node"
+      tag: string
+      classes: string[]
+      attributes: { key: string; value: UnifiedExpression }[]
+      body: UnifiedStatement[]
+    }
+  | {
+      kind: "if"
+      condition: UnifiedExpression
+      thenBody: UnifiedStatement[]
+      elseBody: UnifiedStatement[]
+    }
   | { kind: "for"; name: string; iterable: UnifiedExpression; body: UnifiedStatement[] }
   | { kind: "while"; condition: UnifiedExpression; body: UnifiedStatement[] }
   | { kind: "do"; condition: UnifiedExpression; body: UnifiedStatement[] }
@@ -33,7 +44,11 @@ export interface StaticNode {
   props: Record<string, StaticValue>
   children: StaticValue[]
 }
-export type StaticValue = UnifiedScalar | StaticValue[] | { [key: string]: StaticValue } | StaticNode
+export type StaticValue =
+  | UnifiedScalar
+  | StaticValue[]
+  | { [key: string]: StaticValue }
+  | StaticNode
 export interface StaticToASTNode {
   tag: string
   props: Record<string, StaticValue>
@@ -83,7 +98,8 @@ export function evaluateUnified(module: UnifiedModule): StaticValue | undefined 
 class Evaluator {
   constructor(private readonly staticOnly: boolean) {}
   private dynamic(kind: string): void {
-    if (this.staticOnly) throw new EvaluationRequiredError(`Static evaluation does not execute ${kind}.`)
+    if (this.staticOnly)
+      throw new EvaluationRequiredError(`Static evaluation does not execute ${kind}.`)
   }
   run(statements: UnifiedStatement[], scope: Scope, children?: any[]): any {
     let output: any = null
@@ -140,15 +156,20 @@ class Evaluator {
         try {
           return scope.get(expr.name)
         } catch (error) {
-          if (this.staticOnly) throw new EvaluationRequiredError(`Static evaluation requires '${expr.name}'.`)
+          if (this.staticOnly)
+            throw new EvaluationRequiredError(`Static evaluation requires '${expr.name}'.`)
           throw error
         }
       case "array":
         return expr.items.map(value => this.expression(value, scope))
       case "object":
-        return Object.fromEntries(expr.entries.map(({ key, value }) => [key, this.expression(value, scope)]))
+        return Object.fromEntries(
+          expr.entries.map(({ key, value }) => [key, this.expression(value, scope)]),
+        )
       case "node": {
-        const props = Object.fromEntries(expr.attributes.map(({ key, value }) => [key, this.expression(value, scope)]))
+        const props = Object.fromEntries(
+          expr.attributes.map(({ key, value }) => [key, this.expression(value, scope)]),
+        )
         if (expr.classes.length) props.class = expr.classes.join(" ")
         const children: any[] = []
         this.run(expr.body, new Scope(scope), children)
@@ -157,7 +178,8 @@ class Evaluator {
       case "member": {
         this.dynamic("member access")
         const object = this.expression(expr.object, scope)
-        if (object == null || !Object.hasOwn(Object(object), expr.name)) throw new ReferenceError(`Unknown member: ${expr.name}`)
+        if (object == null || !Object.hasOwn(Object(object), expr.name))
+          throw new ReferenceError(`Unknown member: ${expr.name}`)
         return object[expr.name]
       }
       case "call": {
@@ -204,7 +226,10 @@ class Evaluator {
       }
       case "if":
         this.dynamic("if")
-        return this.run(this.expression(expr.condition, scope) ? expr.thenBody : expr.elseBody, new Scope(scope))
+        return this.run(
+          this.expression(expr.condition, scope) ? expr.thenBody : expr.elseBody,
+          new Scope(scope),
+        )
       case "for": {
         this.dynamic("for")
         const values = this.expression(expr.iterable, scope)
@@ -226,7 +251,12 @@ class Evaluator {
       case "do": {
         this.dynamic(expr.kind)
         let first = true
-        while ((expr.kind === "do" && first) || (expr.kind === "do" ? !this.expression(expr.condition, scope) : this.expression(expr.condition, scope))) {
+        while (
+          (expr.kind === "do" && first) ||
+          (expr.kind === "do"
+            ? !this.expression(expr.condition, scope)
+            : this.expression(expr.condition, scope))
+        ) {
           first = false
           try {
             this.run(expr.body, new Scope(scope))
@@ -242,15 +272,35 @@ class Evaluator {
 }
 
 export function staticValueToAST(value: StaticValue): StaticToASTNode {
-  if (!isStaticNode(value)) throw new TypeError("A document renderer requires a static Matra node output.")
-  return { tag: value.tag, props: value.props, children: value.children.map(child => (isStaticNode(child) ? staticValueToAST(child) : child)) }
+  if (!isStaticNode(value))
+    throw new TypeError("A document renderer requires a static Matra node output.")
+  return {
+    tag: value.tag,
+    props: value.props,
+    children: value.children.map(child => (isStaticNode(child) ? staticValueToAST(child) : child)),
+  }
 }
 function isStaticNode(value: StaticValue): value is StaticNode {
-  return value !== null && typeof value === "object" && !Array.isArray(value) && typeof (value as StaticNode).tag === "string" && typeof (value as StaticNode).props === "object" && Array.isArray((value as StaticNode).children)
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    typeof (value as StaticNode).tag === "string" &&
+    typeof (value as StaticNode).props === "object" &&
+    Array.isArray((value as StaticNode).children)
+  )
 }
 
-type Token = { value: string; offset: number; kind: "word" | "number" | "string" | "symbol" | "newline" | "eof" }
-const reserved = new Set("let fn if else else_if for in while do until return break module import export struct set true false null".split(" "))
+type Token = {
+  value: string
+  offset: number
+  kind: "word" | "number" | "string" | "symbol" | "newline" | "eof"
+}
+const reserved = new Set(
+  "let fn if else else_if for in while do until return break module import export struct set true false null".split(
+    " ",
+  ),
+)
 class UnifiedParser {
   private readonly tokens: Token[] = []
   private lexer: Generator<Token>
@@ -274,7 +324,8 @@ class UnifiedParser {
     while (!this.at(end)) {
       if (this.at("eof")) this.fail(`Expected '${end}'`)
       result.push(this.statement())
-      if (!this.at(end) && !this.separators()) this.fail("Expected a newline or ';' between expressions")
+      if (!this.at(end) && !this.separators())
+        this.fail("Expected a newline or ';' between expressions")
     }
     return result
   }
@@ -360,7 +411,20 @@ class UnifiedParser {
   private expression(minimum = 1): UnifiedExpression {
     this.trivia()
     let value = this.unary()
-    const precedence: Record<string, number> = { "||": 1, "&&": 2, "==": 3, "!=": 3, "<": 4, "<=": 4, ">": 4, ">=": 4, "+": 5, "-": 5, "*": 6, "/": 6 }
+    const precedence: Record<string, number> = {
+      "||": 1,
+      "&&": 2,
+      "==": 3,
+      "!=": 3,
+      "<": 4,
+      "<=": 4,
+      ">": 4,
+      ">=": 4,
+      "+": 5,
+      "-": 5,
+      "*": 6,
+      "/": 6,
+    }
     while (true) {
       this.trivia()
       const priority = this.peek().kind === "symbol" ? (precedence[this.peek().value] ?? 0) : 0
@@ -379,8 +443,10 @@ class UnifiedParser {
     let value = this.primary()
     while (true) {
       this.trivia()
-      if (this.consume(".")) value = { kind: "member", object: value, name: this.word("Expected a member name", true) }
-      else if (this.consume("(")) value = { kind: "call", callee: value, arguments: this.list(")", () => this.expression()) }
+      if (this.consume("."))
+        value = { kind: "member", object: value, name: this.word("Expected a member name", true) }
+      else if (this.consume("("))
+        value = { kind: "call", callee: value, arguments: this.list(")", () => this.expression()) }
       else break
     }
     return value
@@ -390,7 +456,11 @@ class UnifiedParser {
     const thenBody = this.block()
     const checkpoint = this.index
     this.inline()
-    const elseBody: UnifiedStatement[] = this.consume("else_if") ? [{ kind: "expression", expression: this.ifExpression() }] : this.consume("else") ? this.block() : ((this.index = checkpoint), [])
+    const elseBody: UnifiedStatement[] = this.consume("else_if")
+      ? [{ kind: "expression", expression: this.ifExpression() }]
+      : this.consume("else")
+        ? this.block()
+        : ((this.index = checkpoint), [])
     return { kind: "if", condition, thenBody, elseBody }
   }
   private primary(): UnifiedExpression {
@@ -460,7 +530,10 @@ class UnifiedParser {
       return {
         kind: "object",
         entries: this.list("}", () => {
-          const key = this.peek().kind === "string" ? this.next().value : this.word("Expected an object key", true)
+          const key =
+            this.peek().kind === "string"
+              ? this.next().value
+              : this.word("Expected an object key", true)
           this.trivia()
           this.expect(":")
           return { key, value: this.expression() }
@@ -483,7 +556,13 @@ class UnifiedParser {
             true,
           )
         : []
-      return { kind: "node", tag: name, classes: [...new Set(classes)], attributes, body: this.block(true) }
+      return {
+        kind: "node",
+        tag: name,
+        classes: [...new Set(classes)],
+        attributes,
+        body: this.block(true),
+      }
     }
     this.index = checkpoint
     return { kind: "reference", name }
@@ -523,7 +602,8 @@ class UnifiedParser {
   }
   private startsAttribute(): boolean {
     const token = this.peek()
-    if (token.kind !== "word" || !/[ \t\r\n]/.test(this.source[token.offset - 1] ?? "")) return false
+    if (token.kind !== "word" || !/[ \t\r\n]/.test(this.source[token.offset - 1] ?? ""))
+      return false
     let cursor = this.index + 1
     while (this.token(cursor).kind === "newline") cursor++
     const following = this.token(cursor)
@@ -541,7 +621,8 @@ class UnifiedParser {
     while (this.at("newline")) this.next()
   }
   private word(message: string, property = false): string {
-    if (this.peek().kind !== "word" || (!property && reserved.has(this.peek().value))) this.fail(message)
+    if (this.peek().kind !== "word" || (!property && reserved.has(this.peek().value)))
+      this.fail(message)
     return this.next().value
   }
   private consume(value: string): boolean {
@@ -554,7 +635,11 @@ class UnifiedParser {
   }
   private at(value: string): boolean {
     const token = this.peek()
-    return value === "eof" ? token.kind === "eof" : value === "newline" ? token.kind === "newline" : token.kind !== "string" && token.value === value
+    return value === "eof"
+      ? token.kind === "eof"
+      : value === "newline"
+        ? token.kind === "newline"
+        : token.kind !== "string" && token.value === value
   }
   private token(index: number): Token {
     while (index >= this.tokens.length) {
@@ -598,10 +683,14 @@ function* tokenize(source: string, index = 0): Generator<Token> {
       index++
       let value = ""
       while (index < source.length && source[index] !== '"') {
-        if ("\\\r\n".includes(source[index])) throw new UnifiedSyntaxError(`String escapes and multiline strings are not implemented at offset ${index}.`)
+        if ("\\\r\n".includes(source[index]))
+          throw new UnifiedSyntaxError(
+            `String escapes and multiline strings are not implemented at offset ${index}.`,
+          )
         value += source[index++]
       }
-      if (source[index] !== '"') throw new UnifiedSyntaxError(`Unterminated string at offset ${offset}.`)
+      if (source[index] !== '"')
+        throw new UnifiedSyntaxError(`Unterminated string at offset ${offset}.`)
       index++
       yield { kind: "string", value, offset }
       continue
@@ -671,7 +760,10 @@ class MarkupParser {
     const body: UnifiedStatement[] = []
     while (!this.take("</")) {
       if (this.offset === this.source.length) this.fail(`Expected closing tag '${tag}'`)
-      const expression = this.source[this.offset] === "<" ? this.node() : { kind: "literal" as const, value: this.text("<") }
+      const expression =
+        this.source[this.offset] === "<"
+          ? this.node()
+          : { kind: "literal" as const, value: this.text("<") }
       body.push({ kind: "expression", expression })
     }
     const start = this.offset
@@ -685,10 +777,18 @@ class MarkupParser {
     while (this.offset < this.source.length && this.source[this.offset] !== end) {
       const start = this.offset
       if (this.source[start] === "&") {
-        const reference = this.source.slice(start).match(/^&(?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9a-fA-F]+);/)
+        const reference = this.source
+          .slice(start)
+          .match(/^&(?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9a-fA-F]+);/)
         if (!reference) this.fail("Invalid character reference")
         const name = reference[0].slice(1, -1)
-        const entities: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" }
+        const entities: Record<string, string> = {
+          amp: "&",
+          lt: "<",
+          gt: ">",
+          quot: '"',
+          apos: "'",
+        }
         if (name.startsWith("#")) {
           const code = name[1] === "x" ? Number.parseInt(name.slice(2), 16) : Number(name.slice(1))
           this.character(code)
@@ -697,7 +797,8 @@ class MarkupParser {
         this.offset += reference[0].length
       } else {
         if (end !== "<" && this.source[start] === "<") this.fail("Unexpected '<' in attribute")
-        if (end === "<" && this.source.startsWith("]]>", start)) this.fail("Unexpected ']]>' in text")
+        if (end === "<" && this.source.startsWith("]]>", start))
+          this.fail("Unexpected ']]>' in text")
         const code = this.source.codePointAt(start)!
         this.character(code)
         const character = String.fromCodePoint(code)
@@ -708,10 +809,25 @@ class MarkupParser {
     return value
   }
   private character(code: number): void {
-    if (!(code === 9 || code === 10 || code === 13 || (code >= 0x20 && code <= 0xd7ff) || (code >= 0xe000 && code <= 0xfffd) || (code >= 0x10000 && code <= 0x10ffff))) this.fail("Invalid XML character")
+    if (
+      !(
+        code === 9 ||
+        code === 10 ||
+        code === 13 ||
+        (code >= 0x20 && code <= 0xd7ff) ||
+        (code >= 0xe000 && code <= 0xfffd) ||
+        (code >= 0x10000 && code <= 0x10ffff)
+      )
+    )
+      this.fail("Invalid XML character")
   }
   private name(kind: "tag" | "class" | "attribute" = "attribute"): string {
-    const pattern = kind === "tag" ? /^[A-Za-z_:][A-Za-z0-9_:-]*/ : kind === "class" ? /^[A-Za-z_][A-Za-z0-9_-]*/ : /^[A-Za-z_:][A-Za-z0-9_.:-]*/
+    const pattern =
+      kind === "tag"
+        ? /^[A-Za-z_:][A-Za-z0-9_:-]*/
+        : kind === "class"
+          ? /^[A-Za-z_][A-Za-z0-9_-]*/
+          : /^[A-Za-z_:][A-Za-z0-9_.:-]*/
     const name = this.source.slice(this.offset).match(pattern)
     if (!name) this.fail("Expected a markup name")
     this.offset += name[0].length
@@ -719,7 +835,8 @@ class MarkupParser {
   }
   private whitespace(): boolean {
     const start = this.offset
-    while (/[ \t\r\n]/.test(this.source[this.offset] ?? "") && this.offset < this.source.length) this.offset++
+    while (/[ \t\r\n]/.test(this.source[this.offset] ?? "") && this.offset < this.source.length)
+      this.offset++
     return this.offset !== start
   }
   private take(value: string): boolean {

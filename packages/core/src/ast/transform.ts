@@ -14,7 +14,12 @@ export function visit(node: MatraAST, visitor: Visitor): void {
   walk(node, null, null, visitor)
 }
 
-function walk(node: MatraAST, parent: MatraAST | null, index: number | null, visitor: Visitor): void {
+function walk(
+  node: MatraAST,
+  parent: MatraAST | null,
+  index: number | null,
+  visitor: Visitor,
+): void {
   visitor(node, { parent, index })
   node.children.forEach((child, childIndex) => {
     if (isMatraAST(child)) walk(child, node, childIndex, visitor)
@@ -26,8 +31,17 @@ export function transform(node: MatraAST, transformer: Transformer): MatraAST | 
   return transformNode(node, null, null, transformer)
 }
 
-function transformNode(node: MatraAST, parent: MatraAST | null, index: number | null, transformer: Transformer): MatraAST | null {
-  const children = node.children.map((child, childIndex): MatraASTChild | null => (isMatraAST(child) ? transformNode(child, node, childIndex, transformer) : child)).filter((child): child is MatraASTChild => child !== null)
+function transformNode(
+  node: MatraAST,
+  parent: MatraAST | null,
+  index: number | null,
+  transformer: Transformer,
+): MatraAST | null {
+  const children = node.children
+    .map((child, childIndex): MatraASTChild | null =>
+      isMatraAST(child) ? transformNode(child, node, childIndex, transformer) : child,
+    )
+    .filter((child): child is MatraASTChild => child !== null)
   const next: MatraAST = { ...node, props: { ...node.props }, children }
   const result = transformer(next, { parent, index })
   return result === undefined ? next : result

@@ -1,4 +1,17 @@
-import { setCanvasSize, strokeWeight, strokeStyle, fill, circle, svgLayout, g, line, text, textAnchor, textBaseline, textSize } from "../../module.js"
+import {
+  setCanvasSize,
+  strokeWeight,
+  strokeStyle,
+  fill,
+  circle,
+  svgLayout,
+  g,
+  line,
+  text,
+  textAnchor,
+  textBaseline,
+  textSize,
+} from "../../module.js"
 import { calculate, fibonacciDigit, polarOffset } from "../math.js"
 
 const cvsSize = 256

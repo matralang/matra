@@ -26,21 +26,32 @@ export interface BrowserExecuteOptions {
 }
 
 /** Validate a nodejs AST without importing any Node-only runtime modules. */
-export function prepareNodejsBlock(ast: MatraAST, options: BrowserExecuteOptions = {}): BrowserNodejsBlock {
-  if (ast.tag !== "nodejs") throw new CommandValidationError("Browser execution expects a nodejs block", ast.position)
+export function prepareNodejsBlock(
+  ast: MatraAST,
+  options: BrowserExecuteOptions = {},
+): BrowserNodejsBlock {
+  if (ast.tag !== "nodejs")
+    throw new CommandValidationError("Browser execution expects a nodejs block", ast.position)
   if (ast.children.length !== 1 || typeof ast.children[0] !== "string") {
     throw new CommandValidationError("nodejs expects exactly one text code block", ast.position)
   }
   for (const key of Object.keys(ast.props)) {
-    if (!BROWSER_PROPS.has(key)) throw new CommandValidationError(`Unsupported browser nodejs prop: ${key}`, ast.position)
+    if (!BROWSER_PROPS.has(key))
+      throw new CommandValidationError(`Unsupported browser nodejs prop: ${key}`, ast.position)
   }
   const stdout = optionalString(ast.props.stdout, "stdout", ast) ?? "json"
   if (!OUTPUT_FORMATS.has(stdout as CommandOutputFormat)) {
-    throw new CommandValidationError(`nodejs stdout must be one of: ${[...OUTPUT_FORMATS].join(", ")}`, ast.position)
+    throw new CommandValidationError(
+      `nodejs stdout must be one of: ${[...OUTPUT_FORMATS].join(", ")}`,
+      ast.position,
+    )
   }
   const timeout = options.timeout ?? optionalNumber(ast.props.timeout, "timeout", ast) ?? 3000
   if (!Number.isFinite(timeout) || timeout <= 0) {
-    throw new CommandValidationError("nodejs timeout must be a positive finite number", ast.position)
+    throw new CommandValidationError(
+      "nodejs timeout must be a positive finite number",
+      ast.position,
+    )
   }
   const stdin = plainValue(ast.props.stdin, "stdin", ast)
   const bind = optionalString(ast.props.bind, "bind", ast)
@@ -54,7 +65,10 @@ export function prepareNodejsBlock(ast: MatraAST, options: BrowserExecuteOptions
 }
 
 /** Execute one nodejs block in a disposable Web Worker. */
-export function executeNodejsBlock(ast: MatraAST, options: BrowserExecuteOptions = {}): Promise<BrowserNodejsResult> {
+export function executeNodejsBlock(
+  ast: MatraAST,
+  options: BrowserExecuteOptions = {},
+): Promise<BrowserNodejsResult> {
   const block = prepareNodejsBlock(ast, options)
   if (typeof Worker === "undefined" || typeof Blob === "undefined") {
     return Promise.reject(new CommandExecutionError("Web Worker execution is not available"))
@@ -79,7 +93,10 @@ export function executeNodejsBlock(ast: MatraAST, options: BrowserExecuteOptions
       reject(new CommandExecutionError(message))
     }
     const abort = (): void => fail("Browser nodejs execution aborted")
-    const timer = setTimeout(() => fail(`Browser nodejs block timed out after ${block.timeout}ms`), block.timeout)
+    const timer = setTimeout(
+      () => fail(`Browser nodejs block timed out after ${block.timeout}ms`),
+      block.timeout,
+    )
     options.signal?.addEventListener("abort", abort, { once: true })
 
     worker.onmessage = event => {
@@ -90,7 +107,8 @@ export function executeNodejsBlock(ast: MatraAST, options: BrowserExecuteOptions
       }
       if (message?.type !== "result") return
       try {
-        const value = message.value instanceof Uint8Array ? message.value : requireMatraValue(message.value)
+        const value =
+          message.value instanceof Uint8Array ? message.value : requireMatraValue(message.value)
         cleanup()
         resolve({
           status: "ok",
@@ -137,26 +155,51 @@ ${code}
 };`
 }
 
-function optionalString(value: MatraPropValue | undefined, key: string, ast: MatraAST): string | undefined {
+function optionalString(
+  value: MatraPropValue | undefined,
+  key: string,
+  ast: MatraAST,
+): string | undefined {
   if (value === undefined) return undefined
-  if (typeof value !== "string") throw new CommandValidationError(`nodejs ${key} must be a string`, ast.position)
+  if (typeof value !== "string")
+    throw new CommandValidationError(`nodejs ${key} must be a string`, ast.position)
   return value
 }
 
-function optionalNumber(value: MatraPropValue | undefined, key: string, ast: MatraAST): number | undefined {
+function optionalNumber(
+  value: MatraPropValue | undefined,
+  key: string,
+  ast: MatraAST,
+): number | undefined {
   if (value === undefined) return undefined
-  if (typeof value !== "number") throw new CommandValidationError(`nodejs ${key} must be a number`, ast.position)
+  if (typeof value !== "number")
+    throw new CommandValidationError(`nodejs ${key} must be a number`, ast.position)
   return value
 }
 
-function plainValue(value: MatraPropValue | undefined, key: string, ast: MatraAST): MatraValue | undefined {
+function plainValue(
+  value: MatraPropValue | undefined,
+  key: string,
+  ast: MatraAST,
+): MatraValue | undefined {
   if (value === undefined) return undefined
-  if (isAst(value)) throw new CommandValidationError(`nodejs ${key} must be evaluated before execution`, ast.position)
+  if (isAst(value))
+    throw new CommandValidationError(
+      `nodejs ${key} must be evaluated before execution`,
+      ast.position,
+    )
   return value
 }
 
 function isAst(value: MatraPropValue): value is MatraAST {
-  return typeof value === "object" && value !== null && !Array.isArray(value) && "tag" in value && "props" in value && "children" in value
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    "tag" in value &&
+    "props" in value &&
+    "children" in value
+  )
 }
 
 function requireMatraValue(value: unknown): MatraValue {
@@ -164,7 +207,9 @@ function requireMatraValue(value: unknown): MatraValue {
   if (typeof value === "number" && Number.isFinite(value)) return value
   if (Array.isArray(value)) return value.map(requireMatraValue)
   if (typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, requireMatraValue(item)]))
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, requireMatraValue(item)]),
+    )
   }
   throw new TypeError("Browser nodejs output must be JSON-compatible")
 }

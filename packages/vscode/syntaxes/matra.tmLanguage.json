@@ -35,7 +35,10 @@
           "beginCaptures": { "0": { "name": "punctuation.section.embedded.begin.matra" } },
           "end": "\\}\\}",
           "endCaptures": { "0": { "name": "punctuation.section.embedded.end.matra" } },
-          "patterns": [{ "match": "[A-Za-z_][A-Za-z0-9_-]*", "name": "variable.other.matra" }, { "match": "\\.", "name": "punctuation.accessor.matra" }]
+          "patterns": [
+            { "match": "[A-Za-z_][A-Za-z0-9_-]*", "name": "variable.other.matra" },
+            { "match": "\\.", "name": "punctuation.accessor.matra" }
+          ]
         }
       ]
     },
@@ -68,10 +71,18 @@
       ]
     },
     "numbers": {
-      "patterns": [{ "match": "(?<![\\w.-])-?(?:\\d+\\.\\d*|\\.\\d+|\\d+)(?:[eE][+-]?\\d+)?(?![\\w.-])", "name": "constant.numeric.matra" }]
+      "patterns": [
+        {
+          "match": "(?<![\\w.-])-?(?:\\d+\\.\\d*|\\.\\d+|\\d+)(?:[eE][+-]?\\d+)?(?![\\w.-])",
+          "name": "constant.numeric.matra"
+        }
+      ]
     },
     "constants": {
-      "patterns": [{ "match": "\\b(?:true|false)\\b", "name": "constant.language.boolean.matra" }, { "match": "\\bnull\\b", "name": "constant.language.null.matra" }]
+      "patterns": [
+        { "match": "\\b(?:true|false)\\b", "name": "constant.language.boolean.matra" },
+        { "match": "\\bnull\\b", "name": "constant.language.null.matra" }
+      ]
     },
     "root": {
       "patterns": [{ "match": "\\$root\\b", "name": "variable.language.root.matra" }]

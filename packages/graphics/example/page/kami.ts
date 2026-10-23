@@ -1,4 +1,14 @@
-import { circle, fill, noStroke, pop, push, setCanvasSize, strokeStyle, strokeWeight, svgLayout } from "../../module.js"
+import {
+  circle,
+  fill,
+  noStroke,
+  pop,
+  push,
+  setCanvasSize,
+  strokeStyle,
+  strokeWeight,
+  svgLayout,
+} from "../../module.js"
 import taijitu from "../mixin/taijitu.js"
 
 const size = 512

@@ -5,18 +5,25 @@ export interface MatraTemplate {
   raw(source: string): MatraRawSource
 }
 
-export const matra = Object.assign((strings: TemplateStringsArray, ...values: unknown[]) => renderMatraTemplate(strings, values), {
-  raw(source: string): MatraRawSource {
-    return { kind: "MatraRawSource", source }
+export const matra = Object.assign(
+  (strings: TemplateStringsArray, ...values: unknown[]) => renderMatraTemplate(strings, values),
+  {
+    raw(source: string): MatraRawSource {
+      return { kind: "MatraRawSource", source }
+    },
   },
-}) as MatraTemplate
+) as MatraTemplate
 
 export function isMatraTemplateStrings(value: unknown): value is TemplateStringsArray {
   return Array.isArray(value) && "raw" in value
 }
 
 export function renderMatraTemplate(strings: TemplateStringsArray, values: unknown[]): string {
-  return strings.reduce((result, chunk, index) => result + chunk + (index < values.length ? interpolateTemplate(values[index]) : ""), "")
+  return strings.reduce(
+    (result, chunk, index) =>
+      result + chunk + (index < values.length ? interpolateTemplate(values[index]) : ""),
+    "",
+  )
 }
 
 function interpolateTemplate(value: unknown): string {
@@ -29,5 +36,12 @@ function interpolateTemplate(value: unknown): string {
 }
 
 function isRawSource(value: unknown): value is MatraRawSource {
-  return typeof value === "object" && value !== null && "kind" in value && value.kind === "MatraRawSource" && "source" in value && typeof value.source === "string"
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "kind" in value &&
+    value.kind === "MatraRawSource" &&
+    "source" in value &&
+    typeof value.source === "string"
+  )
 }

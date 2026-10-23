@@ -1,6 +1,21 @@
 import type { MatraAST, MatraASTChild, MatraProps } from "@matra/core"
 
-const VOID_ELEMENTS = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"])
+const VOID_ELEMENTS = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr",
+])
 
 export interface HTMLOptions {
   /** Render the domain-neutral $root tag as a fragment. */
@@ -21,7 +36,9 @@ function renderNode(node: MatraAST, options: HTMLOptions, depth = 0): string {
   const { tag, props, children } = node
   const indentation = options.pretty ? "  ".repeat(depth) : ""
   if (tag === (options.rootTag ?? "$root")) {
-    return children.map(child => renderChild(child, options, depth)).join(options.pretty ? "\n" : "")
+    return children
+      .map(child => renderChild(child, options, depth))
+      .join(options.pretty ? "\n" : "")
   }
   if (tag === "#comment") {
     return `${indentation}<!--${String(children[0] ?? "")}-->`
@@ -30,10 +47,15 @@ function renderNode(node: MatraAST, options: HTMLOptions, depth = 0): string {
   const attrs = renderProps(props, options)
   if (VOID_ELEMENTS.has(tag.toLowerCase())) return `${indentation}<${tag}${attrs}>`
 
-  const preservesContent = tag === "script" || tag === "style" || tag === "pre" || tag === "textarea" || tag === "code"
+  const preservesContent =
+    tag === "script" || tag === "style" || tag === "pre" || tag === "textarea" || tag === "code"
   const hasOnlyElementChildren = children.every(child => isMatraAST(child))
   if (!options.pretty || preservesContent || !hasOnlyElementChildren) {
-    const content = children.map(child => (tag === "script" && typeof child === "string" ? child : renderChild(child, options))).join("")
+    const content = children
+      .map(child =>
+        tag === "script" && typeof child === "string" ? child : renderChild(child, options),
+      )
+      .join("")
     return `${indentation}<${tag}${attrs}>${content}</${tag}>`
   }
 
@@ -57,14 +79,23 @@ function renderProps(props: MatraProps, options: HTMLOptions): string {
         throw new TypeError(`Unresolved expression in HTML attribute: ${key}`)
       }
       if (value === true) return ` ${key}`
-      const serialized = prefixBasePath(key, Array.isArray(value) ? value.join(" ") : String(value), options.basePath)
+      const serialized = prefixBasePath(
+        key,
+        Array.isArray(value) ? value.join(" ") : String(value),
+        options.basePath,
+      )
       return ` ${key}="${escapeAttribute(serialized)}"`
     })
     .join("")
 }
 
 function prefixBasePath(key: string, value: string, basePath?: string): string {
-  if ((key !== "href" && key !== "src") || !basePath || !value.startsWith("/") || value.startsWith("//")) {
+  if (
+    (key !== "href" && key !== "src") ||
+    !basePath ||
+    !value.startsWith("/") ||
+    value.startsWith("//")
+  ) {
     return value
   }
   const normalized = basePath.replace(/^\/+|\/+$/g, "")
@@ -72,7 +103,12 @@ function prefixBasePath(key: string, value: string, basePath?: string): string {
 }
 
 function escapeHTML(value: string): string {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;")
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
 }
 
 function escapeAttribute(value: string): string {
@@ -80,7 +116,19 @@ function escapeAttribute(value: string): string {
 }
 
 function isMatraAST(value: unknown): value is MatraAST {
-  return value !== null && typeof value === "object" && !Array.isArray(value) && "tag" in value && typeof value.tag === "string" && "props" in value && value.props !== null && typeof value.props === "object" && !Array.isArray(value.props) && "children" in value && Array.isArray(value.children)
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    "tag" in value &&
+    typeof value.tag === "string" &&
+    "props" in value &&
+    value.props !== null &&
+    typeof value.props === "object" &&
+    !Array.isArray(value.props) &&
+    "children" in value &&
+    Array.isArray(value.children)
+  )
 }
 
 export default { toHTML }

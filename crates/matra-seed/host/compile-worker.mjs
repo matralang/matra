@@ -12,7 +12,12 @@ const recordPointer = compileSource(sourcePointer, source.length)
 const record = new DataView(memory.buffer, recordPointer, 36)
 if (record.getInt32(0, true) !== 0) {
   parentPort.postMessage({
-    diagnostic: formatCompilerDiagnostic(source, memory, recordPointer, workerData.compilerSourcePath),
+    diagnostic: formatCompilerDiagnostic(
+      source,
+      memory,
+      recordPointer,
+      workerData.compilerSourcePath,
+    ),
   })
 } else {
   const outputPointer = record.getInt32(4, true)

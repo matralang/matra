@@ -20,22 +20,39 @@ export interface ExtractMatraMarkdownOptions {
  * Fences may use three or more backticks, so a Matra document can itself
  * contain ordinary Markdown code fences.
  */
-export function extractMatraMarkdown(markdown: string, options: ExtractMatraMarkdownOptions = {}): MatraMarkdownFence {
+export function extractMatraMarkdown(
+  markdown: string,
+  options: ExtractMatraMarkdownOptions = {},
+): MatraMarkdownFence {
   const fences = extractMarkdownFences(markdown)
     .map(fence => {
-      const kind = fence.filename.endsWith(".matra.ts") ? "matra.ts" : fence.filename.endsWith(".matra.program") ? "matra.program" : fence.filename.endsWith(".matra") ? "matra" : undefined
+      const kind = fence.filename.endsWith(".matra.ts")
+        ? "matra.ts"
+        : fence.filename.endsWith(".matra.program")
+          ? "matra.program"
+          : fence.filename.endsWith(".matra")
+            ? "matra"
+            : undefined
       return kind ? { ...fence, kind } : undefined
     })
     .filter((fence): fence is MatraMarkdownFence => fence !== undefined)
 
   if (fences.length === 0) {
-    throw new SyntaxError("Markdown must contain one `*.matra`, `*.matra.ts`, or `*.matra.program` fenced code block.")
+    throw new SyntaxError(
+      "Markdown must contain one `*.matra`, `*.matra.ts`, or `*.matra.program` fenced code block.",
+    )
   }
 
-  const fence = options.entry ? fences.find(candidate => candidate.filename === options.entry) : fences.length === 1 ? fences[0] : undefined
+  const fence = options.entry
+    ? fences.find(candidate => candidate.filename === options.entry)
+    : fences.length === 1
+      ? fences[0]
+      : undefined
 
   if (!fence && options.entry) {
-    throw new SyntaxError(`The Matra entry '${options.entry}' was not found in this Markdown document.`)
+    throw new SyntaxError(
+      `The Matra entry '${options.entry}' was not found in this Markdown document.`,
+    )
   }
   if (!fence) {
     throw new SyntaxError("Set an entry when Markdown contains multiple Matra code blocks.")

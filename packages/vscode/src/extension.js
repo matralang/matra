@@ -19,7 +19,11 @@ function activate(context) {
     const entries = analyze(text).errors.map(error => {
       const start = toPosition(positionAt(text, error.offset))
       const end = toPosition(positionAt(text, error.offset + error.length))
-      const diagnostic = new vscode.Diagnostic(new vscode.Range(start, end), error.message, vscode.DiagnosticSeverity.Error)
+      const diagnostic = new vscode.Diagnostic(
+        new vscode.Range(start, end),
+        error.message,
+        vscode.DiagnosticSeverity.Error,
+      )
       diagnostic.source = "Matra"
       return diagnostic
     })
@@ -36,7 +40,9 @@ function activate(context) {
         const formatted = format(text, options)
         if (formatted === text) return []
         const end = document.positionAt(text.length)
-        return [vscode.TextEdit.replace(new vscode.Range(new vscode.Position(0, 0), end), formatted)]
+        return [
+          vscode.TextEdit.replace(new vscode.Range(new vscode.Position(0, 0), end), formatted),
+        ]
       },
     }),
     vscode.languages.registerDocumentSymbolProvider(selector, {
@@ -46,13 +52,21 @@ function activate(context) {
           const start = document.positionAt(symbol.offset)
           const end = document.positionAt(symbol.offset + symbol.length)
           const range = new vscode.Range(start, end)
-          return new vscode.DocumentSymbol(symbol.name, "Matra element", vscode.SymbolKind.Field, range, range)
+          return new vscode.DocumentSymbol(
+            symbol.name,
+            "Matra element",
+            vscode.SymbolKind.Field,
+            range,
+            range,
+          )
         })
       },
     }),
     vscode.languages.registerFoldingRangeProvider(selector, {
       provideFoldingRanges(document) {
-        return analyze(document.getText()).folds.map(({ start, end }) => new vscode.FoldingRange(start, end))
+        return analyze(document.getText()).folds.map(
+          ({ start, end }) => new vscode.FoldingRange(start, end),
+        )
       },
     }),
     vscode.languages.registerHoverProvider(selector, {

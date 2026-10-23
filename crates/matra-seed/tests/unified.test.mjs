@@ -13,8 +13,25 @@ async function compile(source, extension = "matra", entry) {
     const input = join(directory, `source.${extension}`)
     const output = join(directory, "output.wasm")
     await writeFile(input, source)
-    const result = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, ...(entry ? ["--entry", entry] : [])], { cwd: root, encoding: "utf8" })
-    assert.equal(result.status, 0, result.stderr || result.error?.message || `Compiler terminated by ${result.signal}`)
+    const result = spawnSync(
+      "cargo",
+      [
+        "run",
+        "--quiet",
+        "--manifest-path",
+        "crates/matra-seed/Cargo.toml",
+        "--",
+        input,
+        output,
+        ...(entry ? ["--entry", entry] : []),
+      ],
+      { cwd: root, encoding: "utf8" },
+    )
+    assert.equal(
+      result.status,
+      0,
+      result.stderr || result.error?.message || `Compiler terminated by ${result.signal}`,
+    )
     const bytes = await readFile(output)
     assert.equal(WebAssembly.validate(bytes), true)
     return bytes
@@ -54,7 +71,15 @@ article.card.card(lang="ja", options={theme: "dark"}, series=[10, 20]) {
   [1, 2]
   {value: null}
 }`),
-    { tag: "article", props: { lang: "ja", options: { theme: "dark" }, series: [10, 20], class: "card" }, children: [{ tag: "a", props: { href: "/", class: "link" }, children: ["日本語"] }, [1, 2], { value: null }] },
+    {
+      tag: "article",
+      props: { lang: "ja", options: { theme: "dark" }, series: [10, 20], class: "card" },
+      children: [
+        { tag: "a", props: { href: "/", class: "link" }, children: ["日本語"] },
+        [1, 2],
+        { value: null },
+      ],
+    },
   )
 })
 
@@ -95,7 +120,12 @@ let add = outer(2)
 })
 
 test("unified seed evaluates precedence, decimals, unary and short circuit", async () => {
-  assert.deepEqual(await run(`[5 - 2, -2 + 3, 1 + 2 * 3 == 7, !(false || false) && true, -(.5 + .25), false && unknown(), true || unknown(), 0 || 9]`), [3, 1, true, true, -0.75, false, true, 9])
+  assert.deepEqual(
+    await run(
+      `[5 - 2, -2 + 3, 1 + 2 * 3 == 7, !(false || false) && true, -(.5 + .25), false && unknown(), true || unknown(), 0 || 9]`,
+    ),
+    [3, 1, true, true, -0.75, false, true, 9],
+  )
 })
 
 test("unified seed executes assignment, while, do-until and nested break", async () => {
@@ -127,8 +157,16 @@ test("unified host rejects non-array loops and unknown assignments", async () =>
 })
 
 test("unified seed compiles a named document fence and native module imports", async () => {
-  const document = await compile('```doc.matra\np { "ok" }\n```\n```ignored.matra\n"ignored"\n```', "md", "doc.matra")
-  assert.deepEqual((await instantiateUnified(document)).run(), { tag: "p", props: {}, children: ["ok"] })
+  const document = await compile(
+    '```doc.matra\np { "ok" }\n```\n```ignored.matra\n"ignored"\n```',
+    "md",
+    "doc.matra",
+  )
+  assert.deepEqual((await instantiateUnified(document)).run(), {
+    tag: "p",
+    props: {},
+    children: ["ok"],
+  })
   const native = await compile(
     `\`\`\`doc.matra
 p { "ignored" }
@@ -183,12 +221,22 @@ export fn answer() -> i32 {
   new Uint8Array(compiler.memory.buffer, pointer, encoded.length).set(encoded)
   const recordPointer = compiler.compile(pointer, encoded.length)
   const record = new DataView(compiler.memory.buffer, recordPointer, 36)
-  assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(encoded, compiler.memory, recordPointer))
-  const output = new Uint8Array(compiler.memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
+  assert.equal(
+    record.getInt32(0, true),
+    0,
+    formatCompilerDiagnostic(encoded, compiler.memory, recordPointer),
+  )
+  const output = new Uint8Array(
+    compiler.memory.buffer,
+    record.getInt32(4, true),
+    record.getInt32(8, true),
+  )
   assert.equal((await WebAssembly.instantiate(output)).instance.exports.answer(), 42)
 })
 
-const conformance = JSON.parse(await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"))
+const conformance = JSON.parse(
+  await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"),
+)
 test("unified seed reports markup diagnostic byte offsets", async () => {
   for (const { source, offset } of conformance.markupDiagnostics) {
     const byteOffset = Buffer.byteLength(source.slice(0, offset))
@@ -240,7 +288,10 @@ test("bootstrap CLI reserves document workspace and runs generated Wasm", async 
   try {
     const input = join(directory, "source.matra")
     const output = join(directory, "output.wasm")
-    await writeFile(input, `${"// document workspace\n".repeat(500)}fn value(x) { x * 2 }\np { ...for x in [1, 2] { value(x) } }`)
+    await writeFile(
+      input,
+      `${"// document workspace\n".repeat(500)}fn value(x) { x * 2 }\np { ...for x in [1, 2] { value(x) } }`,
+    )
     const result = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", input, output], {
       cwd: root,
       encoding: "utf8",

@@ -1,13 +1,23 @@
 import { spawn } from "node:child_process"
 import { performance } from "node:perf_hooks"
 import { CommandExecutionError } from "./errors.js"
-import type { AuthorizedExecutionPlan, CommandOutputFormat, CommandResult, CommandSpec, ExecuteOptions, ExecutionResult } from "./types.js"
+import type {
+  AuthorizedExecutionPlan,
+  CommandOutputFormat,
+  CommandResult,
+  CommandSpec,
+  ExecuteOptions,
+  ExecutionResult,
+} from "./types.js"
 import type { MatraValue } from "@matra/core"
 
 const DEFAULT_MAX_OUTPUT_BYTES = 16 * 1024 * 1024
 
 /** Execute an explicitly authorized plan using shell-free local processes. */
-export async function executePlan(plan: AuthorizedExecutionPlan, options: ExecuteOptions = {}): Promise<ExecutionResult> {
+export async function executePlan(
+  plan: AuthorizedExecutionPlan,
+  options: ExecuteOptions = {},
+): Promise<ExecutionResult> {
   if (plan.authorization?.authorized !== true) {
     throw new CommandExecutionError("Execution plan must be authorized before execution")
   }
@@ -47,7 +57,11 @@ export async function executePlan(plan: AuthorizedExecutionPlan, options: Execut
   }
 }
 
-async function executeCommand(command: CommandSpec, stdin: MatraValue | Uint8Array | undefined, options: ExecuteOptions): Promise<CommandResult> {
+async function executeCommand(
+  command: CommandSpec,
+  stdin: MatraValue | Uint8Array | undefined,
+  options: ExecuteOptions,
+): Promise<CommandResult> {
   const started = performance.now()
   const maxOutputBytes = options.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES
   if (!Number.isSafeInteger(maxOutputBytes) || maxOutputBytes <= 0) {
@@ -72,9 +86,12 @@ async function executeCommand(command: CommandSpec, stdin: MatraValue | Uint8Arr
       settled = true
       cleanup()
       reject(
-        new CommandExecutionError(`Failed to execute ${command.id}: ${error instanceof Error ? error.message : String(error)}`, {
-          cause: error,
-        }),
+        new CommandExecutionError(
+          `Failed to execute ${command.id}: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            cause: error,
+          },
+        ),
       )
     }
     const collect = (target: Buffer[], chunk: Buffer): void => {
@@ -126,7 +143,10 @@ async function executeCommand(command: CommandSpec, stdin: MatraValue | Uint8Arr
         decodeError = error instanceof Error ? error.message : String(error)
       }
       const processFailed = exitCode !== 0 && !command.allowFail
-      const error = terminationError ?? decodeError ?? (processFailed ? `Process exited with code ${exitCode}` : undefined)
+      const error =
+        terminationError ??
+        decodeError ??
+        (processFailed ? `Process exited with code ${exitCode}` : undefined)
       resolve({
         id: command.id,
         status: error ? "error" : "ok",
@@ -148,7 +168,10 @@ async function executeCommand(command: CommandSpec, stdin: MatraValue | Uint8Arr
   })
 }
 
-function resolveStdin(stdin: MatraValue | undefined, bindings: Record<string, MatraValue | Uint8Array>): MatraValue | Uint8Array | undefined {
+function resolveStdin(
+  stdin: MatraValue | undefined,
+  bindings: Record<string, MatraValue | Uint8Array>,
+): MatraValue | Uint8Array | undefined {
   if (isRef(stdin)) {
     if (!Object.prototype.hasOwnProperty.call(bindings, stdin.ref)) {
       throw new CommandExecutionError(`Unknown stdin binding: ${stdin.ref}`)
@@ -159,7 +182,13 @@ function resolveStdin(stdin: MatraValue | undefined, bindings: Record<string, Ma
 }
 
 function isRef(value: MatraValue | undefined): value is { ref: string } {
-  return typeof value === "object" && value !== null && !Array.isArray(value) && Object.keys(value).length === 1 && typeof value.ref === "string"
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.keys(value).length === 1 &&
+    typeof value.ref === "string"
+  )
 }
 
 function encodeInput(value: MatraValue | Uint8Array): string | Uint8Array {
@@ -187,12 +216,19 @@ function requireMatraValue(value: unknown): MatraValue {
   if (typeof value === "number" && Number.isFinite(value)) return value
   if (Array.isArray(value)) return value.map(requireMatraValue)
   if (typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, requireMatraValue(item)]))
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, requireMatraValue(item)]),
+    )
   }
   throw new TypeError("Command output must be JSON-compatible")
 }
 
-function record(command: CommandSpec, result: CommandResult, results: CommandResult[], byName: Map<string, CommandResult>): void {
+function record(
+  command: CommandSpec,
+  result: CommandResult,
+  results: CommandResult[],
+  byName: Map<string, CommandResult>,
+): void {
   results.push(result)
   byName.set(command.id, result)
   if (command.bind) byName.set(command.bind, result)

@@ -4,7 +4,10 @@ import { test } from "node:test"
 import { executeMatraProgram } from "../src/matra-program.js"
 
 test("executes matra.raw() in a .matra.ts template", () => {
-  const program = ["const dots = [10, 20].map(x => `circle(cx=${x})`)", 'export default matra`svg { ${matra.raw(dots.join("\\n"))} }`'].join("\n")
+  const program = [
+    "const dots = [10, 20].map(x => `circle(cx=${x})`)",
+    'export default matra`svg { ${matra.raw(dots.join("\\n"))} }`',
+  ].join("\n")
 
   assert.equal(executeMatraProgram(program), "svg { circle(cx=10)\ncircle(cx=20) }")
 })

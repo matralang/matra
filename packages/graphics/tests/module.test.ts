@@ -1,9 +1,28 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { circle, ellipse, fill, fromAst, getCtx, noStroke, pop, push, rect, reset, setCanvasSize, strokeStyle, strokeWeight, svgLayout, text } from "../module.ts"
+import {
+  circle,
+  ellipse,
+  fill,
+  fromAst,
+  getCtx,
+  noStroke,
+  pop,
+  push,
+  rect,
+  reset,
+  setCanvasSize,
+  strokeStyle,
+  strokeWeight,
+  svgLayout,
+  text,
+} from "../module.ts"
 
 test("serializes escaped text and attributes safely", () => {
-  assert.equal(fromAst(["text", { title: 'A & "B"', hidden: false }, "<hello>"]), '<text title="A &amp; &quot;B&quot;">&lt;hello&gt;</text>')
+  assert.equal(
+    fromAst(["text", { title: 'A & "B"', hidden: false }, "<hello>"]),
+    '<text title="A &amp; &quot;B&quot;">&lt;hello&gt;</text>',
+  )
 })
 
 test("captures style when each shape is created", () => {

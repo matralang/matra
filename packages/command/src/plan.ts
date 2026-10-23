@@ -1,11 +1,32 @@
 import { isMatraAST, type MatraAST, type MatraPropValue, type MatraValue } from "@matra/core"
 import process from "node:process"
 import { CommandValidationError } from "./errors.js"
-import type { CommandCapabilities, CommandOutputFormat, CommandSpec, CommandStderrMode, ExecutionPlan } from "./types.js"
+import type {
+  CommandCapabilities,
+  CommandOutputFormat,
+  CommandSpec,
+  CommandStderrMode,
+  ExecutionPlan,
+} from "./types.js"
 
 const OUTPUT_FORMATS = new Set<CommandOutputFormat>(["text", "json", "ndjson", "binary"])
 const STDERR_MODES = new Set<CommandStderrMode>(["text", "ignore"])
-const COMMAND_PROPS = new Set(["id", "program", "args", "cwd", "env", "stdin", "stdout", "stderr", "timeout", "allowFail", "bind", "requires", "produces", "capabilities"])
+const COMMAND_PROPS = new Set([
+  "id",
+  "program",
+  "args",
+  "cwd",
+  "env",
+  "stdin",
+  "stdout",
+  "stderr",
+  "timeout",
+  "allowFail",
+  "bind",
+  "requires",
+  "produces",
+  "capabilities",
+])
 const CAPABILITY_PROPS = new Set(["commands", "read", "write", "network"])
 const NODEJS_PROPS = new Set([...COMMAND_PROPS].filter(key => key !== "program"))
 
@@ -71,8 +92,14 @@ function commandFromNode(node: MatraAST, index: number): CommandSpec {
     requires: stringArray(node.props.requires, "requires", node),
     produces,
     capabilities: {
-      commands: unique([program, ...stringArray(capabilities?.commands, "capabilities.commands", node)]),
-      read: unique([...(cwd ? [cwd] : []), ...stringArray(capabilities?.read, "capabilities.read", node)]),
+      commands: unique([
+        program,
+        ...stringArray(capabilities?.commands, "capabilities.commands", node),
+      ]),
+      read: unique([
+        ...(cwd ? [cwd] : []),
+        ...stringArray(capabilities?.read, "capabilities.read", node),
+      ]),
       write: unique([...produces, ...stringArray(capabilities?.write, "capabilities.write", node)]),
       network: optionalBoolean(capabilities?.network, "capabilities.network", node) ?? false,
     },
@@ -100,7 +127,12 @@ function nodejsFromNode(node: MatraAST, index: number): CommandSpec {
     props: {
       ...node.props,
       program: process.execPath,
-      args: ["--input-type=module", "--eval", nodejsProgram(node.children[0], stdout as CommandOutputFormat), ...(userArgs.length ? ["--", ...userArgs] : [])],
+      args: [
+        "--input-type=module",
+        "--eval",
+        nodejsProgram(node.children[0], stdout as CommandOutputFormat),
+        ...(userArgs.length ? ["--", ...userArgs] : []),
+      ],
       capabilities: { ...(declared ?? {}), commands: [] },
     },
     children: [],
@@ -142,14 +174,21 @@ function validateNames(commands: CommandSpec[]): void {
   for (const command of commands) {
     for (const name of unique([command.id, ...(command.bind ? [command.bind] : [])])) {
       const owner = names.get(name)
-      if (owner && owner !== command.id) throw new CommandValidationError(`Duplicate command id or binding: ${name} (${owner}, ${command.id})`, command.position)
+      if (owner && owner !== command.id)
+        throw new CommandValidationError(
+          `Duplicate command id or binding: ${name} (${owner}, ${command.id})`,
+          command.position,
+        )
       names.set(name, command.id)
     }
   }
   for (const command of commands) {
     for (const dependency of command.requires) {
       if (!names.has(dependency)) {
-        throw new CommandValidationError(`Unknown dependency ${dependency} required by ${command.id}`, command.position)
+        throw new CommandValidationError(
+          `Unknown dependency ${dependency} required by ${command.id}`,
+          command.position,
+        )
       }
     }
   }
@@ -166,7 +205,11 @@ function topologicalSort(commands: CommandSpec[]): CommandSpec[] {
 
   const visit = (command: CommandSpec): void => {
     const current = state.get(command.id)
-    if (current === "visiting") throw new CommandValidationError(`Command dependency cycle at ${command.id}`, command.position)
+    if (current === "visiting")
+      throw new CommandValidationError(
+        `Command dependency cycle at ${command.id}`,
+        command.position,
+      )
     if (current === "visited") return
     state.set(command.id, "visiting")
     for (const dependency of command.requires) visit(byName.get(dependency)!)
@@ -188,48 +231,77 @@ function mergeCapabilities(values: CommandCapabilities[]): CommandCapabilities {
 
 function requiredString(value: MatraPropValue | undefined, key: string, node: MatraAST): string {
   const result = optionalString(value, key, node)
-  if (result === undefined || result.length === 0) fail(`command ${key} must be a non-empty string`, node)
+  if (result === undefined || result.length === 0)
+    fail(`command ${key} must be a non-empty string`, node)
   return result
 }
 
-function optionalString(value: MatraPropValue | undefined, key: string, node: MatraAST): string | undefined {
+function optionalString(
+  value: MatraPropValue | undefined,
+  key: string,
+  node: MatraAST,
+): string | undefined {
   if (value === undefined) return undefined
   if (typeof value !== "string") fail(`command ${key} must be a string`, node)
   return value
 }
 
-function optionalBoolean(value: MatraPropValue | undefined, key: string, node: MatraAST): boolean | undefined {
+function optionalBoolean(
+  value: MatraPropValue | undefined,
+  key: string,
+  node: MatraAST,
+): boolean | undefined {
   if (value === undefined) return undefined
   if (typeof value !== "boolean") fail(`command ${key} must be a boolean`, node)
   return value
 }
 
-function optionalNonNegativeNumber(value: MatraPropValue | undefined, key: string, node: MatraAST): number | undefined {
+function optionalNonNegativeNumber(
+  value: MatraPropValue | undefined,
+  key: string,
+  node: MatraAST,
+): number | undefined {
   if (value === undefined) return undefined
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) fail(`command ${key} must be a non-negative finite number`, node)
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+    fail(`command ${key} must be a non-negative finite number`, node)
   return value
 }
 
 function stringArray(value: MatraPropValue | undefined, key: string, node: MatraAST): string[] {
   if (value === undefined) return []
-  if (!Array.isArray(value) || !value.every(item => typeof item === "string")) fail(`command ${key} must be an array of strings`, node)
+  if (!Array.isArray(value) || !value.every(item => typeof item === "string"))
+    fail(`command ${key} must be an array of strings`, node)
   return [...value] as string[]
 }
 
-function stringRecord(value: MatraPropValue | undefined, key: string, node: MatraAST): Record<string, string> {
+function stringRecord(
+  value: MatraPropValue | undefined,
+  key: string,
+  node: MatraAST,
+): Record<string, string> {
   if (value === undefined) return {}
   const result = objectValue(value, key, node)
-  if (!result || !Object.values(result).every(item => typeof item === "string")) fail(`command ${key} must be an object of strings`, node)
+  if (!result || !Object.values(result).every(item => typeof item === "string"))
+    fail(`command ${key} must be an object of strings`, node)
   return { ...result } as Record<string, string>
 }
 
-function objectValue(value: MatraPropValue | undefined, key: string, node: MatraAST): Record<string, MatraValue> | undefined {
+function objectValue(
+  value: MatraPropValue | undefined,
+  key: string,
+  node: MatraAST,
+): Record<string, MatraValue> | undefined {
   if (value === undefined) return undefined
-  if (typeof value !== "object" || value === null || Array.isArray(value) || isMatraAST(value)) fail(`command ${key} must be an object`, node)
+  if (typeof value !== "object" || value === null || Array.isArray(value) || isMatraAST(value))
+    fail(`command ${key} must be an object`, node)
   return value as Record<string, MatraValue>
 }
 
-function plainValue(value: MatraPropValue | undefined, key: string, node: MatraAST): MatraValue | undefined {
+function plainValue(
+  value: MatraPropValue | undefined,
+  key: string,
+  node: MatraAST,
+): MatraValue | undefined {
   if (value === undefined) return undefined
   if (isMatraAST(value)) fail(`command ${key} must be evaluated before planning`, node)
   return value

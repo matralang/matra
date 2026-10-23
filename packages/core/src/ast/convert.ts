@@ -1,16 +1,39 @@
-import type { MatraAST, MatraASTChild, MatraJSON, MatraJSONChild, MatraJSONPropValue, MatraPropValue, MatraValue } from "./types.js"
+import type {
+  MatraAST,
+  MatraASTChild,
+  MatraJSON,
+  MatraJSONChild,
+  MatraJSONPropValue,
+  MatraPropValue,
+  MatraValue,
+} from "./types.js"
 
 export function isMatraAST(value: unknown): value is MatraAST {
-  return isRecord(value) && typeof value.tag === "string" && isRecord(value.props) && Array.isArray(value.children)
+  return (
+    isRecord(value) &&
+    typeof value.tag === "string" &&
+    isRecord(value.props) &&
+    Array.isArray(value.children)
+  )
 }
 
 export function isMatraJSON(value: unknown): value is MatraJSON {
-  return Array.isArray(value) && value.length === 3 && typeof value[0] === "string" && isRecord(value[1]) && Array.isArray(value[2])
+  return (
+    Array.isArray(value) &&
+    value.length === 3 &&
+    typeof value[0] === "string" &&
+    isRecord(value[1]) &&
+    Array.isArray(value[2])
+  )
 }
 
 /** Convert the object-shaped AST to compact MatraJSON. */
 export function astToMatraJSON(ast: MatraAST): MatraJSON {
-  return [ast.tag, Object.fromEntries(Object.entries(ast.props).map(([key, value]) => [key, propToJSON(value)])), ast.children.map(childToJSON)]
+  return [
+    ast.tag,
+    Object.fromEntries(Object.entries(ast.props).map(([key, value]) => [key, propToJSON(value)])),
+    ast.children.map(childToJSON),
+  ]
 }
 
 /** Convert compact MatraJSON to the object-shaped AST. */
@@ -46,7 +69,9 @@ function isRecord(value: unknown): value is Record<string, any> {
 function cloneValue<T extends MatraValue>(value: T): T {
   if (Array.isArray(value)) return value.map(item => cloneValue(item)) as T
   if (isRecord(value)) {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, cloneValue(item)])) as T
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, cloneValue(item)]),
+    ) as T
   }
   return value
 }

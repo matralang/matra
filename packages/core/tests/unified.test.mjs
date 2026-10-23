@@ -1,9 +1,17 @@
 import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import { describe, it } from "node:test"
-import { EvaluationRequiredError, evaluateStatic, evaluateUnified, parse, parseUnified } from "../dist/index.js"
+import {
+  EvaluationRequiredError,
+  evaluateStatic,
+  evaluateUnified,
+  parse,
+  parseUnified,
+} from "../dist/index.js"
 
-const conformance = JSON.parse(await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"))
+const conformance = JSON.parse(
+  await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"),
+)
 
 describe("unified Matra parser", () => {
   it("normalizes whitespace-separated node attributes to comma-separated AST", () => {
@@ -24,7 +32,10 @@ describe("unified Matra parser", () => {
   })
   it("normalizes markup class shorthand to existing Matra node syntax", () => {
     const markup = parseUnified('<a.button.primary.button class="other" href="/spec/">Link</a>')
-    assert.deepEqual(markup, parseUnified('a.button.primary.button(class="other", href="/spec/") { "Link" }'))
+    assert.deepEqual(
+      markup,
+      parseUnified('a.button.primary.button(class="other", href="/spec/") { "Link" }'),
+    )
     assert.deepEqual(evaluateStatic(markup), {
       tag: "a",
       props: { class: "button primary", href: "/spec/" },
@@ -65,14 +76,21 @@ describe("unified Matra parser", () => {
 ]`)
       assert.deepEqual(evaluateUnified(module), [
         { tag: "p", props: {}, children: ["unbalanced ( and // text"] },
-        { tag: "wrapper", props: { content: { tag: "p", props: {}, children: ['unbalanced ) and "text"'] } }, children: [] },
+        {
+          tag: "wrapper",
+          props: { content: { tag: "p", props: {}, children: ['unbalanced ) and "text"'] } },
+          children: [],
+        },
         { tag: "empty", props: {}, children: [] },
         { tag: "hr", props: {}, children: [] },
       ])
     })
 
     it("preserves the executable document example after markup refinement", async () => {
-      const source = await readFile(new URL("../../../crates/matra-seed/examples/document.matra", import.meta.url), "utf8")
+      const source = await readFile(
+        new URL("../../../crates/matra-seed/examples/document.matra", import.meta.url),
+        "utf8",
+      )
       assert.deepEqual(evaluateUnified(parseUnified(source)), {
         tag: "article",
         props: { lang: "ja", class: "card" },
@@ -121,7 +139,10 @@ article.card.card(lang="ja", options={theme: "dark"}) {
   })
 
   it("does not execute calls or unresolved references during static evaluation", () => {
-    assert.throws(() => evaluateStatic(parseUnified("format_price(total)")), EvaluationRequiredError)
+    assert.throws(
+      () => evaluateStatic(parseUnified("format_price(total)")),
+      EvaluationRequiredError,
+    )
   })
 
   it("requires an explicit separator between body expressions", () => {
@@ -129,13 +150,17 @@ article.card.card(lang="ja", options={theme: "dark"}) {
   })
 
   it("parses control and function declarations without syntax fallback", () => {
-    const module = parseUnified('fn pick(value) { if (value) { return value } else { return "none" } }\nfor (item in items) { p { item } }')
+    const module = parseUnified(
+      'fn pick(value) { if (value) { return value } else { return "none" } }\nfor (item in items) { p { item } }',
+    )
     assert.equal(module.statements[0].kind, "fn")
     assert.equal(module.statements[1].expression.kind, "for")
   })
 
   it("evaluates functions, conditions, and loops into document children", () => {
-    const module = parseUnified('fn label(value) { return value }\nlet items = ["one", "two"]\nul { ...for (item in items) { if (item) { li { label(item) } } } }')
+    const module = parseUnified(
+      'fn label(value) { return value }\nlet items = ["one", "two"]\nul { ...for (item in items) { if (item) { li { label(item) } } } }',
+    )
     assert.deepEqual(evaluateUnified(module), {
       tag: "ul",
       props: {},
@@ -161,13 +186,22 @@ else {
   })
 
   it("represents else_if using existing nested if expressions", () => {
-    assert.deepEqual(parseUnified("if a { 1 } else_if b { 2 } else { 3 }"), parseUnified("if a { 1 } else { if b { 2 } else { 3 } }"))
+    assert.deepEqual(
+      parseUnified("if a { 1 } else_if b { 2 } else { 3 }"),
+      parseUnified("if a { 1 } else { if b { 2 } else { 3 } }"),
+    )
   })
 
   it("reports missing else_if delimiters at the next token or EOF", () => {
     const prefix = "if false {} else_if (true"
-    assert.throws(() => parseUnified(`${prefix} {}`), new RegExp(`at offset ${prefix.length + 1}\\.$`))
-    assert.throws(() => parseUnified(`${prefix})`), new RegExp(`at offset ${prefix.length + 1}\\.$`))
+    assert.throws(
+      () => parseUnified(`${prefix} {}`),
+      new RegExp(`at offset ${prefix.length + 1}\\.$`),
+    )
+    assert.throws(
+      () => parseUnified(`${prefix})`),
+      new RegExp(`at offset ${prefix.length + 1}\\.$`),
+    )
   })
 
   it("evaluates arithmetic and comparison operators by precedence", () => {

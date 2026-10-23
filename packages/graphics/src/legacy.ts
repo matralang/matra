@@ -1,4 +1,16 @@
-export type SvgTag = "svg" | "g" | "circle" | "rect" | "path" | "line" | "ellipse" | "polygon" | "polyline" | "text" | "title" | "desc"
+export type SvgTag =
+  | "svg"
+  | "g"
+  | "circle"
+  | "rect"
+  | "path"
+  | "line"
+  | "ellipse"
+  | "polygon"
+  | "polyline"
+  | "text"
+  | "title"
+  | "desc"
 
 export type PropValue = string | number | boolean | null | undefined
 export type PropObj = Record<string, PropValue>
@@ -6,7 +18,15 @@ export type MatraElm = [SvgTag | null, PropObj | null, string | MatraElm[] | nul
 export type Matrast = MatraElm[]
 
 export type CanvasTextAlign = "start" | "end" | "left" | "right" | "center"
-export type CanvasTextBaseline = "auto" | "middle" | "central" | "hanging" | "text-top" | "text-bottom" | "alphabetic" | "ideographic"
+export type CanvasTextBaseline =
+  | "auto"
+  | "middle"
+  | "central"
+  | "hanging"
+  | "text-top"
+  | "text-bottom"
+  | "alphabetic"
+  | "ideographic"
 
 export type Context = {
   cvsW: number
@@ -62,10 +82,21 @@ export const pop = (): void => {
   ctx = previous
 }
 
-const escapeXml = (value: PropValue): string => String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;")
+const escapeXml = (value: PropValue): string =>
+  String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;")
 
 export const fromAst = ([tag, prop, body]: MatraElm): string => {
-  const bodyStr = typeof body === "string" ? escapeXml(body) : Array.isArray(body) ? body.map(fromAst).join("\n") : ""
+  const bodyStr =
+    typeof body === "string"
+      ? escapeXml(body)
+      : Array.isArray(body)
+        ? body.map(fromAst).join("\n")
+        : ""
 
   if (tag === null) return bodyStr
 
@@ -108,8 +139,16 @@ export const textBaseline = (align: CanvasTextBaseline): void => {
   ctx.textBaseline = align
 }
 
-export const element = (tag: SvgTag, prop: PropObj = {}, body: string | MatraElm[] | null = null): MatraElm => [tag, prop, body]
-export const g = (content: MatraElm[], prop: PropObj | null = null): MatraElm => ["g", prop, content]
+export const element = (
+  tag: SvgTag,
+  prop: PropObj = {},
+  body: string | MatraElm[] | null = null,
+): MatraElm => [tag, prop, body]
+export const g = (content: MatraElm[], prop: PropObj | null = null): MatraElm => [
+  "g",
+  prop,
+  content,
+]
 
 const shape = (tag: SvgTag, prop: PropObj): MatraElm => [
   tag,
@@ -131,7 +170,8 @@ export const background = (colour: string): MatraElm => [
   },
   [],
 ]
-export const circle = (cx: number, cy: number, r: number): MatraElm => shape("circle", { cx, cy, r })
+export const circle = (cx: number, cy: number, r: number): MatraElm =>
+  shape("circle", { cx, cy, r })
 export const rect = (x: number, y: number, width: number, height: number, radius = 0): MatraElm =>
   shape("rect", {
     x,
@@ -140,8 +180,10 @@ export const rect = (x: number, y: number, width: number, height: number, radius
     height,
     ...(radius > 0 ? { rx: radius, ry: radius } : {}),
   })
-export const ellipse = (cx: number, cy: number, rx: number, ry: number): MatraElm => shape("ellipse", { cx, cy, rx, ry })
-export const line = (x1: number, y1: number, x2: number, y2: number): MatraElm => shape("line", { x1, y1, x2, y2 })
+export const ellipse = (cx: number, cy: number, rx: number, ry: number): MatraElm =>
+  shape("ellipse", { cx, cy, rx, ry })
+export const line = (x1: number, y1: number, x2: number, y2: number): MatraElm =>
+  shape("line", { x1, y1, x2, y2 })
 export const path = (d: string): MatraElm => shape("path", { d })
 export const polygon = (points: string): MatraElm => shape("polygon", { points })
 export const polyline = (points: string): MatraElm => shape("polyline", { points })
@@ -168,9 +210,31 @@ export type SvgOptions = {
   attributes?: PropObj
 }
 
-export const svg = (content: MatraElm[], width = ctx.cvsW, height = ctx.cvsH, attributes: PropObj = {}): Matrast => [["svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: `0 0 ${width} ${height}`, width, height, ...attributes }, content]]
+export const svg = (
+  content: MatraElm[],
+  width = ctx.cvsW,
+  height = ctx.cvsH,
+  attributes: PropObj = {},
+): Matrast => [
+  [
+    "svg",
+    {
+      xmlns: "http://www.w3.org/2000/svg",
+      viewBox: `0 0 ${width} ${height}`,
+      width,
+      height,
+      ...attributes,
+    },
+    content,
+  ],
+]
 
-export const svgLayout = (content: MatraElm[], width = ctx.cvsW, height = ctx.cvsH, options: Omit<SvgOptions, "width" | "height"> = {}): string => {
+export const svgLayout = (
+  content: MatraElm[],
+  width = ctx.cvsW,
+  height = ctx.cvsH,
+  options: Omit<SvgOptions, "width" | "height"> = {},
+): string => {
   const { background: backgroundColour = "white", title, description, attributes = {} } = options
   const labelledBy: string[] = []
   const children: MatraElm[] = []
@@ -186,6 +250,8 @@ export const svgLayout = (content: MatraElm[], width = ctx.cvsW, height = ctx.cv
   if (backgroundColour !== null) children.push(background(backgroundColour))
   children.push(...content)
 
-  const accessibility = labelledBy.length ? { role: "img", "aria-labelledby": labelledBy.join(" ") } : {}
+  const accessibility = labelledBy.length
+    ? { role: "img", "aria-labelledby": labelledBy.join(" ") }
+    : {}
   return fromAst(svg(children, width, height, { ...accessibility, ...attributes })[0])
 }

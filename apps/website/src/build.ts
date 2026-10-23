@@ -8,7 +8,14 @@ import { cachedCompiler } from "../../../crates/matra-seed/host/bootstrap-compil
 // Declare the Node `process` global when @types/node is not installed.
 declare const process: any
 
-import { evaluateStatic, evaluateUnified, extractMarkdownFences, extractMatraMarkdown, parse, staticValueToAST } from "@matra/core"
+import {
+  evaluateStatic,
+  evaluateUnified,
+  extractMarkdownFences,
+  extractMatraMarkdown,
+  parse,
+  staticValueToAST,
+} from "@matra/core"
 import type { MatraAST, StaticToASTNode } from "@matra/core"
 import { toHTML } from "@matra/html"
 import { pageLayout } from "./layouts/page.js"
@@ -27,7 +34,8 @@ function parseWebsiteDocument(source: string, sourceId = "Matra source", execute
     const message = error instanceof Error ? error.message : String(error)
     throw new SyntaxError(`${sourceId}: ${message}`, { cause: error })
   }
-  if (value === undefined) throw new SyntaxError("A website Matra source must have an output expression.")
+  if (value === undefined)
+    throw new SyntaxError("A website Matra source must have an output expression.")
   return staticValueToAST(value)
 }
 
@@ -179,7 +187,8 @@ function toOutputPath(pagesDirAbs: string, filePathAbs: string): string {
 
 function toCanonicalUrl(outputPath: string): string {
   const normalizedOutputPath = outputPath.split(path.sep).join("/")
-  const route = normalizedOutputPath === "index.html" ? "/" : `/${normalizedOutputPath.replace(/\.html$/, "")}`
+  const route =
+    normalizedOutputPath === "index.html" ? "/" : `/${normalizedOutputPath.replace(/\.html$/, "")}`
   return new URL(route, canonicalOrigin).href
 }
 
@@ -191,7 +200,18 @@ function getTrailingSlashRedirectScript(basePath: string): string {
 // GitHub Pages serves this for any unmatched path, including trailing-slash
 // requests to our flat .html routes (e.g. "/spec/"), which would otherwise 404.
 function getNotFoundPage(basePath: string): string {
-  return ["<!DOCTYPE html>", '<html lang="ja">', "<head>", '<meta charset="utf-8">', `<script>${getTrailingSlashRedirectScript(basePath)}</script>`, "</head>", "<body></body>", "</html>"].join("\n") + "\n"
+  return (
+    [
+      "<!DOCTYPE html>",
+      '<html lang="ja">',
+      "<head>",
+      '<meta charset="utf-8">',
+      `<script>${getTrailingSlashRedirectScript(basePath)}</script>`,
+      "</head>",
+      "<body></body>",
+      "</html>",
+    ].join("\n") + "\n"
+  )
 }
 
 function assertNoOutputCollisions(pagesDirAbs: string, filesAbs: string[]) {
@@ -210,17 +230,26 @@ function assertNoOutputCollisions(pagesDirAbs: string, filesAbs: string[]) {
   }
 
   if (collisions.length > 0) {
-    const msg = "Output path collision detected:\n" + collisions.map(c => `  - ${c.outRel} is produced by BOTH:\n      * ${c.a}\n      * ${c.b}`).join("\n") + "\n\nFix: keep only one of the sources (e.g. prefer about/index.ts over about.ts), or rename one."
+    const msg =
+      "Output path collision detected:\n" +
+      collisions
+        .map(c => `  - ${c.outRel} is produced by BOTH:\n      * ${c.a}\n      * ${c.b}`)
+        .join("\n") +
+      "\n\nFix: keep only one of the sources (e.g. prefer about/index.ts over about.ts), or rename one."
     throw new Error(msg)
   }
 }
 
-function isNode(value: unknown): value is { tag: string; props: Record<string, unknown>; children: unknown[] } {
+function isNode(
+  value: unknown,
+): value is { tag: string; props: Record<string, unknown>; children: unknown[] } {
   return value !== null && typeof value === "object" && !Array.isArray(value) && "tag" in value
 }
 
 function hasNode(nodes: unknown[], tag: string, prop?: [string, string]): boolean {
-  return nodes.some(node => isNode(node) && node.tag === tag && (!prop || node.props[prop[0]] === prop[1]))
+  return nodes.some(
+    node => isNode(node) && node.tag === tag && (!prop || node.props[prop[0]] === prop[1]),
+  )
 }
 
 function normalizeInternalLinks(ast: StaticToASTNode) {
@@ -252,10 +281,18 @@ function applySiteChrome(ast: StaticToASTNode, canonicalUrl: string, basePath: s
     }
   }
   if (!hasNode(head.children, "link", ["rel", "canonical"])) {
-    head.children.push({ tag: "link", props: { rel: "canonical", href: canonicalUrl }, children: [] })
+    head.children.push({
+      tag: "link",
+      props: { rel: "canonical", href: canonicalUrl },
+      children: [],
+    })
   }
   if (!hasNode(head.children, "meta", ["property", "og:url"])) {
-    head.children.push({ tag: "meta", props: { property: "og:url", content: canonicalUrl }, children: [] })
+    head.children.push({
+      tag: "meta",
+      props: { property: "og:url", content: canonicalUrl },
+      children: [],
+    })
   }
   if (!hasNode(head.children, "script")) head.children.push(googleTagManagerHead)
   if (!hasNode(head.children, "script", ["data-trailing-slash-redirect", "true"])) {
@@ -283,7 +320,9 @@ function applySpecificationLayout(ast: StaticToASTNode, layout: PageMetadata["la
   const main = body.children.find(node => isNode(node) && node.tag === "main")
   if (!isNode(main) || hasNode(main.children, "aside")) return ast
 
-  const content = main.children.find(node => isNode(node) && node.tag === "article" && node.props.class === "docs-content")
+  const content = main.children.find(
+    node => isNode(node) && node.tag === "article" && node.props.class === "docs-content",
+  )
   if (!isNode(content)) return ast
 
   main.children = [
@@ -297,7 +336,9 @@ function applySpecificationLayout(ast: StaticToASTNode, layout: PageMetadata["la
 }
 
 function injectMarkdownCode(ast: StaticToASTNode, markdown: string, filePath: string) {
-  const fences = new Map(extractMarkdownFences(markdown).map(fence => [fence.filename, fence.source]))
+  const fences = new Map(
+    extractMarkdownFences(markdown).map(fence => [fence.filename, fence.source]),
+  )
 
   const inject = (nodes: unknown[]) => {
     for (const node of nodes) {
@@ -365,10 +406,17 @@ async function handler() {
     pageFiles.map(async (filePath: string) => {
       const markdown = fs.readFileSync(filePath, "utf8")
       const fences = extractMarkdownFences(markdown)
-      const pageEntry = ["page.matra.ts", "page.program.matra", "page.matra"].find(entry => fences.some(fence => fence.filename === entry)) ?? "page.matra"
+      const pageEntry =
+        ["page.matra.ts", "page.program.matra", "page.matra"].find(entry =>
+          fences.some(fence => fence.filename === entry),
+        ) ?? "page.matra"
       const document = extractMatraMarkdown(markdown, { entry: pageEntry })
-      const metadata = document.kind === "matra" ? extractPageMetadata(markdown, filePath) : undefined
-      const source = document.kind === "matra.ts" ? await executeMatraModule(document.source, filePath) : pageLayout({ ...metadata!, content: document.source })
+      const metadata =
+        document.kind === "matra" ? extractPageMetadata(markdown, filePath) : undefined
+      const source =
+        document.kind === "matra.ts"
+          ? await executeMatraModule(document.source, filePath)
+          : pageLayout({ ...metadata!, content: document.source })
       const outRel = toOutputPath(pagesDir, filePath)
       const outputPath = path.join(outputDir, outRel)
       const outDir = path.dirname(outputPath)
@@ -376,8 +424,24 @@ async function handler() {
         fs.mkdirSync(outDir, { recursive: true })
       }
 
-      const pageAst = parseWebsiteDocument(source, path.relative(process.cwd(), filePath), pageEntry === "page.program.matra")
-      const ast = normalizeInternalLinks(applySpecificationLayout(applySiteChrome(injectMarkdownCode(pageAst, markdown, filePath), toCanonicalUrl(outRel), basePath), metadata?.layout ?? (path.relative(pagesDir, filePath).startsWith(`spec${path.sep}`) ? "specification" : "site")))
+      const pageAst = parseWebsiteDocument(
+        source,
+        path.relative(process.cwd(), filePath),
+        pageEntry === "page.program.matra",
+      )
+      const ast = normalizeInternalLinks(
+        applySpecificationLayout(
+          applySiteChrome(
+            injectMarkdownCode(pageAst, markdown, filePath),
+            toCanonicalUrl(outRel),
+            basePath,
+          ),
+          metadata?.layout ??
+            (path.relative(pagesDir, filePath).startsWith(`spec${path.sep}`)
+              ? "specification"
+              : "site"),
+        ),
+      )
       const htmlContent = `${DOCTYPE}\n${toHTML(ast as MatraAST, { basePath, pretty: true })}\n`
 
       fs.writeFileSync(outputPath, htmlContent)
@@ -413,7 +477,10 @@ async function handler() {
       "@matra/core": path.resolve(process.cwd(), "src", "client", "core-browser.ts"),
       "@matra/graphics": path.resolve(process.cwd(), "../../packages/graphics/dist/index.js"),
       "@matra/math": path.resolve(process.cwd(), "../../packages/math/dist/index.js"),
-      "@matra/math-compute-engine": path.resolve(process.cwd(), "../../packages/math-compute-engine/dist/index.js"),
+      "@matra/math-compute-engine": path.resolve(
+        process.cwd(),
+        "../../packages/math-compute-engine/dist/index.js",
+      ),
     },
   })
   console.log(`Generated browser bundle at: ${path.join(assetsDir, "playground.js")}`)

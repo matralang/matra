@@ -24,10 +24,17 @@ async function install(options) {
   const prefixIndex = options.indexOf("--prefix")
   let root
   if (prefixIndex >= 0) root = join(options[prefixIndex + 1], "share", "jupyter", "kernels")
-  else if (options.includes("--sys-prefix")) root = join(process.prefix, "share", "jupyter", "kernels")
+  else if (options.includes("--sys-prefix"))
+    root = join(process.prefix, "share", "jupyter", "kernels")
   else if (process.platform === "win32") root = join(process.env.APPDATA, "jupyter", "kernels")
-  else if (process.platform === "darwin") root = join(process.env.HOME, "Library", "Jupyter", "kernels")
-  else root = join(process.env.XDG_DATA_HOME ?? join(process.env.HOME, ".local", "share"), "jupyter", "kernels")
+  else if (process.platform === "darwin")
+    root = join(process.env.HOME, "Library", "Jupyter", "kernels")
+  else
+    root = join(
+      process.env.XDG_DATA_HOME ?? join(process.env.HOME, ".local", "share"),
+      "jupyter",
+      "kernels",
+    )
 
   const target = join(root, "matra")
   await mkdir(target, { recursive: true })
@@ -39,6 +46,8 @@ async function install(options) {
 }
 
 function usage(exitCode) {
-  console.error("Usage: matra-kernel -f CONNECTION_FILE\n       matra-kernel install [--user | --sys-prefix | --prefix PATH]")
+  console.error(
+    "Usage: matra-kernel -f CONNECTION_FILE\n       matra-kernel install [--user | --sys-prefix | --prefix PATH]",
+  )
   process.exit(exitCode)
 }

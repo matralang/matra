@@ -1,4 +1,10 @@
-import { evaluateMatra, listStandardMathCommands, morphionize, numericEvaluateMatra, simplifyMatra } from "@matra/math-compute-engine"
+import {
+  evaluateMatra,
+  listStandardMathCommands,
+  morphionize,
+  numericEvaluateMatra,
+  simplifyMatra,
+} from "@matra/math-compute-engine"
 import { parseMath } from "@matra/math"
 import type { MathCommandInfo } from "@matra/math-compute-engine"
 
@@ -143,7 +149,12 @@ function evaluateCell(cell: MathCell): void {
     setStatus("Enter an expression")
     return
   }
-  const results = [evaluateResult("Evaluate", () => evaluateMatra(expression)), evaluateResult("Simplify", () => simplifyMatra(expression)), evaluateResult("Numeric", () => numericEvaluateMatra(expression), true), evaluateResult("Morphion", () => morphionize(parseMath(expression)))]
+  const results = [
+    evaluateResult("Evaluate", () => evaluateMatra(expression)),
+    evaluateResult("Simplify", () => simplifyMatra(expression)),
+    evaluateResult("Numeric", () => numericEvaluateMatra(expression), true),
+    evaluateResult("Morphion", () => morphionize(parseMath(expression))),
+  ]
   const grid = document.createElement("div")
   grid.className = "notebook-result-grid"
   for (const result of results) {
@@ -162,7 +173,11 @@ function evaluateCell(cell: MathCell): void {
   setStatus(`Evaluated cell ${cells.indexOf(cell) + 1}`)
 }
 
-function evaluateResult(label: string, run: () => unknown, numeric = false): { label: string; value: string; error: boolean } {
+function evaluateResult(
+  label: string,
+  run: () => unknown,
+  numeric = false,
+): { label: string; value: string; error: boolean } {
   try {
     return { label, value: formatValue(run(), numeric), error: false }
   } catch (error) {
@@ -178,7 +193,12 @@ function formatValue(value: unknown, numeric = false): string {
   if (Array.isArray(value) && value[0] === "Complex" && value.length === 3) {
     return formatComplex(value[1], value[2], numeric)
   }
-  if (Array.isArray(value) && value[0] === "Rational" && typeof value[1] === "number" && typeof value[2] === "number") {
+  if (
+    Array.isArray(value) &&
+    value[0] === "Rational" &&
+    typeof value[1] === "number" &&
+    typeof value[2] === "number"
+  ) {
     return formatRational(BigInt(value[1]), BigInt(value[2]), numeric)
   }
   if (typeof value === "string") {
@@ -212,7 +232,12 @@ function signedPart(value: unknown, numeric: boolean): { negative: boolean; text
   if (typeof value === "number") {
     return { negative: value < 0, text: formatValue(Math.abs(value), numeric) }
   }
-  if (Array.isArray(value) && value[0] === "Rational" && typeof value[1] === "number" && typeof value[2] === "number") {
+  if (
+    Array.isArray(value) &&
+    value[0] === "Rational" &&
+    typeof value[1] === "number" &&
+    typeof value[2] === "number"
+  ) {
     return {
       negative: value[1] < 0,
       text: formatRational(BigInt(Math.abs(value[1])), BigInt(value[2]), numeric),
@@ -230,10 +255,14 @@ function formatRational(numerator: bigint, denominator: bigint, numeric: boolean
   const reducedNumerator = numerator / divisor
   const reducedDenominator = denominator / divisor
   if (!numeric) {
-    return reducedDenominator === 1n ? String(reducedNumerator) : `${reducedNumerator}/${reducedDenominator}`
+    return reducedDenominator === 1n
+      ? String(reducedNumerator)
+      : `${reducedNumerator}/${reducedDenominator}`
   }
   const approximation = Number(reducedNumerator) / Number(reducedDenominator)
-  return Number.isFinite(approximation) ? String(approximation) : `${reducedNumerator}/${reducedDenominator}`
+  return Number.isFinite(approximation)
+    ? String(approximation)
+    : `${reducedNumerator}/${reducedDenominator}`
 }
 
 function greatestCommonDivisor(left: bigint, right: bigint): bigint {
@@ -256,7 +285,9 @@ function updateCompletions(cell: MathCell, showAll = false): void {
     hideCompletions(cell)
     return
   }
-  const matches = commands.filter(command => !token || command.name.toLowerCase().startsWith(token.toLowerCase())).slice(0, 7)
+  const matches = commands
+    .filter(command => !token || command.name.toLowerCase().startsWith(token.toLowerCase()))
+    .slice(0, 7)
   if (matches.length === 0) {
     hideCompletions(cell)
     return
@@ -326,7 +357,10 @@ function handleInputKeydown(event: KeyboardEvent, cell: MathCell): void {
     })
   } else if (event.key === "Enter" && cell.completionIndex >= 0) {
     event.preventDefault()
-    const option = cell.completion.querySelectorAll<HTMLButtonElement>(".completion-option")[cell.completionIndex]
+    const option =
+      cell.completion.querySelectorAll<HTMLButtonElement>(".completion-option")[
+        cell.completionIndex
+      ]
     const name = option?.querySelector("code")?.textContent
     const command = commands.find(candidate => candidate.name === name)
     if (command) insertCommand(cell, command)
@@ -407,7 +441,11 @@ function renderReference(): void {
     }
     categories.hidden = true
     list.hidden = false
-    currentCommands = commands.filter(command => `${command.name} ${command.category} ${command.description} ${command.signature ?? ""}`.toLowerCase().includes(query))
+    currentCommands = commands.filter(command =>
+      `${command.name} ${command.category} ${command.description} ${command.signature ?? ""}`
+        .toLowerCase()
+        .includes(query),
+    )
     renderReferenceCommands(
       list,
       currentCommands,
@@ -422,7 +460,10 @@ function renderReference(): void {
   search.addEventListener("input", update)
 }
 
-function renderReferenceCategories(container: HTMLElement, onSelect: (categoryId: string) => void): void {
+function renderReferenceCategories(
+  container: HTMLElement,
+  onSelect: (categoryId: string) => void,
+): void {
   container.replaceChildren()
   for (const category of referenceCategories) {
     const items = commands.filter(command => referenceCategoryId(command) === category.id)
@@ -441,7 +482,13 @@ function renderReferenceCategories(container: HTMLElement, onSelect: (categoryId
   }
 }
 
-function renderReferenceCommands(list: HTMLElement, items: MathCommand[], title: string, onBack: () => void, onSelect: (command: MathCommand) => void): void {
+function renderReferenceCommands(
+  list: HTMLElement,
+  items: MathCommand[],
+  title: string,
+  onBack: () => void,
+  onSelect: (command: MathCommand) => void,
+): void {
   list.replaceChildren()
   const back = document.createElement("button")
   back.type = "button"
@@ -485,7 +532,13 @@ function renderReferenceCommands(list: HTMLElement, items: MathCommand[], title:
   }
 }
 
-function renderCommandDetails(container: HTMLElement, command: MathCommand, candidates: MathCommand[], onBack: () => void, onSelectRelated: (command: MathCommand) => void): void {
+function renderCommandDetails(
+  container: HTMLElement,
+  command: MathCommand,
+  candidates: MathCommand[],
+  onBack: () => void,
+  onSelectRelated: (command: MathCommand) => void,
+): void {
   container.replaceChildren()
   const back = document.createElement("button")
   back.type = "button"
@@ -510,7 +563,15 @@ function renderCommandDetails(container: HTMLElement, command: MathCommand, cand
   insert.addEventListener("click", () => insertReference(example))
   exampleSection.append(code, insert)
 
-  appendReferenceSection(container, "スコープ", [command.kind === "constant" ? "定数" : "関数", `Compute Engine library: ${command.category}`, command.signature ? `Signature: ${command.signature}` : "引数を取らないsymbolです。"].join("\n"))
+  appendReferenceSection(
+    container,
+    "スコープ",
+    [
+      command.kind === "constant" ? "定数" : "関数",
+      `Compute Engine library: ${command.category}`,
+      command.signature ? `Signature: ${command.signature}` : "引数を取らないsymbolです。",
+    ].join("\n"),
+  )
   appendReferenceSection(container, "一般化と拡張", generalizationDescription(command))
   appendReferenceSection(container, "特性と関係", characteristicsDescription(command))
   appendReferenceSection(container, "考えられる問題", potentialIssuesDescription(command))
@@ -619,7 +680,9 @@ function generalizationDescription(command: MathCommand): string {
   if (command.category === "arithmetic" || command.category === "trigonometry") {
     notes.push("他のMathJSON式を引数に取って再帰的に合成できます。")
   }
-  return notes.length > 0 ? notes.join("\n") : "Compute Engineのsignatureに定義された引数形式に従います。"
+  return notes.length > 0
+    ? notes.join("\n")
+    : "Compute Engineのsignatureに定義された引数形式に従います。"
 }
 
 function characteristicsDescription(command: MathCommand): string {
@@ -651,18 +714,34 @@ function relatedCommands(command: MathCommand, candidates: MathCommand[]): MathC
   return candidates
     .filter(candidate => candidate.name !== command.name)
     .map(candidate => {
-      const commonPrefix = candidate.name.slice(0, commonPrefixLength(candidate.name, command.name)).length
+      const commonPrefix = candidate.name.slice(
+        0,
+        commonPrefixLength(candidate.name, command.name),
+      ).length
       const sameNameStem = commandStem(candidate.name) === commandStem(command.name)
-      const sharedProperties = candidate.properties.filter(property => command.properties.includes(property)).length
+      const sharedProperties = candidate.properties.filter(property =>
+        command.properties.includes(property),
+      ).length
       const commandTypes = signatureTypes(command)
-      const sharedTypes = [...signatureTypes(candidate)].filter(type => commandTypes.has(type)).length
+      const sharedTypes = [...signatureTypes(candidate)].filter(type =>
+        commandTypes.has(type),
+      ).length
       const sameCategory = candidate.category === command.category ? 1 : 0
       const sameKind = candidate.kind === command.kind ? 1 : 0
-      const score = (sameNameStem ? 100 : 0) + (commonPrefix >= 3 ? commonPrefix * 3 : 0) + sharedProperties * 5 + sharedTypes * 2 + sameCategory + sameKind
+      const score =
+        (sameNameStem ? 100 : 0) +
+        (commonPrefix >= 3 ? commonPrefix * 3 : 0) +
+        sharedProperties * 5 +
+        sharedTypes * 2 +
+        sameCategory +
+        sameKind
       return { candidate, score }
     })
     .filter(item => item.score >= 3)
-    .sort((left, right) => right.score - left.score || left.candidate.name.localeCompare(right.candidate.name))
+    .sort(
+      (left, right) =>
+        right.score - left.score || left.candidate.name.localeCompare(right.candidate.name),
+    )
     .slice(0, 5)
     .map(item => item.candidate)
 }
@@ -701,7 +780,12 @@ function referenceCategoryId(command: MathCommand): string {
   const nameAndSignature = `${command.name} ${command.signature ?? ""}`.toLowerCase()
   if (command.category === "core" && /string|text/.test(nameAndSignature)) return "text"
   if (["core", "control-structures"].includes(command.category)) return "core"
-  if (["collections", "statistics", "linear-algebra", "number-theory", "polynomials"].includes(command.category)) return "data"
+  if (
+    ["collections", "statistics", "linear-algebra", "number-theory", "polynomials"].includes(
+      command.category,
+    )
+  )
+    return "data"
   if (["colors", "fractals"].includes(command.category)) return "graphics"
   if (command.category === "strings") return "text"
   return "symbolic"

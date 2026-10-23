@@ -1,6 +1,10 @@
 import { matra } from "@matra/core"
 
-export function pageLayout(options: { title: string; description: string; content: string }): string {
+export function pageLayout(options: {
+  title: string
+  description: string
+  content: string
+}): string {
   return matra`
     html(lang="ja") {
       head {

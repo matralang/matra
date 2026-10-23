@@ -1,5 +1,12 @@
 import { DOMParser, NAMESPACE, type Element as XmlElement } from "@xmldom/xmldom"
-import type { ContentMathMLApplication, ContentMathMLExpression, ContentMathMLNumber, ContentMathMLSymbol, MathJson, MathJsonFunction } from "./types.js"
+import type {
+  ContentMathMLApplication,
+  ContentMathMLExpression,
+  ContentMathMLNumber,
+  ContentMathMLSymbol,
+  MathJson,
+  MathJsonFunction,
+} from "./types.js"
 
 const MATHML_NAMESPACE = "http://www.w3.org/1998/Math/MathML"
 export const DEFAULT_OPENMATH_CDBASE = "http://www.openmath.org/cd"
@@ -108,7 +115,8 @@ export function parseContentMathML(source: string): ContentMathMLExpression {
     }
     return parseExpression(children[0])
   } catch (error) {
-    if (error instanceof SyntaxError && error.message.startsWith("Invalid Content MathML:")) throw error
+    if (error instanceof SyntaxError && error.message.startsWith("Invalid Content MathML:"))
+      throw error
     const message = error instanceof Error ? error.message : String(error)
     throw new SyntaxError(`Invalid Content MathML: ${message}`, { cause: error })
   }
@@ -153,7 +161,8 @@ export function mathJsonToContentMathML(expression: MathJson): ContentMathMLExpr
     }
     return { kind: "identifier", name: expression }
   }
-  if (!Array.isArray(expression)) throw new TypeError("Unsupported MathJSON value for Content MathML")
+  if (!Array.isArray(expression))
+    throw new TypeError("Unsupported MathJSON value for Content MathML")
 
   const [head, ...operands] = expression
   if (typeof head !== "string" || !Object.hasOwn(symbolsByMathJsonHead, head)) {
@@ -203,7 +212,8 @@ function parseNumber(element: XmlElement): ContentMathMLExpression {
     const [numeratorText, denominatorText] = rationalParts(element)
     const numerator = parseInteger(numeratorText, "rational numerator")
     const denominator = parseInteger(denominatorText, "rational denominator")
-    if (BigInt(denominator.value) === 0n) throw new SyntaxError("Rational denominator must not be zero")
+    if (BigInt(denominator.value) === 0n)
+      throw new SyntaxError("Rational denominator must not be zero")
     return {
       kind: "application",
       operator: makeSymbol("nums1", "rational"),
@@ -290,7 +300,8 @@ function parseApplication(element: XmlElement): ContentMathMLApplication {
       assertMathMLElement(degreeElement, "degree")
       assertAttributes(degreeElement, [])
       const degreeChildren = expressionChildren(degreeElement)
-      if (degreeChildren.length !== 1) throw new SyntaxError("root degree must contain exactly one expression")
+      if (degreeChildren.length !== 1)
+        throw new SyntaxError("root degree must contain exactly one expression")
       degree = parseExpression(degreeChildren[0])
     }
     if (operands.length !== 1) throw new SyntaxError("Content MathML root requires one radicand")
@@ -326,11 +337,19 @@ function validateArity(application: ContentMathMLApplication): void {
   const valid =
     key === "arith1.plus" || key === "arith1.times"
       ? true
-      : key === "arith1.minus" || key === "arith1.divide" || key === "arith1.power" || key === "arith1.root" || key === "relation1.neq"
+      : key === "arith1.minus" ||
+          key === "arith1.divide" ||
+          key === "arith1.power" ||
+          key === "arith1.root" ||
+          key === "relation1.neq"
         ? count === 2
         : key === "arith1.unary_minus" || key === "arith1.abs" || key.startsWith("transc1.")
           ? count === 1
-          : key === "relation1.eq" || key === "relation1.lt" || key === "relation1.gt" || key === "relation1.leq" || key === "relation1.geq"
+          : key === "relation1.eq" ||
+              key === "relation1.lt" ||
+              key === "relation1.gt" ||
+              key === "relation1.leq" ||
+              key === "relation1.geq"
             ? count >= 2
             : constantMathJson[key] === undefined
   if (!valid) throw new SyntaxError(`Invalid operand count for ${key}: ${count}`)
@@ -413,9 +432,12 @@ function normalizeWhitespace(value: string): string {
 
 function isValidNumber(value: string, type: ContentMathMLNumber["type"]): boolean {
   if (type === "integer") return /^[+-]?\d+$/.test(value)
-  if (type === "real") return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value) && Number.isFinite(Number(value))
+  if (type === "real")
+    return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value) && Number.isFinite(Number(value))
   if (value === "INF" || value === "-INF" || value === "NaN") return true
-  return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value) && Number.isFinite(Number(value))
+  return (
+    /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value) && Number.isFinite(Number(value))
+  )
 }
 
 function makeSymbol(cd: string, name: string): ContentMathMLSymbol {
@@ -433,7 +455,9 @@ function serializeExpression(expression: ContentMathMLExpression): string {
       return `<cn type="${expression.type}">${escapeXml(expression.value)}</cn>`
     case "symbol":
       if (expression.cdbase !== DEFAULT_OPENMATH_CDBASE) {
-        throw new TypeError(`Cannot serialize non-default cdbase without a cdgroup: ${expression.cdbase}`)
+        throw new TypeError(
+          `Cannot serialize non-default cdbase without a cdgroup: ${expression.cdbase}`,
+        )
       }
       return `<csymbol cd="${escapeXml(expression.cd)}">${escapeXml(expression.name)}</csymbol>`
     case "application":
@@ -442,7 +466,12 @@ function serializeExpression(expression: ContentMathMLExpression): string {
 }
 
 function escapeXml(value: string): string {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;")
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;")
 }
 
 function numberToMathJson(number: ContentMathMLNumber): number {
@@ -471,5 +500,7 @@ function applicationHead(operator: ContentMathMLExpression): string {
 }
 
 function unsupportedSymbol(symbol: ContentMathMLSymbol): TypeError {
-  return new TypeError(`Unsupported Content Dictionary symbol: ${symbol.cdbase}/${symbol.cd}#${symbol.name}`)
+  return new TypeError(
+    `Unsupported Content Dictionary symbol: ${symbol.cdbase}/${symbol.cd}#${symbol.name}`,
+  )
 }

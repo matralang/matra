@@ -20,13 +20,34 @@ export function decode(frames, key = "", scheme = "hmac-sha256") {
   const [signature, ...jsonFrames] = frames.slice(delimiter + 1, delimiter + 6)
   const expected = sign(jsonFrames, key, scheme)
   if (key && signature.toString() !== expected) throw new Error("Invalid Jupyter message signature")
-  const [header, parentHeader, metadata, content] = jsonFrames.slice(0, 4).map(frame => JSON.parse(frame.toString()))
-  return { identities, header, parentHeader, metadata, content, buffers: frames.slice(delimiter + 6) }
+  const [header, parentHeader, metadata, content] = jsonFrames
+    .slice(0, 4)
+    .map(frame => JSON.parse(frame.toString()))
+  return {
+    identities,
+    header,
+    parentHeader,
+    metadata,
+    content,
+    buffers: frames.slice(delimiter + 6),
+  }
 }
 
-export function encode({ identities = [], header, parentHeader = {}, metadata = {}, content = {}, buffers = [] }, key = "", scheme = "hmac-sha256") {
-  const jsonFrames = [header, parentHeader, metadata, content].map(value => Buffer.from(JSON.stringify(value)))
-  return [...identities, Buffer.from(DELIMITER), Buffer.from(sign(jsonFrames, key, scheme)), ...jsonFrames, ...buffers]
+export function encode(
+  { identities = [], header, parentHeader = {}, metadata = {}, content = {}, buffers = [] },
+  key = "",
+  scheme = "hmac-sha256",
+) {
+  const jsonFrames = [header, parentHeader, metadata, content].map(value =>
+    Buffer.from(JSON.stringify(value)),
+  )
+  return [
+    ...identities,
+    Buffer.from(DELIMITER),
+    Buffer.from(sign(jsonFrames, key, scheme)),
+    ...jsonFrames,
+    ...buffers,
+  ]
 }
 
 function sign(frames, key, scheme) {

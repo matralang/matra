@@ -43,32 +43,49 @@ export function Map(fn: StandardFunction, values: readonly MatraValue[]): MatraV
 }
 
 /** Evaluate Range, Map, and registered application functions in a Core AST. */
-export function evaluateStandard(expression: MatraAST | MatraASTChild, options: StandardEvaluationOptions = {}): MatraValue {
+export function evaluateStandard(
+  expression: MatraAST | MatraASTChild,
+  options: StandardEvaluationOptions = {},
+): MatraValue {
   return evaluateExpression(expression, options.functions ?? {}, {})
 }
 
 /** Evaluate standard expressions embedded in props throughout an AST. */
-export function evaluateStandardProps(ast: MatraAST, options: StandardEvaluationOptions = {}): MatraAST {
+export function evaluateStandardProps(
+  ast: MatraAST,
+  options: StandardEvaluationOptions = {},
+): MatraAST {
   return evaluatePropExpressions(ast, expression => evaluateStandard(expression, options))
 }
 
-function evaluateExpression(expression: MatraASTChild, functions: Readonly<Record<string, StandardFunction>>, scope: StandardScope): MatraValue {
+function evaluateExpression(
+  expression: MatraASTChild,
+  functions: Readonly<Record<string, StandardFunction>>,
+  scope: StandardScope,
+): MatraValue {
   if (!isMatraAST(expression)) return expression
   if (Object.keys(expression.props).length > 0) {
     throw new TypeError(`Standard function ${expression.tag} does not accept properties`)
   }
 
   if (expression.tag === "Range") {
-    const args = expression.children.map(child => requireNumber(evaluateExpression(child, functions, scope), "Range"))
+    const args = expression.children.map(child =>
+      requireNumber(evaluateExpression(child, functions, scope), "Range"),
+    )
     if (args.length < 1 || args.length > 3) throw new TypeError("Range expects 1 to 3 arguments")
-    return args.length === 1 ? Range(args[0]) : args.length === 2 ? Range(args[0], args[1]) : Range(args[0], args[1], args[2])
+    return args.length === 1
+      ? Range(args[0])
+      : args.length === 2
+        ? Range(args[0], args[1])
+        : Range(args[0], args[1], args[2])
   }
 
   if (expression.tag === "Map") {
     if (expression.children.length !== 2) throw new TypeError("Map expects 2 arguments")
     const fn = resolveFunction(expression.children[0], functions, scope)
     const values = evaluateExpression(expression.children[1], functions, scope)
-    if (!Array.isArray(values)) throw new TypeError("Map expects a collection as its second argument")
+    if (!Array.isArray(values))
+      throw new TypeError("Map expects a collection as its second argument")
     return Map(fn, values)
   }
 
@@ -92,7 +109,11 @@ function evaluateExpression(expression: MatraASTChild, functions: Readonly<Recor
   return fn(...expression.children.map(child => evaluateExpression(child, functions, scope)))
 }
 
-function resolveFunction(expression: MatraASTChild, functions: Readonly<Record<string, StandardFunction>>, scope: StandardScope): StandardFunction {
+function resolveFunction(
+  expression: MatraASTChild,
+  functions: Readonly<Record<string, StandardFunction>>,
+  scope: StandardScope,
+): StandardFunction {
   if (isMatraAST(expression)) {
     if (expression.tag !== "Lambda") {
       throw new TypeError("Map expects a function name or Lambda as its first argument")
@@ -107,7 +128,11 @@ function resolveFunction(expression: MatraASTChild, functions: Readonly<Record<s
   return fn
 }
 
-function createLambda(expression: MatraAST, functions: Readonly<Record<string, StandardFunction>>, closure: StandardScope): StandardFunction {
+function createLambda(
+  expression: MatraAST,
+  functions: Readonly<Record<string, StandardFunction>>,
+  closure: StandardScope,
+): StandardFunction {
   if (Object.keys(expression.props).length > 0 || expression.children.length !== 2) {
     throw new TypeError("Lambda expects a parameter name and a body")
   }
