@@ -1,11 +1,11 @@
 import assert from "node:assert/strict"
-import { instantiateUnified } from "./unified-host.mjs"
 import { createHash } from "node:crypto"
 import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises"
-import { Worker } from "node:worker_threads"
 import { fileURLToPath } from "node:url"
-import { cachedCompiler, CommandError } from "./bootstrap-compiler.mjs"
+import { Worker } from "node:worker_threads"
+import { CommandError, cachedCompiler } from "./bootstrap-compiler.mjs"
 import { sourcePosition } from "./compiler-host.mjs"
+import { instantiateUnified } from "./unified-host.mjs"
 
 const compilerSourcePath = fileURLToPath(new URL("../examples/compiler.md", import.meta.url))
 const artifactCacheDirectory = fileURLToPath(

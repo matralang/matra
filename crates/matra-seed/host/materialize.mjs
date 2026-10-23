@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { basename, dirname } from "node:path"
-import { cachedCompiler, CommandError } from "./bootstrap-compiler.mjs"
+import { CommandError, cachedCompiler } from "./bootstrap-compiler.mjs"
 
 const arguments_ = process.argv.slice(2)
 if (arguments_[0] === "--") arguments_.shift()

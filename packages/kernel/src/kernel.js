@@ -1,8 +1,8 @@
-import { readFile } from "node:fs/promises"
 import { randomUUID } from "node:crypto"
+import { readFile } from "node:fs/promises"
 import { Publisher, Reply, Router } from "zeromq"
-import { complete, completeness, evaluate, inspect } from "./runtime.js"
 import { decode, encode, makeHeader } from "./message.js"
+import { complete, completeness, evaluate, inspect } from "./runtime.js"
 
 const protocolVersion = "5.3"
 

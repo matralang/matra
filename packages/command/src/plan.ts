@@ -1,5 +1,5 @@
-import { isMatraAST, type MatraAST, type MatraPropValue, type MatraValue } from "@matra/core"
 import process from "node:process"
+import { isMatraAST, type MatraAST, type MatraPropValue, type MatraValue } from "@matra/core"
 import { CommandValidationError } from "./errors.js"
 import type {
   CommandCapabilities,

@@ -1,3 +1,5 @@
+import { parseMath } from "@matra/math"
+import type { MathCommandInfo } from "@matra/math-compute-engine"
 import {
   evaluateMatra,
   listStandardMathCommands,
@@ -5,8 +7,6 @@ import {
   numericEvaluateMatra,
   simplifyMatra,
 } from "@matra/math-compute-engine"
-import { parseMath } from "@matra/math"
-import type { MathCommandInfo } from "@matra/math-compute-engine"
 
 type MathCommand = MathCommandInfo
 

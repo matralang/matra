@@ -1,4 +1,4 @@
-import { fill, strokeStyle, strokeWeight, circle, path, push, pop } from "../../module.ts"
+import { circle, fill, path, pop, push, strokeStyle, strokeWeight } from "../../module.ts"
 
 const rightCircle = (cx, cy, r) => {
   fill("black")

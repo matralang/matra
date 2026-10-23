@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process"
 import { performance } from "node:perf_hooks"
+import type { MatraValue } from "@matra/core"
 import { CommandExecutionError } from "./errors.js"
 import type {
   AuthorizedExecutionPlan,
@@ -9,7 +10,6 @@ import type {
   ExecuteOptions,
   ExecutionResult,
 } from "./types.js"
-import type { MatraValue } from "@matra/core"
 
 const DEFAULT_MAX_OUTPUT_BYTES = 16 * 1024 * 1024
 

@@ -1,14 +1,40 @@
 /** @matra/core — domain-neutral Matra tree primitives. */
 
-export { parse } from "./parser/index.js"
 export {
-  evaluateStatic,
-  evaluateUnified,
-  EvaluationRequiredError,
-  parseUnified,
-  staticValueToAST,
-  UnifiedSyntaxError,
-} from "./unified.js"
+  astToMatraJSON,
+  isMatraAST,
+  isMatraJSON,
+  matraJSONToAST,
+} from "./ast/convert.js"
+export type { PropExpressionEvaluator } from "./ast/evaluate.js"
+export { evaluatePropExpressions } from "./ast/evaluate.js"
+export { transform, visit } from "./ast/transform.js"
+export type * from "./ast/types.js"
+export { CORE_VERSION, SPEC_VERSION } from "./ast/types.js"
+export type {
+  JSONMatraNode,
+  JSONMatraPrimitive,
+  JSONMatraValue,
+  MatraDocumentSource,
+  MatraExpressionSource,
+  MatraFactory,
+  MatraRawSource,
+} from "./jsonmatra.js"
+export { loadMatra, matra, normalizeMatra } from "./jsonmatra.js"
+export type { ExtractMatraMarkdownOptions, MarkdownFence, MatraMarkdownFence } from "./markdown.js"
+export { extractMarkdownFences, extractMatraMarkdown } from "./markdown.js"
+export { formatCodeFrame, MatraSyntaxError } from "./parser/error.js"
+export { parse } from "./parser/index.js"
+export { printJSON } from "./printer.js"
+export type { MatraRenderer } from "./render.js"
+export { renderWith } from "./render.js"
+export type { StandardEvaluationOptions, StandardFunction } from "./standard.js"
+export {
+  evaluateStandard,
+  evaluateStandardProps,
+  mapValues as Map,
+  Range,
+} from "./standard.js"
 export type {
   StaticNode,
   StaticToASTNode,
@@ -18,51 +44,25 @@ export type {
   UnifiedScalar,
   UnifiedStatement,
 } from "./unified.js"
-export { formatCodeFrame, MatraSyntaxError } from "./parser/error.js"
 export {
-  astToMatraJSON,
-  isMatraAST,
-  isMatraJSON,
-  matraJSONToAST,
-} from "./ast/convert.js"
-export { printJSON } from "./printer.js"
-export { extractMarkdownFences, extractMatraMarkdown } from "./markdown.js"
-export type { ExtractMatraMarkdownOptions, MarkdownFence, MatraMarkdownFence } from "./markdown.js"
-export { transform, visit } from "./ast/transform.js"
-export { evaluatePropExpressions } from "./ast/evaluate.js"
-export type { PropExpressionEvaluator } from "./ast/evaluate.js"
-export { renderWith } from "./render.js"
-export type { MatraRenderer } from "./render.js"
-export {
-  evaluateStandard,
-  evaluateStandardProps,
-  mapValues as Map,
-  Range,
-} from "./standard.js"
-export type { StandardEvaluationOptions, StandardFunction } from "./standard.js"
-export { loadMatra, matra, normalizeMatra } from "./jsonmatra.js"
-export type {
-  JSONMatraPrimitive,
-  JSONMatraNode,
-  JSONMatraValue,
-  MatraDocumentSource,
-  MatraExpressionSource,
-  MatraFactory,
-  MatraRawSource,
-} from "./jsonmatra.js"
-export { CORE_VERSION, SPEC_VERSION } from "./ast/types.js"
-export type * from "./ast/types.js"
+  EvaluationRequiredError,
+  evaluateStatic,
+  evaluateUnified,
+  parseUnified,
+  staticValueToAST,
+  UnifiedSyntaxError,
+} from "./unified.js"
 
-import { parse } from "./parser/index.js"
 import { astToMatraJSON, matraJSONToAST } from "./ast/convert.js"
-import { printJSON } from "./printer.js"
-import { extractMarkdownFences, extractMatraMarkdown } from "./markdown.js"
-import { transform, visit } from "./ast/transform.js"
 import { evaluatePropExpressions } from "./ast/evaluate.js"
+import { transform, visit } from "./ast/transform.js"
+import { CORE_VERSION } from "./ast/types.js"
+import { loadMatra, matra, normalizeMatra } from "./jsonmatra.js"
+import { extractMarkdownFences, extractMatraMarkdown } from "./markdown.js"
+import { parse } from "./parser/index.js"
+import { printJSON } from "./printer.js"
 import { renderWith } from "./render.js"
 import { evaluateStandard, evaluateStandardProps, mapValues, Range } from "./standard.js"
-import { loadMatra, matra, normalizeMatra } from "./jsonmatra.js"
-import { CORE_VERSION } from "./ast/types.js"
 
 export const VERSION = CORE_VERSION
 

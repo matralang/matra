@@ -1,8 +1,8 @@
+import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { access, mkdir, mkdtemp, readFile, rename, rm } from "node:fs/promises"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { spawnSync } from "node:child_process"
 
 const seedRoot = fileURLToPath(new URL("..", import.meta.url))
 const manifest = join(seedRoot, "Cargo.toml")

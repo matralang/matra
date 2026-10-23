@@ -1,8 +1,8 @@
 import assert from "node:assert/strict"
+import { execFileSync } from "node:child_process"
 import { readdir, readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { execFileSync } from "node:child_process"
 import { parseMath } from "@matra/math"
 
 async function collectMarkdownPages(directory) {

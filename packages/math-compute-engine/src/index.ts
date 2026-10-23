@@ -1,25 +1,25 @@
 import {
   evaluate as computeEvaluate,
-  N,
   simplify as computeSimplify,
+  N,
 } from "@cortex-js/compute-engine"
 import { evaluatePropExpressions, type MatraAST, type MatraValue } from "@matra/core"
 import {
   astToMathJson,
   contentMathMLToMathJson,
+  type MathJson,
+  type MorphionForm,
   mathJsonToContentMathML,
   parseContentMathML,
   parseMath,
-  type MathJson,
-  type MorphionForm,
 } from "@matra/math"
 import { morphionize } from "./morphion.js"
 import { listStandardMathCommands } from "./standard-library.js"
 
 export type MathScope = Readonly<Record<string, MathJson>>
-export { morphionize, listStandardMathCommands }
-export type { MorphionForm }
 export type { MathCommandInfo } from "./standard-library.js"
+export type { MorphionForm }
+export { listStandardMathCommands, morphionize }
 
 /** Evaluate an already parsed MathJSON expression. */
 export function evaluate(expression: MathJson): unknown {

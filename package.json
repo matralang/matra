@@ -9,7 +9,7 @@
     "bootstrap:verify": "node crates/matra-seed/host/verify-self-host.mjs",
     "check": "pnpm run build && pnpm -r --if-present run check",
     "lint": "pnpm run check && pnpm run lint:biome && pnpm run lint:markdown",
-    "lint:biome": "biome lint .",
+    "lint:biome": "biome check .",
     "lint:markdown": "markdownlint-cli2 '**/*.md'",
     "format": "biome format --write .",
     "test": "pnpm -r --if-present run test && pnpm run test:seed",

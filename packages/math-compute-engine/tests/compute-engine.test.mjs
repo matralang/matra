@@ -5,9 +5,9 @@ import {
   evaluateContentMathML,
   evaluateMatra,
   listStandardMathCommands,
+  morphionize,
   numericEvaluateMatra,
   numericEvaluateProps,
-  morphionize,
   simplifyMatra,
 } from "../dist/index.js"
 

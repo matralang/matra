@@ -1,6 +1,6 @@
-import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
-import { cachedCompiler, CommandError } from "./bootstrap-compiler.mjs"
+import { fileURLToPath } from "node:url"
+import { CommandError, cachedCompiler } from "./bootstrap-compiler.mjs"
 
 const arguments_ = process.argv.slice(2)
 if (arguments_[0] === "--") arguments_.shift()

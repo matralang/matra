@@ -1,8 +1,8 @@
 import {
   isMatraAST,
-  parse,
   type MatraAST,
   type MatraASTChild,
+  parse,
   type UnifiedExpression,
 } from "@matra/core"
 import type { MathJson } from "./types.js"

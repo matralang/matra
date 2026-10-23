@@ -1,15 +1,15 @@
 import assert from "node:assert/strict"
+import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { fileURLToPath } from "node:url"
-import { spawnSync } from "node:child_process"
 import { test } from "node:test"
+import { fileURLToPath } from "node:url"
 import { Worker } from "node:worker_threads"
-import { instantiateUnified } from "../host/unified-host.mjs"
 import { cachedCompiler } from "../host/bootstrap-compiler.mjs"
 import { formatCompilerDiagnostic, sourceExcerpt, sourcePosition } from "../host/compiler-host.mjs"
+import { instantiateUnified } from "../host/unified-host.mjs"
 
 const root = new URL("../../..", import.meta.url)
 

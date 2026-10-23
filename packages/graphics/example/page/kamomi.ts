@@ -1,18 +1,18 @@
 import {
-  setCanvasSize,
-  strokeWeight,
-  strokeStyle,
-  fill,
   circle,
-  svgLayout,
+  fill,
   g,
+  setCanvasSize,
+  strokeStyle,
+  strokeWeight,
+  svgLayout,
   text,
   textAnchor,
   textBaseline,
   textSize,
 } from "../../module.js"
-import taijitsu from "../mixin/taijitu.js"
 import { polarOffset } from "../math.js"
+import taijitsu from "../mixin/taijitu.js"
 
 const cvsSize = 512
 const [cvsW, cvsH] = [cvsSize, cvsSize]
