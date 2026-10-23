@@ -36,67 +36,61 @@ const flkmArr = [
   { name: "M", col: "blue", normalCol: "blue", lightCol: "lightblue" },
 ]
 
-const circleElmArr: any[] = []
+const circleElmArr: MatraElm[] = []
 
 let dxPrev = 0
 let dyPrev = 0
 
-circleElmArr.push([
-  ...Array.from({ length: 3 }).flatMap((_, j) => {
-    return Array.from({ length: 25 }).map((_, i) => {
-      const outer = polarOffset(outerR, i, 12, -0.5)
-      const inner = polarOffsetFormula(
-        "Add(Divide(j, 3), Divide(i, 24))",
-        { i, j },
-        outerRIn,
-        1,
-        -0.5,
-      )
-      const dx = calculate("Add(outer, inner)", { outer: outer[0], inner: inner[0] })
-      const dy = calculate("Add(outer, inner)", { outer: outer[1], inner: inner[1] })
+Array.from({ length: 3 }).forEach((_, j) => {
+  Array.from({ length: 25 }).forEach((_, i) => {
+    const outer = polarOffset(outerR, i, 12, -0.5)
+    const inner = polarOffsetFormula(
+      "Add(Divide(j, 3), Divide(i, 24))",
+      { i, j },
+      outerRIn,
+      1,
+      -0.5,
+    )
+    const dx = calculate("Add(outer, inner)", { outer: outer[0], inner: inner[0] })
+    const dy = calculate("Add(outer, inner)", { outer: outer[1], inner: inner[1] })
 
-      if (i > 0) {
-        strokeStyle(flkmArr[calculate("Subtract(Power(2, j), 1)", { j })].lightCol)
-        if (j === 0) {
-          strokeWeight(0.88)
-        } else {
-          strokeWeight(0.44)
-        }
-        const lineElm = line(cvsW / 2 + dxPrev, cvsH / 2 - dyPrev, cvsW / 2 + dx, cvsH / 2 - dy)
-
-        lineElmArr.push(lineElm)
-
-        dxPrev = dx
-        dyPrev = dy
+    if (i > 0) {
+      strokeStyle(flkmArr[calculate("Subtract(Power(2, j), 1)", { j })].lightCol)
+      if (j === 0) {
+        strokeWeight(0.88)
+      } else {
+        strokeWeight(0.44)
       }
+      const lineElm = line(cvsW / 2 + dxPrev, cvsH / 2 - dyPrev, cvsW / 2 + dx, cvsH / 2 - dy)
+
+      lineElmArr.push(lineElm)
 
       dxPrev = dx
       dyPrev = dy
+    }
 
-      if (i > 24) {
-        return null
-      }
+    dxPrev = dx
+    dyPrev = dy
 
-      const colourIndex = calculate("Subtract(Power(2, j), 1)", { j })
-      fill(flkmArr[colourIndex].lightCol)
-      strokeStyle(flkmArr[colourIndex].normalCol)
-      strokeWeight(1)
+    const colourIndex = calculate("Subtract(Power(2, j), 1)", { j })
+    fill(flkmArr[colourIndex].lightCol)
+    strokeStyle(flkmArr[colourIndex].normalCol)
+    strokeWeight(1)
 
-      const circleElm = circle(cvsW / 2 + dx, cvsH / 2 - dy, elmSize / 2)
+    const circleElm = circle(cvsW / 2 + dx, cvsH / 2 - dy, elmSize / 2)
 
-      fill("black")
-      textAnchor("center")
-      textBaseline("middle")
-      textSize(elmSize * 0.5)
-      const factor = calculate("Power(4, j)", { j })
-      const textElm = text(String(fibonacciDigit(i, factor)), cvsW / 2 + dx, cvsH / 2 - dy)
+    fill("black")
+    textAnchor("center")
+    textBaseline("middle")
+    textSize(elmSize * 0.5)
+    const factor = calculate("Power(4, j)", { j })
+    const textElm = text(String(fibonacciDigit(i, factor)), cvsW / 2 + dx, cvsH / 2 - dy)
 
-      const gElm = g([circleElm, textElm])
+    const gElm = g([circleElm, textElm])
 
-      circleElmArr.push(gElm)
-    })
-  }),
-])
+    circleElmArr.push(gElm)
+  })
+})
 
 Array.from({ length: 9 }).forEach((_, i) => {
   const outer = polarOffset(innerR, i, 4, -0.5)
