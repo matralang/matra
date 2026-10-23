@@ -69,7 +69,7 @@ const specificationNavigation = parseWebsiteDocument(`
 
 const googleTagManagerBody = parseWebsiteDocument(`
   noscript {
-    iframe(src="https://www.googletagmanager.com/ns.html?id=GTM-T8JD7GH9", height="0", width="0", style="display:none;visibility:hidden") {}
+    iframe(src="https://www.googletagmanager.com/ns.html?id=GTM-T8JD7GH9" height="0" width="0" style="display:none;visibility:hidden") {}
   }
 `)
 
@@ -79,13 +79,13 @@ const googleTagManagerHead = parseWebsiteDocument(`
 
 const sharedHeadNodes = parseWebsiteDocument(`
   head {
-    link(rel="icon", href="/favicon.ico", sizes="any") {}
-    link(rel="icon", href="/favicon.svg", type="image/svg+xml") {}
-    meta(property="og:image", content="https://matralang.org/og-image.png") {}
-    meta(name="twitter:image", content="https://matralang.org/og-image.png") {}
-    link(rel="preconnect", href="https://fonts.googleapis.com") {}
-    link(rel="preconnect", href="https://fonts.gstatic.com", crossorigin="anonymous") {}
-    link(href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap", rel="stylesheet") {}
+    link(rel="icon" href="/favicon.ico" sizes="any") {}
+    link(rel="icon" href="/favicon.svg" type="image/svg+xml") {}
+    meta(property="og:image" content="https://matralang.org/og-image.png") {}
+    meta(name="twitter:image" content="https://matralang.org/og-image.png") {}
+    link(rel="preconnect" href="https://fonts.googleapis.com") {}
+    link(rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous") {}
+    link(href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet") {}
   }
 `).children
 

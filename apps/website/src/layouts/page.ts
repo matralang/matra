@@ -9,7 +9,7 @@ export function pageLayout(options: {
     html(lang="ja") {
       head {
         meta(charset="UTF-8") {}
-        meta(name="viewport", content="width=device-width, initial-scale=1") {}
+        meta(name="viewport" content="width=device-width, initial-scale=1") {}
         meta(name="description", content=${options.description}) {}
         meta(property="og:type", content="website") {}
         meta(property="og:title", content=${options.title}) {}

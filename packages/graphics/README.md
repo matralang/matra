@@ -7,12 +7,10 @@ SVG renderer and vector graphics library for the Matra language.
 ## Matra source
 
 ```matra
-svg(
-  rect(x=0, y=0, width=256, height=256, fill="#fffaf0"),
-  circle(cx=128, cy=128, r=72, fill="#ff4d6d"),
-  width=256,
-  height=256
-)
+svg(width=256 height=256) {
+  rect(x=0 y=0 width=256 height=256 fill="#fffaf0") {}
+  circle(cx=128 cy=128 r=72 fill="#ff4d6d") {}
+}
 ```
 
 Compile it directly to SVG:

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { renderWith } from '@matra/core';
 import { compile, svgNode, svgRenderer, toSVG } from '../src/index.ts';
@@ -14,9 +15,17 @@ test('renders a Matra graphics AST as SVG', () => {
 });
 
 test('compiles Matra source to SVG', () => {
-  const result = compile('svg(width=64, height=64) { circle(cx=32, cy=32, r=20, fill="red") {} }');
+  const result = compile('svg(width=64 height=64) { circle(cx=32 cy=32 r=20 fill="red") {} }');
   assert.match(result, /^<svg[^>]+viewBox="0 0 64 64"/);
   assert.match(result, /<circle cx="32" cy="32" r="20" fill="red"><\/circle>/);
+});
+
+test('compiles the whitespace-separated basic artwork example', async () => {
+  const source = await readFile(new URL('../example/page/basic.matra', import.meta.url), 'utf8');
+  assert.equal(
+    compile(source),
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><rect x="0" y="0" width="256" height="256" fill="#fffaf0"></rect><circle cx="128" cy="128" r="72" fill="#ff4d6d" stroke="#171717" stroke-width="4"></circle><text x="128" y="132" fill="white" text-anchor="middle" dominant-baseline="middle">Matra</text></svg>',
+  );
 });
 
 test('implements the core renderer contract', () => {
