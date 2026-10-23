@@ -94,7 +94,7 @@ function evaluateExpression(
       throw new TypeError("Var expects one variable name")
     }
     const name = expression.children[0]
-    if (!Object.prototype.hasOwnProperty.call(scope, name)) {
+    if (!Object.hasOwn(scope, name)) {
       throw new ReferenceError(`Unknown standard variable: ${name}`)
     }
     return scope[name]

@@ -23,7 +23,7 @@ export const svgRenderer: MatraRenderer<string, SVGRenderOptions> = {
   render: toSVG,
 }
 
-function wrapInSvg(ast: MatraAST, options: SVGRenderOptions): MatraAST {
+function wrapInSvg(ast: MatraAST, _options: SVGRenderOptions): MatraAST {
   return svgNode("svg", {}, ast.tag === "$root" ? ast.children : [ast])
 }
 

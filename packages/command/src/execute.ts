@@ -173,7 +173,7 @@ function resolveStdin(
   bindings: Record<string, MatraValue | Uint8Array>,
 ): MatraValue | Uint8Array | undefined {
   if (isRef(stdin)) {
-    if (!Object.prototype.hasOwnProperty.call(bindings, stdin.ref)) {
+    if (!Object.hasOwn(bindings, stdin.ref)) {
       throw new CommandExecutionError(`Unknown stdin binding: ${stdin.ref}`)
     }
     return bindings[stdin.ref]

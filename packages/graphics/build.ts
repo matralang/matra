@@ -1,8 +1,8 @@
-// @ts-ignore Node types are intentionally not required by this tiny package.
+// @ts-expect-error Node types are intentionally not required by this tiny package.
 import fs from "node:fs"
-// @ts-ignore Node types are intentionally not required by this tiny package.
+// @ts-expect-error Node types are intentionally not required by this tiny package.
 import path from "node:path"
-// @ts-ignore Node types are intentionally not required by this tiny package.
+// @ts-expect-error Node types are intentionally not required by this tiny package.
 import { pathToFileURL } from "node:url"
 import esbuild from "esbuild"
 import { compile } from "./src/index.js"
@@ -51,7 +51,7 @@ for (const file of sources) {
     }
 
     fs.writeFileSync(outputPath, `${pageModule.default}\n`, "utf8")
-    // @ts-ignore Node types are intentionally not required by this tiny package.
+    // @ts-expect-error Node types are intentionally not required by this tiny package.
     console.log(`Built: ${path.relative(process.cwd(), outputPath)}`)
   } finally {
     if (fs.existsSync(temporaryModule)) fs.unlinkSync(temporaryModule)

@@ -1,5 +1,3 @@
-"use strict"
-
 const pairs = { "{": "}", "[": "]", "(": ")" }
 const closing = new Set(Object.values(pairs))
 
@@ -95,7 +93,7 @@ function analyze(text) {
   }
 
   const symbols = []
-  const tagPattern = /(^|[\s{,(])([^\s`~"'()\[\]{}<>=|#.,]+)(?=\s*(?:\(|\{|[.#\[]))/gmu
+  const tagPattern = /(^|[\s{,(])([^\s`~"'()[\]{}<>=|#.,]+)(?=\s*(?:\(|\{|[.#[]))/gmu
   for (const match of masked.matchAll(tagPattern)) {
     const name = match[2]
     if (["true", "false", "null"].includes(name)) continue
@@ -117,7 +115,7 @@ function format(text, options = {}) {
     const structural = maskedLines[index] || ""
     const leadingClosers = structural.trimStart().match(/^[)}\]]+/)?.[0].length || 0
     const indent = Math.max(0, level - leadingClosers)
-    const opens = (structural.match(/[({\[]/g) || []).length
+    const opens = (structural.match(/[({[]/g) || []).length
     const closes = (structural.match(/[)}\]]/g) || []).length
     level = Math.max(0, level + opens - closes)
     return unit.repeat(indent) + sourceLine.trim()

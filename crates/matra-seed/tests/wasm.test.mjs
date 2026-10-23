@@ -1150,7 +1150,7 @@ test("bootstrap compiler executes signed LEB writes inside nested loop condition
     .slice(markdown.indexOf("fn write_i32_leb("), markdown.indexOf("fn u32_leb_length("))
     .replace("fn write_i32_leb(", "export fn write_i32_leb(")
   const source = new TextEncoder().encode(
-    "module demo\nfn negate_i32(value: i32) -> i32 { let zero = 0 return zero - value }\n" + writer,
+    `module demo\nfn negate_i32(value: i32) -> i32 { let zero = 0 return zero - value }\n${writer}`,
   )
   const {
     instance: {

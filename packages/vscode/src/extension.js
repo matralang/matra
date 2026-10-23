@@ -1,5 +1,3 @@
-"use strict"
-
 const vscode = require("vscode")
 const { analyze, format, positionAt } = require("./analyzer")
 

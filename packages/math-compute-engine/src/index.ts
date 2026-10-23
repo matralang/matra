@@ -1,5 +1,4 @@
 import {
-  ComputeEngine,
   evaluate as computeEvaluate,
   N,
   simplify as computeSimplify,
@@ -74,7 +73,7 @@ export function numericEvaluateProps(ast: MatraAST, scope: MathScope = {}): Matr
 /** Replace symbol operands with MathJSON values before computation. */
 function bind(expression: MathJson, scope: MathScope): MathJson {
   if (typeof expression === "string") {
-    return Object.prototype.hasOwnProperty.call(scope, expression) ? scope[expression] : expression
+    return Object.hasOwn(scope, expression) ? scope[expression] : expression
   }
   if (!Array.isArray(expression)) return expression
   const [head, ...operands] = expression

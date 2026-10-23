@@ -1,8 +1,8 @@
-// @ts-ignore: allow importing Node modules without @types/node installed
+// @ts-expect-error: allow importing Node modules without @types/node installed
 import { spawn } from "node:child_process"
-// @ts-ignore: allow importing Node modules without @types/node installed
+// @ts-expect-error: allow importing Node modules without @types/node installed
 import { watch } from "node:fs"
-// @ts-ignore: allow importing Node modules without @types/node installed
+// @ts-expect-error: allow importing Node modules without @types/node installed
 import { resolve } from "node:path"
 
 declare const process: any

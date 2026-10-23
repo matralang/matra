@@ -6,7 +6,6 @@ import {
   circle,
   svgLayout,
   g,
-  line,
   text,
   textAnchor,
   textBaseline,
@@ -56,34 +55,32 @@ Array.from({ length: 1 }).map(_ => {
 })
 
 circleElmArr.push([
-  ...Array.from({ length: 3 })
-    .map((_, j) => {
-      return Array.from({ length: 25 }).map((_, i) => {
-        const outer = polarOffset(outerR, i, 24, -0.5)
-        const inner = polarOffset(outerRIn, j, 3, -0.5)
-        const dx = calculate("Add(outer, inner)", { outer: outer[0], inner: inner[0] })
-        const dy = calculate("Add(outer, inner)", { outer: outer[1], inner: inner[1] })
+  ...Array.from({ length: 3 }).flatMap((_, j) => {
+    return Array.from({ length: 25 }).map((_, i) => {
+      const outer = polarOffset(outerR, i, 24, -0.5)
+      const inner = polarOffset(outerRIn, j, 3, -0.5)
+      const dx = calculate("Add(outer, inner)", { outer: outer[0], inner: inner[0] })
+      const dy = calculate("Add(outer, inner)", { outer: outer[1], inner: inner[1] })
 
-        strokeStyle(flkmArr[calculate("Subtract(Power(2, j), 1)", { j })].col)
+      strokeStyle(flkmArr[calculate("Subtract(Power(2, j), 1)", { j })].col)
 
-        fill("white")
-        strokeStyle("none")
+      fill("white")
+      strokeStyle("none")
 
-        const circleElm = circle(cvsW / 2 + dx, cvsH / 2 - dy, elmSize / 2)
+      const circleElm = circle(cvsW / 2 + dx, cvsH / 2 - dy, elmSize / 2)
 
-        fill("black")
-        textAnchor("center")
-        textBaseline("middle")
-        textSize(elmSize * 0.5)
-        const factor = calculate("Power(4, j)", { j })
-        const textElm = text(String(fibonacciDigit(i, factor)), cvsW / 2 + dx, cvsH / 2 - dy)
+      fill("black")
+      textAnchor("center")
+      textBaseline("middle")
+      textSize(elmSize * 0.5)
+      const factor = calculate("Power(4, j)", { j })
+      const textElm = text(String(fibonacciDigit(i, factor)), cvsW / 2 + dx, cvsH / 2 - dy)
 
-        const gElm = g([circleElm, textElm])
+      const gElm = g([circleElm, textElm])
 
-        circleElmArr.push(gElm)
-      })
+      circleElmArr.push(gElm)
     })
-    .flat(),
+  }),
 ])
 
 Array.from({ length: 9 }).map((_, i) => {

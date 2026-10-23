@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises"
 import { randomUUID } from "node:crypto"
-import process from "node:process"
 import { Publisher, Reply, Router } from "zeromq"
 import { complete, completeness, evaluate, inspect } from "./runtime.js"
 import { decode, encode, makeHeader } from "./message.js"

@@ -91,7 +91,7 @@ function formatCompilerDiagnostic(
   const prefix = new TextDecoder().decode(source.slice(0, offset))
   const lines = prefix.split("\n")
   const line = lines.length
-  const column = lines.at(-1)!.length + 1
+  const column = (lines.at(-1)?.length ?? 0) + 1
   const lineStart = source.lastIndexOf(10, offset - 1) + 1
   const nextNewline = source.indexOf(10, offset)
   const lineEnd = nextNewline === -1 ? source.length : nextNewline

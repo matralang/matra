@@ -1,7 +1,7 @@
-// @ts-ignore: allow importing fs without @types/node installed
-import * as fs from "fs"
-// @ts-ignore: allow importing path without @types/node installed
-import * as path from "path"
+// @ts-expect-error: allow importing fs without @types/node installed
+import * as fs from "node:fs"
+// @ts-expect-error: allow importing path without @types/node installed
+import * as path from "node:path"
 import { build } from "esbuild"
 import { cachedCompiler } from "../../../crates/matra-seed/host/bootstrap-compiler.mjs"
 
@@ -200,18 +200,16 @@ function getTrailingSlashRedirectScript(basePath: string): string {
 // GitHub Pages serves this for any unmatched path, including trailing-slash
 // requests to our flat .html routes (e.g. "/spec/"), which would otherwise 404.
 function getNotFoundPage(basePath: string): string {
-  return (
-    [
-      "<!DOCTYPE html>",
-      '<html lang="ja">',
-      "<head>",
-      '<meta charset="utf-8">',
-      `<script>${getTrailingSlashRedirectScript(basePath)}</script>`,
-      "</head>",
-      "<body></body>",
-      "</html>",
-    ].join("\n") + "\n"
-  )
+  return `${[
+    "<!DOCTYPE html>",
+    '<html lang="ja">',
+    "<head>",
+    '<meta charset="utf-8">',
+    `<script>${getTrailingSlashRedirectScript(basePath)}</script>`,
+    "</head>",
+    "<body></body>",
+    "</html>",
+  ].join("\n")}\n`
 }
 
 function assertNoOutputCollisions(pagesDirAbs: string, filesAbs: string[]) {

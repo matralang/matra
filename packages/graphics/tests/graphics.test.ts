@@ -75,6 +75,6 @@ test("can format SVG for source views", () => {
   const result = compile("svg(width=10, height=10) { circle(cx=5, cy=5, r=4) {} }", {
     pretty: true,
   })
-  assert.match(result, /<svg[^>]*>\n  <circle/)
+  assert.match(result, /<svg[^>]*>\n {2}<circle/)
   assert.match(result, /\n<\/svg>$/)
 })

@@ -15,7 +15,7 @@ async function seed(source) {
   try {
     const input = join(directory, "input.md")
     const output = join(directory, "output.wasm")
-    await writeFile(input, "```compiler.matra.program\n" + source + "\n```\n")
+    await writeFile(input, `\`\`\`compiler.matra.program\n${source}\n\`\`\`\n`)
     const result = spawnSync(
       "cargo",
       ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output],

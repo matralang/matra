@@ -38,7 +38,7 @@ const referenceProperties: Record<string, string> = {
   idempotent: "冪等",
 }
 
-const curatedExamples: Record<string, string> = {
+const _curatedExamples: Record<string, string> = {
   Add: "Add(x, 2, 3)",
   Subtract: "Subtract(x, 3)",
   Multiply: "Multiply(x, 2, 3)",
