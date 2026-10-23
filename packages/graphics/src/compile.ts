@@ -1,3 +1,4 @@
+import type { MatraAST } from "@matra/core"
 import { evaluateStatic, parse, renderWith, staticValueToAST } from "@matra/core"
 import { svgRenderer } from "./render.js"
 import type { SVGRenderOptions } from "./types.js"
@@ -8,5 +9,5 @@ export type CompileOptions = SVGRenderOptions
 export function compile(source: string, options: CompileOptions = {}): string {
   const value = evaluateStatic(parse(source))
   if (value === undefined) throw new TypeError("Graphics source must have an output expression.")
-  return renderWith(svgRenderer, staticValueToAST(value) as any, options)
+  return renderWith(svgRenderer, staticValueToAST(value) as MatraAST, options)
 }

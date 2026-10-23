@@ -63,27 +63,30 @@ export class EvaluationRequiredError extends Error {
 }
 
 class Scope {
-  private readonly bindings = new Map<string, any>()
+  private readonly bindings = new Map<string, RuntimeValue>()
   constructor(private readonly parent?: Scope) {}
-  declare(name: string, value: any): void {
+  declare(name: string, value: RuntimeValue): void {
     if (this.bindings.has(name)) throw new SyntaxError(`Duplicate binding: ${name}`)
     this.bindings.set(name, value)
   }
-  get(name: string): any {
+  get(name: string): RuntimeValue {
     if (this.bindings.has(name)) return this.bindings.get(name)
     if (this.parent) return this.parent.get(name)
     throw new ReferenceError(`Unknown name: ${name}`)
   }
-  assign(name: string, value: any): void {
+  assign(name: string, value: RuntimeValue): void {
     if (this.bindings.has(name)) this.bindings.set(name, value)
     else if (this.parent) this.parent.assign(name, value)
     else throw new ReferenceError(`Unknown name: ${name}`)
   }
 }
 class Returned {
-  constructor(readonly value: any) {}
+  constructor(readonly value: RuntimeValue) {}
 }
 class Broken {}
+
+// biome-ignore lint/suspicious/noExplicitAny: The evaluator executes dynamically typed expressions and functions.
+type RuntimeValue = any
 
 export function parseUnified(source: string): UnifiedModule {
   return new UnifiedParser(source).module()
@@ -101,8 +104,8 @@ class Evaluator {
     if (this.staticOnly)
       throw new EvaluationRequiredError(`Static evaluation does not execute ${kind}.`)
   }
-  run(statements: UnifiedStatement[], scope: Scope, children?: any[]): any {
-    let output: any = null
+  run(statements: UnifiedStatement[], scope: Scope, children?: RuntimeValue[]): RuntimeValue {
+    let output: RuntimeValue = null
     for (const statement of statements) {
       output = null
       switch (statement.kind) {
@@ -132,7 +135,7 @@ class Evaluator {
           throw new Broken()
         case "fn": {
           this.dynamic("function declaration")
-          scope.declare(statement.name, (...args: any[]) => {
+          scope.declare(statement.name, (...args: RuntimeValue[]) => {
             const local = new Scope(scope)
             statement.parameters.forEach((name, index) => {
               local.declare(name, args[index] ?? null)
@@ -150,7 +153,7 @@ class Evaluator {
     }
     return output
   }
-  private expression(expr: UnifiedExpression, scope: Scope): any {
+  private expression(expr: UnifiedExpression, scope: Scope): RuntimeValue {
     switch (expr.kind) {
       case "literal":
         return expr.value
@@ -173,7 +176,7 @@ class Evaluator {
           expr.attributes.map(({ key, value }) => [key, this.expression(value, scope)]),
         )
         if (expr.classes.length) props.class = expr.classes.join(" ")
-        const children: any[] = []
+        const children: RuntimeValue[] = []
         this.run(expr.body, new Scope(scope), children)
         return { tag: expr.tag, props, children }
       }

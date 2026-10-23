@@ -1,12 +1,13 @@
+import type { MatraElm } from "../../module.js"
 import {
-  setCanvasSize,
-  strokeWeight,
-  strokeStyle,
-  fill,
   circle,
-  svgLayout,
+  fill,
   g,
   line,
+  setCanvasSize,
+  strokeStyle,
+  strokeWeight,
+  svgLayout,
   text,
   textAnchor,
   textBaseline,
@@ -26,7 +27,7 @@ setCanvasSize(cvsW, cvsH)
 
 strokeWeight(1)
 
-const lineElmArr: any[] = []
+const lineElmArr: MatraElm[] = []
 
 const flkmArr = [
   { name: "F", col: "green", normalCol: "green", lightCol: "lightgreen" },

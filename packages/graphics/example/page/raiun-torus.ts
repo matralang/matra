@@ -1,11 +1,12 @@
+import type { MatraElm } from "../../module.js"
 import {
-  setCanvasSize,
-  strokeWeight,
-  strokeStyle,
-  fill,
   circle,
-  svgLayout,
+  fill,
   g,
+  setCanvasSize,
+  strokeStyle,
+  strokeWeight,
+  svgLayout,
   text,
   textAnchor,
   textBaseline,
@@ -32,7 +33,7 @@ const flkmArr = [
 
 const circleElmArr: any[] = []
 
-const torusCircleElmArr: any[] = []
+const torusCircleElmArr: MatraElm[] = []
 
 Array.from({ length: 3 }).forEach((_, j) => {
   const [dx, dy] = polarOffset(outerRIn, j, 3, -0.5)
