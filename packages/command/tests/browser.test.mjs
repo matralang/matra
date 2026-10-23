@@ -1,10 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import {
-  browserWorkerSource,
-  executeNodejsBlock,
-  prepareNodejsBlock,
-} from "../dist/browser.js"
+import { browserWorkerSource, executeNodejsBlock, prepareNodejsBlock } from "../dist/browser.js"
 
 const nodejs = (props = {}, code = "") => ({ tag: "nodejs", props, children: [code] })
 
@@ -27,16 +23,10 @@ describe("Matra browser nodejs adapter", () => {
   })
 
   it("rejects execution when Web Workers are unavailable", async () => {
-    await assert.rejects(
-      executeNodejsBlock(nodejs({}, "return 1")),
-      /Web Worker execution is not available/,
-    )
+    await assert.rejects(executeNodejsBlock(nodejs({}, "return 1")), /Web Worker execution is not available/)
   })
 
   it("rejects process-oriented props in browser blocks", () => {
-    assert.throws(
-      () => prepareNodejsBlock(nodejs({ cwd: "/tmp" }, "return 1")),
-      /Unsupported browser nodejs prop: cwd/,
-    )
+    assert.throws(() => prepareNodejsBlock(nodejs({ cwd: "/tmp" }, "return 1")), /Unsupported browser nodejs prop: cwd/)
   })
 })

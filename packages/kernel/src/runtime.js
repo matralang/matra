@@ -2,12 +2,7 @@ import { astToMatraJSON, evaluateStatic, parse, printJSON, staticValueToAST } fr
 import { toSVG } from "@matra/graphics"
 import { toHTML } from "@matra/html"
 
-const TAGS = [
-  "a", "article", "button", "canvas", "circle", "div", "ellipse", "footer",
-  "form", "g", "h1", "h2", "header", "img", "input", "label", "li", "line",
-  "main", "nav", "ol", "p", "path", "polygon", "rect", "section", "span", "svg",
-  "table", "text", "textarea", "ul",
-]
+const TAGS = ["a", "article", "button", "canvas", "circle", "div", "ellipse", "footer", "form", "g", "h1", "h2", "header", "img", "input", "label", "li", "line", "main", "nav", "ol", "p", "path", "polygon", "rect", "section", "span", "svg", "table", "text", "textarea", "ul"]
 const MAGICS = ["%%html", "%%svg", "%%json", "%%ast"]
 const HELP = {
   "%%html": "Render the cell as HTML (the default).",
@@ -61,9 +56,7 @@ export function inspect(code, cursor = code.length) {
   const word = left.match(/(?:%%|[A-Za-z$][\w-]*)$/)?.[0]
   if (!word) return { status: "ok", found: false, data: {}, metadata: {} }
   const description = HELP[word] ?? (TAGS.includes(word) ? `Matra element \`${word}\`.` : null)
-  return description
-    ? { status: "ok", found: true, data: { "text/plain": description, "text/markdown": description }, metadata: {} }
-    : { status: "ok", found: false, data: {}, metadata: {} }
+  return description ? { status: "ok", found: true, data: { "text/plain": description, "text/markdown": description }, metadata: {} } : { status: "ok", found: false, data: {}, metadata: {} }
 }
 
 export function completeness(source) {
@@ -95,7 +88,5 @@ export function completeness(source) {
 
 function splitMagic(source) {
   const match = source.match(/^\s*%%(html|svg|json|ast)\s*(?:\r?\n|$)/)
-  return match
-    ? { mode: match[1], code: source.slice(match[0].length) }
-    : { mode: "html", code: source }
+  return match ? { mode: match[1], code: source.slice(match[0].length) } : { mode: "html", code: source }
 }

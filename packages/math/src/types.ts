@@ -20,11 +20,7 @@ export interface MorphionForm {
   }
 }
 
-export type ContentMathMLExpression =
-  | ContentMathMLIdentifier
-  | ContentMathMLNumber
-  | ContentMathMLSymbol
-  | ContentMathMLApplication
+export type ContentMathMLExpression = ContentMathMLIdentifier | ContentMathMLNumber | ContentMathMLSymbol | ContentMathMLApplication
 
 export interface ContentMathMLIdentifier {
   kind: "identifier"

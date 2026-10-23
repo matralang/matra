@@ -1,10 +1,4 @@
-import {
-  evaluateMatra,
-  listStandardMathCommands,
-  morphionize,
-  numericEvaluateMatra,
-  simplifyMatra,
-} from "@matra/math-compute-engine"
+import { evaluateMatra, listStandardMathCommands, morphionize, numericEvaluateMatra, simplifyMatra } from "@matra/math-compute-engine"
 import { parseMath } from "@matra/math"
 import type { MathCommandInfo } from "@matra/math-compute-engine"
 
@@ -114,7 +108,9 @@ function createCell(source = ""): MathCell {
   cells.push(cell)
   run.addEventListener("click", () => evaluateCell(cell))
   remove.addEventListener("click", () => removeCell(cell))
-  input.addEventListener("focus", () => { activeCell = cell })
+  input.addEventListener("focus", () => {
+    activeCell = cell
+  })
   input.addEventListener("input", () => {
     cell.output.hidden = true
     updateCompletions(cell)
@@ -147,12 +143,7 @@ function evaluateCell(cell: MathCell): void {
     setStatus("Enter an expression")
     return
   }
-  const results = [
-    evaluateResult("Evaluate", () => evaluateMatra(expression)),
-    evaluateResult("Simplify", () => simplifyMatra(expression)),
-    evaluateResult("Numeric", () => numericEvaluateMatra(expression), true),
-    evaluateResult("Morphion", () => morphionize(parseMath(expression))),
-  ]
+  const results = [evaluateResult("Evaluate", () => evaluateMatra(expression)), evaluateResult("Simplify", () => simplifyMatra(expression)), evaluateResult("Numeric", () => numericEvaluateMatra(expression), true), evaluateResult("Morphion", () => morphionize(parseMath(expression)))]
   const grid = document.createElement("div")
   grid.className = "notebook-result-grid"
   for (const result of results) {
@@ -265,9 +256,7 @@ function updateCompletions(cell: MathCell, showAll = false): void {
     hideCompletions(cell)
     return
   }
-  const matches = commands
-    .filter(command => !token || command.name.toLowerCase().startsWith(token.toLowerCase()))
-    .slice(0, 7)
+  const matches = commands.filter(command => !token || command.name.toLowerCase().startsWith(token.toLowerCase())).slice(0, 7)
   if (matches.length === 0) {
     hideCompletions(cell)
     return
@@ -377,21 +366,33 @@ function renderReference(): void {
     categories.hidden = true
     detail.hidden = true
     list.hidden = false
-    renderReferenceCommands(list, currentCommands, referenceCategories.find(category => category.id === categoryId)?.title ?? "Reference", () => {
-      search.value = ""
-      list.hidden = true
-      categories.hidden = false
-      renderReferenceCategories(categories, browseCategory)
-    }, command => showCommandDetails(command))
+    renderReferenceCommands(
+      list,
+      currentCommands,
+      referenceCategories.find(category => category.id === categoryId)?.title ?? "Reference",
+      () => {
+        search.value = ""
+        list.hidden = true
+        categories.hidden = false
+        renderReferenceCategories(categories, browseCategory)
+      },
+      command => showCommandDetails(command),
+    )
   }
   const showCommandDetails = (command: MathCommand) => {
     list.hidden = true
     categories.hidden = true
     detail.hidden = false
-    renderCommandDetails(detail, command, currentCommands, () => {
-      detail.hidden = true
-      list.hidden = false
-    }, showCommandDetails)
+    renderCommandDetails(
+      detail,
+      command,
+      currentCommands,
+      () => {
+        detail.hidden = true
+        list.hidden = false
+      },
+      showCommandDetails,
+    )
   }
   renderReferenceCategories(categories, browseCategory)
 
@@ -406,15 +407,17 @@ function renderReference(): void {
     }
     categories.hidden = true
     list.hidden = false
-    currentCommands = commands.filter(command =>
-      `${command.name} ${command.category} ${command.description} ${command.signature ?? ""}`
-        .toLowerCase()
-        .includes(query),
+    currentCommands = commands.filter(command => `${command.name} ${command.category} ${command.description} ${command.signature ?? ""}`.toLowerCase().includes(query))
+    renderReferenceCommands(
+      list,
+      currentCommands,
+      "検索結果",
+      () => {
+        search.value = ""
+        update()
+      },
+      showCommandDetails,
     )
-    renderReferenceCommands(list, currentCommands, "検索結果", () => {
-      search.value = ""
-      update()
-    }, showCommandDetails)
   }
   search.addEventListener("input", update)
 }
@@ -438,13 +441,7 @@ function renderReferenceCategories(container: HTMLElement, onSelect: (categoryId
   }
 }
 
-function renderReferenceCommands(
-  list: HTMLElement,
-  items: MathCommand[],
-  title: string,
-  onBack: () => void,
-  onSelect: (command: MathCommand) => void,
-): void {
+function renderReferenceCommands(list: HTMLElement, items: MathCommand[], title: string, onBack: () => void, onSelect: (command: MathCommand) => void): void {
   list.replaceChildren()
   const back = document.createElement("button")
   back.type = "button"
@@ -488,13 +485,7 @@ function renderReferenceCommands(
   }
 }
 
-function renderCommandDetails(
-  container: HTMLElement,
-  command: MathCommand,
-  candidates: MathCommand[],
-  onBack: () => void,
-  onSelectRelated: (command: MathCommand) => void,
-): void {
+function renderCommandDetails(container: HTMLElement, command: MathCommand, candidates: MathCommand[], onBack: () => void, onSelectRelated: (command: MathCommand) => void): void {
   container.replaceChildren()
   const back = document.createElement("button")
   back.type = "button"
@@ -519,11 +510,7 @@ function renderCommandDetails(
   insert.addEventListener("click", () => insertReference(example))
   exampleSection.append(code, insert)
 
-  appendReferenceSection(container, "スコープ", [
-    command.kind === "constant" ? "定数" : "関数",
-    `Compute Engine library: ${command.category}`,
-    command.signature ? `Signature: ${command.signature}` : "引数を取らないsymbolです。",
-  ].join("\n"))
+  appendReferenceSection(container, "スコープ", [command.kind === "constant" ? "定数" : "関数", `Compute Engine library: ${command.category}`, command.signature ? `Signature: ${command.signature}` : "引数を取らないsymbolです。"].join("\n"))
   appendReferenceSection(container, "一般化と拡張", generalizationDescription(command))
   appendReferenceSection(container, "特性と関係", characteristicsDescription(command))
   appendReferenceSection(container, "考えられる問題", potentialIssuesDescription(command))
@@ -671,12 +658,7 @@ function relatedCommands(command: MathCommand, candidates: MathCommand[]): MathC
       const sharedTypes = [...signatureTypes(candidate)].filter(type => commandTypes.has(type)).length
       const sameCategory = candidate.category === command.category ? 1 : 0
       const sameKind = candidate.kind === command.kind ? 1 : 0
-      const score = (sameNameStem ? 100 : 0) +
-        (commonPrefix >= 3 ? commonPrefix * 3 : 0) +
-        sharedProperties * 5 +
-        sharedTypes * 2 +
-        sameCategory +
-        sameKind
+      const score = (sameNameStem ? 100 : 0) + (commonPrefix >= 3 ? commonPrefix * 3 : 0) + sharedProperties * 5 + sharedTypes * 2 + sameCategory + sameKind
       return { candidate, score }
     })
     .filter(item => item.score >= 3)
@@ -694,9 +676,17 @@ function signatureTypes(command: MathCommand): Set<string> {
   const open = command.signature.indexOf("(")
   const close = command.signature.indexOf(")", open + 1)
   if (open < 0 || close < 0) return new Set()
-  const parameters = splitSignature(command.signature.slice(open + 1, close))
-    .map(parameter => parameter.replace(/^\w+\s*:\s*/, "").replace(/[+*?]$/, "").toLowerCase())
-  const result = command.signature.slice(close + 1).split("->")[1]?.trim().toLowerCase()
+  const parameters = splitSignature(command.signature.slice(open + 1, close)).map(parameter =>
+    parameter
+      .replace(/^\w+\s*:\s*/, "")
+      .replace(/[+*?]$/, "")
+      .toLowerCase(),
+  )
+  const result = command.signature
+    .slice(close + 1)
+    .split("->")[1]
+    ?.trim()
+    .toLowerCase()
   if (result) parameters.push(result)
   return new Set(parameters.filter(type => /^[a-z][a-z0-9_<>, ]*$/.test(type)))
 }

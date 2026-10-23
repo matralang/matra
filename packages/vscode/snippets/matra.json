@@ -11,16 +11,12 @@
   },
   "Block element": {
     "prefix": "block",
-    "body": [
-      "${1:div} {",
-      "  $0",
-      "}"
-    ],
+    "body": ["${1:div} {", "  $0", "}"],
     "description": "Create an element using Matra block syntax"
   },
   "Block element with text": {
     "prefix": "block-text",
-    "body": ["${1:p} { \"${2:text}\" }"] ,
+    "body": ["${1:p} { \"${2:text}\" }"],
     "description": "Create a block-style element with text"
   },
   "Conditional element": {
@@ -30,7 +26,7 @@
   },
   "Repeated element": {
     "prefix": "m-each",
-    "body": ["${1:li}[m-each=\"${2:items}\" m-as=\"${3:item}\"] { \"{{${3:item}}}\" }"] ,
+    "body": ["${1:li}[m-each=\"${2:items}\" m-as=\"${3:item}\"] { \"{{${3:item}}}\" }"],
     "description": "Create a repeated block element"
   },
   "Interpolation": {

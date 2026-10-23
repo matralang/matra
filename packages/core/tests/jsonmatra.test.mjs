@@ -21,10 +21,7 @@ describe("JSONMatra family", () => {
         children: ["child1", "child2"],
       }),
     )
-    await writeFile(
-      tuplePath,
-      JSON.stringify(["tag", { prop1: "value1" }, ["child1", "child2"]]),
-    )
+    await writeFile(tuplePath, JSON.stringify(["tag", { prop1: "value1" }, ["child1", "child2"]]))
 
     const expected = {
       tag: "tag",
@@ -40,10 +37,10 @@ describe("JSONMatra family", () => {
     const dir = await mkdtemp(join(tmpdir(), "matra-invalid-json-"))
 
     for (const [name, source] of [
-      ["comment.matra.json", "{ /* no */ \"a\": 1 }"],
-      ["undefined.matra.json", "{ \"a\": undefined }"],
-      ["bigint.matra.json", "{ \"a\": 9007199254740991n }"],
-      ["trailing.matra.json", "{ \"a\": 1, }"],
+      ["comment.matra.json", '{ /* no */ "a": 1 }'],
+      ["undefined.matra.json", '{ "a": undefined }'],
+      ["bigint.matra.json", '{ "a": 9007199254740991n }'],
+      ["trailing.matra.json", '{ "a": 1, }'],
     ]) {
       const path = join(dir, name)
       await writeFile(path, source)
@@ -56,18 +53,10 @@ describe("JSONMatra family", () => {
     const corePath = fileURLToPath(new URL("../dist/index.js", import.meta.url))
 
     const astPath = join(dir, "ast.matra.js")
-    await writeFile(
-      astPath,
-      `import { matra } from ${JSON.stringify(corePath)};\n` +
-        `export default matra.ast({ tag: "tag", props: { a: 1 }, children: ["x"] });\n`,
-    )
+    await writeFile(astPath, `import { matra } from ${JSON.stringify(corePath)};\n` + `export default matra.ast({ tag: "tag", props: { a: 1 }, children: ["x"] });\n`)
 
     const docPath = join(dir, "doc.matra.js")
-    await writeFile(
-      docPath,
-      `import { matra } from ${JSON.stringify(corePath)};\n` +
-        "export default matra.doc`tag { child }`;\n",
-    )
+    await writeFile(docPath, `import { matra } from ${JSON.stringify(corePath)};\n` + "export default matra.doc`tag { child }`;\n")
 
     assert.deepEqual(await loadMatra(astPath), {
       tag: "tag",
@@ -98,10 +87,7 @@ describe("JSONMatra family", () => {
       kind: "MatraExpressionSource",
       source: "Divide(Plus(1, Sqrt(5)), 2)",
     })
-    await assert.rejects(
-      () => loadMatra(unsupportedPath),
-      /\.jsonm parsing is not implemented/,
-    )
+    await assert.rejects(() => loadMatra(unsupportedPath), /\.jsonm parsing is not implemented/)
   })
 
   it("normalizes objects, tuples, primitives, and ordinary arrays", () => {

@@ -29,17 +29,7 @@ export async function cachedCompiler() {
   const directory = await mkdtemp(join(cacheRoot, "build-"))
   const temporaryCompiler = join(directory, "compiler.wasm")
   try {
-    run("cargo", [
-      "run",
-      "--quiet",
-      "--manifest-path",
-      manifest,
-      "--",
-      compilerSource,
-      temporaryCompiler,
-      "--entry",
-      "compiler.matra",
-    ])
+    run("cargo", ["run", "--quiet", "--manifest-path", manifest, "--", compilerSource, temporaryCompiler, "--entry", "compiler.matra"])
     await rename(temporaryCompiler, compiler)
   } finally {
     await rm(directory, { recursive: true, force: true })
@@ -50,16 +40,7 @@ export async function cachedCompiler() {
 
 async function compilerCacheKey() {
   const hash = createHash("sha256")
-  const inputs = [
-    compilerSource,
-    join(seedRoot, "src/lib.rs"),
-    join(seedRoot, "src/main.rs"),
-    join(seedRoot, "src/unified.rs"),
-    join(seedRoot, "src/unified_native.rs"),
-    join(seedRoot, "src/unified_wasm.rs"),
-    manifest,
-    join(seedRoot, "Cargo.lock"),
-  ]
+  const inputs = [compilerSource, join(seedRoot, "src/lib.rs"), join(seedRoot, "src/main.rs"), join(seedRoot, "src/unified.rs"), join(seedRoot, "src/unified_native.rs"), join(seedRoot, "src/unified_wasm.rs"), manifest, join(seedRoot, "Cargo.lock")]
   for (const input of inputs) {
     hash.update(input.slice(seedRoot.length + 1))
     hash.update(await readFile(input))

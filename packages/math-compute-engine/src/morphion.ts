@@ -25,8 +25,7 @@ export function morphionize(expression: MathJson): MorphionForm {
   for (const term of form.values()) {
     for (const [key, factor] of term.factors) factors.set(key, factor.base)
   }
-  const bases = [...factors.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
+  const bases = [...factors.entries()].sort(([left], [right]) => left.localeCompare(right))
   const terms = [...form.values()]
     .map(term => ({
       key: bases.map(([key]) => term.factors.get(key)?.exponent ?? 0),
@@ -49,19 +48,13 @@ function toForm(expression: MathJson, depth: number): Form {
   if (typeof head !== "string") return atom(expression)
   if (head === "Rational" && operands.length === 2) return constant(expression)
   if (head === "Complex" && operands.length === 2) {
-    return addForms(
-      toForm(operands[0], depth + 1),
-      multiplyForms(toForm(operands[1], depth + 1), atom(IMAGINARY_UNIT)),
-    )
+    return addForms(toForm(operands[0], depth + 1), multiplyForms(toForm(operands[1], depth + 1), atom(IMAGINARY_UNIT)))
   }
   if (head === "Add") return operands.reduce<Form>((result, operand) => addForms(result, toForm(operand, depth + 1)), new Map())
   if (head === "Subtract") {
     if (operands.length === 0) return atom(expression)
     const [first, ...rest] = operands
-    return rest.reduce<Form>(
-      (result, operand) => addForms(result, scaleForm(toForm(operand, depth + 1), -1)),
-      toForm(first, depth + 1),
-    )
+    return rest.reduce<Form>((result, operand) => addForms(result, scaleForm(toForm(operand, depth + 1), -1)), toForm(first, depth + 1))
   }
   if (head === "Negate" && operands.length === 1) return scaleForm(toForm(operands[0], depth + 1), -1)
   if (head === "Multiply") {
@@ -217,9 +210,7 @@ function recurringDecimalToRational(value: string): MathJson | undefined {
   numerator /= divisor
   const reducedDenominator = denominator / divisor
   if (!Number.isSafeInteger(Number(numerator)) || !Number.isSafeInteger(Number(reducedDenominator))) return undefined
-  return reducedDenominator === 1n
-    ? Number(numerator)
-    : ["Rational", Number(numerator), Number(reducedDenominator)] as MathJsonFunction
+  return reducedDenominator === 1n ? Number(numerator) : (["Rational", Number(numerator), Number(reducedDenominator)] as MathJsonFunction)
 }
 
 function integerValue(value: MathJson): number | undefined {

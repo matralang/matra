@@ -6,7 +6,7 @@ import { build } from "esbuild"
 import { cachedCompiler } from "../../../crates/matra-seed/host/bootstrap-compiler.mjs"
 
 // Declare the Node `process` global when @types/node is not installed.
-declare const process: any;
+declare const process: any
 
 import { evaluateStatic, evaluateUnified, extractMarkdownFences, extractMatraMarkdown, parse, staticValueToAST } from "@matra/core"
 import type { MatraAST, StaticToASTNode } from "@matra/core"
@@ -115,14 +115,16 @@ function extractPageMetadata(markdown: string, filePath: string): PageMetadata {
   const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/)
   if (!match) throw new SyntaxError(`Page metadata is required in ${filePath}`)
 
-  const fields = Object.fromEntries(match[1]
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .map(line => {
-      const separator = line.indexOf(":")
-      if (separator < 1) throw new SyntaxError(`Invalid page metadata in ${filePath}: ${line}`)
-      return [line.slice(0, separator).trim(), line.slice(separator + 1).trim()]
-    }))
+  const fields = Object.fromEntries(
+    match[1]
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map(line => {
+        const separator = line.indexOf(":")
+        if (separator < 1) throw new SyntaxError(`Invalid page metadata in ${filePath}: ${line}`)
+        return [line.slice(0, separator).trim(), line.slice(separator + 1).trim()]
+      }),
+  )
   if (!fields.title || !fields.description) {
     throw new SyntaxError(`Page metadata must define title and description in ${filePath}`)
   }
@@ -177,9 +179,7 @@ function toOutputPath(pagesDirAbs: string, filePathAbs: string): string {
 
 function toCanonicalUrl(outputPath: string): string {
   const normalizedOutputPath = outputPath.split(path.sep).join("/")
-  const route = normalizedOutputPath === "index.html"
-    ? "/"
-    : `/${normalizedOutputPath.replace(/\.html$/, "")}`
+  const route = normalizedOutputPath === "index.html" ? "/" : `/${normalizedOutputPath.replace(/\.html$/, "")}`
   return new URL(route, canonicalOrigin).href
 }
 
@@ -191,16 +191,7 @@ function getTrailingSlashRedirectScript(basePath: string): string {
 // GitHub Pages serves this for any unmatched path, including trailing-slash
 // requests to our flat .html routes (e.g. "/spec/"), which would otherwise 404.
 function getNotFoundPage(basePath: string): string {
-  return [
-    "<!DOCTYPE html>",
-    '<html lang="ja">',
-    "<head>",
-    '<meta charset="utf-8">',
-    `<script>${getTrailingSlashRedirectScript(basePath)}</script>`,
-    "</head>",
-    "<body></body>",
-    "</html>",
-  ].join("\n") + "\n"
+  return ["<!DOCTYPE html>", '<html lang="ja">', "<head>", '<meta charset="utf-8">', `<script>${getTrailingSlashRedirectScript(basePath)}</script>`, "</head>", "<body></body>", "</html>"].join("\n") + "\n"
 }
 
 function assertNoOutputCollisions(pagesDirAbs: string, filesAbs: string[]) {
@@ -219,24 +210,17 @@ function assertNoOutputCollisions(pagesDirAbs: string, filesAbs: string[]) {
   }
 
   if (collisions.length > 0) {
-    const msg =
-      "Output path collision detected:\n" +
-      collisions
-        .map(c => `  - ${c.outRel} is produced by BOTH:\n      * ${c.a}\n      * ${c.b}`)
-        .join("\n") +
-      "\n\nFix: keep only one of the sources (e.g. prefer about/index.ts over about.ts), or rename one."
+    const msg = "Output path collision detected:\n" + collisions.map(c => `  - ${c.outRel} is produced by BOTH:\n      * ${c.a}\n      * ${c.b}`).join("\n") + "\n\nFix: keep only one of the sources (e.g. prefer about/index.ts over about.ts), or rename one."
     throw new Error(msg)
   }
 }
 
-function isNode(value: unknown): value is { tag: string, props: Record<string, unknown>, children: unknown[] } {
+function isNode(value: unknown): value is { tag: string; props: Record<string, unknown>; children: unknown[] } {
   return value !== null && typeof value === "object" && !Array.isArray(value) && "tag" in value
 }
 
 function hasNode(nodes: unknown[], tag: string, prop?: [string, string]): boolean {
-  return nodes.some(node =>
-    isNode(node) && node.tag === tag && (!prop || node.props[prop[0]] === prop[1]),
-  )
+  return nodes.some(node => isNode(node) && node.tag === tag && (!prop || node.props[prop[0]] === prop[1]))
 }
 
 function normalizeInternalLinks(ast: StaticToASTNode) {
@@ -299,16 +283,16 @@ function applySpecificationLayout(ast: StaticToASTNode, layout: PageMetadata["la
   const main = body.children.find(node => isNode(node) && node.tag === "main")
   if (!isNode(main) || hasNode(main.children, "aside")) return ast
 
-  const content = main.children.find(node =>
-    isNode(node) && node.tag === "article" && node.props.class === "docs-content",
-  )
+  const content = main.children.find(node => isNode(node) && node.tag === "article" && node.props.class === "docs-content")
   if (!isNode(content)) return ast
 
-  main.children = [{
-    tag: "div",
-    props: { class: "shell docs-shell" },
-    children: [specificationNavigation, content],
-  }]
+  main.children = [
+    {
+      tag: "div",
+      props: { class: "shell docs-shell" },
+      children: [specificationNavigation, content],
+    },
+  ]
   return ast
 }
 
@@ -318,9 +302,7 @@ function injectMarkdownCode(ast: StaticToASTNode, markdown: string, filePath: st
   const inject = (nodes: unknown[]) => {
     for (const node of nodes) {
       if (!isNode(node)) continue
-      const reference = typeof node.props.src === "string"
-        ? node.props.src
-        : undefined
+      const reference = typeof node.props.src === "string" ? node.props.src : undefined
       if (reference?.startsWith("matra:")) {
         const filename = reference.slice("matra:".length)
         const source = fences.get(filename)
@@ -379,45 +361,29 @@ async function handler() {
   assertNoOutputCollisions(pagesDir, pageFiles)
   fs.rmSync(outputDir, { recursive: true, force: true })
 
-  await Promise.all(pageFiles.map(async (filePath: string) => {
-    const markdown = fs.readFileSync(filePath, "utf8")
-    const fences = extractMarkdownFences(markdown)
-    const pageEntry = ["page.matra.ts", "page.program.matra", "page.matra"]
-      .find(entry => fences.some(fence => fence.filename === entry)) ?? "page.matra"
-    const document = extractMatraMarkdown(markdown, { entry: pageEntry })
-    const metadata = document.kind === "matra"
-      ? extractPageMetadata(markdown, filePath)
-      : undefined
-    const source = document.kind === "matra.ts"
-      ? await executeMatraModule(document.source, filePath)
-      : pageLayout({ ...metadata!, content: document.source })
-    const outRel = toOutputPath(pagesDir, filePath)
-    const outputPath = path.join(outputDir, outRel)
-    const outDir = path.dirname(outputPath)
-    if (!fs.existsSync(outDir)) {
-      fs.mkdirSync(outDir, { recursive: true })
-    }
+  await Promise.all(
+    pageFiles.map(async (filePath: string) => {
+      const markdown = fs.readFileSync(filePath, "utf8")
+      const fences = extractMarkdownFences(markdown)
+      const pageEntry = ["page.matra.ts", "page.program.matra", "page.matra"].find(entry => fences.some(fence => fence.filename === entry)) ?? "page.matra"
+      const document = extractMatraMarkdown(markdown, { entry: pageEntry })
+      const metadata = document.kind === "matra" ? extractPageMetadata(markdown, filePath) : undefined
+      const source = document.kind === "matra.ts" ? await executeMatraModule(document.source, filePath) : pageLayout({ ...metadata!, content: document.source })
+      const outRel = toOutputPath(pagesDir, filePath)
+      const outputPath = path.join(outputDir, outRel)
+      const outDir = path.dirname(outputPath)
+      if (!fs.existsSync(outDir)) {
+        fs.mkdirSync(outDir, { recursive: true })
+      }
 
-    const pageAst = parseWebsiteDocument(source, path.relative(process.cwd(), filePath), pageEntry === "page.program.matra")
-    const ast = normalizeInternalLinks(applySpecificationLayout(
-      applySiteChrome(
-        injectMarkdownCode(
-          pageAst,
-          markdown,
-          filePath,
-        ),
-        toCanonicalUrl(outRel),
-        basePath,
-      ),
-      metadata?.layout ?? (path.relative(pagesDir, filePath).startsWith(`spec${path.sep}`)
-        ? "specification"
-        : "site"),
-    ))
-    const htmlContent = `${DOCTYPE}\n${toHTML(ast as MatraAST, { basePath, pretty: true })}\n`
+      const pageAst = parseWebsiteDocument(source, path.relative(process.cwd(), filePath), pageEntry === "page.program.matra")
+      const ast = normalizeInternalLinks(applySpecificationLayout(applySiteChrome(injectMarkdownCode(pageAst, markdown, filePath), toCanonicalUrl(outRel), basePath), metadata?.layout ?? (path.relative(pagesDir, filePath).startsWith(`spec${path.sep}`) ? "specification" : "site")))
+      const htmlContent = `${DOCTYPE}\n${toHTML(ast as MatraAST, { basePath, pretty: true })}\n`
 
-    fs.writeFileSync(outputPath, htmlContent)
-    console.log(`Generated HTML file at: ${outputPath}`)
-  }))
+      fs.writeFileSync(outputPath, htmlContent)
+      console.log(`Generated HTML file at: ${outputPath}`)
+    }),
+  )
 
   fs.writeFileSync(path.join(outputDir, "404.html"), getNotFoundPage(basePath))
 

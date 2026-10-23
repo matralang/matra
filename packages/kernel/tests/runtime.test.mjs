@@ -9,7 +9,7 @@ test("renders HTML with a rich MIME bundle", () => {
 })
 
 test("renders SVG using a cell magic", () => {
-  const result = evaluate('%%svg\nsvg(width=20, height=20) { circle(cx=10, cy=10, r=5) {} }')
+  const result = evaluate("%%svg\nsvg(width=20, height=20) { circle(cx=10, cy=10, r=5) {} }")
   assert.match(result.data["image/svg+xml"], /^<svg/)
   assert.match(result.data["image/svg+xml"], /<circle/)
 })

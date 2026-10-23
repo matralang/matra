@@ -26,32 +26,35 @@ type MatraFence = { filename: string; kind: "matra" | "matra.ts" | "matra.progra
 type MatraRenderer = ResultMode | "auto"
 type MatraDocument = MatraFence & { renderer: MatraRenderer; title?: string; stylesheet?: string }
 
-function markdown(
-  filename: string,
-  source: string,
-  renderer: MatraRenderer = "html",
-  frontMatter = true,
-): string {
+function markdown(filename: string, source: string, renderer: MatraRenderer = "html", frontMatter = true): string {
   const title = filename.replace(/\.matra(?:\.ts)?$/, "").replace(/[-_]/g, " ")
-  const metadata = frontMatter
-    ? `---\nmatra:\n  entry: ${filename}\n  renderer: ${renderer}\n---\n\n`
-    : ""
+  const metadata = frontMatter ? `---\nmatra:\n  entry: ${filename}\n  renderer: ${renderer}\n---\n\n` : ""
   return `${metadata}# ${title}\n\n\`\`\`${filename}\n${source}\n\`\`\``
 }
 
 const examples: Record<string, string> = {
-  card: markdown("card.matra", `article.matra-frame {
+  card: markdown(
+    "card.matra",
+    `article.matra-frame {
   p.eyebrow { "MATRA" }
   h2 { "Structure first." }
   p { "Edit this source and watch it render." }
   a.matra-button(href="/spec/") { "Read the spec" }
   hr {}
-}`, "html", false),
-  list: markdown("list.matra", `section {
+}`,
+    "html",
+    false,
+  ),
+  list: markdown(
+    "list.matra",
+    `section {
   h2 { "Specification" }
   ol { li { "Data Model" }; li { "AST" }; li { "Grammar" }; li { "Parser" } }
-}`),
-  profile: markdown("profile.matra", `article.profile {
+}`,
+  ),
+  profile: markdown(
+    "profile.matra",
+    `article.profile {
   p.eyebrow { "CONTRIBUTOR" }
   h2 { "Ada Lovelace" }
   p { "Mathematics, poetry, and the first algorithm." }
@@ -61,13 +64,19 @@ const examples: Record<string, string> = {
     dt { "Published" }
     dd { "1843" }
   }
-}`),
-  navigation: markdown("navigation.matra", `nav(aria-label="Main navigation") {
+}`,
+  ),
+  navigation: markdown(
+    "navigation.matra",
+    `nav(aria-label="Main navigation") {
   a.brand(href="/") { "MATRA" }
   ul { li { a(href="/docs/") { "Docs" } }; li { a(href="/examples/") { "Examples" } }; li { a(href="/play/") { "Playground" } } }
-}`),
+}`,
+  ),
   article: markdown("article.matra", `main { article { header { h1 { "Structure is a way of seeing." } }; section { h2 { "Start with the outline" }; p { "Names, attributes, and children make the hierarchy visible." } } } }`),
-  "document-toc": markdown("document-toc.matra", `// 文書を値として保存し、見出しから目次を作ります。
+  "document-toc": markdown(
+    "document-toc.matra",
+    `// 文書を値として保存し、見出しから目次を作ります。
 let document = article {
   h1 { "Matraで文書を扱う" }
   h2(id="structure") { "文書を組み立てる" }
@@ -95,8 +104,11 @@ fn tableOfContents(document) {
 main {
   tableOfContents(document)
   document
-}`),
-  dynamic: markdown("dynamic-list.matra", `fn label(value) {
+}`,
+  ),
+  dynamic: markdown(
+    "dynamic-list.matra",
+    `fn label(value) {
   if (value == "stable") { return "Stable API" } else { return "Experimental" }
 }
 
@@ -109,41 +121,65 @@ section {
       li { label(release) }
     }
   }
-}`),
-  poster: markdown("poster.matra", `svg(width=640, height=400) {
+}`,
+  ),
+  poster: markdown(
+    "poster.matra",
+    `svg(width=640, height=400) {
   defs { linearGradient(id="glow") { stop(offset="0%", stop-color="#c8f135") {}; stop(offset="100%", stop-color="#39b7ff") {} } }
   rect(x=0, y=0, width=640, height=400, rx=28, fill="#101814") {}
   circle(cx=500, cy=90, r=180, fill="url(#glow)", opacity=0.88) {}
   text(x=48, y=210, fill="#ffffff", font-size=72, font-weight=700) { "MATRA" }
   text(x=52, y=252, fill="#c8f135", font-size=22) { "structure becomes image" }
-}`, "svg"),
-  orbit: markdown("orbit.matra", `svg(width=480, height=480) {
+}`,
+    "svg",
+  ),
+  orbit: markdown(
+    "orbit.matra",
+    `svg(width=480, height=480) {
   rect(x=0, y=0, width=480, height=480, fill="#f3f1e9") {}
   circle(cx=240, cy=240, r=150, fill="none", stroke="#193e30", stroke-width=2) {}
   circle(cx=240, cy=240, r=82, fill="none", stroke="#193e30", stroke-width=2, stroke-dasharray="8 12") {}
   circle(cx=390, cy=240, r=22, fill="#c8f135") {}
   circle(cx=240, cy=158, r=12, fill="#39b7ff") {}
   circle(cx=240, cy=240, r=34, fill="#101814") {}
-}`, "svg"),
-  landscape: markdown("landscape.matra", `svg(width=640, height=400) {
+}`,
+    "svg",
+  ),
+  landscape: markdown(
+    "landscape.matra",
+    `svg(width=640, height=400) {
   rect(x=0, y=0, width=640, height=400, fill="#e9f4f1") {}
   circle(cx=520, cy=92, r=48, fill="#c8f135") {}
   path(d="M0 280 L170 115 L330 280 Z", fill="#315f50") {}
   path(d="M150 310 L390 105 L640 310 Z", fill="#193e30") {}
   path(d="M0 300 Q160 250 320 310 T640 290 V400 H0 Z", fill="#39b7ff", opacity=0.75) {}
-}`, "svg"),
-  signal: markdown("signal.matra", `svg(width=640, height=360) {
+}`,
+    "svg",
+  ),
+  signal: markdown(
+    "signal.matra",
+    `svg(width=640, height=360) {
   rect(x=0, y=0, width=640, height=360, rx=24, fill="#101814") {}
   line(x1=80, y1=180, x2=560, y2=180, stroke="#435149", stroke-width=2) {}
   path(d="M80 180 L150 180 L180 90 L225 270 L270 135 L310 180 L560 180", fill="none", stroke="#c8f135", stroke-width=8, stroke-linecap="round", stroke-linejoin="round") {}
   circle(cx=180, cy=90, r=10, fill="#39b7ff") {}
   text(x=80, y=65, fill="#ffffff", font-size=18, font-family="monospace") { "SIGNAL / 01" }
-}`, "svg"),
-  "js-card": markdown("card.matra.ts", `const title = "Matra from JavaScript"
-export default matra\`article.card { h2 { \${title} } }\``),
-  "js-graphics": markdown("graphics.matra.ts", `const dots = matra.raw(\`circle(cx=280, cy=180, r=48, fill="#c8f135") {}
+}`,
+    "svg",
+  ),
+  "js-card": markdown(
+    "card.matra.ts",
+    `const title = "Matra from JavaScript"
+export default matra\`article.card { h2 { \${title} } }\``,
+  ),
+  "js-graphics": markdown(
+    "graphics.matra.ts",
+    `const dots = matra.raw(\`circle(cx=280, cy=180, r=48, fill="#c8f135") {}
 text(x=48, y=70, fill="#ffffff", font-size=20) { "GENERATED / TS" }\`)
-export default matra\`svg(width=560, height=360) { rect(x=0, y=0, width=560, height=360, fill="#101814") {}; \${dots} }\``, "svg"),
+export default matra\`svg(width=560, height=360) { rect(x=0, y=0, width=560, height=360, fill="#101814") {}; \${dots} }\``,
+    "svg",
+  ),
   "compute-engine": markdown("formula.matra", "Add(Power(2, 10), Factorial(5), Sin(Divide(Pi, 2)))", "math"),
   program: `# Program compiler\n\n\`\`\`answer.matra.program\nmodule playground\n\nexport fn answer() -> i32 {\n  let (value = 40)\n  while (value < 42) {\n    set (value = value + 1)\n  }\n  return value\n}\n\`\`\``,
 }
@@ -167,9 +203,7 @@ async function render(): Promise<void> {
       await renderMatraProgram(document, version)
       return
     }
-    const programResult = document.kind === "matra.ts"
-      ? await runMatraTypeScriptProgram(document.source)
-      : { source: document.source }
+    const programResult = document.kind === "matra.ts" ? await runMatraTypeScriptProgram(document.source) : { source: document.source }
     if (version !== renderVersion) return
     value = programResult.source
     const selectedStylesheet = document.stylesheet ?? stylesheet.value
@@ -181,12 +215,8 @@ async function render(): Promise<void> {
     const evaluatedValue = evaluateUnified(parsedModule)
     if (evaluatedValue === undefined) throw new TypeError("A preview requires an output expression.")
     const parsedAst = staticValueToAST(evaluatedValue)
-    const mode = document.renderer === "auto" && renderMode.value === "auto"
-      ? (parsedAst.tag === "svg" || (parsedAst.tag === "$root" && parsedAst.children.some(child => isNode(child) && child.tag === "svg")) ? "svg" : "html")
-      : document.renderer === "auto" ? renderMode.value as OutputMode : document.renderer
-    const ast = mode === "svg"
-      ? numericEvaluateProps(parsedAst)
-      : document.title ? injectDocumentTitle(parsedAst, document.title) : parsedAst
+    const mode = document.renderer === "auto" && renderMode.value === "auto" ? (parsedAst.tag === "svg" || (parsedAst.tag === "$root" && parsedAst.children.some(child => isNode(child) && child.tag === "svg")) ? "svg" : "html") : document.renderer === "auto" ? (renderMode.value as OutputMode) : document.renderer
+    const ast = mode === "svg" ? numericEvaluateProps(parsedAst) : document.title ? injectDocumentTitle(parsedAst, document.title) : parsedAst
     setExpressionTabLabel("MatraJSON")
     const matraJSON = printJSON(astToMatraJSON(ast), { pretty: true })
     const html = mode === "html" ? toHTML(ast) : ""
@@ -235,19 +265,7 @@ function renderMath(program: string, filename: string, selectedStylesheet: strin
   const evaluated = evaluateMatra(program)
   const simplified = simplifyMatra(program)
   const numeric = numericEvaluateMatra(program)
-  const result = [
-    "Input",
-    program,
-    "",
-    "Evaluate",
-    formatValue(evaluated),
-    "",
-    "Simplify",
-    formatValue(simplified),
-    "",
-    "Numeric",
-    formatValue(numeric),
-  ].join("\n")
+  const result = ["Input", program, "", "Evaluate", formatValue(evaluated), "", "Simplify", formatValue(simplified), "", "Numeric", formatValue(numeric)].join("\n")
 
   latestMode = "math"
   latestOutputs = {
@@ -313,7 +331,9 @@ copyButton.addEventListener("click", async () => {
   const output = outputForPanel(activePanel)
   await navigator.clipboard.writeText(output)
   copyButton.textContent = "Copied"
-  window.setTimeout(() => { copyButton.textContent = "Copy" }, 1200)
+  window.setTimeout(() => {
+    copyButton.textContent = "Copy"
+  }, 1200)
 })
 
 downloadButton.addEventListener("click", () => {
@@ -372,7 +392,9 @@ async function compileMatraProgram(source: string, filename: string): Promise<{ 
       else {
         const bytes = new Uint8Array(response.output)
         let binary = ""
-        bytes.forEach(byte => { binary += String.fromCharCode(byte) })
+        bytes.forEach(byte => {
+          binary += String.fromCharCode(byte)
+        })
         resolve({ output: btoa(binary), result: response.result ?? "Compiled successfully.", bytes: bytes.length })
       }
     })
@@ -419,19 +441,23 @@ function formatValue(value: unknown): string {
 }
 
 function escapeHTML(value: string): string {
-  return value.replace(/[&<>"]/g, character => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    "\"": "&quot;",
-  }[character] ?? character))
+  return value.replace(
+    /[&<>"]/g,
+    character =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+      })[character] ?? character,
+  )
 }
 
 function isNode(value: unknown): value is { tag: string } {
   return typeof value === "object" && value !== null && "tag" in value
 }
 
-async function runMatraTypeScriptProgram(program: string): Promise<{ source: string, mode?: OutputMode }> {
+async function runMatraTypeScriptProgram(program: string): Promise<{ source: string; mode?: OutputMode }> {
   const id = ++workerSequence
   const worker = new Worker(new URL("./matra-worker.js", import.meta.url), { type: "module" })
   return new Promise((resolve, reject) => {
@@ -444,7 +470,7 @@ async function runMatraTypeScriptProgram(program: string): Promise<{ source: str
       worker.terminate()
     }
     worker.addEventListener("message", event => {
-      const result = event.data as { id: number, source?: string, error?: string }
+      const result = event.data as { id: number; source?: string; error?: string }
       if (result.id !== id) return
       finish()
       if (result.error) reject(new Error(result.error))
@@ -461,7 +487,7 @@ async function runMatraTypeScriptProgram(program: string): Promise<{ source: str
 function extractMatraDocument(markdown: string): MatraDocument {
   const { entry, renderer, title, stylesheet } = parseMatraFrontMatter(markdown)
   const fence = extractMatraMarkdown(markdown, { entry })
-  return { ...fence, renderer, title: title === false ? undefined : title ?? extractMarkdownTitle(markdown), stylesheet }
+  return { ...fence, renderer, title: title === false ? undefined : (title ?? extractMarkdownTitle(markdown)), stylesheet }
 }
 
 function parseMatraFrontMatter(markdown: string): { entry?: string; renderer: MatraRenderer; title?: string | false; stylesheet?: string } {

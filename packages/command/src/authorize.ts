@@ -1,16 +1,9 @@
 import path from "node:path"
 import { CommandAuthorizationError } from "./errors.js"
-import type {
-  AuthorizedExecutionPlan,
-  CapabilityPolicy,
-  ExecutionPlan,
-} from "./types.js"
+import type { AuthorizedExecutionPlan, CapabilityPolicy, ExecutionPlan } from "./types.js"
 
 /** Check every requested capability and return an executable authorized plan. */
-export function authorizePlan(
-  plan: ExecutionPlan,
-  policy: CapabilityPolicy,
-): AuthorizedExecutionPlan {
+export function authorizePlan(plan: ExecutionPlan, policy: CapabilityPolicy): AuthorizedExecutionPlan {
   const violations: string[] = []
   checkNames("command", plan.capabilities.commands, policy.commands, violations)
   checkPaths("read", plan.capabilities.read, policy.read, violations)
@@ -25,12 +18,7 @@ export function authorizePlan(
   }
 }
 
-function checkNames(
-  kind: string,
-  requested: string[],
-  allowed: readonly string[] | "*" | undefined,
-  violations: string[],
-): void {
+function checkNames(kind: string, requested: string[], allowed: readonly string[] | "*" | undefined, violations: string[]): void {
   if (allowed === "*") return
   const set = new Set(allowed ?? [])
   for (const value of requested) {
@@ -38,12 +26,7 @@ function checkNames(
   }
 }
 
-function checkPaths(
-  kind: string,
-  requested: string[],
-  allowed: readonly string[] | "*" | undefined,
-  violations: string[],
-): void {
+function checkPaths(kind: string, requested: string[], allowed: readonly string[] | "*" | undefined, violations: string[]): void {
   if (allowed === "*") return
   const roots = (allowed ?? []).map(root => path.resolve(root))
   for (const value of requested) {

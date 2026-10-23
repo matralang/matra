@@ -7,7 +7,7 @@ describe("Matra MathJSON bridge", () => {
     assert.deepEqual(parseMath("Add(1, Power(x, 2), -3)"), ["Add", 1, ["Power", "x", 2], -3])
   })
   it("preserves signed numeric operands without executing arbitrary unary expressions", () => {
-    assert.deepEqual(parseMath("point(-.5, -0)"), ["point", -.5, -0])
+    assert.deepEqual(parseMath("point(-.5, -0)"), ["point", -0.5, -0])
     assert.throws(() => parseMath("-value"), /does not support unified unary/)
   })
   it("unwraps the optional Formula document node", () => {

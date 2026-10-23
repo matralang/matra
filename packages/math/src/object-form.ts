@@ -42,7 +42,7 @@ export function objectFormToMathJson(form: MathObjectForm): MathJson {
     throw new TypeError("Matra Object Form cannot be empty")
   }
 
-  const unknownKey = keys.find((key) => !objectFormKeys.has(key))
+  const unknownKey = keys.find(key => !objectFormKeys.has(key))
   if (unknownKey !== undefined) {
     throw new TypeError(`Unknown Matra Object Form key: ${unknownKey}`)
   }
@@ -103,11 +103,7 @@ function seedFromForm(form: MathObjectForm): MathJson | undefined {
   const seed = groups[0]
   if (seed === "base") return toMathJson(requiredExpression(form.base, "base seed"))
   if (seed === "complex") {
-    return [
-      "Complex",
-      toMathJson(requiredExpression(form.re, "Complex re seed")),
-      toMathJson(requiredExpression(form.im, "Complex im seed")),
-    ]
+    return ["Complex", toMathJson(requiredExpression(form.re, "Complex re seed")), toMathJson(requiredExpression(form.im, "Complex im seed"))]
   }
   if (seed === "rational") {
     const [numerator, denominator] = normalizeTuple(form.rational, "rational")
@@ -124,11 +120,7 @@ function seedFromForm(form: MathObjectForm): MathJson | undefined {
 
 function buildExponent(form: MathObjectForm): MathJson {
   if (hasOwn(form, "power") && hasOwn(form, "root")) {
-    return [
-      "Divide",
-      toMathJson(requiredExpression(form.power, "power layer")),
-      toMathJson(requiredExpression(form.root, "root layer")),
-    ]
+    return ["Divide", toMathJson(requiredExpression(form.power, "power layer")), toMathJson(requiredExpression(form.root, "root layer"))]
   }
   if (hasOwn(form, "root")) {
     return ["Divide", 1, toMathJson(requiredExpression(form.root, "root layer"))]
@@ -143,10 +135,7 @@ function normalizeList(expressionList: MathExpressionList | undefined): MathJson
   return Array.isArray(expressionList) ? expressionList.map(toMathJson) : [toMathJson(expressionList)]
 }
 
-function normalizeTuple(
-  tuple: [MathExpression, MathExpression] | undefined,
-  name: string,
-): [MathJson, MathJson] {
+function normalizeTuple(tuple: [MathExpression, MathExpression] | undefined, name: string): [MathJson, MathJson] {
   if (!Array.isArray(tuple) || tuple.length !== 2) {
     throw new TypeError(`${name} seed must contain exactly two expressions`)
   }
@@ -167,21 +156,11 @@ function assertHasSeed(seed: MathJson | undefined, label: string): asserts seed 
 }
 
 function isMathJsonScalar(expression: unknown): expression is MathJson {
-  return (
-    expression === null ||
-    typeof expression === "number" ||
-    typeof expression === "string" ||
-    typeof expression === "boolean"
-  )
+  return expression === null || typeof expression === "number" || typeof expression === "string" || typeof expression === "boolean"
 }
 
 function isPlainObject(expression: unknown): expression is MathObjectForm {
-  return (
-    typeof expression === "object" &&
-    expression !== null &&
-    !Array.isArray(expression) &&
-    Object.getPrototypeOf(expression) === Object.prototype
-  )
+  return typeof expression === "object" && expression !== null && !Array.isArray(expression) && Object.getPrototypeOf(expression) === Object.prototype
 }
 
 function hasOwn<T extends object, K extends PropertyKey>(object: T, key: K): object is T & Record<K, unknown> {

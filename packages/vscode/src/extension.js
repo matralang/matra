@@ -13,17 +13,13 @@ function activate(context) {
   const diagnostics = vscode.languages.createDiagnosticCollection("matra")
   context.subscriptions.push(diagnostics)
 
-  const updateDiagnostics = (document) => {
+  const updateDiagnostics = document => {
     if (document.languageId !== "matra") return
     const text = document.getText()
-    const entries = analyze(text).errors.map((error) => {
+    const entries = analyze(text).errors.map(error => {
       const start = toPosition(positionAt(text, error.offset))
       const end = toPosition(positionAt(text, error.offset + error.length))
-      const diagnostic = new vscode.Diagnostic(
-        new vscode.Range(start, end),
-        error.message,
-        vscode.DiagnosticSeverity.Error,
-      )
+      const diagnostic = new vscode.Diagnostic(new vscode.Range(start, end), error.message, vscode.DiagnosticSeverity.Error)
       diagnostic.source = "Matra"
       return diagnostic
     })
@@ -33,7 +29,7 @@ function activate(context) {
   context.subscriptions.push(
     vscode.workspace.onDidOpenTextDocument(updateDiagnostics),
     vscode.workspace.onDidChangeTextDocument(({ document }) => updateDiagnostics(document)),
-    vscode.workspace.onDidCloseTextDocument((document) => diagnostics.delete(document.uri)),
+    vscode.workspace.onDidCloseTextDocument(document => diagnostics.delete(document.uri)),
     vscode.languages.registerDocumentFormattingEditProvider(selector, {
       provideDocumentFormattingEdits(document, options) {
         const text = document.getText()
@@ -46,7 +42,7 @@ function activate(context) {
     vscode.languages.registerDocumentSymbolProvider(selector, {
       provideDocumentSymbols(document) {
         const text = document.getText()
-        return analyze(text).symbols.map((symbol) => {
+        return analyze(text).symbols.map(symbol => {
           const start = document.positionAt(symbol.offset)
           const end = document.positionAt(symbol.offset + symbol.length)
           const range = new vscode.Range(start, end)
@@ -56,9 +52,7 @@ function activate(context) {
     }),
     vscode.languages.registerFoldingRangeProvider(selector, {
       provideFoldingRanges(document) {
-        return analyze(document.getText()).folds.map(
-          ({ start, end }) => new vscode.FoldingRange(start, end),
-        )
+        return analyze(document.getText()).folds.map(({ start, end }) => new vscode.FoldingRange(start, end))
       },
     }),
     vscode.languages.registerHoverProvider(selector, {
@@ -67,7 +61,7 @@ function activate(context) {
         if (!range) return undefined
         const word = document.getText(range)
         const help = {
-          "$root": "Matraドキュメントのルート要素です。",
+          $root: "Matraドキュメントのルート要素です。",
           "m-if": "値が真のときだけ要素を描画する条件ディレクティブです。",
           "m-each": "配列の各要素について要素を繰り返すディレクティブです。",
           "m-as": "`m-each`内で各要素を参照する変数名を指定します。",

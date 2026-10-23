@@ -1,20 +1,11 @@
 import { isMatraAST, type MatraAST, type MatraPropValue, type MatraValue } from "@matra/core"
 import process from "node:process"
 import { CommandValidationError } from "./errors.js"
-import type {
-  CommandCapabilities,
-  CommandOutputFormat,
-  CommandSpec,
-  CommandStderrMode,
-  ExecutionPlan,
-} from "./types.js"
+import type { CommandCapabilities, CommandOutputFormat, CommandSpec, CommandStderrMode, ExecutionPlan } from "./types.js"
 
 const OUTPUT_FORMATS = new Set<CommandOutputFormat>(["text", "json", "ndjson", "binary"])
 const STDERR_MODES = new Set<CommandStderrMode>(["text", "ignore"])
-const COMMAND_PROPS = new Set([
-  "id", "program", "args", "cwd", "env", "stdin", "stdout", "stderr",
-  "timeout", "allowFail", "bind", "requires", "produces", "capabilities",
-])
+const COMMAND_PROPS = new Set(["id", "program", "args", "cwd", "env", "stdin", "stdout", "stderr", "timeout", "allowFail", "bind", "requires", "produces", "capabilities"])
 const CAPABILITY_PROPS = new Set(["commands", "read", "write", "network"])
 const NODEJS_PROPS = new Set([...COMMAND_PROPS].filter(key => key !== "program"))
 
@@ -109,12 +100,7 @@ function nodejsFromNode(node: MatraAST, index: number): CommandSpec {
     props: {
       ...node.props,
       program: process.execPath,
-      args: [
-        "--input-type=module",
-        "--eval",
-        nodejsProgram(node.children[0], stdout as CommandOutputFormat),
-        ...(userArgs.length ? ["--", ...userArgs] : []),
-      ],
+      args: ["--input-type=module", "--eval", nodejsProgram(node.children[0], stdout as CommandOutputFormat), ...(userArgs.length ? ["--", ...userArgs] : [])],
       capabilities: { ...(declared ?? {}), commands: [] },
     },
     children: [],
@@ -250,7 +236,7 @@ function plainValue(value: MatraPropValue | undefined, key: string, node: MatraA
 }
 
 function optionalField<K extends string, V>(key: K, value: V | undefined): { [P in K]?: V } {
-  return value === undefined ? {} : { [key]: value } as { [P in K]?: V }
+  return value === undefined ? {} : ({ [key]: value } as { [P in K]?: V })
 }
 
 function unique(values: string[]): string[] {

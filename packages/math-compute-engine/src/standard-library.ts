@@ -41,16 +41,13 @@ function buildStandardMathCommands(): MathCommandInfo[] {
   const libraries = ComputeEngine.getStandardLibrary("all") as unknown as RawLibrary[]
 
   for (const library of libraries) {
-    const definitions = Array.isArray(library.definitions)
-      ? library.definitions.flatMap(definition => Object.entries(asRecord(definition)))
-      : Object.entries(asRecord(library.definitions))
+    const definitions = Array.isArray(library.definitions) ? library.definitions.flatMap(definition => Object.entries(asRecord(definition))) : Object.entries(asRecord(library.definitions))
 
     for (const [name, rawDefinition] of definitions) {
       if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(name)) continue
       const definition = asRecord(rawDefinition) as RawDefinition
       const signature = typeof definition.signature === "string" ? definition.signature : undefined
-      const isConstant = definition.isConstant === true ||
-        Object.hasOwn(definition, "value") || typeof definition.type === "string"
+      const isConstant = definition.isConstant === true || Object.hasOwn(definition, "value") || typeof definition.type === "string"
       if (!signature && !isConstant) continue
 
       const command: MathCommandInfo = {
@@ -58,11 +55,8 @@ function buildStandardMathCommands(): MathCommandInfo[] {
         kind: signature ? "function" : "constant",
         category: library.name,
         signature,
-        description: typeof definition.description === "string"
-          ? definition.description
-          : signature ?? `Compute Engine ${library.name} symbol`,
-        properties: ["associative", "commutative", "idempotent"]
-          .filter(property => definition[property as keyof RawDefinition] === true),
+        description: typeof definition.description === "string" ? definition.description : (signature ?? `Compute Engine ${library.name} symbol`),
+        properties: ["associative", "commutative", "idempotent"].filter(property => definition[property as keyof RawDefinition] === true),
         complexity: typeof definition.complexity === "number" ? definition.complexity : undefined,
         wikidata: typeof definition.wikidata === "string" ? definition.wikidata : undefined,
       }
@@ -73,13 +67,9 @@ function buildStandardMathCommands(): MathCommandInfo[] {
     }
   }
 
-  return [...commands.values()].sort((left, right) =>
-    left.category.localeCompare(right.category) || left.name.localeCompare(right.name),
-  )
+  return [...commands.values()].sort((left, right) => left.category.localeCompare(right.category) || left.name.localeCompare(right.name))
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : {}
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
 }

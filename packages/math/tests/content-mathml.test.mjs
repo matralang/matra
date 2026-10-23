@@ -1,21 +1,12 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import {
-  contentMathMLToMathJson,
-  mathJsonToContentMathML,
-  normalizeContentMathML,
-  parseContentMathML,
-  serializeContentMathML,
-} from "../dist/index.js"
+import { contentMathMLToMathJson, mathJsonToContentMathML, normalizeContentMathML, parseContentMathML, serializeContentMathML } from "../dist/index.js"
 
-const math = (expression) => `<math xmlns="http://www.w3.org/1998/Math/MathML">${expression}</math>`
+const math = expression => `<math xmlns="http://www.w3.org/1998/Math/MathML">${expression}</math>`
 
 describe("Content MathML bridge", () => {
   it("rewrites operator elements into Strict Content MathML symbols", () => {
-    assert.equal(
-      normalizeContentMathML(math("<apply><plus/><ci>x</ci><cn type='integer'>2</cn></apply>")),
-      math('<apply><csymbol cd="arith1">plus</csymbol><ci>x</ci><cn type="integer">2</cn></apply>'),
-    )
+    assert.equal(normalizeContentMathML(math("<apply><plus/><ci>x</ci><cn type='integer'>2</cn></apply>")), math('<apply><csymbol cd="arith1">plus</csymbol><ci>x</ci><cn type="integer">2</cn></apply>'))
   })
 
   it("preserves unknown symbol identity in its tree and strict serialization", () => {
@@ -45,18 +36,9 @@ describe("Content MathML bridge", () => {
   })
 
   it("normalizes unary minus, roots, and rational numbers", () => {
-    assert.equal(
-      normalizeContentMathML(math("<apply><minus/><cn>3</cn></apply>")),
-      math('<apply><csymbol cd="arith1">unary_minus</csymbol><cn type="real">3</cn></apply>'),
-    )
-    assert.equal(
-      normalizeContentMathML(math("<apply><root/><cn type='integer'>9</cn></apply>")),
-      math('<apply><csymbol cd="arith1">root</csymbol><cn type="integer">9</cn><cn type="integer">2</cn></apply>'),
-    )
-    assert.deepEqual(
-      contentMathMLToMathJson(parseContentMathML(math("<cn type='rational'>3<sep/>4</cn>"))),
-      ["Rational", 3, 4],
-    )
+    assert.equal(normalizeContentMathML(math("<apply><minus/><cn>3</cn></apply>")), math('<apply><csymbol cd="arith1">unary_minus</csymbol><cn type="real">3</cn></apply>'))
+    assert.equal(normalizeContentMathML(math("<apply><root/><cn type='integer'>9</cn></apply>")), math('<apply><csymbol cd="arith1">root</csymbol><cn type="integer">9</cn><cn type="integer">2</cn></apply>'))
+    assert.deepEqual(contentMathMLToMathJson(parseContentMathML(math("<cn type='rational'>3<sep/>4</cn>"))), ["Rational", 3, 4])
   })
 
   it("preserves MathML double special values but rejects them at the MathJSON boundary", () => {
@@ -72,10 +54,7 @@ describe("Content MathML bridge", () => {
 
   it("round-trips supported MathJSON through CD-aware expressions", () => {
     const expression = ["Add", ["Sin", "x"], "Pi"]
-    assert.deepEqual(
-      contentMathMLToMathJson(mathJsonToContentMathML(expression)),
-      expression,
-    )
+    assert.deepEqual(contentMathMLToMathJson(mathJsonToContentMathML(expression)), expression)
     assert.deepEqual(mathJsonToContentMathML(true), {
       kind: "symbol",
       cdbase: "http://www.openmath.org/cd",

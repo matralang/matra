@@ -1,23 +1,6 @@
 const diagnosticLabels = ["", "parse error", "unknown function", "argument count mismatch"]
 
-const expectedLabels = [
-  "",
-  "module",
-  "identifier",
-  "fn",
-  "(",
-  "parameter or )",
-  ":",
-  "i32",
-  "-",
-  ">",
-  "{",
-  "return",
-  "value",
-  "integer",
-  ")",
-  "}",
-]
+const expectedLabels = ["", "module", "identifier", "fn", "(", "parameter or )", ":", "i32", "-", ">", "{", "return", "value", "integer", ")", "}"]
 
 export function sourcePosition(source, offset) {
   const prefix = new TextDecoder().decode(source.slice(0, offset))
@@ -85,9 +68,7 @@ function expandTabs(value) {
 }
 // 文書 frontend の arena/buffer を含め、compiler 自身が示す作業量を確保する。
 export function reserveCompilerWorkspace(compiler, sourcePointer, sourceLength) {
-  const pages = typeof compiler.workspace_pages === "function"
-    ? compiler.workspace_pages(sourcePointer, sourceLength)
-    : Math.ceil(sourceLength * 4 / 65536) + 128
+  const pages = typeof compiler.workspace_pages === "function" ? compiler.workspace_pages(sourcePointer, sourceLength) : Math.ceil((sourceLength * 4) / 65536) + 128
   if (!Number.isInteger(pages) || pages <= 0) throw new RangeError("Compiler workspace size is out of range")
   compiler.memory.grow(pages)
 }

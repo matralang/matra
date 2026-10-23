@@ -35,7 +35,11 @@ try {
       console.log(`Stage 3: ready (${checksum(stage3.output)}; ${elapsedSeconds(stage3Started)}s)`)
       if (Buffer.compare(stage2.output, stage3.output) === 0) {
         console.log("Self-host verification: stage 2 and stage 3 are byte-identical.")
-        for (const [name, compiler] of [["Stage 1", stage1], ["Stage 2", stage2.output], ["Stage 3", stage3.output]]) {
+        for (const [name, compiler] of [
+          ["Stage 1", stage1],
+          ["Stage 2", stage2.output],
+          ["Stage 3", stage3.output],
+        ]) {
           await verifyUnified(name, compiler)
         }
       } else {
@@ -102,11 +106,7 @@ async function compileCached(compilerBytes, source, stage) {
   if (process.env.MATRA_SELF_HOST_CACHE === "0") {
     return compile(compilerBytes, source)
   }
-  const key = createHash("sha256")
-    .update(stage)
-    .update(compilerBytes)
-    .update(source)
-    .digest("hex")
+  const key = createHash("sha256").update(stage).update(compilerBytes).update(source).digest("hex")
   const cachePath = `${artifactCacheDirectory}/${stage}-${key}.wasm`
   try {
     await access(cachePath)
@@ -173,9 +173,15 @@ async function verifyUnified(name, compiler) {
       continue
     }
     const instance = await instantiateUnified(result.output)
-    assert.throws(() => instance.run(), error => !(error instanceof WebAssembly.RuntimeError), `${name}: unexpected acceptance: ${source}`)
+    assert.throws(
+      () => instance.run(),
+      error => !(error instanceof WebAssembly.RuntimeError),
+      `${name}: unexpected acceptance: ${source}`,
+    )
   }
-  const native = await compile(compiler, new TextEncoder().encode(`module regression
+  const native = await compile(
+    compiler,
+    new TextEncoder().encode(`module regression
 fn store(values: [i32], value: i32) -> i32 {
   array_set(values, 0, value)
   return array_get(values, 0)
@@ -195,7 +201,8 @@ export fn answer() -> i32 {
     if (flag == 1) { return store(values, value) }
   }
   return 0
-}`))
+}`),
+  )
   assert.ok(native.output, `${name}: native statement regression: ${native.diagnostic}`)
   const { instance } = await WebAssembly.instantiate(native.output)
   assert.equal(instance.exports.answer(), -1)

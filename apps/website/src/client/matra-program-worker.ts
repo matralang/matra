@@ -6,7 +6,7 @@ type CompilerResult = {
 }
 
 self.addEventListener("message", async event => {
-  const { id, source, filename } = event.data as { id: number, source: string, filename: string }
+  const { id, source, filename } = event.data as { id: number; source: string; filename: string }
   try {
     const compilerResponse = await fetch(new URL("./matra-program-compiler.wasm", self.location.href))
     if (!compilerResponse.ok) throw new Error(`Could not load the Matra Program compiler (${compilerResponse.status}).`)
@@ -32,13 +32,14 @@ self.addEventListener("message", async event => {
     const output = new Uint8Array(exports.memory.buffer, outputPointer, outputLength).slice()
     const module = await WebAssembly.compile(output)
     const generated = await WebAssembly.instantiate(module)
-    const result = Object.entries(generated.exports)
-      .filter(([, value]) => typeof value === "function")
-      .map(([name, value]) => {
-        const fn = value as Function
-        return fn.length === 0 ? `${name}() = ${String(fn())}` : `${name}(${fn.length} argument${fn.length === 1 ? "" : "s"})`
-      })
-      .join("\n") || "Compiled successfully. The module has no exported functions."
+    const result =
+      Object.entries(generated.exports)
+        .filter(([, value]) => typeof value === "function")
+        .map(([name, value]) => {
+          const fn = value as Function
+          return fn.length === 0 ? `${name}() = ${String(fn())}` : `${name}(${fn.length} argument${fn.length === 1 ? "" : "s"})`
+        })
+        .join("\n") || "Compiled successfully. The module has no exported functions."
     const response: CompilerResult = { id, output: output.buffer, result }
     self.postMessage(response, [output.buffer])
   } catch (error) {

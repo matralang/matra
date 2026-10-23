@@ -1,17 +1,13 @@
-import type { MatraAST, MatraASTChild, MatraProps } from '@matra/core';
-import { SVG_TAGS, type SvgNode, type SvgTag } from './types.js';
+import type { MatraAST, MatraASTChild, MatraProps } from "@matra/core"
+import { SVG_TAGS, type SvgNode, type SvgTag } from "./types.js"
 
 /** Pure AST builder used by Matra and JavaScript callers alike. */
-export function svgNode(
-  tag: SvgTag,
-  props: MatraProps = {},
-  children: MatraASTChild[] = [],
-): SvgNode {
-  return { tag, props: { ...props }, children: [...children] };
+export function svgNode(tag: SvgTag, props: MatraProps = {}, children: MatraASTChild[] = []): SvgNode {
+  return { tag, props: { ...props }, children: [...children] }
 }
 
 export function isSvgNode(node: MatraAST): node is SvgNode {
-  return SVG_TAG_SET.has(node.tag);
+  return SVG_TAG_SET.has(node.tag)
 }
 
-const SVG_TAG_SET = new Set<string>(SVG_TAGS);
+const SVG_TAG_SET = new Set<string>(SVG_TAGS)

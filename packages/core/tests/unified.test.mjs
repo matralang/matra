@@ -26,7 +26,9 @@ describe("unified Matra parser", () => {
     const markup = parseUnified('<a.button.primary.button class="other" href="/spec/">Link</a>')
     assert.deepEqual(markup, parseUnified('a.button.primary.button(class="other", href="/spec/") { "Link" }'))
     assert.deepEqual(evaluateStatic(markup), {
-      tag: "a", props: { class: "button primary", href: "/spec/" }, children: ["Link"],
+      tag: "a",
+      props: { class: "button primary", href: "/spec/" },
+      children: ["Link"],
     })
     assert.deepEqual(parseUnified("<hr.divider />"), parseUnified("hr.divider {}"))
   })
@@ -45,7 +47,9 @@ describe("unified Matra parser", () => {
 
   it("keeps multiline Matra attributes distinct from calls", () => {
     assert.deepEqual(evaluateStatic(parseUnified('p(\n title\n = "ok"\n) {}')), {
-      tag: "p", props: { title: "ok" }, children: [],
+      tag: "p",
+      props: { title: "ok" },
+      children: [],
     })
 
     it("keeps node-header lookahead out of markup content", () => {
@@ -70,11 +74,19 @@ describe("unified Matra parser", () => {
     it("preserves the executable document example after markup refinement", async () => {
       const source = await readFile(new URL("../../../crates/matra-seed/examples/document.matra", import.meta.url), "utf8")
       assert.deepEqual(evaluateUnified(parseUnified(source)), {
-        tag: "article", props: { lang: "ja", class: "card" }, children: [
+        tag: "article",
+        props: { lang: "ja", class: "card" },
+        children: [
           { tag: "h1", props: {}, children: ["Matra"] },
-          { tag: "ul", props: {}, children: ["文書", "関数", "Wasm"].map(value => ({
-            tag: "li", props: {}, children: [`${value}!`],
-          })) },
+          {
+            tag: "ul",
+            props: {},
+            children: ["文書", "関数", "Wasm"].map(value => ({
+              tag: "li",
+              props: {},
+              children: [`${value}!`],
+            })),
+          },
         ],
       })
     })
@@ -87,7 +99,10 @@ describe("unified Matra parser", () => {
     const module = parseUnified('heading("Title")\nheading.title { "Title" }\ninvoice.title')
     assert.equal(module.statements[0].expression.kind, "call")
     assert.deepEqual(module.statements[1].expression, {
-      kind: "node", tag: "heading", classes: ["title"], attributes: [],
+      kind: "node",
+      tag: "heading",
+      classes: ["title"],
+      attributes: [],
       body: [{ kind: "expression", expression: { kind: "literal", value: "Title" } }],
     })
     assert.equal(module.statements[2].expression.kind, "member")
@@ -122,7 +137,9 @@ article.card.card(lang="ja", options={theme: "dark"}) {
   it("evaluates functions, conditions, and loops into document children", () => {
     const module = parseUnified('fn label(value) { return value }\nlet items = ["one", "two"]\nul { ...for (item in items) { if (item) { li { label(item) } } } }')
     assert.deepEqual(evaluateUnified(module), {
-      tag: "ul", props: {}, children: [
+      tag: "ul",
+      props: {},
+      children: [
         { tag: "li", props: {}, children: ["one"] },
         { tag: "li", props: {}, children: ["two"] },
       ],
@@ -130,19 +147,21 @@ article.card.card(lang="ja", options={theme: "dark"}) {
   })
 
   it("accepts else after a newline", () => {
-    assert.equal(evaluateUnified(parseUnified(`if (false) {
+    assert.equal(
+      evaluateUnified(
+        parseUnified(`if (false) {
   "unreachable"
 }
 else {
   "selected"
-}`)), "selected")
+}`),
+      ),
+      "selected",
+    )
   })
 
   it("represents else_if using existing nested if expressions", () => {
-    assert.deepEqual(
-      parseUnified("if a { 1 } else_if b { 2 } else { 3 }"),
-      parseUnified("if a { 1 } else { if b { 2 } else { 3 } }"),
-    )
+    assert.deepEqual(parseUnified("if a { 1 } else_if b { 2 } else { 3 }"), parseUnified("if a { 1 } else { if b { 2 } else { 3 } }"))
   })
 
   it("reports missing else_if delimiters at the next token or EOF", () => {
@@ -162,7 +181,6 @@ else {
   })
 })
 
-
 for (const fixture of conformance.accept) {
   it(`unified conformance: ${fixture.name}`, () => {
     assert.deepEqual(evaluateUnified(parseUnified(fixture.source)), fixture.value)
@@ -175,8 +193,10 @@ for (const source of conformance.reject) {
 }
 
 it("static retrieval respects scope, explicit spread, and null results", () => {
-  assert.deepEqual(evaluateStatic(parseUnified('let x = 1\np { let x = 2; ...[x, null] }')), {
-    tag: "p", props: {}, children: [2, null],
+  assert.deepEqual(evaluateStatic(parseUnified("let x = 1\np { let x = 2; ...[x, null] }")), {
+    tag: "p",
+    props: {},
+    children: [2, null],
   })
   assert.equal(evaluateStatic(parseUnified("1; let x = 2")), null)
   assert.throws(() => evaluateStatic(parseUnified("let x = 1; let x = 2")), /Duplicate binding/)

@@ -74,7 +74,7 @@ function analyze(text) {
   }
 
   const commentStack = []
-  for (let offset = 0; offset < text.length;) {
+  for (let offset = 0; offset < text.length; ) {
     if (text.startsWith("<!--", offset)) {
       commentStack.push(offset)
       offset += 4

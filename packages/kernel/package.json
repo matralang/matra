@@ -8,21 +8,35 @@
   "bin": {
     "matra-kernel": "bin/matra-kernel.js"
   },
-  "files": ["bin", "src", "kernelspec", "README.md"],
+  "files": [
+    "bin",
+    "src",
+    "kernelspec",
+    "README.md"
+  ],
   "scripts": {
     "build": "node --check src/kernel.js && node --check src/runtime.js && node --check bin/matra-kernel.js",
     "check": "pnpm run build",
     "test": "node --test tests/*.test.mjs",
     "prepack": "pnpm test"
   },
-  "keywords": ["matra", "jupyter", "kernel", "notebook", "colab"],
+  "keywords": [
+    "matra",
+    "jupyter",
+    "kernel",
+    "notebook",
+    "colab"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/matralang/matra.git",
     "directory": "packages/kernel"
   },
-  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org" },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
   "dependencies": {
     "@matra/core": "workspace:^",
     "@matra/graphics": "workspace:^",

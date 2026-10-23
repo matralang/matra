@@ -26,10 +26,7 @@ export interface BrowserExecuteOptions {
 }
 
 /** Validate a nodejs AST without importing any Node-only runtime modules. */
-export function prepareNodejsBlock(
-  ast: MatraAST,
-  options: BrowserExecuteOptions = {},
-): BrowserNodejsBlock {
+export function prepareNodejsBlock(ast: MatraAST, options: BrowserExecuteOptions = {}): BrowserNodejsBlock {
   if (ast.tag !== "nodejs") throw new CommandValidationError("Browser execution expects a nodejs block", ast.position)
   if (ast.children.length !== 1 || typeof ast.children[0] !== "string") {
     throw new CommandValidationError("nodejs expects exactly one text code block", ast.position)
@@ -57,10 +54,7 @@ export function prepareNodejsBlock(
 }
 
 /** Execute one nodejs block in a disposable Web Worker. */
-export function executeNodejsBlock(
-  ast: MatraAST,
-  options: BrowserExecuteOptions = {},
-): Promise<BrowserNodejsResult> {
+export function executeNodejsBlock(ast: MatraAST, options: BrowserExecuteOptions = {}): Promise<BrowserNodejsResult> {
   const block = prepareNodejsBlock(ast, options)
   if (typeof Worker === "undefined" || typeof Blob === "undefined") {
     return Promise.reject(new CommandExecutionError("Web Worker execution is not available"))
@@ -96,9 +90,7 @@ export function executeNodejsBlock(
       }
       if (message?.type !== "result") return
       try {
-        const value = message.value instanceof Uint8Array
-          ? message.value
-          : requireMatraValue(message.value)
+        const value = message.value instanceof Uint8Array ? message.value : requireMatraValue(message.value)
         cleanup()
         resolve({
           status: "ok",
@@ -164,8 +156,7 @@ function plainValue(value: MatraPropValue | undefined, key: string, ast: MatraAS
 }
 
 function isAst(value: MatraPropValue): value is MatraAST {
-  return typeof value === "object" && value !== null && !Array.isArray(value) &&
-    "tag" in value && "props" in value && "children" in value
+  return typeof value === "object" && value !== null && !Array.isArray(value) && "tag" in value && "props" in value && "children" in value
 }
 
 function requireMatraValue(value: unknown): MatraValue {

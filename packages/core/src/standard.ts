@@ -2,9 +2,7 @@ import { isMatraAST } from "./ast/convert.js"
 import { evaluatePropExpressions } from "./ast/evaluate.js"
 import type { MatraAST, MatraASTChild, MatraValue } from "./ast/types.js"
 
-export type StandardFunction = (
-  ...args: MatraValue[]
-) => MatraValue
+export type StandardFunction = (...args: MatraValue[]) => MatraValue
 
 export interface StandardEvaluationOptions {
   /** Application functions available to Map and ordinary calls. */
@@ -22,7 +20,11 @@ export function Range(startOrEnd: number, end?: number, step?: number): number[]
   const stop = end === undefined ? startOrEnd : end
   const increment = step ?? 1
 
-  for (const [name, value] of [["start", start], ["end", stop], ["step", increment]] as const) {
+  for (const [name, value] of [
+    ["start", start],
+    ["end", stop],
+    ["step", increment],
+  ] as const) {
     if (!Number.isFinite(value)) throw new RangeError(`Range ${name} must be finite`)
   }
   if (increment === 0) throw new RangeError("Range step must not be zero")
@@ -36,34 +38,21 @@ export function Range(startOrEnd: number, end?: number, step?: number): number[]
 }
 
 /** Apply a standard function to every value in a collection. */
-export function Map(
-  fn: StandardFunction,
-  values: readonly MatraValue[],
-): MatraValue[] {
+export function Map(fn: StandardFunction, values: readonly MatraValue[]): MatraValue[] {
   return values.map(value => fn(value))
 }
 
 /** Evaluate Range, Map, and registered application functions in a Core AST. */
-export function evaluateStandard(
-  expression: MatraAST | MatraASTChild,
-  options: StandardEvaluationOptions = {},
-): MatraValue {
+export function evaluateStandard(expression: MatraAST | MatraASTChild, options: StandardEvaluationOptions = {}): MatraValue {
   return evaluateExpression(expression, options.functions ?? {}, {})
 }
 
 /** Evaluate standard expressions embedded in props throughout an AST. */
-export function evaluateStandardProps(
-  ast: MatraAST,
-  options: StandardEvaluationOptions = {},
-): MatraAST {
+export function evaluateStandardProps(ast: MatraAST, options: StandardEvaluationOptions = {}): MatraAST {
   return evaluatePropExpressions(ast, expression => evaluateStandard(expression, options))
 }
 
-function evaluateExpression(
-  expression: MatraASTChild,
-  functions: Readonly<Record<string, StandardFunction>>,
-  scope: StandardScope,
-): MatraValue {
+function evaluateExpression(expression: MatraASTChild, functions: Readonly<Record<string, StandardFunction>>, scope: StandardScope): MatraValue {
   if (!isMatraAST(expression)) return expression
   if (Object.keys(expression.props).length > 0) {
     throw new TypeError(`Standard function ${expression.tag} does not accept properties`)
@@ -72,11 +61,7 @@ function evaluateExpression(
   if (expression.tag === "Range") {
     const args = expression.children.map(child => requireNumber(evaluateExpression(child, functions, scope), "Range"))
     if (args.length < 1 || args.length > 3) throw new TypeError("Range expects 1 to 3 arguments")
-    return args.length === 1
-      ? Range(args[0])
-      : args.length === 2
-        ? Range(args[0], args[1])
-        : Range(args[0], args[1], args[2])
+    return args.length === 1 ? Range(args[0]) : args.length === 2 ? Range(args[0], args[1]) : Range(args[0], args[1], args[2])
   }
 
   if (expression.tag === "Map") {
@@ -107,11 +92,7 @@ function evaluateExpression(
   return fn(...expression.children.map(child => evaluateExpression(child, functions, scope)))
 }
 
-function resolveFunction(
-  expression: MatraASTChild,
-  functions: Readonly<Record<string, StandardFunction>>,
-  scope: StandardScope,
-): StandardFunction {
+function resolveFunction(expression: MatraASTChild, functions: Readonly<Record<string, StandardFunction>>, scope: StandardScope): StandardFunction {
   if (isMatraAST(expression)) {
     if (expression.tag !== "Lambda") {
       throw new TypeError("Map expects a function name or Lambda as its first argument")
@@ -126,11 +107,7 @@ function resolveFunction(
   return fn
 }
 
-function createLambda(
-  expression: MatraAST,
-  functions: Readonly<Record<string, StandardFunction>>,
-  closure: StandardScope,
-): StandardFunction {
+function createLambda(expression: MatraAST, functions: Readonly<Record<string, StandardFunction>>, closure: StandardScope): StandardFunction {
   if (Object.keys(expression.props).length > 0 || expression.children.length !== 2) {
     throw new TypeError("Lambda expects a parameter name and a body")
   }
@@ -147,7 +124,7 @@ function requireNumber(value: MatraValue, name: string): number {
 }
 
 function rangeTolerance(start: number, end: number, step: number): number {
-  return Number.EPSILON * Math.max(1, Math.abs(start), Math.abs(end)) / Math.abs(step) * 4
+  return ((Number.EPSILON * Math.max(1, Math.abs(start), Math.abs(end))) / Math.abs(step)) * 4
 }
 
 function normalizeZero(value: number): number {

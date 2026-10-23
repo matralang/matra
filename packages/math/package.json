@@ -5,8 +5,15 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "check": "tsc --noEmit",
@@ -19,6 +26,12 @@
     "url": "git+https://github.com/matralang/matra.git",
     "directory": "packages/math"
   },
-  "dependencies": { "@matra/core": "workspace:^", "@xmldom/xmldom": "^0.9.12" },
-  "devDependencies": { "@types/node": "^22.20.0", "typescript": "^5.9.3" }
+  "dependencies": {
+    "@matra/core": "workspace:^",
+    "@xmldom/xmldom": "^0.9.12"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "typescript": "^5.9.3"
+  }
 }

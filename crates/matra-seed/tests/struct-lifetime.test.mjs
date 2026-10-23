@@ -25,7 +25,9 @@ async function seed(source) {
 }
 
 async function bootstrap(source) {
-  const { instance: { exports: compiler } } = await WebAssembly.instantiate(await readFile(await cachedCompiler()))
+  const {
+    instance: { exports: compiler },
+  } = await WebAssembly.instantiate(await readFile(await cachedCompiler()))
   compiler.memory.grow(32)
   const bytes = new TextEncoder().encode(source)
   const pointer = compiler.alloc(bytes.length)
@@ -36,7 +38,10 @@ async function bootstrap(source) {
   return new Uint8Array(compiler.memory.buffer, record.getInt32(4, true), record.getInt32(8, true)).slice()
 }
 
-for (const [name, compile] of [["seed", seed], ["bootstrap", bootstrap]]) {
+for (const [name, compile] of [
+  ["seed", seed],
+  ["bootstrap", bootstrap],
+]) {
   test(`${name} resolves local widths from the enclosing function and skips commented braces`, async () => {
     const source = `module demo
 struct item { left: i32 }
@@ -72,7 +77,9 @@ export fn bytes_copy(source: bytes) -> i32 {
   return result
 }
 `
-    const { instance: { exports: generated } } = await WebAssembly.instantiate(await compile(source))
+    const {
+      instance: { exports: generated },
+    } = await WebAssembly.instantiate(await compile(source))
     assert.equal(generated.probe(), 42)
     new DataView(generated.memory.buffer).setInt32(4096, 40, true)
     assert.equal(generated.field(4096), 42)
@@ -91,14 +98,18 @@ export fn probe() -> i32 {
   return array_get(values, 0)
 }
 `
-    const { instance: { exports: generated } } = await WebAssembly.instantiate(await compile(source))
+    const {
+      instance: { exports: generated },
+    } = await WebAssembly.instantiate(await compile(source))
     assert.equal(generated.probe(), 42)
   })
 
   test(`${name} materializes flat metadata after scalar extraction`, async () => {
     const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
     const program = markdown.split("```compiler.matra\n")[1]
-    const source = program.slice(0, program.indexOf("// A temporary execution probe")) + `
+    const source =
+      program.slice(0, program.indexOf("// A temporary execution probe")) +
+      `
 fn metadata(source: bytes, offset: i32) -> [i32] {
   let value = next_token(source, offset)
   let kind = value.kind
@@ -120,7 +131,9 @@ export fn probe(source: bytes) -> i32 {
   return result
 }
 `
-    const { instance: { exports: generated } } = await WebAssembly.instantiate(await compile(source))
+    const {
+      instance: { exports: generated },
+    } = await WebAssembly.instantiate(await compile(source))
     const bytes = new TextEncoder().encode("module compiler\n\nstruct")
     new Uint8Array(generated.memory.buffer, 4096, bytes.length).set(bytes)
     assert.equal(generated.probe(4096, bytes.length), 16)
@@ -144,14 +157,18 @@ export fn probe(source: bytes) -> i32 {
   return status + position
 }
 `
-    const { instance: { exports: generated } } = await WebAssembly.instantiate(await compile(source))
-  assert.equal(generated.probe(0, 0), 41)
+    const {
+      instance: { exports: generated },
+    } = await WebAssembly.instantiate(await compile(source))
+    assert.equal(generated.probe(0, 0), 41)
   })
 
   test(`${name} preserves consecutive lexer results and aliases`, async () => {
     const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
     const program = markdown.split("```compiler.matra\n")[1]
-    const source = program.slice(0, program.indexOf("// A temporary execution probe")) + `
+    const source =
+      program.slice(0, program.indexOf("// A temporary execution probe")) +
+      `
 export fn probe(source: bytes, selected: i32) -> token {
   let first = next_token(source, 0)
   let alias = first
@@ -162,12 +179,18 @@ export fn probe(source: bytes, selected: i32) -> token {
   return third
 }
 `
-    const { instance: { exports: generated } } = await WebAssembly.instantiate(await compile(source))
+    const {
+      instance: { exports: generated },
+    } = await WebAssembly.instantiate(await compile(source))
     const bytes = new TextEncoder().encode("module compiler\n\nstruct")
     new Uint8Array(generated.memory.buffer, 4096, bytes.length).set(bytes)
     const fields = pointer => [0, 4, 8].map(offset => new DataView(generated.memory.buffer).getInt32(pointer + offset, true))
     const pointers = [0, 1, 2].map(selected => generated.probe(4096, bytes.length, selected))
-    assert.deepEqual(pointers.map(fields), [[1, 0, 6], [1, 7, 8], [1, 17, 6]])
+    assert.deepEqual(pointers.map(fields), [
+      [1, 0, 6],
+      [1, 7, 8],
+      [1, 17, 6],
+    ])
     assert.equal(new Set(pointers).size, 3)
   })
 
@@ -196,7 +219,9 @@ fn allocate_result() -> i32 {
 }
 export fn escape() -> i32 { let temporary = make(7) return allocate_result() }
 `
-    const { instance: { exports: e } } = await WebAssembly.instantiate(await compile(source))
+    const {
+      instance: { exports: e },
+    } = await WebAssembly.instantiate(await compile(source))
     const initial = e.heap()
     for (let value = 0; value < 20000; value++) assert.equal(e.scalar(value), value * 2 + 3)
     assert.equal(e.heap(), initial)
@@ -223,7 +248,9 @@ struct pair { left: i32 right: i32 }
 fn make(value: i32) -> pair { return pair(value, value + 1) }
 export fn answer() -> pair { return pair(make(20).right, make(40).right) }
 `
-  const { instance: { exports: generated } } = await WebAssembly.instantiate(await seed(source))
+  const {
+    instance: { exports: generated },
+  } = await WebAssembly.instantiate(await seed(source))
   const pointer = generated.answer()
   const result = new DataView(generated.memory.buffer, pointer, 8)
   assert.deepEqual([result.getInt32(0, true), result.getInt32(4, true)], [21, 41])
@@ -237,9 +264,14 @@ export fn choose(value: token) -> i32 {
   if value.kind == 2 { result = 20 } else { result = 42 }
   return result
 }`
-  const { instance: { exports: generated } } = await WebAssembly.instantiate(await bootstrap(source))
+  const {
+    instance: { exports: generated },
+  } = await WebAssembly.instantiate(await bootstrap(source))
   const view = new DataView(generated.memory.buffer)
-  for (const [kind, expected] of [[1, 42], [2, 20]]) {
+  for (const [kind, expected] of [
+    [1, 42],
+    [2, 20],
+  ]) {
     view.setInt32(4096, kind, true)
     assert.equal(generated.choose(4096), expected)
   }

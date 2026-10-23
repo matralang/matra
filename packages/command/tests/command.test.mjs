@@ -1,14 +1,8 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import {
-  authorizePlan,
-  CommandAuthorizationError,
-  CommandValidationError,
-  executePlan,
-  planCommands,
-} from "../dist/index.js"
+import { authorizePlan, CommandAuthorizationError, CommandValidationError, executePlan, planCommands } from "../dist/index.js"
 
-const command = (props) => ({ tag: "command", props, children: [] })
+const command = props => ({ tag: "command", props, children: [] })
 const workflow = children => ({ tag: "workflow", props: {}, children })
 const nodejs = (props, code) => ({ tag: "nodejs", props, children: [code] })
 
@@ -20,10 +14,10 @@ describe("Matra command planning", () => {
     ])
 
     const plan = planCommands(ast)
-    assert.deepEqual(plan.commands.map(command => command.id), [
-      "producer-output",
-      "consumer-output",
-    ])
+    assert.deepEqual(
+      plan.commands.map(command => command.id),
+      ["producer-output", "consumer-output"],
+    )
     assert.deepEqual(plan.capabilities, {
       commands: ["producer", "consumer"],
       read: ["./data"],
@@ -33,29 +27,11 @@ describe("Matra command planning", () => {
   })
 
   it("rejects malformed commands, missing dependencies, and cycles", () => {
-    assert.throws(
-      () => planCommands(command({ program: "python", args: [1] })),
-      CommandValidationError,
-    )
-    assert.throws(
-      () => planCommands(command({ program: "a", requires: ["missing"] })),
-      /Unknown dependency/,
-    )
-    assert.throws(
-      () => planCommands(command({ program: "a", timeot: 100 })),
-      /Unknown command prop: timeot/,
-    )
-    assert.throws(
-      () => planCommands(command({ program: "a", capabilities: { netwrok: true } })),
-      /Unknown command capability: netwrok/,
-    )
-    assert.throws(
-      () => planCommands(workflow([
-        command({ program: "a", id: "a", requires: ["b"] }),
-        command({ program: "b", id: "b", requires: ["a"] }),
-      ])),
-      /dependency cycle/,
-    )
+    assert.throws(() => planCommands(command({ program: "python", args: [1] })), CommandValidationError)
+    assert.throws(() => planCommands(command({ program: "a", requires: ["missing"] })), /Unknown dependency/)
+    assert.throws(() => planCommands(command({ program: "a", timeot: 100 })), /Unknown command prop: timeot/)
+    assert.throws(() => planCommands(command({ program: "a", capabilities: { netwrok: true } })), /Unknown command capability: netwrok/)
+    assert.throws(() => planCommands(workflow([command({ program: "a", id: "a", requires: ["b"] }), command({ program: "b", id: "b", requires: ["a"] })])), /dependency cycle/)
   })
 })
 
@@ -107,7 +83,7 @@ describe("Matra local process execution", () => {
       tag: "command",
       props: {
         program: process.execPath,
-        args: ["-e", 'process.stdout.write(JSON.stringify({answer: 42}))'],
+        args: ["-e", "process.stdout.write(JSON.stringify({answer: 42}))"],
         stdout: "json",
         bind: "answer",
       },
@@ -117,7 +93,7 @@ describe("Matra local process execution", () => {
       tag: "command",
       props: {
         program: process.execPath,
-        args: ["-e", 'process.stdin.pipe(process.stdout)'],
+        args: ["-e", "process.stdin.pipe(process.stdout)"],
         stdin: { ref: "answer" },
         stdout: "json",
         bind: "copied",
@@ -132,7 +108,10 @@ describe("Matra local process execution", () => {
     assert.equal(result.status, "ok")
     assert.deepEqual(result.bindings.answer, { answer: 42 })
     assert.deepEqual(result.bindings.copied, { answer: 42 })
-    assert.deepEqual(result.results.map(item => item.status), ["ok", "ok"])
+    assert.deepEqual(
+      result.results.map(item => item.status),
+      ["ok", "ok"],
+    )
   })
 
   it("returns structured failure and skips dependent commands", async () => {

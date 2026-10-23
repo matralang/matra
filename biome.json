@@ -6,12 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": [
-      "**/*.{js,jsx,ts,tsx,mjs,cjs,json,jsonc,css}",
-      "!packages/core/src/parser/generated.mjs",
-      "!packages/math/legacy",
-      "!spec/archive"
-    ]
+    "includes": ["**/*.{js,jsx,ts,tsx,mjs,cjs,json,jsonc,css}", "!packages/core/src/parser/generated.mjs", "!packages/math/legacy", "!spec/archive"]
   },
   "formatter": {
     "indentStyle": "space",
@@ -21,7 +16,8 @@
   "javascript": {
     "formatter": {
       "quoteStyle": "double",
-      "semicolons": "asNeeded"
+      "semicolons": "asNeeded",
+      "arrowParentheses": "asNeeded"
     }
   },
   "linter": {

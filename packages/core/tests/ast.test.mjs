@@ -1,11 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import {
-  astToMatraJSON,
-  matraJSONToAST,
-  transform,
-  visit,
-} from "../dist/index.js"
+import { astToMatraJSON, matraJSONToAST, transform, visit } from "../dist/index.js"
 
 describe("Matra AST", () => {
   it("round-trips AST and MatraJSON recursively", () => {
@@ -33,9 +28,13 @@ describe("Matra AST", () => {
   })
 
   it("preserves node-shaped arrays nested inside value arrays", () => {
-    const json = ["div", {
-      attr: [["chart", {}, [["series", { label: "x" }, [1, 2, 3]]]]],
-    }, []]
+    const json = [
+      "div",
+      {
+        attr: [["chart", {}, [["series", { label: "x" }, [1, 2, 3]]]]],
+      },
+      [],
+    ]
     assert.deepEqual(matraJSONToAST(json), {
       tag: "div",
       props: {
@@ -55,16 +54,11 @@ describe("Matra AST", () => {
     visit(ast, node => tags.push(node.tag))
     assert.deepEqual(tags, ["doc", "p"])
 
-    const changed = transform(ast, node =>
-      node.tag === "p" ? { ...node, tag: "paragraph" } : undefined,
-    )
+    const changed = transform(ast, node => (node.tag === "p" ? { ...node, tag: "paragraph" } : undefined))
     assert.deepEqual(changed, {
       tag: "doc",
       props: {},
-      children: [
-        { tag: "paragraph", props: {}, children: ["Hello"] },
-        "literal",
-      ],
+      children: [{ tag: "paragraph", props: {}, children: ["Hello"] }, "literal"],
     })
     assert.equal(ast.children[0].tag, "p")
   })
@@ -75,11 +69,14 @@ describe("Matra AST", () => {
       end: { offset: 3, line: 1, column: 4 },
     }
     const ast = { tag: "old", props: {}, children: [], position }
-    assert.deepEqual(transform(ast, node => ({ ...node, tag: "new" })), {
-      tag: "new",
-      props: {},
-      children: [],
-      position,
-    })
+    assert.deepEqual(
+      transform(ast, node => ({ ...node, tag: "new" })),
+      {
+        tag: "new",
+        props: {},
+        children: [],
+        position,
+      },
+    )
   })
 })

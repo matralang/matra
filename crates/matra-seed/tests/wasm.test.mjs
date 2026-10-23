@@ -44,35 +44,34 @@ test("bootstrap compiler accepts a call comparison in a conditional condition", 
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-conditional-"))
   const input = join(directory, "conditional.md")
   const output = join(directory, "conditional.wasm")
-  await writeFile(input, [
-    "# Conditional call comparison",
-    "",
-    "```compiler.matra.program",
-    "module demo",
-    "",
-    "fn is_arithmetic_operator(source: bytes, value: i32) -> i32 {",
-    "  if value == 43 {",
-    "    return 1",
-    "  }",
-    "  return 0",
-    "}",
-    "",
-    "export fn answer(source: bytes, call_separator: i32) -> i32 {",
-    "  while is_arithmetic_operator(source, call_separator) == 1 {",
-    "    return 42",
-    "  }",
-    "  return 0",
-    "}",
-    "```",
-    "",
-  ].join("\n"))
+  await writeFile(
+    input,
+    [
+      "# Conditional call comparison",
+      "",
+      "```compiler.matra.program",
+      "module demo",
+      "",
+      "fn is_arithmetic_operator(source: bytes, value: i32) -> i32 {",
+      "  if value == 43 {",
+      "    return 1",
+      "  }",
+      "  return 0",
+      "}",
+      "",
+      "export fn answer(source: bytes, call_separator: i32) -> i32 {",
+      "  while is_arithmetic_operator(source, call_separator) == 1 {",
+      "    return 42",
+      "  }",
+      "  return 0",
+      "}",
+      "```",
+      "",
+    ].join("\n"),
+  )
 
   try {
-    const result = spawnSync(
-      "cargo",
-      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"],
-      { cwd: root, encoding: "utf8" },
-    )
+    const result = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"], { cwd: root, encoding: "utf8" })
     assert.equal(result.status, 0, result.stderr)
   } finally {
     await rm(directory, { recursive: true, force: true })
@@ -83,28 +82,10 @@ test("bootstrap compiler accepts a simple conditional return in a function body"
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-simple-conditional-"))
   const input = join(directory, "simple-conditional.md")
   const output = join(directory, "simple-conditional.wasm")
-  await writeFile(input, [
-    "# Simple conditional return",
-    "",
-    "```compiler.matra.program",
-    "module demo",
-    "",
-    "export fn answer(value: i32) -> i32 {",
-    "  if value == 9 {",
-    "    return 1",
-    "  }",
-    "  return 0",
-    "}",
-    "```",
-    "",
-  ].join("\n"))
+  await writeFile(input, ["# Simple conditional return", "", "```compiler.matra.program", "module demo", "", "export fn answer(value: i32) -> i32 {", "  if value == 9 {", "    return 1", "  }", "  return 0", "}", "```", ""].join("\n"))
 
   try {
-    const result = spawnSync(
-      "cargo",
-      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"],
-      { cwd: root, encoding: "utf8" },
-    )
+    const result = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"], { cwd: root, encoding: "utf8" })
     assert.equal(result.status, 0, result.stderr)
   } finally {
     await rm(directory, { recursive: true, force: true })
@@ -115,27 +96,10 @@ test("Rust seed executes parenthesized let and set statements", async () => {
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-let-set-"))
   const input = join(directory, "let-set.md")
   const output = join(directory, "let-set.wasm")
-  await writeFile(input, [
-    "# Parenthesized let and set",
-    "",
-    "```answer.matra.program",
-    "module example",
-    "",
-    "export fn answer() -> i32 {",
-    "  let (value: i32 = 40)",
-    "  set (value = value + 2)",
-    "  return value",
-    "}",
-    "```",
-    "",
-  ].join("\n"))
+  await writeFile(input, ["# Parenthesized let and set", "", "```answer.matra.program", "module example", "", "export fn answer() -> i32 {", "  let (value: i32 = 40)", "  set (value = value + 2)", "  return value", "}", "```", ""].join("\n"))
 
   try {
-    const result = spawnSync(
-      "cargo",
-      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "answer.matra.program"],
-      { cwd: root, encoding: "utf8" },
-    )
+    const result = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "answer.matra.program"], { cwd: root, encoding: "utf8" })
     assert.equal(result.status, 0, result.stderr)
 
     const { instance } = await WebAssembly.instantiate(await readFile(output))
@@ -149,32 +113,13 @@ test("Rust seed executes parenthesized if and while conditions", async () => {
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-conditions-"))
   const input = join(directory, "conditions.md")
   const output = join(directory, "conditions.wasm")
-  await writeFile(input, [
-    "# Parenthesized conditions",
-    "",
-    "```answer.matra.program",
-    "module example",
-    "",
-    "export fn answer() -> i32 {",
-    "  let (value = 0)",
-    "  if (value == 0) {",
-    "    set (value = 40)",
-    "  }",
-    "  while (value < 42) {",
-    "    set (value = value + 1)",
-    "  }",
-    "  return value",
-    "}",
-    "```",
-    "",
-  ].join("\n"))
+  await writeFile(
+    input,
+    ["# Parenthesized conditions", "", "```answer.matra.program", "module example", "", "export fn answer() -> i32 {", "  let (value = 0)", "  if (value == 0) {", "    set (value = 40)", "  }", "  while (value < 42) {", "    set (value = value + 1)", "  }", "  return value", "}", "```", ""].join("\n"),
+  )
 
   try {
-    const result = spawnSync(
-      "cargo",
-      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "answer.matra.program"],
-      { cwd: root, encoding: "utf8" },
-    )
+    const result = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "answer.matra.program"], { cwd: root, encoding: "utf8" })
     assert.equal(result.status, 0, result.stderr)
 
     const { instance } = await WebAssembly.instantiate(await readFile(output))
@@ -188,41 +133,42 @@ test("Rust seed executes do-until loops", async () => {
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-do-until-"))
   const input = join(directory, "do-until.md")
   const output = join(directory, "do-until.wasm")
-  await writeFile(input, [
-    "# Do until",
-    "",
-    "```answer.matra.program",
-    "module example",
-    "",
-    "export fn repeat(value: i32) -> i32 {",
-    "  do {",
-    "    set (value = value + 1)",
-    "  }",
-    "  until (value >= 3)",
-    "  return value",
-    "}",
-    "",
-    "export fn stop(value: i32) -> i32 {",
-    "  do {",
-    "    set (value = value + 1)",
-    "    break",
-    "  }",
-    "  until (value >= 100)",
-    "  return value",
-    "}",
-    "```",
-    "",
-  ].join("\n"))
+  await writeFile(
+    input,
+    [
+      "# Do until",
+      "",
+      "```answer.matra.program",
+      "module example",
+      "",
+      "export fn repeat(value: i32) -> i32 {",
+      "  do {",
+      "    set (value = value + 1)",
+      "  }",
+      "  until (value >= 3)",
+      "  return value",
+      "}",
+      "",
+      "export fn stop(value: i32) -> i32 {",
+      "  do {",
+      "    set (value = value + 1)",
+      "    break",
+      "  }",
+      "  until (value >= 100)",
+      "  return value",
+      "}",
+      "```",
+      "",
+    ].join("\n"),
+  )
 
   try {
-    const result = spawnSync(
-      "cargo",
-      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "answer.matra.program"],
-      { cwd: root, encoding: "utf8" },
-    )
+    const result = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "answer.matra.program"], { cwd: root, encoding: "utf8" })
     assert.equal(result.status, 0, result.stderr)
 
-    const { instance: { exports } } = await WebAssembly.instantiate(await readFile(output))
+    const {
+      instance: { exports },
+    } = await WebAssembly.instantiate(await readFile(output))
     assert.equal(exports.repeat(0), 3)
     assert.equal(exports.repeat(10), 11)
     assert.equal(exports.stop(0), 1)
@@ -243,22 +189,26 @@ test("bootstrap compiler executes and validates do-until loops", async () => {
       worker.terminate()
       reject(new Error("do-until test: Stage 2 compilation timed out"))
     }, 180000)
-    worker.once("message", (result) => {
+    worker.once("message", result => {
       clearTimeout(timer)
       worker.terminate()
       if (result.output) resolve(result.output)
       else reject(new Error(result.diagnostic))
     })
-    worker.once("error", (error) => {
+    worker.once("error", error => {
       clearTimeout(timer)
       worker.terminate()
       reject(error)
     })
   })
   for (const compilerBytes of [stage1, stage2]) {
-    const compileSource = async (text) => {
+    const compileSource = async text => {
       const source = new TextEncoder().encode(text)
-      const { instance: { exports: { alloc, compile, memory } } } = await WebAssembly.instantiate(compilerBytes)
+      const {
+        instance: {
+          exports: { alloc, compile, memory },
+        },
+      } = await WebAssembly.instantiate(compilerBytes)
       const pointer = alloc(source.length)
       new Uint8Array(memory.buffer, pointer, source.length).set(source)
       const recordPointer = compile(pointer, source.length)
@@ -338,7 +288,9 @@ export fn conditional() -> i32 {
 }`)
     assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(source, memory, recordPointer))
     const output = new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
-    const { instance: { exports } } = await WebAssembly.instantiate(output)
+    const {
+      instance: { exports },
+    } = await WebAssembly.instantiate(output)
     assert.equal(exports.repeat(0), 3)
     assert.equal(exports.repeat(10), 11)
     assert.equal(exports.stop(0), 1)
@@ -385,14 +337,20 @@ export fn answer() -> i32 {
   set (value = value + 2)
   return value
 }`)
-  const { instance: { exports: { alloc, compile, memory } } } = await WebAssembly.instantiate(compilerBytes)
+  const {
+    instance: {
+      exports: { alloc, compile, memory },
+    },
+  } = await WebAssembly.instantiate(compilerBytes)
   const pointer = alloc(source.length)
   new Uint8Array(memory.buffer, pointer, source.length).set(source)
   const recordPointer = compile(pointer, source.length)
   const record = new DataView(memory.buffer, recordPointer, 36)
   assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(source, memory, recordPointer))
   const output = new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
-  const { instance: { exports: generated } } = await WebAssembly.instantiate(output)
+  const {
+    instance: { exports: generated },
+  } = await WebAssembly.instantiate(output)
   assert.equal(generated.answer(), 42)
 })
 
@@ -410,9 +368,13 @@ export fn answer() -> i32 {
   }
   return value
 }`
-  const compileSource = async (text) => {
+  const compileSource = async text => {
     const source = new TextEncoder().encode(text)
-    const { instance: { exports: { alloc, compile, memory } } } = await WebAssembly.instantiate(compilerBytes)
+    const {
+      instance: {
+        exports: { alloc, compile, memory },
+      },
+    } = await WebAssembly.instantiate(compilerBytes)
     const pointer = alloc(source.length)
     new Uint8Array(memory.buffer, pointer, source.length).set(source)
     const recordPointer = compile(pointer, source.length)
@@ -422,8 +384,12 @@ export fn answer() -> i32 {
   }
   const output = await compileSource(sourceText)
   const legacyOutput = await compileSource(sourceText.replace("if (value == 0)", "if value == 0").replace("while (value < 42)", "while value < 42"))
-  const { instance: { exports: generated } } = await WebAssembly.instantiate(output)
-  const { instance: { exports: legacyGenerated } } = await WebAssembly.instantiate(legacyOutput)
+  const {
+    instance: { exports: generated },
+  } = await WebAssembly.instantiate(output)
+  const {
+    instance: { exports: legacyGenerated },
+  } = await WebAssembly.instantiate(legacyOutput)
   assert.equal(generated.answer(), 42)
   assert.equal(legacyGenerated.answer(), 42)
 })
@@ -432,39 +398,38 @@ test("bootstrap compiler accepts a call guard before a local and while", async (
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-call-guard-"))
   const input = join(directory, "call-guard.md")
   const output = join(directory, "call-guard.wasm")
-  await writeFile(input, [
-    "# Call guard before local and while",
-    "",
-    "```compiler.matra.program",
-    "module demo",
-    "",
-    "fn is_zero(source: bytes, value: i32) -> i32 {",
-    "  if value == 0 {",
-    "    return 1",
-    "  }",
-    "  return 0",
-    "}",
-    "",
-    "export fn answer(source: bytes, value: i32) -> i32 {",
-    "  if is_zero(source, value) == 0 {",
-    "    return 1",
-    "  }",
-    "  let current = value",
-    "  while current != 0 {",
-    "    current = 0",
-    "  }",
-    "  return current",
-    "}",
-    "```",
-    "",
-  ].join("\n"))
+  await writeFile(
+    input,
+    [
+      "# Call guard before local and while",
+      "",
+      "```compiler.matra.program",
+      "module demo",
+      "",
+      "fn is_zero(source: bytes, value: i32) -> i32 {",
+      "  if value == 0 {",
+      "    return 1",
+      "  }",
+      "  return 0",
+      "}",
+      "",
+      "export fn answer(source: bytes, value: i32) -> i32 {",
+      "  if is_zero(source, value) == 0 {",
+      "    return 1",
+      "  }",
+      "  let current = value",
+      "  while current != 0 {",
+      "    current = 0",
+      "  }",
+      "  return current",
+      "}",
+      "```",
+      "",
+    ].join("\n"),
+  )
 
   try {
-    const result = spawnSync(
-      "cargo",
-      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"],
-      { cwd: root, encoding: "utf8" },
-    )
+    const result = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"], { cwd: root, encoding: "utf8" })
     assert.equal(result.status, 0, result.stderr)
   } finally {
     await rm(directory, { recursive: true, force: true })
@@ -475,32 +440,31 @@ test("bootstrap compiler accepts multiple statements inside a loop-nested condit
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-loop-conditional-"))
   const input = join(directory, "loop-conditional.md")
   const output = join(directory, "loop-conditional.wasm")
-  await writeFile(input, [
-    "# Multi-statement loop-nested conditional",
-    "",
-    "```compiler.matra.program",
-    "module demo",
-    "",
-    "export fn answer(source: bytes, offset: i32) -> i32 {",
-    "  let call_argument = offset",
-    "  while call_argument != 0 {",
-    "    if call_argument == 1 {",
-    "      let call_field = 2",
-    "      call_argument = call_field",
-    "    }",
-    "  }",
-    "  return call_argument",
-    "}",
-    "```",
-    "",
-  ].join("\n"))
+  await writeFile(
+    input,
+    [
+      "# Multi-statement loop-nested conditional",
+      "",
+      "```compiler.matra.program",
+      "module demo",
+      "",
+      "export fn answer(source: bytes, offset: i32) -> i32 {",
+      "  let call_argument = offset",
+      "  while call_argument != 0 {",
+      "    if call_argument == 1 {",
+      "      let call_field = 2",
+      "      call_argument = call_field",
+      "    }",
+      "  }",
+      "  return call_argument",
+      "}",
+      "```",
+      "",
+    ].join("\n"),
+  )
 
   try {
-    const result = spawnSync(
-      "cargo",
-      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"],
-      { cwd: root, encoding: "utf8" },
-    )
+    const result = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"], { cwd: root, encoding: "utf8" })
     assert.equal(result.status, 0, result.stderr)
   } finally {
     await rm(directory, { recursive: true, force: true })
@@ -511,40 +475,39 @@ test("bootstrap compiler accepts a nested while as a sibling statement inside an
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-nested-while-"))
   const input = join(directory, "nested-while.md")
   const output = join(directory, "nested-while.wasm")
-  await writeFile(input, [
-    "# Nested while as a sibling statement",
-    "",
-    "```compiler.matra.program",
-    "module demo",
-    "",
-    "fn is_symbol(source: bytes, value: i32, target: i32) -> i32 {",
-    "  return 0",
-    "}",
-    "",
-    "export fn answer(source: bytes, call_argument: i32) -> i32 {",
-    "  let call_separator = call_argument",
-    "  while is_symbol(source, call_argument, 41) == 0 {",
-    "    if is_symbol(source, call_separator, 46) == 1 {",
-    "      let call_field = call_separator",
-    "      call_separator = call_field",
-    "    }",
-    "    while is_symbol(source, call_separator, 43) == 1 {",
-    "      call_separator = call_argument",
-    "    }",
-    "    call_argument = call_separator",
-    "  }",
-    "  return call_separator",
-    "}",
-    "```",
-    "",
-  ].join("\n"))
+  await writeFile(
+    input,
+    [
+      "# Nested while as a sibling statement",
+      "",
+      "```compiler.matra.program",
+      "module demo",
+      "",
+      "fn is_symbol(source: bytes, value: i32, target: i32) -> i32 {",
+      "  return 0",
+      "}",
+      "",
+      "export fn answer(source: bytes, call_argument: i32) -> i32 {",
+      "  let call_separator = call_argument",
+      "  while is_symbol(source, call_argument, 41) == 0 {",
+      "    if is_symbol(source, call_separator, 46) == 1 {",
+      "      let call_field = call_separator",
+      "      call_separator = call_field",
+      "    }",
+      "    while is_symbol(source, call_separator, 43) == 1 {",
+      "      call_separator = call_argument",
+      "    }",
+      "    call_argument = call_separator",
+      "  }",
+      "  return call_separator",
+      "}",
+      "```",
+      "",
+    ].join("\n"),
+  )
 
   try {
-    const result = spawnSync(
-      "cargo",
-      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"],
-      { cwd: root, encoding: "utf8" },
-    )
+    const result = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"], { cwd: root, encoding: "utf8" })
     assert.equal(result.status, 0, result.stderr)
   } finally {
     await rm(directory, { recursive: true, force: true })
@@ -555,32 +518,31 @@ test("bootstrap compiler accepts a loop local conditional with a struct field RH
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-loop-local-field-"))
   const input = join(directory, "loop-local-field.md")
   const output = join(directory, "loop-local-field.wasm")
-  await writeFile(input, [
-    "# Loop local conditional with a struct field RHS",
-    "",
-    "```compiler.matra.program",
-    "module demo",
-    "",
-    "struct pair { left: i32 right: i32 }",
-    "",
-    "export fn answer(value: i32, record: pair) -> i32 {",
-    "  while value != 0 {",
-    "    if value < record.right {",
-    "      value = 0",
-    "    }",
-    "  }",
-    "  return value",
-    "}",
-    "```",
-    "",
-  ].join("\n"))
+  await writeFile(
+    input,
+    [
+      "# Loop local conditional with a struct field RHS",
+      "",
+      "```compiler.matra.program",
+      "module demo",
+      "",
+      "struct pair { left: i32 right: i32 }",
+      "",
+      "export fn answer(value: i32, record: pair) -> i32 {",
+      "  while value != 0 {",
+      "    if value < record.right {",
+      "      value = 0",
+      "    }",
+      "  }",
+      "  return value",
+      "}",
+      "```",
+      "",
+    ].join("\n"),
+  )
 
   try {
-    const result = spawnSync(
-      "cargo",
-      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"],
-      { cwd: root, encoding: "utf8" },
-    )
+    const result = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"], { cwd: root, encoding: "utf8" })
     assert.equal(result.status, 0, result.stderr)
   } finally {
     await rm(directory, { recursive: true, force: true })
@@ -594,7 +556,9 @@ test("bootstrap compiler executes call assignments in both loop conditional bran
   try {
     for (const condition of ["value == 1", "identity(value) == 1"]) {
       for (const earlyReturn of [false, true]) {
-        await writeFile(input, `module demo
+        await writeFile(
+          input,
+          `module demo
 struct pair { left: i32 right: i32 }
 fn make_pair() -> pair { return pair(20, 20) }
 fn identity(value: i32) -> i32 { return value }
@@ -610,9 +574,12 @@ export fn answer(value: i32, record: pair) -> i32 {
   }
   return result
 }
-`)
+`,
+        )
         const result = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", input, output], {
-          cwd: root, encoding: "utf8", timeout: 30000,
+          cwd: root,
+          encoding: "utf8",
+          timeout: 30000,
         })
         assert.equal(result.status, 0, result.stderr)
         const { instance } = await WebAssembly.instantiate(await readFile(output))
@@ -631,7 +598,9 @@ test("bootstrap compiler executes repeated local, while and conditional statemen
   const input = join(directory, "input.matra")
   const output = join(directory, "output.wasm")
   try {
-    const statements = Array.from({ length: 12 }, (_, index) => `
+    const statements = Array.from(
+      { length: 12 },
+      (_, index) => `
   let value${index} = identity(${index})
   while value${index} < ${index + 1} {
     value${index} = value${index} + 1
@@ -649,8 +618,11 @@ test("bootstrap compiler executes repeated local, while and conditional statemen
     }
   }
   result = result + 2
-`).join("")
-    await writeFile(input, `module demo
+`,
+    ).join("")
+    await writeFile(
+      input,
+      `module demo
 fn identity(value: i32) -> i32 { return value }
 export fn answer(flag: i32) -> i32 {
   flag = flag + 0
@@ -659,7 +631,8 @@ ${statements}
   let final_value = result + 10
   return final_value
 }
-`)
+`,
+    )
     const compiler = await WebAssembly.instantiate(await readFile(await cachedCompiler()))
     const { alloc, compile, memory } = compiler.instance.exports
     memory.grow(64)
@@ -677,7 +650,9 @@ ${statements}
     for (const ending of ["}", "", "123 return value }", "let other = 2 }"]) {
       await writeFile(input, `module demo\nfn answer() -> i32 { let value = 1 ${ending}`)
       const invalid = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", input, output], {
-        cwd: root, encoding: "utf8", timeout: 30000,
+        cwd: root,
+        encoding: "utf8",
+        timeout: 30000,
       })
       assert.equal(invalid.status, 1, invalid.stderr)
       assert.match(invalid.stderr, /parse error: expected return/)
@@ -688,8 +663,11 @@ ${statements}
 })
 
 test("bootstrap compiler emits declarations and arithmetic returns inside a conditional", async () => {
-  const { instance: { exports: { alloc, compile, memory } } } =
-    await WebAssembly.instantiate(await readFile(await cachedCompiler()))
+  const {
+    instance: {
+      exports: { alloc, compile, memory },
+    },
+  } = await WebAssembly.instantiate(await readFile(await cachedCompiler()))
   const source = new TextEncoder().encode(`module demo
 fn identity(value: i32) -> i32 { return value }
 export fn answer(flag: i32) -> i32 {
@@ -714,8 +692,11 @@ export fn answer(flag: i32) -> i32 {
 })
 
 test("bootstrap compiler lowers byte intrinsics in nested assignment expressions", async () => {
-  const { instance: { exports: { alloc, compile, memory } } } =
-    await WebAssembly.instantiate(await readFile(await cachedCompiler()))
+  const {
+    instance: {
+      exports: { alloc, compile, memory },
+    },
+  } = await WebAssembly.instantiate(await readFile(await cachedCompiler()))
   const source = new TextEncoder().encode(`module demo
 fn identity(value: i32) -> i32 { return value }
 export fn answer(prefix: bytes, source: bytes, offset: i32) -> i32 {
@@ -742,8 +723,11 @@ test("bootstrap compiler executes the bootstrap lexer with nested loop returns",
   const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
   const program = markdown.split("```compiler.matra\n")[1]
   const lexer = program.slice(0, program.indexOf("// A temporary execution probe")).replace("fn next_token(", "export fn next_token(")
-  const { instance: { exports: { alloc, compile, memory } } } =
-    await WebAssembly.instantiate(await readFile(await cachedCompiler()))
+  const {
+    instance: {
+      exports: { alloc, compile, memory },
+    },
+  } = await WebAssembly.instantiate(await readFile(await cachedCompiler()))
   memory.grow(32)
   const source = new TextEncoder().encode(lexer)
   const pointer = alloc(source.length)
@@ -752,7 +736,9 @@ test("bootstrap compiler executes the bootstrap lexer with nested loop returns",
   const record = new DataView(memory.buffer, recordPointer, 36)
   assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(source, memory, recordPointer))
   const output = new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
-  const { instance: { exports: generated } } = await WebAssembly.instantiate(output)
+  const {
+    instance: { exports: generated },
+  } = await WebAssembly.instantiate(output)
   for (const [input, offset, expected] of [
     ["abc123_", 0, [1, 0, 7]],
     ["  // comment\nfoo9", 0, [1, 13, 4]],
@@ -767,7 +753,11 @@ test("bootstrap compiler executes the bootstrap lexer with nested loop returns",
     new Uint8Array(generated.memory.buffer, 1024, bytes.length).set(bytes)
     const result = generated.next_token(1024, bytes.length, offset)
     const fields = new DataView(generated.memory.buffer, result, 12)
-    assert.deepEqual([0, 4, 8].map((index) => fields.getInt32(index, true)), expected, input)
+    assert.deepEqual(
+      [0, 4, 8].map(index => fields.getInt32(index, true)),
+      expected,
+      input,
+    )
   }
 })
 
@@ -778,7 +768,11 @@ test("conditional statement length matches emitted comparison and nested block b
     const program = markdown.split("```compiler.matra\n")[1].split("\n```")[0]
     const input = join(directory, "probe.md")
     const output = join(directory, "probe.wasm")
-    await writeFile(input, "```compiler.matra.program\n" + program + `
+    await writeFile(
+      input,
+      "```compiler.matra.program\n" +
+        program +
+        `
 export fn conditional_probe(buffer: bytes, source: bytes, offset: i32) -> i32 {
   let table = function_table(source)
   let function = function_at_index(source, 1)
@@ -787,10 +781,14 @@ export fn conditional_probe(buffer: bytes, source: bytes, offset: i32) -> i32 {
   let end = write_conditional_statement(buffer, 8, source, table, function, statement)
   return length * 65536 + end
 }
-` + "\n```\n")
+` +
+        "\n```\n",
+    )
     const built = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "compiler.matra.program"], { cwd: root, encoding: "utf8" })
     assert.equal(built.status, 0, built.stderr)
-    const { instance: { exports: generated } } = await WebAssembly.instantiate(await readFile(output))
+    const {
+      instance: { exports: generated },
+    } = await WebAssembly.instantiate(await readFile(output))
     generated.memory.grow(32)
     for (const [statement, expected] of [
       ["if left < right { left = 3 }", [0x20, 0, 0x20, 1, 0x48, 4, 0x40, 0x41, 3, 0x21, 0, 0x0b]],
@@ -810,8 +808,14 @@ export fn conditional_probe(buffer: bytes, source: bytes, offset: i32) -> i32 {
       assert.equal(measured & 0xffff, 8 + expected.length, statement)
       const bytes = new Uint8Array(generated.memory.buffer, buffer, 256)
       assert.deepEqual([...bytes.slice(8, 8 + expected.length)], expected, statement)
-      assert.ok(bytes.slice(0, 8).every((byte) => byte === 0xaa), statement)
-      assert.ok(bytes.slice(8 + expected.length).every((byte) => byte === 0xaa), statement)
+      assert.ok(
+        bytes.slice(0, 8).every(byte => byte === 0xaa),
+        statement,
+      )
+      assert.ok(
+        bytes.slice(8 + expected.length).every(byte => byte === 0xaa),
+        statement,
+      )
     }
   } finally {
     await rm(directory, { recursive: true, force: true })
@@ -833,7 +837,11 @@ export fn answer(parameter: item, enabled: i32) -> i32 {
   }
   return 0
 }`)
-    const { instance: { exports: { alloc, compile, memory } } } = await WebAssembly.instantiate(compilerBytes)
+    const {
+      instance: {
+        exports: { alloc, compile, memory },
+      },
+    } = await WebAssembly.instantiate(compilerBytes)
     memory.grow(16)
     const pointer = alloc(source.length)
     new Uint8Array(memory.buffer, pointer, source.length).set(source)
@@ -841,7 +849,9 @@ export fn answer(parameter: item, enabled: i32) -> i32 {
     const record = new DataView(memory.buffer, recordPointer, 36)
     assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(source, memory, recordPointer))
     const output = new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
-    const { instance: { exports: generated } } = await WebAssembly.instantiate(output)
+    const {
+      instance: { exports: generated },
+    } = await WebAssembly.instantiate(output)
     const parameter = new DataView(generated.memory.buffer, 1024, 8)
     parameter.setInt32(0, 7, true)
     parameter.setInt32(4, 41, true)
@@ -856,7 +866,11 @@ test("bootstrap compiler preserves array return body boundaries and both result 
     for (const prefix of ["", "fn identity(value: i32) -> i32 { return value }\n"]) {
       for (const body of ["return data", `let index = 1 ${type === "bytes" ? "byte_set" : "array_set"}(data, index, 42) return data`]) {
         const source = new TextEncoder().encode(`module demo\n${prefix}export fn answer(data: ${type}) -> ${type} { ${body} }`)
-        const { instance: { exports: { alloc, compile, memory } } } = await WebAssembly.instantiate(compilerBytes)
+        const {
+          instance: {
+            exports: { alloc, compile, memory },
+          },
+        } = await WebAssembly.instantiate(compilerBytes)
         memory.grow(16)
         const pointer = alloc(source.length)
         new Uint8Array(memory.buffer, pointer, source.length).set(source)
@@ -864,7 +878,9 @@ test("bootstrap compiler preserves array return body boundaries and both result 
         const record = new DataView(memory.buffer, recordPointer, 36)
         assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(source, memory, recordPointer))
         const output = new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
-        const { instance: { exports: generated } } = await WebAssembly.instantiate(output)
+        const {
+          instance: { exports: generated },
+        } = await WebAssembly.instantiate(output)
         assert.deepEqual(generated.answer(1024, 7), [1024, 7], `${type}: ${prefix}${body}`)
         if (body !== "return data") {
           const values = new DataView(generated.memory.buffer)
@@ -879,7 +895,11 @@ test("bootstrap compiler executes signed LEB writes inside nested loop condition
   const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
   const writer = markdown.slice(markdown.indexOf("fn write_i32_leb("), markdown.indexOf("fn u32_leb_length(")).replace("fn write_i32_leb(", "export fn write_i32_leb(")
   const source = new TextEncoder().encode("module demo\nfn negate_i32(value: i32) -> i32 { let zero = 0 return zero - value }\n" + writer)
-  const { instance: { exports: { alloc, compile, memory } } } = await WebAssembly.instantiate(await readFile(await cachedCompiler()))
+  const {
+    instance: {
+      exports: { alloc, compile, memory },
+    },
+  } = await WebAssembly.instantiate(await readFile(await cachedCompiler()))
   memory.grow(32)
   const pointer = alloc(source.length)
   new Uint8Array(memory.buffer, pointer, source.length).set(source)
@@ -887,18 +907,28 @@ test("bootstrap compiler executes signed LEB writes inside nested loop condition
   const record = new DataView(memory.buffer, recordPointer, 36)
   assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(source, memory, recordPointer))
   const output = new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
-  const { instance: { exports: generated } } = await WebAssembly.instantiate(output)
+  const {
+    instance: { exports: generated },
+  } = await WebAssembly.instantiate(output)
   for (const [value, expected] of [
-    [0, [0]], [63, [63]], [64, [0xc0, 0]], [127, [0xff, 0]], [128, [0x80, 1]],
-    [-1, [0x7f]], [-64, [0x40]], [-65, [0xbf, 0x7f]], [-128, [0x80, 0x7f]],
-    [2147483647, [0xff, 0xff, 0xff, 0xff, 7]], [-2147483648, [0x80, 0x80, 0x80, 0x80, 0x78]],
+    [0, [0]],
+    [63, [63]],
+    [64, [0xc0, 0]],
+    [127, [0xff, 0]],
+    [128, [0x80, 1]],
+    [-1, [0x7f]],
+    [-64, [0x40]],
+    [-65, [0xbf, 0x7f]],
+    [-128, [0x80, 0x7f]],
+    [2147483647, [0xff, 0xff, 0xff, 0xff, 7]],
+    [-2147483648, [0x80, 0x80, 0x80, 0x80, 0x78]],
   ]) {
     const bytes = new Uint8Array(generated.memory.buffer, 1024, 16)
     bytes.fill(0xaa)
     assert.deepEqual(generated.write_i32_leb(1024, 16, 3, value), [1024, 16])
     assert.deepEqual([...bytes.slice(3, 3 + expected.length)], expected, `${value}`)
-    assert.ok(bytes.slice(0, 3).every((byte) => byte === 0xaa))
-    assert.ok(bytes.slice(3 + expected.length).every((byte) => byte === 0xaa))
+    assert.ok(bytes.slice(0, 3).every(byte => byte === 0xaa))
+    assert.ok(bytes.slice(3 + expected.length).every(byte => byte === 0xaa))
   }
 })
 
@@ -922,7 +952,11 @@ export fn answer(data: bytes, table: [i32], flag: i32) -> i32 {
   }
   return byte_length(result)
 }`)
-  const { instance: { exports: { alloc, compile, memory } } } = await WebAssembly.instantiate(await readFile(await cachedCompiler()))
+  const {
+    instance: {
+      exports: { alloc, compile, memory },
+    },
+  } = await WebAssembly.instantiate(await readFile(await cachedCompiler()))
   memory.grow(32)
   const pointer = alloc(source.length)
   new Uint8Array(memory.buffer, pointer, source.length).set(source)
@@ -930,7 +964,9 @@ export fn answer(data: bytes, table: [i32], flag: i32) -> i32 {
   const record = new DataView(memory.buffer, recordPointer, 36)
   assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(source, memory, recordPointer))
   const output = new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
-  const { instance: { exports: generated } } = await WebAssembly.instantiate(output)
+  const {
+    instance: { exports: generated },
+  } = await WebAssembly.instantiate(output)
   const bytes = new Uint8Array(generated.memory.buffer, 1024, 4)
   bytes.set([1, 0, 0, 0])
   assert.equal(generated.answer(1024, 4, 2048, 5, 2), 4)
@@ -940,11 +976,7 @@ export fn answer(data: bytes, table: [i32], flag: i32) -> i32 {
 
 test("bootstrap compiler preserves bytes, array and struct arguments in conditionals", async () => {
   const compilerBytes = await readFile(await cachedCompiler())
-  for (const condition of [
-    "matches(source, table, value, byte_length(source)) == 1",
-    "identity(1) == matches(source, table, value, 3)",
-    "matches(source, table, value, byte_length(source)) == identity(1)",
-  ]) {
+  for (const condition of ["matches(source, table, value, byte_length(source)) == 1", "identity(1) == matches(source, table, value, 3)", "matches(source, table, value, byte_length(source)) == identity(1)"]) {
     const source = new TextEncoder().encode(`module demo
 struct token { kind: i32 start: i32 length: i32 }
 fn identity(value: i32) -> i32 { return value }
@@ -964,7 +996,11 @@ export fn answer(source: bytes, table: [i32], value: token) -> i32 {
   }
   return 0
 }`)
-    const { instance: { exports: { alloc, compile, memory } } } = await WebAssembly.instantiate(compilerBytes)
+    const {
+      instance: {
+        exports: { alloc, compile, memory },
+      },
+    } = await WebAssembly.instantiate(compilerBytes)
     memory.grow(16)
     const pointer = alloc(source.length)
     new Uint8Array(memory.buffer, pointer, source.length).set(source)
@@ -972,7 +1008,9 @@ export fn answer(source: bytes, table: [i32], value: token) -> i32 {
     const record = new DataView(memory.buffer, recordPointer, 36)
     assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(source, memory, recordPointer))
     const output = new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
-    const { instance: { exports: generated } } = await WebAssembly.instantiate(output)
+    const {
+      instance: { exports: generated },
+    } = await WebAssembly.instantiate(output)
     new Uint8Array(generated.memory.buffer, 1024, 3).set([9, 3, 7])
     const value = new DataView(generated.memory.buffer, 2048, 12)
     value.setInt32(4, 1, true)
@@ -985,14 +1023,20 @@ export fn answer(source: bytes, table: [i32], value: token) -> i32 {
 test("bootstrap compiler executes type_end with a conditional struct local", async () => {
   const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
   const program = markdown.split("```compiler.matra\n")[1]
-  const source = new TextEncoder().encode(program.slice(0, program.indexOf("fn read_small_integer(")) + `
+  const source = new TextEncoder().encode(
+    program.slice(0, program.indexOf("fn read_small_integer(")) +
+      `
 export fn probe(source: bytes) -> token {
   let first = next_token(source, 0)
   return type_end(source, first)
 }
-`)
-  const { instance: { exports: { alloc, compile, memory } } } =
-    await WebAssembly.instantiate(await readFile(await cachedCompiler()))
+`,
+  )
+  const {
+    instance: {
+      exports: { alloc, compile, memory },
+    },
+  } = await WebAssembly.instantiate(await readFile(await cachedCompiler()))
   memory.grow(32)
   const pointer = alloc(source.length)
   new Uint8Array(memory.buffer, pointer, source.length).set(source)
@@ -1000,20 +1044,33 @@ export fn probe(source: bytes) -> token {
   const record = new DataView(memory.buffer, recordPointer, 36)
   assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(source, memory, recordPointer))
   const output = new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
-  const { instance: { exports: generated } } = await WebAssembly.instantiate(output)
-  for (const [input, expected] of [["[i32]", [3, 4, 1]], ["i32", [1, 0, 3]]]) {
+  const {
+    instance: { exports: generated },
+  } = await WebAssembly.instantiate(output)
+  for (const [input, expected] of [
+    ["[i32]", [3, 4, 1]],
+    ["i32", [1, 0, 3]],
+  ]) {
     const bytes = new TextEncoder().encode(input)
     new Uint8Array(generated.memory.buffer, 1024, bytes.length).set(bytes)
     const result = generated.probe(1024, bytes.length)
     const fields = new DataView(generated.memory.buffer, result, 12)
-    assert.deepEqual([0, 4, 8].map((index) => fields.getInt32(index, true)), expected, input)
+    assert.deepEqual(
+      [0, 4, 8].map(index => fields.getInt32(index, true)),
+      expected,
+      input,
+    )
   }
 })
 
 test("bootstrap compiler lowers struct returns in both loop conditional branches", async () => {
   const compilerBytes = await readFile(await cachedCompiler())
   for (const condition of ["identity(value) == 1", "value == 1"]) {
-    const { instance: { exports: { alloc, compile, memory } } } = await WebAssembly.instantiate(compilerBytes)
+    const {
+      instance: {
+        exports: { alloc, compile, memory },
+      },
+    } = await WebAssembly.instantiate(compilerBytes)
     memory.grow(16)
     const source = new TextEncoder().encode(`module demo
 struct token { kind: i32 start: i32 length: i32 }
@@ -1035,12 +1092,22 @@ export fn answer(source: bytes, value: i32) -> token {
     const record = new DataView(memory.buffer, recordPointer, 36)
     assert.equal(record.getInt32(0, true), 0, formatCompilerDiagnostic(source, memory, recordPointer))
     const output = new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true))
-    const { instance: { exports: generated } } = await WebAssembly.instantiate(output)
+    const {
+      instance: { exports: generated },
+    } = await WebAssembly.instantiate(output)
     new Uint8Array(generated.memory.buffer)[1024] = 128
-    for (const [value, expected] of [[1, [1, 2, 128]], [2, [2, 1, 129]], [0, [0, 0, 0]]]) {
+    for (const [value, expected] of [
+      [1, [1, 2, 128]],
+      [2, [2, 1, 129]],
+      [0, [0, 0, 0]],
+    ]) {
       const result = generated.answer(1024, 1, value)
       const fields = new DataView(generated.memory.buffer, result, 12)
-      assert.deepEqual([0, 4, 8].map((index) => fields.getInt32(index, true)), expected, condition)
+      assert.deepEqual(
+        [0, 4, 8].map(index => fields.getInt32(index, true)),
+        expected,
+        condition,
+      )
     }
   }
 })
@@ -1050,7 +1117,9 @@ test("seed reclaims temporary structs while preserving returned values and escap
   try {
     const input = join(directory, "input.md")
     const output = join(directory, "output.wasm")
-    await writeFile(input, `\`\`\`arena.matra.program
+    await writeFile(
+      input,
+      `\`\`\`arena.matra.program
 module arena
 struct pair { left: i32 right: i32 }
 export fn heap() -> i32 {
@@ -1084,19 +1153,23 @@ export fn mutate(output: bytes) -> i32 {
   return temporary.left
 }
 \`\`\`
-`)
+`,
+    )
     const compiled = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output], {
-      cwd: root, encoding: "utf8",
+      cwd: root,
+      encoding: "utf8",
     })
     assert.equal(compiled.status, 0, compiled.stderr)
-    const { instance: { exports: e } } = await WebAssembly.instantiate(await readFile(output))
+    const {
+      instance: { exports: e },
+    } = await WebAssembly.instantiate(await readFile(output))
     const initial = e.heap()
     for (let index = 0; index < 20000; index++) {
       assert.equal(e.scalar(index), index === 0 ? 0 : index + 1)
     }
     assert.equal(e.heap(), initial)
     const pointer = e.recursive(100)
-    const fields = (address) => [0, 4].map((offset) => new DataView(e.memory.buffer).getInt32(address + offset, true))
+    const fields = address => [0, 4].map(offset => new DataView(e.memory.buffer).getInt32(address + offset, true))
     assert.deepEqual(fields(pointer), [120, 222])
     assert.equal(e.heap(), initial + 8)
     const retained = e.retain(pointer)
@@ -1120,94 +1193,93 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-"))
   const input = join(directory, "example.md")
   const output = join(directory, "example.wasm")
-  await writeFile(input, [
-    "# Example",
-    "",
-    "```math.matra.program",
-    "module math",
-    "",
-    "fn double(value: i32) -> i32 {",
-    "  return value * 2",
-    "}",
-    "```",
-    "",
-    "```answer.matra.program",
-    "module example",
-    "",
-    "import math",
-    "",
-    "struct token {",
-    "  kind: i32",
-    "  start: i32",
-    "  length: i32",
-    "}",
-    "",
-    "fn retain_token(value: token) -> token {",
-    "  return value",
-    "}",
-    "",
-    "export fn token_length() -> i32 {",
-    "  let value = retain_token(token(20, 21, 22))",
-    "  return value.length",
-    "}",
-    "",
-    "export fn first_byte(source: bytes) -> i32 {",
-    "  return byte_at(source, 0)",
-    "}",
-    "",
-    "export fn source_length(source: bytes) -> i32 {",
-    "  return byte_length(source)",
-    "}",
-    "",
-    "fn first_byte_of(source: bytes) -> i32 {",
-    "  return byte_at(source, 0)",
-    "}",
-    "",
-    "export fn forwarded_first_byte(source: bytes) -> i32 {",
-    "  return first_byte_of(source)",
-    "}",
-    "",
-    "fn pass_through(source: bytes) -> bytes {",
-    "  return source",
-    "}",
-    "",
-    "export fn retain(source: bytes) -> bytes {",
-    "  let tree = pass_through(source)",
-    "  return tree",
-    "}",
-    "",
-    "export fn array_value() -> i32 {",
-    "  let values: [i32] = allocate_i32_array(2)",
-    "  array_set(values, 0, 20)",
-    "  array_set(values, 1, 22)",
-    "  return array_get(values, 0) + array_get(values, 1)",
-    "}",
-    "",
-    "export fn answer(input: i32) -> i32 {",
-    "  let doubled = double(input)",
-    "  let result: i32 = doubled + 2",
-    "  while result < 100 {",
-    "    if result == 42 {",
-    "      break",
-    "    }",
-    "    result = result + 1",
-    "  }",
-    "  if result == 42 {",
-    "    return result",
-    "  } else {",
-    "    return 0",
-    "  }",
-    "}",
-    "```",
-    "",
-  ].join("\n"))
+  await writeFile(
+    input,
+    [
+      "# Example",
+      "",
+      "```math.matra.program",
+      "module math",
+      "",
+      "fn double(value: i32) -> i32 {",
+      "  return value * 2",
+      "}",
+      "```",
+      "",
+      "```answer.matra.program",
+      "module example",
+      "",
+      "import math",
+      "",
+      "struct token {",
+      "  kind: i32",
+      "  start: i32",
+      "  length: i32",
+      "}",
+      "",
+      "fn retain_token(value: token) -> token {",
+      "  return value",
+      "}",
+      "",
+      "export fn token_length() -> i32 {",
+      "  let value = retain_token(token(20, 21, 22))",
+      "  return value.length",
+      "}",
+      "",
+      "export fn first_byte(source: bytes) -> i32 {",
+      "  return byte_at(source, 0)",
+      "}",
+      "",
+      "export fn source_length(source: bytes) -> i32 {",
+      "  return byte_length(source)",
+      "}",
+      "",
+      "fn first_byte_of(source: bytes) -> i32 {",
+      "  return byte_at(source, 0)",
+      "}",
+      "",
+      "export fn forwarded_first_byte(source: bytes) -> i32 {",
+      "  return first_byte_of(source)",
+      "}",
+      "",
+      "fn pass_through(source: bytes) -> bytes {",
+      "  return source",
+      "}",
+      "",
+      "export fn retain(source: bytes) -> bytes {",
+      "  let tree = pass_through(source)",
+      "  return tree",
+      "}",
+      "",
+      "export fn array_value() -> i32 {",
+      "  let values: [i32] = allocate_i32_array(2)",
+      "  array_set(values, 0, 20)",
+      "  array_set(values, 1, 22)",
+      "  return array_get(values, 0) + array_get(values, 1)",
+      "}",
+      "",
+      "export fn answer(input: i32) -> i32 {",
+      "  let doubled = double(input)",
+      "  let result: i32 = doubled + 2",
+      "  while result < 100 {",
+      "    if result == 42 {",
+      "      break",
+      "    }",
+      "    result = result + 1",
+      "  }",
+      "  if result == 42 {",
+      "    return result",
+      "  } else {",
+      "    return 0",
+      "  }",
+      "}",
+      "```",
+      "",
+    ].join("\n"),
+  )
 
   try {
-    const result = spawnSync(
-      "cargo",
-      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "answer.matra.program"],
-      { cwd: root, encoding: "utf8" },
-    )
+    const result = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output, "--entry", "answer.matra.program"], { cwd: root, encoding: "utf8" })
     assert.equal(result.status, 0, result.stderr)
 
     const module = await WebAssembly.instantiate(await readFile(output))
@@ -1230,11 +1302,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
   const output = join(directory, "compiler.wasm")
 
   try {
-    const result = spawnSync(
-      "cargo",
-      ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", fileURLToPath(new URL("crates/matra-seed/examples/compiler.md", root)), output, "--entry", "compiler.matra"],
-      { cwd: root, encoding: "utf8" },
-    )
+    const result = spawnSync("cargo", ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", fileURLToPath(new URL("crates/matra-seed/examples/compiler.md", root)), output, "--entry", "compiler.matra"], { cwd: root, encoding: "utf8" })
     assert.equal(result.status, 0, result.stderr)
 
     const module = await WebAssembly.instantiate(await readFile(output))
@@ -1266,10 +1334,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     assert.equal(reproducibleResult.stdout, "Built bootstrap compiler cache.\n")
     const reproducibleEntries = await readdir(reproducibleEnvironment.MATRA_BOOTSTRAP_CACHE_DIR)
     assert.deepEqual(reproducibleEntries, cacheEntries)
-    assert.deepEqual(
-      await readFile(join(reproducibleEnvironment.MATRA_BOOTSTRAP_CACHE_DIR, reproducibleEntries[0])),
-      await readFile(join(pipelineEnvironment.MATRA_BOOTSTRAP_CACHE_DIR, cacheEntries[0])),
-    )
+    assert.deepEqual(await readFile(join(reproducibleEnvironment.MATRA_BOOTSTRAP_CACHE_DIR, reproducibleEntries[0])), await readFile(join(pipelineEnvironment.MATRA_BOOTSTRAP_CACHE_DIR, cacheEntries[0])))
 
     const materializedCompiler = join(directory, "matra-bootstrap.wasm")
     const materializedResult = spawnSync("node", ["crates/matra-seed/host/materialize.mjs", "--", materializedCompiler], { cwd: root, encoding: "utf8", env: pipelineEnvironment })
@@ -1303,12 +1368,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     await writeFile(hostInput, "module demo\nfn answer() -> i32 { return value }")
     const hostDiagnostic = spawnSync("node", ["crates/matra-seed/host/compile.mjs", output, hostInput, hostOutput], { cwd: root, encoding: "utf8" })
     assert.equal(hostDiagnostic.status, 1)
-    const expectedHostDiagnostic = [
-      `${hostInput}:2:29: parse error: expected value`,
-      "fn answer() -> i32 { return value }",
-      "                            ^^^^^",
-      "",
-    ].join("\n")
+    const expectedHostDiagnostic = [`${hostInput}:2:29: parse error: expected value`, "fn answer() -> i32 { return value }", "                            ^^^^^", ""].join("\n")
     assert.equal(hostDiagnostic.stderr, expectedHostDiagnostic)
     const pipelineDiagnostic = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", hostInput, pipelineOutput], { cwd: root, encoding: "utf8", env: pipelineEnvironment })
     assert.equal(pipelineDiagnostic.status, 1)
@@ -1346,41 +1406,30 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     const whitespaceRecordPointer = module.instance.exports.compile(whitespacePointer, 3)
     const whitespaceRecord = new DataView(module.instance.exports.memory.buffer, whitespaceRecordPointer, 20)
     assert.equal(whitespaceRecord.getInt32(0, true), 0)
-    const whitespaceOutput = new Uint8Array(module.instance.exports.memory.buffer,
-      whitespaceRecord.getInt32(4, true), whitespaceRecord.getInt32(8, true))
+    const whitespaceOutput = new Uint8Array(module.instance.exports.memory.buffer, whitespaceRecord.getInt32(4, true), whitespaceRecord.getInt32(8, true))
     assert.equal((await instantiateUnified(whitespaceOutput)).run(), null)
 
     const identifierPointer = module.instance.exports.alloc(8)
-    new Uint8Array(module.instance.exports.memory.buffer, identifierPointer, 8).set(
-      new TextEncoder().encode("  token7"),
-    )
+    new Uint8Array(module.instance.exports.memory.buffer, identifierPointer, 8).set(new TextEncoder().encode("  token7"))
     assert.equal(module.instance.exports.token_summary(identifierPointer, 8), 1206)
 
     const integerPointer = module.instance.exports.alloc(5)
-    new Uint8Array(module.instance.exports.memory.buffer, integerPointer, 5).set(
-      new TextEncoder().encode("\n1234"),
-    )
+    new Uint8Array(module.instance.exports.memory.buffer, integerPointer, 5).set(new TextEncoder().encode("\n1234"))
     assert.equal(module.instance.exports.token_summary(integerPointer, 5), 2104)
 
     const commentPointer = module.instance.exports.alloc(10)
-    new Uint8Array(module.instance.exports.memory.buffer, commentPointer, 10).set(
-      new TextEncoder().encode("// note\nid"),
-    )
+    new Uint8Array(module.instance.exports.memory.buffer, commentPointer, 10).set(new TextEncoder().encode("// note\nid"))
     assert.equal(module.instance.exports.token_summary(commentPointer, 10), 1802)
 
     const programPointer = module.instance.exports.alloc(23)
-    new Uint8Array(module.instance.exports.memory.buffer, programPointer, 23).set(
-      new TextEncoder().encode("module demo\nimport math"),
-    )
+    new Uint8Array(module.instance.exports.memory.buffer, programPointer, 23).set(new TextEncoder().encode("module demo\nimport math"))
     const programRecordPointer = module.instance.exports.compile(programPointer, 23)
     const programRecord = new DataView(module.instance.exports.memory.buffer, programRecordPointer, 20)
     assert.equal(programRecord.getInt32(0, true), 0)
     assert.equal(programRecord.getInt32(8, true), 8)
 
     const invalidProgramPointer = module.instance.exports.alloc(22)
-    new Uint8Array(module.instance.exports.memory.buffer, invalidProgramPointer, 22).set(
-      new TextEncoder().encode("module demo import 123"),
-    )
+    new Uint8Array(module.instance.exports.memory.buffer, invalidProgramPointer, 22).set(new TextEncoder().encode("module demo import 123"))
     const invalidProgramRecordPointer = module.instance.exports.compile(invalidProgramPointer, 22)
     const invalidProgramRecord = new DataView(module.instance.exports.memory.buffer, invalidProgramRecordPointer, 36)
     assert.equal(invalidProgramRecord.getInt32(0, true), 1)
@@ -1392,11 +1441,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     const invalidProgramDiagnosticLength = invalidProgramRecord.getInt32(16, true)
     const invalidProgramDiagnostic = new Uint8Array(module.instance.exports.memory.buffer, invalidProgramDiagnosticPointer, invalidProgramDiagnosticLength)
     assert.equal(new TextDecoder().decode(invalidProgramDiagnostic), "parse error at 19")
-    assert.equal(formatCompilerDiagnostic(new TextEncoder().encode("module demo import 123"), module.instance.exports.memory, invalidProgramRecordPointer), [
-      "parse error: expected identifier at 1:20",
-      "module demo import 123",
-      "                   ^^^",
-    ].join("\n"))
+    assert.equal(formatCompilerDiagnostic(new TextEncoder().encode("module demo import 123"), module.instance.exports.memory, invalidProgramRecordPointer), ["parse error: expected identifier at 1:20", "module demo import 123", "                   ^^^"].join("\n"))
 
     const functionSource = new TextEncoder().encode("module demo\nfn answer() -> i32 { return 42 }")
     const functionPointer = module.instance.exports.alloc(functionSource.length)
@@ -1688,7 +1733,9 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     const compiledStructParameter = await WebAssembly.instantiate(structParameterOutput)
     assert.equal(compiledStructParameter.instance.exports.retain(42), 42)
 
-    const structFieldInitializerSource = new TextEncoder().encode("module demo\nstruct pair { left: i32 right: i32 }\nfn make() -> pair { return pair(0, 0) }\nexport fn field_values(value: pair, expected: i32) -> i32 { let saved = value.left if expected == 0 { return 0 } let saved_after = value.right return saved + saved_after }")
+    const structFieldInitializerSource = new TextEncoder().encode(
+      "module demo\nstruct pair { left: i32 right: i32 }\nfn make() -> pair { return pair(0, 0) }\nexport fn field_values(value: pair, expected: i32) -> i32 { let saved = value.left if expected == 0 { return 0 } let saved_after = value.right return saved + saved_after }",
+    )
     const structFieldInitializerPointer = module.instance.exports.alloc(structFieldInitializerSource.length)
     new Uint8Array(module.instance.exports.memory.buffer, structFieldInitializerPointer, structFieldInitializerSource.length).set(structFieldInitializerSource)
     const structFieldInitializerRecordPointer = module.instance.exports.compile(structFieldInitializerPointer, structFieldInitializerSource.length)
@@ -1803,7 +1850,9 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     const compiledLocalCall = await WebAssembly.instantiate(localCallOutput)
     assert.equal(compiledLocalCall.instance.exports.calculate(40), 42)
 
-    const localFieldArgumentSource = new TextEncoder().encode("module demo\nstruct span { start: i32 length: i32 }\nfn make() -> span { return span(0, 0) }\nfn sum(left: i32, right: i32) -> i32 { let result = left + right return result }\nexport fn resolve(value: span, delta: i32) -> i32 { let total = sum(value.start + delta, value.length + 1) return total }")
+    const localFieldArgumentSource = new TextEncoder().encode(
+      "module demo\nstruct span { start: i32 length: i32 }\nfn make() -> span { return span(0, 0) }\nfn sum(left: i32, right: i32) -> i32 { let result = left + right return result }\nexport fn resolve(value: span, delta: i32) -> i32 { let total = sum(value.start + delta, value.length + 1) return total }",
+    )
     const localFieldArgumentPointer = module.instance.exports.alloc(localFieldArgumentSource.length)
     new Uint8Array(module.instance.exports.memory.buffer, localFieldArgumentPointer, localFieldArgumentSource.length).set(localFieldArgumentSource)
     const localFieldArgumentRecordPointer = module.instance.exports.compile(localFieldArgumentPointer, localFieldArgumentSource.length)
@@ -1818,7 +1867,9 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     localFieldArgumentMemory.setInt32(4, 7, true)
     assert.equal(compiledLocalFieldArgument.instance.exports.resolve(0, 3), 16)
 
-    const whileSource = new TextEncoder().encode("module demo\nfn increment(value: i32) -> i32 { let result = value + 1 return result }\nexport fn count(value: i32) -> i32 { let result = 0 while result < value { result = result + increment(0) - 0 } if result == value { return 7 } let final = increment(result) if increment(increment(final)) == 3 { while final < 2 { final = final + 1 } return final } return final }")
+    const whileSource = new TextEncoder().encode(
+      "module demo\nfn increment(value: i32) -> i32 { let result = value + 1 return result }\nexport fn count(value: i32) -> i32 { let result = 0 while result < value { result = result + increment(0) - 0 } if result == value { return 7 } let final = increment(result) if increment(increment(final)) == 3 { while final < 2 { final = final + 1 } return final } return final }",
+    )
     const whilePointer = module.instance.exports.alloc(whileSource.length)
     new Uint8Array(module.instance.exports.memory.buffer, whilePointer, whileSource.length).set(whileSource)
     const whileRecordPointer = module.instance.exports.compile(whilePointer, whileSource.length)
@@ -1855,7 +1906,9 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     const compiledWhileConditional = await WebAssembly.instantiate(whileConditionalOutput)
     assert.equal(compiledWhileConditional.instance.exports.count(5), 5)
 
-    const whileConditionalFieldSource = new TextEncoder().encode("module demo\nstruct pair { left: i32 right: i32 }\nfn make() -> pair { return pair(0, 0) }\nfn read(value: i32) -> i32 { return value }\nexport fn matches(value: pair, index: i32) -> i32 { let result = 0 while result < 1 { if read(value.left + index) == read(value.right + index) { return 1 } else { result = result + 2 } } return result }")
+    const whileConditionalFieldSource = new TextEncoder().encode(
+      "module demo\nstruct pair { left: i32 right: i32 }\nfn make() -> pair { return pair(0, 0) }\nfn read(value: i32) -> i32 { return value }\nexport fn matches(value: pair, index: i32) -> i32 { let result = 0 while result < 1 { if read(value.left + index) == read(value.right + index) { return 1 } else { result = result + 2 } } return result }",
+    )
     const whileConditionalFieldPointer = module.instance.exports.alloc(whileConditionalFieldSource.length)
     new Uint8Array(module.instance.exports.memory.buffer, whileConditionalFieldPointer, whileConditionalFieldSource.length).set(whileConditionalFieldSource)
     const whileConditionalFieldRecordPointer = module.instance.exports.compile(whileConditionalFieldPointer, whileConditionalFieldSource.length)
@@ -1872,7 +1925,9 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     whileConditionalFieldMemory.setInt32(4, 4, true)
     assert.equal(compiledWhileConditionalField.instance.exports.matches(0, 1), 2)
 
-    const whileBreakSource = new TextEncoder().encode("module demo\nfn identity(value: i32) -> i32 { return value }\nfn is_zero(value: i32) -> i32 { if value == 0 { return 1 } return 0 }\nexport fn stop_before(limit: i32) -> i32 { let result = 0 while result < 10 { if is_zero(identity(result)) == 1 { while result < 1 { result = result + 1 } } else { if result >= 0 { if result + 1 == limit { break } } else { break } result = result + 1 } } return result }")
+    const whileBreakSource = new TextEncoder().encode(
+      "module demo\nfn identity(value: i32) -> i32 { return value }\nfn is_zero(value: i32) -> i32 { if value == 0 { return 1 } return 0 }\nexport fn stop_before(limit: i32) -> i32 { let result = 0 while result < 10 { if is_zero(identity(result)) == 1 { while result < 1 { result = result + 1 } } else { if result >= 0 { if result + 1 == limit { break } } else { break } result = result + 1 } } return result }",
+    )
     const whileBreakPointer = module.instance.exports.alloc(whileBreakSource.length)
     new Uint8Array(module.instance.exports.memory.buffer, whileBreakPointer, whileBreakSource.length).set(whileBreakSource)
     const whileBreakRecordPointer = module.instance.exports.compile(whileBreakPointer, whileBreakSource.length)
@@ -1897,11 +1952,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     const compiledLongName = await WebAssembly.instantiate(longNameOutput)
     assert.equal(compiledLongName.instance.exports[longFunctionName](), 42)
 
-    const largeSectionSourceText = [
-      "module demo",
-      ...Array.from({ length: 129 }, (_, index) => `fn value${index}() -> i32 { return ${index} }`),
-      "export fn answer() -> i32 { return value128() }",
-    ].join("\n")
+    const largeSectionSourceText = ["module demo", ...Array.from({ length: 129 }, (_, index) => `fn value${index}() -> i32 { return ${index} }`), "export fn answer() -> i32 { return value128() }"].join("\n")
     const largeCompiler = await WebAssembly.instantiate(await readFile(output))
     largeCompiler.instance.exports.memory.grow(2)
     const largeSectionSource = new TextEncoder().encode(largeSectionSourceText)
@@ -1930,11 +1981,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     const unknownCallDiagnosticLength = unknownCallRecord.getInt32(16, true)
     const unknownCallDiagnostic = new Uint8Array(module.instance.exports.memory.buffer, unknownCallDiagnosticPointer, unknownCallDiagnosticLength)
     assert.equal(new TextDecoder().decode(unknownCallDiagnostic), `unknown function at ${unknownCallSourceText.indexOf("other")}`)
-    assert.equal(formatCompilerDiagnostic(unknownCallSource, module.instance.exports.memory, unknownCallRecordPointer), [
-      "unknown function at 3:29",
-      "fn answer() -> i32 { return other() }",
-      "                            ^^^^^",
-    ].join("\n"))
+    assert.equal(formatCompilerDiagnostic(unknownCallSource, module.instance.exports.memory, unknownCallRecordPointer), ["unknown function at 3:29", "fn answer() -> i32 { return other() }", "                            ^^^^^"].join("\n"))
 
     const tableSourceText = "module demo\nfn one() -> i32 { return 1 }\nfn two() -> i32 { return 2 }\nfn three() -> i32 { return 3 }"
     const tableSource = new TextEncoder().encode(tableSourceText)
@@ -1956,11 +2003,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     assert.equal(invalidFunctionRecord.getInt32(28, true), "value".length)
     assert.equal(invalidFunctionRecord.getInt32(32, true), 12)
     assert.deepEqual(sourcePosition(invalidFunctionSource, invalidFunctionRecord.getInt32(24, true)), { line: 2, column: 29 })
-    assert.equal(formatCompilerDiagnostic(invalidFunctionSource, module.instance.exports.memory, invalidFunctionRecordPointer), [
-      "parse error: expected value at 2:29",
-      "fn answer() -> i32 { return value }",
-      "                            ^^^^^",
-    ].join("\n"))
+    assert.equal(formatCompilerDiagnostic(invalidFunctionSource, module.instance.exports.memory, invalidFunctionRecordPointer), ["parse error: expected value at 2:29", "fn answer() -> i32 { return value }", "                            ^^^^^"].join("\n"))
     const invalidFunctionDiagnosticPointer = invalidFunctionRecord.getInt32(12, true)
     const invalidFunctionDiagnosticLength = invalidFunctionRecord.getInt32(16, true)
     const invalidFunctionDiagnostic = new Uint8Array(module.instance.exports.memory.buffer, invalidFunctionDiagnosticPointer, invalidFunctionDiagnosticLength)
@@ -1979,11 +2022,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     const incompleteFunctionDiagnosticLength = incompleteFunctionRecord.getInt32(16, true)
     const incompleteFunctionDiagnostic = new Uint8Array(module.instance.exports.memory.buffer, incompleteFunctionDiagnosticPointer, incompleteFunctionDiagnosticLength)
     assert.equal(new TextDecoder().decode(incompleteFunctionDiagnostic), `parse error at ${incompleteFunctionSourceText.length}`)
-    assert.equal(formatCompilerDiagnostic(incompleteFunctionSource, module.instance.exports.memory, incompleteFunctionRecordPointer), [
-      "parse error: expected parameter or ) at 2:11",
-      "fn answer(",
-      "          ^",
-    ].join("\n"))
+    assert.equal(formatCompilerDiagnostic(incompleteFunctionSource, module.instance.exports.memory, incompleteFunctionRecordPointer), ["parse error: expected parameter or ) at 2:11", "fn answer(", "          ^"].join("\n"))
   } finally {
     await rm(directory, { recursive: true, force: true })
   }

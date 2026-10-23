@@ -6,7 +6,11 @@
   "exports": {
     "./matra.css": "./matra.css"
   },
-  "files": ["matra.css", "README.md", "LICENSE"],
+  "files": [
+    "matra.css",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "node --check scripts/check-css.mjs",
     "check": "pnpm run build",

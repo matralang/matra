@@ -1,12 +1,5 @@
 import { DOMParser, NAMESPACE, type Element as XmlElement } from "@xmldom/xmldom"
-import type {
-  ContentMathMLApplication,
-  ContentMathMLExpression,
-  ContentMathMLNumber,
-  ContentMathMLSymbol,
-  MathJson,
-  MathJsonFunction,
-} from "./types.js"
+import type { ContentMathMLApplication, ContentMathMLExpression, ContentMathMLNumber, ContentMathMLSymbol, MathJson, MathJsonFunction } from "./types.js"
 
 const MATHML_NAMESPACE = "http://www.w3.org/1998/Math/MathML"
 export const DEFAULT_OPENMATH_CDBASE = "http://www.openmath.org/cd"
@@ -170,7 +163,7 @@ export function mathJsonToContentMathML(expression: MathJson): ContentMathMLExpr
   return {
     kind: "application",
     operator: makeSymbol(cd, name),
-    operands: operands.map((operand) => mathJsonToContentMathML(operand)),
+    operands: operands.map(operand => mathJsonToContentMathML(operand)),
   }
 }
 
@@ -283,8 +276,7 @@ function parseApplication(element: XmlElement): ContentMathMLApplication {
 
   const operatorElement = children[0]
   const operatorName = xmlLocalName(operatorElement)
-  const specialRoot = operatorName === "root" &&
-    operatorElement.namespaceURI === MATHML_NAMESPACE
+  const specialRoot = operatorName === "root" && operatorElement.namespaceURI === MATHML_NAMESPACE
   if (specialRoot) {
     assertAttributes(operatorElement, [])
     if (elementChildren(operatorElement).length > 0 || readText(operatorElement).trim() !== "") {
@@ -292,7 +284,7 @@ function parseApplication(element: XmlElement): ContentMathMLApplication {
     }
     const operands = children.slice(1)
     let degree: ContentMathMLExpression = { kind: "number", type: "integer", value: "2" }
-    const degreeIndex = operands.findIndex((child) => xmlLocalName(child) === "degree")
+    const degreeIndex = operands.findIndex(child => xmlLocalName(child) === "degree")
     if (degreeIndex >= 0) {
       const degreeElement = operands.splice(degreeIndex, 1)[0]
       assertMathMLElement(degreeElement, "degree")
@@ -331,17 +323,16 @@ function validateArity(application: ContentMathMLApplication): void {
   if (operator.kind !== "symbol" || operator.cdbase !== DEFAULT_OPENMATH_CDBASE) return
   const key = `${operator.cd}.${operator.name}`
   const count = application.operands.length
-  const valid = key === "arith1.plus" || key === "arith1.times"
-    ? true
-    : key === "arith1.minus" || key === "arith1.divide" || key === "arith1.power" ||
-        key === "arith1.root" || key === "relation1.neq"
-      ? count === 2
-      : key === "arith1.unary_minus" || key === "arith1.abs" || key.startsWith("transc1.")
-        ? count === 1
-        : key === "relation1.eq" || key === "relation1.lt" || key === "relation1.gt" ||
-            key === "relation1.leq" || key === "relation1.geq"
-          ? count >= 2
-          : constantMathJson[key] === undefined
+  const valid =
+    key === "arith1.plus" || key === "arith1.times"
+      ? true
+      : key === "arith1.minus" || key === "arith1.divide" || key === "arith1.power" || key === "arith1.root" || key === "relation1.neq"
+        ? count === 2
+        : key === "arith1.unary_minus" || key === "arith1.abs" || key.startsWith("transc1.")
+          ? count === 1
+          : key === "relation1.eq" || key === "relation1.lt" || key === "relation1.gt" || key === "relation1.leq" || key === "relation1.geq"
+            ? count >= 2
+            : constantMathJson[key] === undefined
   if (!valid) throw new SyntaxError(`Invalid operand count for ${key}: ${count}`)
 }
 
@@ -451,8 +442,7 @@ function serializeExpression(expression: ContentMathMLExpression): string {
 }
 
 function escapeXml(value: string): string {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;").replaceAll("'", "&apos;")
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;")
 }
 
 function numberToMathJson(number: ContentMathMLNumber): number {

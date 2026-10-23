@@ -18,49 +18,70 @@ async function compile(source, extension = "matra", entry) {
     const bytes = await readFile(output)
     assert.equal(WebAssembly.validate(bytes), true)
     return bytes
-  } finally { await rm(directory, { recursive: true, force: true }) }
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
 }
-async function run(source) { return (await instantiateUnified(await compile(source))).run() }
+async function run(source) {
+  return (await instantiateUnified(await compile(source))).run()
+}
 
 test("unified seed preserves the mixed markup document example", async () => {
   const source = await readFile(new URL("../examples/document.matra", import.meta.url), "utf8")
   assert.deepEqual(await run(source), {
-    tag: "article", props: { lang: "ja", class: "card" }, children: [
+    tag: "article",
+    props: { lang: "ja", class: "card" },
+    children: [
       { tag: "h1", props: {}, children: ["Matra"] },
-      { tag: "ul", props: {}, children: ["文書", "関数", "Wasm"].map(value => ({
-        tag: "li", props: {}, children: [`${value}!`],
-      })) },
+      {
+        tag: "ul",
+        props: {},
+        children: ["文書", "関数", "Wasm"].map(value => ({
+          tag: "li",
+          props: {},
+          children: [`${value}!`],
+        })),
+      },
     ],
   })
 })
 
 test("unified seed executes documents, member access, classes and data", async () => {
-  assert.deepEqual(await run(`let page = {title: "日本語", url: "/"}
+  assert.deepEqual(
+    await run(`let page = {title: "日本語", url: "/"}
 article.card.card(lang="ja", options={theme: "dark"}, series=[10, 20]) {
   a.link(href=page.url) { page.title }
   [1, 2]
   {value: null}
-}`), { tag: "article", props: { lang: "ja", options: { theme: "dark" }, series: [10, 20], class: "card" }, children: [
-    { tag: "a", props: { href: "/", class: "link" }, children: ["日本語"] }, [1, 2], { value: null },
-  ] })
+}`),
+    { tag: "article", props: { lang: "ja", options: { theme: "dark" }, series: [10, 20], class: "card" }, children: [{ tag: "a", props: { href: "/", class: "link" }, children: ["日本語"] }, [1, 2], { value: null }] },
+  )
 })
 
 test("unified seed emits explicitly expanded loop results", async () => {
-  assert.deepEqual(await run(`fn label(value) { return value + "!" }
+  assert.deepEqual(
+    await run(`fn label(value) { return value + "!" }
 ul {
   let items = ["one", "two"]
   ...for (item in items) {
     if (item != "") { li { label(item) } }
     else { "unreachable" }
   }
-}`), { tag: "ul", props: {}, children: [
-    { tag: "li", props: {}, children: ["one!"] },
-    { tag: "li", props: {}, children: ["two!"] },
-  ] })
+}`),
+    {
+      tag: "ul",
+      props: {},
+      children: [
+        { tag: "li", props: {}, children: ["one!"] },
+        { tag: "li", props: {}, children: ["two!"] },
+      ],
+    },
+  )
 })
 
 test("unified seed uses lexical scopes, closures, recursion and null returns", async () => {
-  assert.deepEqual(await run(`let x = 10
+  assert.deepEqual(
+    await run(`let x = 10
 fn outer(x) {
   fn inner(y) { return x + y }
   return inner
@@ -68,27 +89,35 @@ fn outer(x) {
 fn factorial(n) { if (n <= 1) { return 1 }; return n * factorial(n - 1) }
 fn empty() { if (true) { return null }; return "wrong" }
 let add = outer(2)
-[add(3), x, factorial(5), empty()]`), [5, 10, 120, null])
+[add(3), x, factorial(5), empty()]`),
+    [5, 10, 120, null],
+  )
 })
 
 test("unified seed evaluates precedence, decimals, unary and short circuit", async () => {
-  assert.deepEqual(await run(`[5 - 2, -2 + 3, 1 + 2 * 3 == 7, !(false || false) && true, -(.5 + .25), false && unknown(), true || unknown(), 0 || 9]`), [3, 1, true, true, -.75, false, true, 9])
+  assert.deepEqual(await run(`[5 - 2, -2 + 3, 1 + 2 * 3 == 7, !(false || false) && true, -(.5 + .25), false && unknown(), true || unknown(), 0 || 9]`), [3, 1, true, true, -0.75, false, true, 9])
 })
 
 test("unified seed executes assignment, while, do-until and nested break", async () => {
-  assert.deepEqual(await run(`let n = 0
+  assert.deepEqual(
+    await run(`let n = 0
 let total = 0
 while (n < 4) {
   n = n + 1
   do { total = total + 2; break } until (false)
 }
 do { total = total + 1 } until (total >= 10)
-[n, total]`), [4, 10])
+[n, total]`),
+    [4, 10],
+  )
 })
 
 test("unified seed preserves string delimiters and prototype-shaped data keys", async () => {
-  assert.deepEqual(await run(`let value = {"__proto__": "safe", "constructor": "data"}
-p { "}"; ")"; "null"; "if"; value.__proto__; value.constructor }`), { tag: "p", props: {}, children: ["}", ")", "null", "if", "safe", "data"] })
+  assert.deepEqual(
+    await run(`let value = {"__proto__": "safe", "constructor": "data"}
+p { "}"; ")"; "null"; "if"; value.__proto__; value.constructor }`),
+    { tag: "p", props: {}, children: ["}", ")", "null", "if", "safe", "data"] },
+  )
 })
 
 test("unified host rejects non-array loops and unknown assignments", async () => {
@@ -100,7 +129,8 @@ test("unified host rejects non-array loops and unknown assignments", async () =>
 test("unified seed compiles a named document fence and native module imports", async () => {
   const document = await compile('```doc.matra\np { "ok" }\n```\n```ignored.matra\n"ignored"\n```', "md", "doc.matra")
   assert.deepEqual((await instantiateUnified(document)).run(), { tag: "p", props: {}, children: ["ok"] })
-  const native = await compile(`\`\`\`doc.matra
+  const native = await compile(
+    `\`\`\`doc.matra
 p { "ignored" }
 \`\`\`
 \`\`\`math.matra
@@ -111,7 +141,10 @@ fn twice(x: i32) -> i32 { return x * 2 }
 module main
 import math
 export fn answer() -> i32 { return twice(21) }
-\`\`\``, "md", "main.matra")
+\`\`\``,
+    "md",
+    "main.matra",
+  )
   assert.equal((await WebAssembly.instantiate(native)).instance.exports.answer(), 42)
 })
 
@@ -141,7 +174,9 @@ export fn answer() -> i32 {
   assert.equal((await WebAssembly.instantiate(bytes)).instance.exports.answer(), 42)
   const { cachedCompiler } = await import("../host/bootstrap-compiler.mjs")
   const { formatCompilerDiagnostic } = await import("../host/compiler-host.mjs")
-  const { instance: { exports: compiler } } = await WebAssembly.instantiate(await readFile(await cachedCompiler()))
+  const {
+    instance: { exports: compiler },
+  } = await WebAssembly.instantiate(await readFile(await cachedCompiler()))
   compiler.memory.grow(32)
   const encoded = new TextEncoder().encode(source)
   const pointer = compiler.alloc(encoded.length)
@@ -153,15 +188,17 @@ export fn answer() -> i32 {
   assert.equal((await WebAssembly.instantiate(output)).instance.exports.answer(), 42)
 })
 
-
 const conformance = JSON.parse(await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"))
 test("unified seed reports markup diagnostic byte offsets", async () => {
   for (const { source, offset } of conformance.markupDiagnostics) {
     const byteOffset = Buffer.byteLength(source.slice(0, offset))
-    await assert.rejects(() => compile(source), error => {
-      assert.match(error.message, new RegExp(`offset ${byteOffset}\\b`), source)
-      return true
-    })
+    await assert.rejects(
+      () => compile(source),
+      error => {
+        assert.match(error.message, new RegExp(`offset ${byteOffset}\\b`), source)
+        return true
+      },
+    )
   }
 })
 for (const fixture of conformance.native) {
@@ -175,11 +212,14 @@ for (const fixture of conformance.native) {
     }
     for (const source of conformance.nativeReject) {
       test(`native rejects: ${source}`, async () => {
-        await assert.rejects(() => compile(source), error => {
-          assert.match(error.message, /offset|Reserved word/)
-          assert.doesNotMatch(error.message, /panicked|unreachable|out of bounds/i)
-          return true
-        })
+        await assert.rejects(
+          () => compile(source),
+          error => {
+            assert.match(error.message, /offset|Reserved word/)
+            assert.doesNotMatch(error.message, /panicked|unreachable|out of bounds/i)
+            return true
+          },
+        )
       })
     }
   })
@@ -202,11 +242,15 @@ test("bootstrap CLI reserves document workspace and runs generated Wasm", async 
     const output = join(directory, "output.wasm")
     await writeFile(input, `${"// document workspace\n".repeat(500)}fn value(x) { x * 2 }\np { ...for x in [1, 2] { value(x) } }`)
     const result = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", input, output], {
-      cwd: root, encoding: "utf8", timeout: 30000,
+      cwd: root,
+      encoding: "utf8",
+      timeout: 30000,
     })
     assert.equal(result.status, 0, result.stderr || result.error?.message)
     assert.deepEqual((await instantiateUnified(await readFile(output))).run(), {
-      tag: "p", props: {}, children: [2, 4],
+      tag: "p",
+      props: {},
+      children: [2, 4],
     })
   } finally {
     await rm(directory, { recursive: true, force: true })

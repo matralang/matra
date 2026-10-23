@@ -4,8 +4,11 @@ import { decode, encode, makeHeader } from "../src/message.js"
 
 test("round-trips signed Jupyter wire messages", () => {
   const message = {
-    identities: [Buffer.from("client")], header: makeHeader("kernel_info_request", "session"),
-    parentHeader: {}, metadata: {}, content: { hello: "world" },
+    identities: [Buffer.from("client")],
+    header: makeHeader("kernel_info_request", "session"),
+    parentHeader: {},
+    metadata: {},
+    content: { hello: "world" },
   }
   const decoded = decode(encode(message, "secret"), "secret")
   assert.equal(decoded.identities[0].toString(), "client")

@@ -15,7 +15,12 @@
       "import": "./dist/browser.js"
     }
   },
-  "files": ["dist", "README.md", "README.ja.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "README.ja.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "check": "tsc --noEmit",

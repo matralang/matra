@@ -5,16 +5,9 @@ export class MatraSyntaxError extends SyntaxError {
   readonly codeFrame: string
   override readonly cause: unknown
 
-  constructor(
-    message: string,
-    location: SourcePosition,
-    source: string,
-    cause?: unknown,
-  ) {
+  constructor(message: string, location: SourcePosition, source: string, cause?: unknown) {
     const codeFrame = formatCodeFrame(source, location)
-    const where = location.source
-      ? `${location.source}:${location.start.line}:${location.start.column}`
-      : `line ${location.start.line}, column ${location.start.column}`
+    const where = location.source ? `${location.source}:${location.start.line}:${location.start.column}` : `line ${location.start.line}, column ${location.start.column}`
     super(`${message} at ${where}${codeFrame ? `\n${codeFrame}` : ""}`)
     this.name = "MatraSyntaxError"
     this.location = location
@@ -23,11 +16,7 @@ export class MatraSyntaxError extends SyntaxError {
   }
 }
 
-export function normalizeSyntaxError(
-  error: unknown,
-  source: string,
-  sourceId?: string,
-): Error {
+export function normalizeSyntaxError(error: unknown, source: string, sourceId?: string): Error {
   if (error instanceof MatraSyntaxError) return error
   const location = readLocation(error, sourceId)
   if (!location) return error instanceof Error ? error : new Error(String(error))
@@ -43,9 +32,7 @@ export function formatCodeFrame(source: string, position: SourcePosition): strin
   const number = String(position.start.line)
   const startColumn = Math.max(1, position.start.column)
   const sameLine = position.end.line === position.start.line
-  const width = sameLine
-    ? Math.max(1, position.end.column - startColumn)
-    : Math.max(1, line.length - startColumn + 2)
+  const width = sameLine ? Math.max(1, position.end.column - startColumn) : Math.max(1, line.length - startColumn + 2)
   return `${number} | ${line}\n${" ".repeat(number.length)} | ${" ".repeat(startColumn - 1)}${"^".repeat(width)}`
 }
 
@@ -62,8 +49,5 @@ function readLocation(error: unknown, sourceId?: string): SourcePosition | null 
 }
 
 function isPoint(value: unknown): value is SourcePosition["start"] {
-  return typeof value === "object" && value !== null &&
-    "offset" in value && typeof value.offset === "number" &&
-    "line" in value && typeof value.line === "number" &&
-    "column" in value && typeof value.column === "number"
+  return typeof value === "object" && value !== null && "offset" in value && typeof value.offset === "number" && "line" in value && typeof value.line === "number" && "column" in value && typeof value.column === "number"
 }

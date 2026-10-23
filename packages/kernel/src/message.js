@@ -4,8 +4,12 @@ export const DELIMITER = "<IDS|MSG>"
 
 export function makeHeader(msgType, session, username = "kernel") {
   return {
-    msg_id: randomUUID(), username, session, date: new Date().toISOString(),
-    msg_type: msgType, version: "5.3",
+    msg_id: randomUUID(),
+    username,
+    session,
+    date: new Date().toISOString(),
+    msg_type: msgType,
+    version: "5.3",
   }
 }
 

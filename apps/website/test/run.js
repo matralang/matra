@@ -7,11 +7,13 @@ import { parseMath } from "@matra/math"
 
 async function collectMarkdownPages(directory) {
   const entries = await readdir(directory, { withFileTypes: true })
-  const files = await Promise.all(entries.map(async entry => {
-    const fullPath = join(directory, entry.name)
-    if (entry.isDirectory()) return collectMarkdownPages(fullPath)
-    return entry.isFile() && entry.name.endsWith(".md") ? [fullPath] : []
-  }))
+  const files = await Promise.all(
+    entries.map(async entry => {
+      const fullPath = join(directory, entry.name)
+      if (entry.isDirectory()) return collectMarkdownPages(fullPath)
+      return entry.isFile() && entry.name.endsWith(".md") ? [fullPath] : []
+    }),
+  )
   return files.flat()
 }
 
@@ -33,10 +35,33 @@ const mathDataSource = examplesSource.match(/```math-data\.matra\n([\s\S]*?)\n``
 assert.ok(mathDataSource)
 assert.deepEqual(parseMath(mathDataSource), [
   "Dataset",
-  ["Field", "rational_sequence", [["Rational", 1, 2], ["Rational", 2, 3], ["Rational", 3, 4]]],
-  ["Field", "complex_sequence", [["Complex", 1, 2], ["Complex", 0, -1], ["Complex", 3, 0]]],
+  [
+    "Field",
+    "rational_sequence",
+    [
+      ["Rational", 1, 2],
+      ["Rational", 2, 3],
+      ["Rational", 3, 4],
+    ],
+  ],
+  [
+    "Field",
+    "complex_sequence",
+    [
+      ["Complex", 1, 2],
+      ["Complex", 0, -1],
+      ["Complex", 3, 0],
+    ],
+  ],
   ["Field", "constant_sequence", ["Pi", "ExponentialE", ["Multiply", "Pi", 2], ["Add", "Pi", "ExponentialE"]]],
-  ["Field", "arrays", [[1, 2, 3], [4, 5, 6]]],
+  [
+    "Field",
+    "arrays",
+    [
+      [1, 2, 3],
+      [4, 5, 6],
+    ],
+  ],
 ])
 for (const source of nativeMatraPages) {
   assert.match(source, /^---\ntitle: .+\ndescription: .+\nlayout: (?:site|specification)\n---/)
@@ -55,12 +80,7 @@ const index = await readFile(new URL("../dist/index.html", import.meta.url), "ut
 const docs = await readFile(new URL("../dist/docs.html", import.meta.url), "utf8")
 const packages = await readFile(new URL("../dist/packages.html", import.meta.url), "utf8")
 const spec = await readFile(new URL("../dist/spec.html", import.meta.url), "utf8")
-const specPages = await Promise.all([
-  "data-model",
-  "ast",
-  "grammar",
-  "parser",
-].map(page => readFile(new URL(`../dist/spec/${page}.html`, import.meta.url), "utf8")))
+const specPages = await Promise.all(["data-model", "ast", "grammar", "parser"].map(page => readFile(new URL(`../dist/spec/${page}.html`, import.meta.url), "utf8")))
 const playground = await readFile(new URL("../dist/play.html", import.meta.url), "utf8")
 const mathNotebook = await readFile(new URL("../dist/math.html", import.meta.url), "utf8")
 const playgroundBundle = await readFile(new URL("../dist/assets/playground.js", import.meta.url), "utf8")
@@ -69,20 +89,7 @@ const mathNotebookSource = await readFile(new URL("../src/client/math-notebook.t
 const playgroundWorker = await readFile(new URL("../dist/assets/matra-worker.js", import.meta.url), "utf8")
 const playgroundSource = await readFile(new URL("../src/client/playground.ts", import.meta.url), "utf8")
 
-for (const page of [
-  "blog.html",
-  "docs.html",
-  "examples.html",
-  "index.html",
-  "packages.html",
-  "play.html",
-  "math.html",
-  "spec.html",
-  "spec/data-model.html",
-  "spec/ast.html",
-  "spec/grammar.html",
-  "spec/parser.html",
-]) {
+for (const page of ["blog.html", "docs.html", "examples.html", "index.html", "packages.html", "play.html", "math.html", "spec.html", "spec/data-model.html", "spec/ast.html", "spec/grammar.html", "spec/parser.html"]) {
   const document = await readFile(new URL(`../dist/${page}`, import.meta.url), "utf8")
   assert.match(document, /^<!DOCTYPE html>\n<html/, page)
   assert.match(document, /<header class="site-header">/, page)
@@ -118,14 +125,19 @@ assert.match(spec, /<title>Matra Specification v0.2<\/title>/)
 assert.match(spec, /Data Model/)
 for (const [document, links] of [
   [docs, ["/spec", "/play", "/examples", "/packages"]],
-  [packages, ["core", "command", "html", "graphics"].map(name =>
-    `https://github.com/matralang/matra/tree/main/packages/${name}`)],
+  [packages, ["core", "command", "html", "graphics"].map(name => `https://github.com/matralang/matra/tree/main/packages/${name}`)],
   [spec, ["/spec/data-model", "/spec/ast", "/spec/grammar", "/spec/parser"]],
 ]) {
   const cards = [...document.matchAll(/<a href="([^"]+)" class="docs-card">\s*<span>(\d{2})<\/span>\s*<div>\s*<h2>([^<]+)<\/h2>\s*<p>([^<]+)<\/p>/g)]
   assert.equal(cards.length, 4)
-  assert.deepEqual(cards.map(card => card[1]), links)
-  assert.deepEqual(cards.map(card => card[2]), ["01", "02", "03", "04"])
+  assert.deepEqual(
+    cards.map(card => card[1]),
+    links,
+  )
+  assert.deepEqual(
+    cards.map(card => card[2]),
+    ["01", "02", "03", "04"],
+  )
 }
 
 for (const page of specPages) {

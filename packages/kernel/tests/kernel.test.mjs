@@ -9,10 +9,14 @@ test("announces busy and idle while answering kernel_info", async () => {
   const published = []
   kernel.publish = async (_request, type, content) => published.push([type, content])
   const socket = { send: async () => {} }
-  const request = encode({
-    identities: [Buffer.from("client")],
-    header: makeHeader("kernel_info_request", "client-session"),
-  }, connection.key, connection.signature_scheme)
+  const request = encode(
+    {
+      identities: [Buffer.from("client")],
+      header: makeHeader("kernel_info_request", "client-session"),
+    },
+    connection.key,
+    connection.signature_scheme,
+  )
 
   await kernel.handle(socket, request)
 

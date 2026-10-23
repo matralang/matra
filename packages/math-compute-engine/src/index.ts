@@ -1,14 +1,6 @@
 import { ComputeEngine, evaluate as computeEvaluate, N, simplify as computeSimplify } from "@cortex-js/compute-engine"
 import { evaluatePropExpressions, type MatraAST, type MatraValue } from "@matra/core"
-import {
-  astToMathJson,
-  contentMathMLToMathJson,
-  mathJsonToContentMathML,
-  parseContentMathML,
-  parseMath,
-  type MathJson,
-  type MorphionForm,
-} from "@matra/math"
+import { astToMathJson, contentMathMLToMathJson, mathJsonToContentMathML, parseContentMathML, parseMath, type MathJson, type MorphionForm } from "@matra/math"
 import { morphionize } from "./morphion.js"
 import { listStandardMathCommands } from "./standard-library.js"
 
@@ -73,7 +65,7 @@ function bind(expression: MathJson, scope: MathScope): MathJson {
   }
   if (!Array.isArray(expression)) return expression
   const [head, ...operands] = expression
-  return [head, ...operands.map((operand) => bind(operand, scope))]
+  return [head, ...operands.map(operand => bind(operand, scope))]
 }
 
 function requireMatraValue(value: unknown): MatraValue {
@@ -84,25 +76,14 @@ function requireMatraValue(value: unknown): MatraValue {
   }
   if (Array.isArray(value)) return value.map(requireMatraValue)
   if (typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [key, requireMatraValue(item)]),
-    )
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, requireMatraValue(item)]))
   }
   throw new TypeError("Computed prop value must be JSON-compatible")
 }
 
 function exactScalarNumber(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value
-  if (
-    Array.isArray(value) &&
-    value.length === 3 &&
-    value[0] === "Rational" &&
-    typeof value[1] === "number" &&
-    typeof value[2] === "number" &&
-    Number.isFinite(value[1]) &&
-    Number.isFinite(value[2]) &&
-    value[2] !== 0
-  ) {
+  if (Array.isArray(value) && value.length === 3 && value[0] === "Rational" && typeof value[1] === "number" && typeof value[2] === "number" && Number.isFinite(value[1]) && Number.isFinite(value[2]) && value[2] !== 0) {
     const quotient = value[1] / value[2]
     return Number.isFinite(quotient) ? quotient : undefined
   }
