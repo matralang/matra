@@ -134,7 +134,9 @@ class Evaluator {
           this.dynamic("function declaration")
           scope.declare(statement.name, (...args: any[]) => {
             const local = new Scope(scope)
-            statement.parameters.forEach((name, index) => local.declare(name, args[index] ?? null))
+            statement.parameters.forEach((name, index) => {
+              local.declare(name, args[index] ?? null)
+            })
             try {
               return this.run(statement.body, local)
             } catch (flow) {
@@ -456,11 +458,14 @@ class UnifiedParser {
     const thenBody = this.block()
     const checkpoint = this.index
     this.inline()
-    const elseBody: UnifiedStatement[] = this.consume("else_if")
-      ? [{ kind: "expression", expression: this.ifExpression() }]
-      : this.consume("else")
-        ? this.block()
-        : ((this.index = checkpoint), [])
+    let elseBody: UnifiedStatement[] = []
+    if (this.consume("else_if")) {
+      elseBody = [{ kind: "expression", expression: this.ifExpression() }]
+    } else if (this.consume("else")) {
+      elseBody = this.block()
+    } else {
+      this.index = checkpoint
+    }
     return { kind: "if", condition, thenBody, elseBody }
   }
   private primary(): UnifiedExpression {

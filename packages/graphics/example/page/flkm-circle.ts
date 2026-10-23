@@ -20,7 +20,7 @@ const flkmArr = [
 const torusCircleElmArr: any[] = []
 
 // 重なり順を三角形対称にしたい
-Array.from({ length: 3 }).map((_, j) => {
+Array.from({ length: 3 }).forEach((_, j) => {
   const [dx, dy] = polarOffset(outerRIn, j, 3, -0.5)
 
   fill("transparent")
@@ -31,7 +31,7 @@ Array.from({ length: 3 }).map((_, j) => {
   torusCircleElmArr.push(circleElm)
 })
 
-Array.from({ length: 1 }).map(_ => {
+Array.from({ length: 1 }).forEach(_ => {
   fill("transparent")
   strokeStyle(flkmArr[2].col)
 

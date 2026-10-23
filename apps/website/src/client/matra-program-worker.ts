@@ -41,7 +41,7 @@ self.addEventListener("message", async event => {
       Object.entries(generated.exports)
         .filter(([, value]) => typeof value === "function")
         .map(([name, value]) => {
-          const fn = value as Function
+          const fn = value as (...args: never[]) => unknown
           return fn.length === 0
             ? `${name}() = ${String(fn())}`
             : `${name}(${fn.length} argument${fn.length === 1 ? "" : "s"})`

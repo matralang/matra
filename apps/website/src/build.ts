@@ -16,7 +16,7 @@ import {
   parse,
   staticValueToAST,
 } from "@matra/core"
-import type { MatraAST, StaticToASTNode } from "@matra/core"
+import type { MatraAST, StaticToASTNode, StaticValue } from "@matra/core"
 import { toHTML } from "@matra/html"
 import { pageLayout } from "./layouts/page.js"
 
@@ -27,7 +27,7 @@ type PageMetadata = {
 }
 
 function parseWebsiteDocument(source: string, sourceId = "Matra source", execute = false) {
-  let value
+  let value: StaticValue | undefined
   try {
     value = (execute ? evaluateUnified : evaluateStatic)(parse(source))
   } catch (error) {

@@ -19,7 +19,7 @@ const flkmArr = [
 
 const torusCircleElmArr: any[] = []
 
-Array.from({ length: 3 }).map((_, j) => {
+Array.from({ length: 3 }).forEach((_, j) => {
   const [dx, dy] = polarOffset(outerRIn, j, 3, -0.5)
 
   fill("none")
@@ -30,7 +30,7 @@ Array.from({ length: 3 }).map((_, j) => {
   torusCircleElmArr.push(circleElm)
 })
 
-Array.from({ length: 1 }).map(_ => {
+Array.from({ length: 1 }).forEach(_ => {
   fill("none")
   strokeStyle(flkmArr[2].col)
 
