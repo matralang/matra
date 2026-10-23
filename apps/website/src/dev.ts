@@ -5,7 +5,12 @@ import { watch } from "node:fs"
 // @ts-expect-error: allow importing Node modules without @types/node installed
 import { resolve } from "node:path"
 
-declare const process: any
+declare const process: {
+  platform: string
+  cwd(): string
+  exit(code?: number): never
+  on(signal: "SIGINT" | "SIGTERM", listener: () => void): void
+}
 
 const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm"
 const sourceDirectory = resolve(process.cwd(), "src")

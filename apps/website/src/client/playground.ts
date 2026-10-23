@@ -625,7 +625,7 @@ function extractMarkdownTitle(markdown: string): string | undefined {
   return withoutFrontMatter.match(/^#\s+(.+?)\s*$/m)?.[1]
 }
 
-function injectDocumentTitle(ast: any, title: string): any {
+function injectDocumentTitle(ast: MatraAST, title: string): MatraAST {
   const heading = { tag: "h1", props: {}, children: [title] }
   if (ast.tag === "$root") return { ...ast, children: [heading, ...ast.children] }
   return { tag: "$root", props: {}, children: [heading, ast] }

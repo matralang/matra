@@ -6,8 +6,13 @@ import { build } from "esbuild"
 import { cachedCompiler } from "../../../crates/matra-seed/host/bootstrap-compiler.mjs"
 
 // Declare the Node `process` global when @types/node is not installed.
-declare const process: any
+declare const process: {
+  cwd(): string
+  env: Record<string, string | undefined>
+  exit(code?: number): never
+}
 
+import type { MatraAST, StaticToASTNode, StaticValue } from "@matra/core"
 import {
   evaluateStatic,
   evaluateUnified,
@@ -16,7 +21,6 @@ import {
   parse,
   staticValueToAST,
 } from "@matra/core"
-import type { MatraAST, StaticToASTNode, StaticValue } from "@matra/core"
 import { toHTML } from "@matra/html"
 import { pageLayout } from "./layouts/page.js"
 

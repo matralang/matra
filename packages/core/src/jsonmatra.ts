@@ -1,10 +1,9 @@
 import { readFile } from "node:fs/promises"
 import { extname, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
-import { isMatraTemplateStrings, matra as matraTemplate, type MatraRawSource } from "./template.js"
-
 import { isMatraAST, isMatraJSON, matraJSONToAST } from "./ast/convert.js"
 import type { SourcePosition } from "./ast/types.js"
+import { isMatraTemplateStrings, type MatraRawSource, matra as matraTemplate } from "./template.js"
 
 export type JSONMatraPrimitive = string | number | boolean | null | bigint | undefined
 
@@ -181,6 +180,6 @@ function isSourceNode(input: unknown): input is MatraDocumentSource | MatraExpre
   )
 }
 
-function isRecord(input: unknown): input is Record<string, any> {
+function isRecord(input: unknown): input is Record<string, unknown> {
   return input !== null && typeof input === "object" && !Array.isArray(input)
 }

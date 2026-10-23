@@ -1,4 +1,5 @@
-import { setCanvasSize, strokeWeight, strokeStyle, fill, circle, svgLayout } from "../../module.js"
+import type { MatraElm } from "../../module.js"
+import { circle, fill, setCanvasSize, strokeStyle, strokeWeight, svgLayout } from "../../module.js"
 import { calculate, polarOffset } from "../math.js"
 
 const cvsSize = 256
@@ -17,7 +18,7 @@ const flkmArr = [
   { name: "M", col: "blue" },
 ]
 
-const torusCircleElmArr: any[] = []
+const torusCircleElmArr: MatraElm[] = []
 
 // 重なり順を三角形対称にしたい
 Array.from({ length: 3 }).forEach((_, j) => {
@@ -40,6 +41,6 @@ Array.from({ length: 1 }).forEach(_ => {
   torusCircleElmArr.push(circleElm)
 })
 
-const matraElmArr: any[] = [...torusCircleElmArr]
+const matraElmArr = [...torusCircleElmArr]
 
 export default svgLayout(matraElmArr, cvsW, cvsH)

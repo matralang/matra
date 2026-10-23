@@ -62,13 +62,13 @@ function propToAST(value: MatraJSONPropValue): MatraPropValue {
   return isMatraJSON(value) ? matraJSONToAST(value) : cloneValue(value)
 }
 
-function isRecord(value: unknown): value is Record<string, any> {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value)
 }
 
 function cloneValue<T extends MatraValue>(value: T): T {
   if (Array.isArray(value)) return value.map(item => cloneValue(item)) as T
-  if (isRecord(value)) {
+  if (value !== null && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value).map(([key, item]) => [key, cloneValue(item)]),
     ) as T
