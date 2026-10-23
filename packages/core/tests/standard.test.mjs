@@ -1,10 +1,10 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import {
+import core, {
   evaluatePropExpressions,
   evaluateStandard,
   evaluateStandardProps,
-  Map,
+  Map as mapValues,
   Range,
 } from "../dist/index.js"
 
@@ -26,8 +26,9 @@ describe("Matra standard collection functions", () => {
   })
 
   it("maps a function over values", () => {
+    assert.equal(core.Map, mapValues)
     assert.deepEqual(
-      Map(value => Number(value) * 2, [1, 2, 3]),
+      mapValues(value => Number(value) * 2, [1, 2, 3]),
       [2, 4, 6],
     )
   })

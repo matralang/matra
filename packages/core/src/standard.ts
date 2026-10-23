@@ -38,7 +38,7 @@ export function Range(startOrEnd: number, end?: number, step?: number): number[]
 }
 
 /** Apply a standard function to every value in a collection. */
-export function Map(fn: StandardFunction, values: readonly MatraValue[]): MatraValue[] {
+export function mapValues(fn: StandardFunction, values: readonly MatraValue[]): MatraValue[] {
   return values.map(value => fn(value))
 }
 
@@ -86,7 +86,7 @@ function evaluateExpression(
     const values = evaluateExpression(expression.children[1], functions, scope)
     if (!Array.isArray(values))
       throw new TypeError("Map expects a collection as its second argument")
-    return Map(fn, values)
+    return mapValues(fn, values)
   }
 
   if (expression.tag === "Var") {
