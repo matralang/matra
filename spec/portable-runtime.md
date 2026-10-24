@@ -29,6 +29,8 @@ Rust command may download that toolchain. On Windows, use Visual Studio Installe
 "Desktop development with C++" workload, including the MSVC C++ build tools and a Windows SDK.
 The Rust MSVC toolchain needs `link.exe` to build the native seed. After installing Rust or Visual
 Studio, restart VS Code or open a new terminal so the environment is refreshed.
+If `rustc` or `cargo` is not on `PATH`, `build` exits with status 1 and explains how to install the
+Rust toolchain.
 
 From the repository root, verify that Rust 1.97.1 is selected and run the portable test:
 

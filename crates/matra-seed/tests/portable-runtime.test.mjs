@@ -38,9 +38,14 @@ function hasCode(code) {
 }
 
 function invoke(...args) {
+  return invokeWith(process.env, ...args)
+}
+
+function invokeWith(env, ...args) {
   const result = spawnSync(process.execPath, [cli, ...args], {
     cwd: tmpdir(),
     encoding: "utf8",
+    env,
     timeout: 120000,
   })
   assert.ifError(result.error)
@@ -193,6 +198,24 @@ test("permission failures are explicit without overwriting the file", async t =>
     await chmod(file, 0o600)
   }
   assert.equal(await readFile(file, "utf8"), "unchanged")
+})
+
+test("build explains a missing Rust toolchain without writing output", async t => {
+  const root = await temporaryProject(t)
+  const emptyPath = join(root, "empty-path")
+  await mkdir(emptyPath)
+  await copyFile(new URL("main.matra", sample), join(root, "main.matra"))
+  // WindowsではPath・PATHの表記揺れがあるため、大小文字を無視して置き換える
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => name.toUpperCase() !== "PATH"),
+  )
+  env.PATH = emptyPath
+  const build = invokeWith(env, "build", root, "main.matra", "main.wasm")
+  assert.equal(build.status, 1)
+  assert.equal(build.stdout, "")
+  assert.match(build.stderr, /^Rust toolchain is required .*`rustc` was not found on PATH\./)
+  assert.match(build.stderr, /rustup/)
+  await assert.rejects(readFile(join(root, "main.wasm")), { code: "ENOENT" })
 })
 
 test("self-hosted build and run execute the unchanged portable project", async t => {

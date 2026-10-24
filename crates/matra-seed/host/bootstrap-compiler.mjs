@@ -79,7 +79,17 @@ async function exists(path) {
 
 function run(command, arguments_) {
   const result = spawnSync(command, arguments_, { encoding: "utf8" })
+  if (result.error?.code === "ENOENT") throw missingToolchain(command)
   if (result.error) throw result.error
   if (result.status !== 0) throw new CommandError(result.status ?? 1, result.stderr)
   return result
+}
+
+function missingToolchain(command) {
+  return new CommandError(
+    1,
+    `Rust toolchain is required to build the bootstrap compiler: \`${command}\` was not found on PATH.\n` +
+      "Install Rust with rustup (https://rustup.rs/); rust-toolchain.toml selects the required version.\n" +
+      "On Windows, also install the MSVC C++ build tools, then open a new terminal.\n",
+  )
 }

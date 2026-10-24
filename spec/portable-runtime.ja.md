@@ -29,6 +29,7 @@ Rustはrustupで導入する。repositoryの`rust-toolchain.toml`がRust 1.97.1�
 WindowsではVisual Studio Installerで「C++によるデスクトップ開発」を選択し、
 MSVC C++ build toolsとWindows SDKを導入する。RustのMSVC toolchainがnative seedをbuildする際に
 `link.exe`が必要となる。RustやVisual Studioの導入後は、VS Codeを再起動するか新しいterminalを開く。
+`rustc`または`cargo`が`PATH`に無い場合、`build`は終了code 1で停止し、Rust toolchainの導入方法を表示する。
 
 repository rootで次を実行し、Rust 1.97.1が選択されることとportable testの成功を確認する。
 
