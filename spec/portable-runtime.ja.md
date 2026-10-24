@@ -24,6 +24,20 @@ Rust toolchain（`rust-toolchain.toml`に従う）を用意する。
 初回buildにはRust seedが必要で、以後は既存のbootstrap compiler cacheを利用する。
 独立した実行ファイルとして配布する手順ではない。
 
+Rustはrustupで導入する。repositoryの`rust-toolchain.toml`がRust 1.97.1を選択するため、
+初回のRust commandではこのtoolchainのdownloadが発生することがある。
+WindowsではVisual Studio Installerで「C++によるデスクトップ開発」を選択し、
+MSVC C++ build toolsとWindows SDKを導入する。RustのMSVC toolchainがnative seedをbuildする際に
+`link.exe`が必要となる。RustやVisual Studioの導入後は、VS Codeを再起動するか新しいterminalを開く。
+
+repository rootで次を実行し、Rust 1.97.1が選択されることとportable testの成功を確認する。
+
+```text
+rustc --version
+cargo --version
+pnpm test:portable
+```
+
 repository rootで、3 OSとも同じコマンドを使う。
 
 ```text

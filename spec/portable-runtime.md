@@ -24,6 +24,20 @@ This entry point and its tests use only Node.js built-in modules; a workspace-wi
 The first build needs the Rust seed; subsequent builds reuse the existing bootstrap compiler cache.
 This is not a standalone executable distribution procedure.
 
+Install Rust with rustup. The repository's `rust-toolchain.toml` selects Rust 1.97.1, so the first
+Rust command may download that toolchain. On Windows, use Visual Studio Installer to install the
+"Desktop development with C++" workload, including the MSVC C++ build tools and a Windows SDK.
+The Rust MSVC toolchain needs `link.exe` to build the native seed. After installing Rust or Visual
+Studio, restart VS Code or open a new terminal so the environment is refreshed.
+
+From the repository root, verify that Rust 1.97.1 is selected and run the portable test:
+
+```text
+rustc --version
+cargo --version
+pnpm test:portable
+```
+
 From the repository root, use the same commands on all three OSes:
 
 ```text
