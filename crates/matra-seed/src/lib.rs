@@ -141,9 +141,7 @@ fn extract_matra_fences(markdown: &str) -> Result<Vec<MatraFence>, CompileError>
             source.push_str(body_line);
         }
         if !closed {
-            return Err(CompileError::new(format!(
-                "Unclosed Matra fence: {name}"
-            )));
+            return Err(CompileError::new(format!("Unclosed Matra fence: {name}")));
         }
         fences.push(MatraFence {
             filename: name.to_owned(),
@@ -158,9 +156,7 @@ fn select_entry(fences: &[MatraFence], entry: Option<&str>) -> Result<usize, Com
         Some(entry) => fences
             .iter()
             .position(|fence| fence.filename == entry)
-            .ok_or_else(|| {
-                CompileError::new(format!("The Matra entry '{entry}' was not found."))
-            }),
+            .ok_or_else(|| CompileError::new(format!("The Matra entry '{entry}' was not found."))),
         None if fences.len() == 1 => Ok(0),
         None if fences.is_empty() => Err(CompileError::new(
             "Markdown must contain one `*.matra` fenced code block.",
@@ -1695,7 +1691,8 @@ export fn answer(input: i32) -> i32 {
 
     #[test]
     fn rejects_legacy_program_fences() {
-        let source = "```answer.matra.program\nmodule answer\nexport fn answer() -> i32 { return 1 }\n```";
+        let source =
+            "```answer.matra.program\nmodule answer\nexport fn answer() -> i32 { return 1 }\n```";
         assert!(compile_markdown(source, None).is_err());
     }
 
@@ -1706,7 +1703,8 @@ export fn answer(input: i32) -> i32 {
 
     #[test]
     fn reports_unknown_names() {
-        let source = "```broken.matra\nmodule broken\nexport fn answer() -> i32 { return missing }\n```";
+        let source =
+            "```broken.matra\nmodule broken\nexport fn answer() -> i32 { return missing }\n```";
         assert!(
             compile_markdown(source, None)
                 .unwrap_err()
