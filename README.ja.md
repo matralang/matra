@@ -21,6 +21,18 @@ Android・iOSは当面Web動作または一部サポートを想定します。
 現在の資産、保証範囲、未決のAPI設計、段階的な検証計画は
 [移植性方針と共通ランタイムのロードマップ](spec/portable-runtime.ja.md)を参照してください。
 
+v0.3の小さな実動版はNode.jsホストを使います。同じサンプルをMatra製compilerでWasmへbuildし、
+共通API経由で入力fileの読み込み・Matraでの処理・結果の書き出しを実行します。
+Node.js 22/24、pnpm、Rust toolchainを用意し、repository rootで実行してください。
+
+```text
+pnpm portable -- build crates/matra-seed/examples/portable main.matra main.wasm
+pnpm portable -- run crates/matra-seed/examples/portable main.wasm
+```
+
+パッケージ管理、npm・Python連携、独立したruntimeの配布はこの実動版に含めません。
+3 OS検証のCI定義はありますが、正式サポートの宣言ではありません。
+
 ## パッケージ
 
 - [`@matra/core`](packages/core)

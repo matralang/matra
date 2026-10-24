@@ -22,6 +22,19 @@ This is a goal for future formal support, not a guarantee of current behavior.
 See the [portability policy and common runtime roadmap](spec/portable-runtime.md)
 for existing assets, guarantee boundaries, open API decisions, and phased validation.
 
+The small working v0.3 subset uses a Node.js host. Build the same sample to Wasm with
+the Matra-written compiler, then read an input file, process it in Matra, and write
+the result through common APIs. Prepare Node.js 22/24, pnpm, and the Rust toolchain,
+then run from the repository root:
+
+```text
+pnpm portable -- build crates/matra-seed/examples/portable main.matra main.wasm
+pnpm portable -- run crates/matra-seed/examples/portable main.wasm
+```
+
+This subset excludes package management, npm/Python integration, and standalone runtime distribution.
+Three-OS CI is configured; this is not a declaration of formal support.
+
 ## Packages
 
 - [`@matra/core`](packages/core)

@@ -1,5 +1,5 @@
 /** 統一文法の暫定 host value ABI。制御フローは生成 Wasm が実行する。 */
-export async function instantiateUnified(bytes) {
+export async function instantiateUnified(bytes, { globals = {} } = {}) {
   const values = [undefined]
   const intern = value => {
     values.push(value)
@@ -49,7 +49,12 @@ export async function instantiateUnified(bytes) {
         )
       },
       scope(parent) {
-        scopes.push({ parent: parent ? scope(parent) : undefined, bindings: new Map() })
+        scopes.push({
+          parent: parent ? scope(parent) : undefined,
+          bindings: parent
+            ? new Map()
+            : new Map(Object.entries(globals).map(([name, item]) => [name, intern(item)])),
+        })
         return scopes.length - 1
       },
       bind(env, key, item) {

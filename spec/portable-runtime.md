@@ -4,10 +4,100 @@
 
 ## Status
 
-This document guides future design and implementation; it does not declare implemented APIs or formal support.
-The concrete common host API, package format, and task definitions remain undecided.
+This document guides design and implementation and defines the small working v0.3 subset, not formal support.
+The minimal host API below is implemented; broader APIs, package formats, and task definitions remain undecided.
 It changes neither general Matra Program nor compiler source grammar, existing ABIs, or public APIs.
 The [unified grammar](./unified-grammar.md) remains authoritative for syntax and evaluation.
+
+## Small working v0.3 subset
+
+The v0.3 milestone is to build and run the same Matra/Wasm project unchanged on
+Windows, macOS, and Linux using a host running on Node.js.
+It excludes standalone runtime distribution, package management, a general task engine, and npm/Python integration.
+This is an experimental minimal contract; completion of the whole system remains on the roadmap below.
+
+### Running the sample
+
+Prepare a repository checkout, pnpm (as specified by the root `packageManager`), Node.js 22 or 24,
+and the Rust toolchain specified in `rust-toolchain.toml`.
+This entry point and its tests use only Node.js built-in modules; a workspace-wide build is unnecessary.
+The first build needs the Rust seed; subsequent builds reuse the existing bootstrap compiler cache.
+This is not a standalone executable distribution procedure.
+
+From the repository root, use the same commands on all three OSes:
+
+```text
+pnpm portable -- build crates/matra-seed/examples/portable main.matra main.wasm
+pnpm portable -- run crates/matra-seed/examples/portable main.wasm
+```
+
+`build ROOT SOURCE OUTPUT` compiles source to Wasm with the Matra-written Stage 1 compiler.
+`run ROOT WASM [ARGS...]` executes that Wasm connected to the common host API.
+`ROOT` is a native path relative to the CLI's working directory; `SOURCE`, `OUTPUT`, and `WASM`
+are logical paths relative to that root.
+Program file APIs use the same root without changing the process working directory.
+`ARGS` contains only arguments following the Wasm path, not Node.js or script paths.
+CLI failures report to stderr with a nonzero exit status.
+
+The [sample](../crates/matra-seed/examples/portable/main.matra) reads `input.txt`, uses Matra
+expressions to prepend `Matra v0.3:` and one space, writes `output.txt`, and prints `Wrote output.txt`.
+Its first argument can select another input file.
+Git pins the input fixture to LF; generated files are ignored.
+
+### Minimal common API
+
+Explicitly inject the following `runtime` binding into document-profile Wasm.
+Reuse existing member/call semantics and the host value ABI without adding grammar or Wasm imports.
+Ordinary `instantiateUnified()` does not inject it automatically, preserving existing document execution.
+
+| API | v0.3 contract |
+| --- | --- |
+| `runtime.version` | String `"0.3"` identifying this API subset |
+| `runtime.args` | String array copied from the caller, iterable with `for` |
+| `runtime.read_text(path)` | Read a regular file as UTF-8 and return a string; reject invalid UTF-8 |
+| `runtime.write_text(path, text)` | Create or overwrite a file as UTF-8; return `null` |
+| `runtime.print(text)` | Write text plus one LF to stdout; return `null` |
+
+I/O is synchronous. Preserve line endings and UTF-8 BOMs as characters.
+Reject non-string paths/text and lone surrogates rather than implicitly coercing values or substituting characters.
+Writes do not create parent directories or guarantee atomicity or rollback on failure.
+Stdout write failures also count as execution failures.
+
+### Minimal path and error contract
+
+- Paths must be nonempty, root-relative, `/`-separated, with each component specified in Unicode NFC.
+  Match native filesystem NFD names through NFC normalization.
+- Reject absolute paths, drive prefixes, backslashes, empty components, `.` and `..`,
+  control characters, `<>:"|?*`, trailing dots/spaces, and Windows reserved device names.
+- Match existing names through NFC and Unicode lowercase, rejecting case mismatches and collisions
+  with the same comparison name. Complete emulation of OS-specific Unicode aliases is out of scope.
+- The root must be an existing directory. Reject symlinks inside it (including Windows junctions),
+  reads/writes of non-regular files, and writes with missing parent directories.
+  Resolve the native root itself to a canonical path.
+
+The Node.js implementation reports `PortableRuntimeError.code` values `INVALID_ARGUMENT`, `INVALID_PATH`,
+`CASE_MISMATCH`, `SYMLINK`, `NOT_FOUND`, `NOT_DIRECTORY`, `NOT_FILE`,
+`IS_DIRECTORY`, `ACCESS_DENIED`, `INVALID_UTF8`, and `IO_ERROR`.
+Compiler diagnostics and Wasm validation/execution errors outside the host are also explicit CLI failures.
+These checks support portability; they are not an OS security sandbox against concurrent filesystem
+changes, hard links, or similar mechanisms. Use trusted, explicitly selected programs and projects.
+This subset provides no APIs for networking, time, environment variables, or external CLIs.
+
+### Validation and completion condition
+
+```text
+pnpm test:portable
+pnpm bootstrap:verify
+```
+
+`test:portable` runs host API/error regressions and CLI build/run of the same sample.
+In addition to Stage 2/3 byte equality, `bootstrap:verify` checks reading, Matra processing,
+file writing, arguments, and stdout for sample Wasm generated by each Stage's compiler.
+The [CI workflow](../.github/workflows/portable-runtime.yml) runs these two commands across
+Windows, macOS, Linux, and Node.js 22/24. Only host setup varies.
+Adding CI configuration does not establish verified three-OS operation:
+all jobs for the target commit must pass to complete the v0.3 milestone.
+These are validation environments, not a formal support matrix with minimum OS versions.
 
 ## Central goal and guarantee boundary
 
@@ -48,7 +138,8 @@ Build reproducibility needs a separate contract specifying inputs, toolchains, a
   Stage 1/2/3 self-host verification. Stage 2/3 byte equality verifies the compiler;
   it does not prove project portability across the three OSes.
 - The [unified grammar Wasm host](../crates/matra-seed/host/unified-host.mjs) provides a provisional
-  host value ABI, not a completed common runtime with filesystem and networking APIs.
+  host value ABI. The [minimal Node.js host](../crates/matra-seed/host/node-runtime.mjs) adds v0.3 file I/O
+  and related features on top of it, not a completed broad common runtime.
 - [Matra Command](../packages/command/README.md) provides external process integration through execution
   plans and explicit authorization. Even `shell: false` does not guarantee an external program's
   availability or portability. Keep existing execution features and position them as extensions
@@ -57,8 +148,8 @@ Build reproducibility needs a separate contract specifying inputs, toolchains, a
 - [`loadMatra`](../packages/core/src/jsonmatra.ts) is a document loader using Node.js file APIs and
   module loading. Its role is distinct from common package loading and dependency resolution.
 - The [bootstrap artifact workflow](../.github/workflows/bootstrap-artifact.yml) runs on Ubuntu.
-  Shared verification from dependency resolution through build and execution across all three OSes
-  remains future work.
+  A separate portable runtime workflow performs v0.3 three-OS verification.
+  Full common verification including dependency resolution remains future work.
 
 Use Wasm as a strong candidate for the common execution format and align its surroundings through
 common host APIs. Distinguish the development pnpm workspace from future Matra user-project package
@@ -138,9 +229,9 @@ When changing the compiler, also preserve existing Stage 2/3 byte equality verif
 Introduce three-OS verification incrementally from phase 2 rather than deferring it to the final phase.
 Declare formal support only after satisfying phase 4.
 
-## Next design decisions
+## Design decisions after v0.3
 
-First decide the PC host implementation/distribution model and support matrix, minimal file/path APIs,
-local package loading unit, and how to start and build the minimal sample.
+Build on the v0.3 Node.js host and single-source execution to decide formal PC host distribution
+and the support matrix, file/path API extensions, local package loading units, and general task definitions.
 Evaluate WASI, the Component Model, and reuse of existing hosts such as Node.js against this contract.
 Do not settle on a Wasm format while postponing required host capabilities or distribution prerequisites.

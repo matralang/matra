@@ -19,6 +19,17 @@ const expectedLabels = [
   "}",
 ]
 
+export function programSource(markdown, fenceName) {
+  const normalized = markdown.replaceAll("\r\n", "\n")
+  const opening = `\`\`\`${fenceName}\n`
+  const start = normalized.indexOf(opening)
+  if (start < 0) throw new Error(`Program fence not found: ${fenceName}`)
+  const sourceStart = start + opening.length
+  const end = normalized.indexOf("\n```", sourceStart)
+  if (end < 0) throw new Error(`Program fence is not closed: ${fenceName}`)
+  return normalized.slice(sourceStart, end)
+}
+
 export function sourcePosition(source, offset) {
   const prefix = new TextDecoder().decode(source.slice(0, offset))
   const lines = prefix.split("\n")

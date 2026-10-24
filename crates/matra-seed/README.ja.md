@@ -51,10 +51,30 @@ Rust library は `compile_unified(source)`、`unified::parse(source)`、
 Rust seed の共通 parser で構文木を作り、既存の型・linear-memory ABI へ lower する。
 自己ホスト compiler も文書 profile を解析し、暫定 host ABI の Wasm を生成する。
 `bootstrap:verify` は各 Stage で共通の受理・拒否・実行テストも実施する。
+各Stageのcompilerで生成したportableサンプルのWasmについても、
+共通host API経由のfile読み書き・引数・標準出力を検証する。
 compiler module は統一文法と `*.matra` fence に統一する。`module` 宣言が native profile を選び、
 それ以外の `.matra` source は document profile として扱う。旧 `.matra.program` fence は受理しない。
 
 ## Command
+
+### Portable runtime v0.3
+
+Node.js 22/24ホスト上で、同じMatra／Wasmサンプルを変更せずに実行する最小実装を提供する。
+repository rootで次を実行する。
+
+```text
+pnpm portable -- build crates/matra-seed/examples/portable main.matra main.wasm
+pnpm portable -- run crates/matra-seed/examples/portable main.wasm
+pnpm test:portable
+```
+
+`build`はMatra製Stage 1 compilerを使い、`run`は共通APIでfileを読み書きする。
+契約、制限、3 OS CIの完了条件は
+[移植性方針](../../spec/portable-runtime.ja.md#v03の小さな実動版)を参照する。
+パッケージ管理や独立runtimeの配布は含まない。
+
+### Compiler commands
 
 Rust seedでMarkdown Programをcompileする。
 

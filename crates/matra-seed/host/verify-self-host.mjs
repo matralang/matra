@@ -1,10 +1,13 @@
 import assert from "node:assert/strict"
 import { createHash } from "node:crypto"
-import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { Worker } from "node:worker_threads"
 import { CommandError, cachedCompiler } from "./bootstrap-compiler.mjs"
-import { sourcePosition } from "./compiler-host.mjs"
+import { programSource, sourcePosition } from "./compiler-host.mjs"
+import { instantiatePortable } from "./node-runtime.mjs"
 import { instantiateUnified } from "./unified-host.mjs"
 
 const compilerSourcePath = fileURLToPath(new URL("../examples/compiler.md", import.meta.url))
@@ -57,16 +60,6 @@ try {
   } else {
     throw error
   }
-}
-
-function programSource(markdown, fenceName) {
-  const opening = `\`\`\`${fenceName}\n`
-  const start = markdown.indexOf(opening)
-  if (start < 0) throw new Error(`Program fence not found: ${fenceName}`)
-  const sourceStart = start + opening.length
-  const end = markdown.indexOf("\n```", sourceStart)
-  if (end < 0) throw new Error(`Program fence is not closed: ${fenceName}`)
-  return markdown.slice(sourceStart, end)
 }
 
 async function compile(compilerBytes, source) {
@@ -229,4 +222,28 @@ export fn answer() -> i32 {
   console.log(
     `${name}: unified grammar conformance (${fixtures.accept.length + fixtures.reject.length} document cases, ${fixtures.native.length + fixtures.nativeReject.length} native cases).`,
   )
+  await verifyPortable(name, compiler)
+}
+
+async function verifyPortable(name, compiler) {
+  const example = new URL("../examples/portable/", import.meta.url)
+  const result = await compile(compiler, await readFile(new URL("main.matra", example)))
+  assert.ok(result.output, `${name}: portable sample: ${result.diagnostic}`)
+  const root = await mkdtemp(join(tmpdir(), "matra-portable-stage-"))
+  try {
+    const input = await readFile(new URL("input.txt", example), "utf8")
+    await writeFile(join(root, "input.txt"), input)
+    const output = []
+    const program = await instantiatePortable(result.output, {
+      root,
+      args: ["input.txt"],
+      stdout: { write: value => output.push(value) },
+    })
+    assert.equal(program.run(), null)
+    assert.equal(await readFile(join(root, "output.txt"), "utf8"), `Matra v0.3: ${input}`)
+    assert.deepEqual(output, ["Wrote output.txt\n"])
+    console.log(`${name}: portable file I/O sample passed.`)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
 }

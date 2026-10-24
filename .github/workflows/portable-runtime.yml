@@ -1,0 +1,30 @@
+name: Verify portable runtime
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        node: [22, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install Rust toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal
+      - name: Verify host contracts and self-hosted sample
+        run: pnpm test:portable
+      - name: Verify compiler bootstrap
+        run: pnpm bootstrap:verify

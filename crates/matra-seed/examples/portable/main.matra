@@ -1,0 +1,9 @@
+let input_path = "input.txt"
+for (argument in runtime.args) {
+  input_path = argument
+  break
+}
+let source = runtime.read_text(input_path)
+let result = "Matra v" + runtime.version + ": " + source
+runtime.write_text("output.txt", result)
+runtime.print("Wrote output.txt")
