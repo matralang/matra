@@ -23,6 +23,11 @@ Matraはルート付きツリーを記述する、ドメイン非依存の記法
 
 過去の提案（現行仕様ではない）: [Matra Programのfor構文](./for-loop-proposal.ja.md)。
 
+## 設計方針とロードマップ
+
+- [移植性方針と共通ランタイム](./portable-runtime.ja.md) — PC 3 OSで目指す保証範囲、
+  パッケージ・タスク・検証の優先順位と未決事項。実装済みAPIや正式サポートの宣言ではない。
+
 ## 適用範囲
 
 tagとproperty名に組み込みのドメイン的意味はありません。HTML rendering、

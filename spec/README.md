@@ -24,6 +24,12 @@ Each English document is named `name.md`; its Japanese counterpart is named
 
 Historical proposal (not the current specification): [Matra Program for syntax](./for-loop-proposal.md).
 
+## Design policy and roadmap
+
+- [Portability policy and common runtime](./portable-runtime.md) — intended guarantee across the three
+  PC OSes, package/task/validation priorities, and open decisions; not a declaration of implemented
+  APIs or formal support.
+
 ## Scope
 
 Tags and property names have no built-in domain meaning. HTML rendering,

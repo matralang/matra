@@ -10,6 +10,18 @@ Matra is maintained as a pnpm workspace monorepo. Published packages keep the
 - [Matra Specification v0.2](spec/README.md)
 - [Matra Specification v0.2（日本語）](spec/README.ja.md)
 
+## Portability policy
+
+Matra's central goal is to resolve dependencies, start, build, and run the same project
+using common APIs and supported packages on Windows, macOS, and Linux without changing
+source or configuration. Portability, including dependencies, takes priority over
+compatibility with arbitrary external CLIs.
+Android and iOS initially target Web operation or partial support.
+
+This is a goal for future formal support, not a guarantee of current behavior.
+See the [portability policy and common runtime roadmap](spec/portable-runtime.md)
+for existing assets, guarantee boundaries, open API decisions, and phased validation.
+
 ## Packages
 
 - [`@matra/core`](packages/core)
