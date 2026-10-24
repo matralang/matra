@@ -1,7 +1,7 @@
 {
   "name": "matra",
   "private": true,
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@12.15.0",
   "scripts": {
     "build": "pnpm --filter @matra/core run build && pnpm --filter @matra/command run build && pnpm --filter @matra/math run build && pnpm --filter @matra/math-compute-engine run build && pnpm --filter @matra/graphics run build && pnpm --filter @matra/html run build && pnpm --filter @matra/styles run build && pnpm --filter @matra/kernel run build && pnpm --filter @matra/website run build && cargo build --manifest-path crates/matra-seed/Cargo.toml",
     "bootstrap:compile": "node crates/matra-seed/host/bootstrap.mjs",
