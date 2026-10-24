@@ -12,10 +12,18 @@ describe("Markdown Matra fences", () => {
     })
   })
 
-  it("extracts a Matra Program fence", () => {
-    assert.deepEqual(
-      extractMatraMarkdown("# Program\n\n```answer.matra.program\nmodule answer\n```\n"),
-      { filename: "answer.matra.program", kind: "matra.program", source: "module answer\n" },
+  it("extracts a native profile in a standard Matra fence", () => {
+    assert.deepEqual(extractMatraMarkdown("# Program\n\n```answer.matra\nmodule answer\n```\n"), {
+      filename: "answer.matra",
+      kind: "matra",
+      source: "module answer\n",
+    })
+  })
+
+  it("does not recognize the legacy Matra Program extension", () => {
+    assert.throws(
+      () => extractMatraMarkdown("# Program\n\n```answer.matra.program\nmodule answer\n```\n"),
+      /must contain one/,
     )
   })
 

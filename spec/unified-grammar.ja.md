@@ -9,9 +9,8 @@
 文法の正式化は、パッケージのリリースや Wasm ABI の安定化を意味しない。
 v0.x の破壊的変更として、旧 Core v0.2 の関数ノード構文、selector の `#id`、
 backtick／tilde text、`$root`、`= expr`、if/for の暗黙 child 展開を廃止する。
-旧 `.matra.program` の入口は実装に残るが、v0.3 の適合要件ではない。
-compiler source は `compiler.matra` fence を使う。
-移行対象は core/seed の parser・評価系・テスト、document.matra、Playground の手続き例、seed README。
+旧 `.matra.program` の入口は削除し、native compiler module も `*.matra` fence に統一する。
+`module` 宣言が native profile を選択する。compiler source は `compiler.matra` fence を使う。
 
 TypeScript の `parse()` と Rust seed は統一構文を解析する。`evaluateStatic()` は静的文書を取得し、
 `evaluateUnified()` は明示的に実行する。Rust seed と自己ホスト compiler は文書用 Wasm を生成する。

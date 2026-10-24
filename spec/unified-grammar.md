@@ -9,9 +9,8 @@ Its rules and shared tests define conformance. Compatibility with old source is 
 Finalizing the grammar does not constitute a package release or stabilize the Wasm ABI.
 As a breaking v0.x change, it removes Core v0.2 function nodes, selector `#id`, backtick/tilde text,
 `$root`, `= expr`, and implicit child expansion by if/for.
-The legacy `.matra.program` entry point remains implemented but is not a v0.3 conformance requirement.
-Compiler source uses the `compiler.matra` fence.
-Migration covers core/seed parsers, evaluators, tests, document.matra, the procedural Playground example, and seed READMEs.
+The `.matra.program` legacy entry point is removed; native compiler modules also use `*.matra` fences.
+The `module` declaration selects the native profile. Compiler source uses the `compiler.matra` fence.
 
 TypeScript `parse()` and Rust seed parse the unified syntax. `evaluateStatic()` retrieves static documents;
 `evaluateUnified()` explicitly executes programs. Rust seed and the self-hosted compiler generate document Wasm.

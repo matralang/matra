@@ -4,13 +4,11 @@
 
 ## 目的
 
-Matra Programは、自己ホストcompilerを含むMatra toolingを実装する実行profileです。
-Matra Coreはdomain-neutralなtree記法のまま維持し、このprofileが別のsyntaxと
-実行意味を定義します。
+Matra Programは、自己ホストcompilerを含むMatra toolingを実装するnative実行profileです。
+一般のMatra sourceと統一文法を共有し、`module`宣言がこのprofileと実行意味を選択します。
 
-Markdown文書をsource bundleとし、名前付き`*.matra.program` fenced code blockを
-moduleとして扱います。seed compilerはentry blockとそのimportを1つのWebAssembly
-moduleへcompileします。
+Markdown文書をsource bundleとし、名前付き`*.matra` fenced code blockをmoduleとして扱います。
+seed compilerはentry blockとそのimportを1つのWebAssembly moduleへcompileします。
 
 ## 現在のseed subset
 
@@ -24,7 +22,7 @@ lowerします。
 `allocate_i32_array(size)`、`array_get(array, index)`、`array_set(array, index, value)`は
 `[i32]`のallocationとaccessを提供します。
 
-`bool`とstableなcompiler ABIは下記の予定syntaxとして定義しますが、まだ未実装です。
+`bool`とstableなcompiler ABIは下記の予定機能ですが、まだ未実装です。
 seed subsetはfieldがすべて`i32`のstructを実装します。struct valueはlinear memory上のfieldを
 指すpointerで、constructorは`name(value, ...)`、field readは`value.field`です。field assignment、
 nested struct、struct array、`bytes` fieldは未実装です。bootstrap compilerは下記ABIの暫定subsetを実装します。
@@ -39,7 +37,7 @@ import math
 export fn answer(input: i32) -> i32 {
   let (result = double(input))
   while (result < 42) {
-    set (result = result + 1)
+    result = result + 1
   }
   return result
 }
@@ -64,89 +62,13 @@ Markdown文書に複数のProgram blockがある場合、callerはentry fenceを
 
 ```text
 cargo run --manifest-path crates/matra-seed/Cargo.toml -- \
-  source.md output.wasm --entry compiler.matra.program
+  source.md output.wasm --entry compiler.matra
 ```
 
-## Draft grammar
+## 文法
 
-whitespaceはtokenを区切ります。`//`から行末までをline commentとします。statement間の
-newlineを推奨します。
-
-```ebnf
-program    = module, { import }, { struct }, { function } ;
-module     = "module", identifier ;
-import     = "import", identifier ;
-function   = [ "export" ], "fn", identifier, "(", [ parameters ], ")",
-             "->", type, block ;
-struct     = "struct", identifier, "{", { identifier, ":", "i32" }, "}" ;
-parameters = parameter, { ",", parameter } ;
-parameter  = identifier, ":", type ;
-type       = "i32" | "bool" | "bytes" | "[", type, "]" | identifier ;
-block      = "{", { statement }, "}" ;
-statement  = let | set | assignment | byte_set | if | while | do-until | break | return ;
-let        = "let", ( "(", binding, ")" | binding ) ;
-binding    = identifier, [ ":", type ], "=", expression ;
-set        = "set", "(", identifier, "=", expression, ")" ;
-assignment = identifier, "=", expression ;
-byte_set   = "byte_set", "(", expression, ",", expression, ",", expression, ")" ;
-condition  = "(", expression, ")" | expression ;
-if         = "if", condition, block, { "else_if", condition, block }, [ "else", block ] ;
-while      = "while", condition, block ;
-do-until   = "do", block, "until", "(", expression, ")" ;
-break      = "break" ;
-return     = "return", expression ;
-```
-
-新しいsourceはlocal宣言に`let (name = expression)`、既存localへの代入に
-`set (name = expression)`を使用すべきです（SHOULD）。型注釈は
-`let (name: type = expression)`のようにidentifierの直後へ置きます。移行期間中は
-`let name = expression`と`name = expression`も同じstatementとして受理します（MAY）。
-
-丸括弧はstatementの一部であり、式の一部ではありません。通常のwhitespaceとline commentは
-`let`または`set`と`(`の間、および丸括弧内のtoken間に置けます。閉じる`)`がない場合、
-parserは次のtoken、またはsource末尾をerror位置として報告しなければなりません（MUST）。
-`set`の対象は宣言済みのlocalでなければならず（MUST）、型注釈を含めることはできません。
-
-```matra
-let (count: i32 = 1)
-set (count = count + 1)
-```
-
-次は閉じる`)`がなく、拒否されます。
-
-```matra
-let (count = 1
-```
-
-新しいsourceは`if (condition)`と`while (condition)`のように条件を丸括弧で囲むべきです
-（SHOULD）。移行期間中は`if condition`と`while condition`も同じ制御構文として受理します
-（MAY）。条件内では通常のexpression構文を使用し、`$`などの追加delimiterは使用しません。
-
-`else_if (condition) { ... }` は直前の `if` / `else_if` に接続し、最後に `else` を置けます。
-最初に成立した分岐だけを実行し、後続条件は評価しません。間には空白・改行・line comment だけを
-許します。孤立した分岐や `else` 後の追加分岐は拒否します。`else_if` の予約語化を含む
-互換性と診断の規則は[統一文法](./unified-grammar.ja.md)を参照してください。
-
-`do` blockは必ず1回実行され、その後に`until` conditionを評価します。conditionが`0`なら
-blockを再実行し、nonzeroなら後続statementへ進みます。`break`はconditionを評価せずに
-最も内側の`while`または`do-until`を終了します。`until`の条件を囲む丸括弧は必須です
-（MUST）。`do` blockの閉じる`}`、`until`、`(`、`)`のいずれかが欠落したsourceは拒否し、
-parserは欠落位置の次tokenまたはsource末尾をerror位置として報告しなければなりません（MUST）。
-
-自己ホストcompilerもこの構文を受理します。既存sourceを維持する互換追加で、
-`fn name(parameters) -> type`は変更しません。token間には通常のwhitespaceとline commentを
-置けます。`until ()`、`until (count >=)`、`until count >= 10`は拒否します。
-
-```matra
-do {
-  set (count = count + 1)
-}
-until (count >= 10)
-```
-
-expressionはliteral、variable、call、index、field access、unary `-`と`!`、
-arithmetic、comparison、logical operatorを持ちます。result typeが`unit`以外の
-functionは、最後のすべてのcontrol-flow pathでreturnしなければなりません。
+native profileは統一文法を使用します。source形式、制約、parser契約は
+[統一文法](./unified-grammar.ja.md)を正本とし、本書では別の文法を定義しません。
 
 ## WebAssembly境界
 

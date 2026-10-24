@@ -4,13 +4,14 @@
 
 ## Purpose
 
-Matra Program is an executable profile for implementing Matra tooling,
-including the self-hosted compiler. Matra Core remains a domain-neutral tree
-notation; this profile defines separate syntax and execution semantics.
+Matra Program is the native executable profile for implementing Matra tooling,
+including the self-hosted compiler. It shares the unified grammar with ordinary
+Matra source; a `module` declaration selects this profile and its execution
+semantics.
 
-A Markdown document is a source bundle. Each named `*.matra.program` fenced
-code block is one module. The seed compiler compiles an entry block and its
-imports to one WebAssembly module.
+A Markdown document is a source bundle. Each named `*.matra` fenced code block
+is one module. The seed compiler compiles an entry block and its imports to one
+WebAssembly module.
 
 ## Current seed subset
 
@@ -24,7 +25,7 @@ index, value)` writes one byte. `byte_pointer(bytes)` returns its pointer.
 `allocate_i32_array(size)`, `array_get(array, index)`, and `array_set(array,
 index, value)` provide allocation and access for `[i32]`.
 
-`bool` and a stable compiler ABI are specified as planned syntax below, but are
+`bool` and a stable compiler ABI are specified below as planned features, but are
 not yet implemented. The seed subset supports structs whose fields are all
 `i32`: a struct value is a pointer to its fields in linear memory, constructors
 use `name(value, ...)`, and fields are read with `value.field`. Field assignment,
@@ -41,7 +42,7 @@ import math
 export fn answer(input: i32) -> i32 {
   let (result = double(input))
   while (result < 42) {
-    set (result = result + 1)
+    result = result + 1
   }
   return result
 }
@@ -68,99 +69,14 @@ the entry fence.
 
 ```text
 cargo run --manifest-path crates/matra-seed/Cargo.toml -- \
-  source.md output.wasm --entry compiler.matra.program
+  source.md output.wasm --entry compiler.matra
 ```
 
-## Draft grammar
+## Syntax
 
-Whitespace separates tokens; `//` starts a line comment. Newlines are
-recommended between statements.
-
-```ebnf
-program    = module, { import }, { struct }, { function } ;
-module     = "module", identifier ;
-import     = "import", identifier ;
-function   = [ "export" ], "fn", identifier, "(", [ parameters ], ")",
-             "->", type, block ;
-struct     = "struct", identifier, "{", { identifier, ":", "i32" }, "}" ;
-parameters = parameter, { ",", parameter } ;
-parameter  = identifier, ":", type ;
-type       = "i32" | "bool" | "bytes" | "[", type, "]" | identifier ;
-block      = "{", { statement }, "}" ;
-statement  = let | set | assignment | byte_set | if | while | do-until | break | return ;
-let        = "let", ( "(", binding, ")" | binding ) ;
-binding    = identifier, [ ":", type ], "=", expression ;
-set        = "set", "(", identifier, "=", expression, ")" ;
-assignment = identifier, "=", expression ;
-byte_set   = "byte_set", "(", expression, ",", expression, ",", expression, ")" ;
-condition  = "(", expression, ")" | expression ;
-if         = "if", condition, block, { "else_if", condition, block }, [ "else", block ] ;
-while      = "while", condition, block ;
-do-until   = "do", block, "until", "(", expression, ")" ;
-break      = "break" ;
-return     = "return", expression ;
-```
-
-New source SHOULD use `let (name = expression)` for local declarations and
-`set (name = expression)` for assignment to an existing local. A type
-annotation follows the identifier, as in `let (name: type = expression)`.
-During migration, implementations MAY also accept `let name = expression` and
-`name = expression` as equivalent statements.
-
-The parentheses belong to the statement, not to its expression. Normal
-whitespace and line comments may appear between `let` or `set` and `(` and
-between tokens inside the parentheses. If the closing `)` is missing, the
-parser MUST report the next token or the end of the source as the error
-position. The target of `set` MUST be a previously declared local and cannot
-include a type annotation.
-
-```matra
-let (count: i32 = 1)
-set (count = count + 1)
-```
-
-The following is rejected because its closing `)` is missing.
-
-```matra
-let (count = 1
-```
-
-New source SHOULD parenthesize conditions as `if (condition)` and
-`while (condition)`. During migration, implementations MAY accept
-`if condition` and `while condition` as equivalent control statements.
-Conditions use the normal expression syntax without an additional delimiter
-such as `$`.
-
-`else_if (condition) { ... }` attaches to the preceding `if` / `else_if`, with an optional final `else`.
-Only the first matching branch executes; subsequent conditions are skipped.
-Only whitespace, newlines, and line comments may intervene.
-Orphan branches and branches following else are rejected.
-See the [unified grammar](./unified-grammar.md) for compatibility, including the new reserved word
-`else_if`, and diagnostic rules.
-
-A `do` block executes once before its `until` condition is evaluated. If the
-condition is `0`, the block executes again; a nonzero condition continues with
-the following statement. `break` exits the innermost `while` or `do-until`
-without evaluating the condition. Parentheses around the `until` condition are
-required (MUST). A source missing the closing `}`, `until`, `(`, or `)` MUST be
-rejected, and the parser MUST report the following token or the end of the
-source as the error position.
-
-The self-hosted compiler also accepts this syntax. This is a compatible addition
-that preserves existing source and `fn name(parameters) -> type`. Normal
-whitespace and line comments may separate tokens. `until ()`, `until (count >=)`,
-and `until count >= 10` are rejected.
-
-```matra
-do {
-  set (count = count + 1)
-}
-until (count >= 10)
-```
-
-Expressions include literals, variables, calls, indexing, field access,
-unary `-` and `!`, arithmetic, comparisons, and logical operators. A function
-whose result type is not `unit` MUST return on every final control-flow path.
+The native profile uses the unified grammar. Its source forms, restrictions,
+and parser contract are defined by the [unified grammar](./unified-grammar.md);
+this document does not define a separate syntax.
 
 ## WebAssembly boundary
 

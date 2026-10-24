@@ -51,8 +51,8 @@ Rust library は `compile_unified(source)`、`unified::parse(source)`、
 Rust seed の共通 parser で構文木を作り、既存の型・linear-memory ABI へ lower する。
 自己ホスト compiler も文書 profile を解析し、暫定 host ABI の Wasm を生成する。
 `bootstrap:verify` は各 Stage で共通の受理・拒否・実行テストも実施する。
-既存 `.matra.program` fence は互換入口として保持する。影響範囲は compiler example、fence を読む host/test、
-seed README、統一文法の日英仕様であり、旧 Program example の一括書き換えは不要。
+compiler module は統一文法と `*.matra` fence に統一する。`module` 宣言が native profile を選び、
+それ以外の `.matra` source は document profile として扱う。旧 `.matra.program` fence は受理しない。
 
 ## Command
 
@@ -60,7 +60,7 @@ Rust seedでMarkdown Programをcompileする。
 
 ```text
 cargo run --manifest-path crates/matra-seed/Cargo.toml -- \
-  INPUT.md OUTPUT.wasm --entry NAME.matra.program
+  INPUT.md OUTPUT.wasm --entry NAME.matra
 ```
 
 cached stage-1 compilerでMatra sourceをcompileする。

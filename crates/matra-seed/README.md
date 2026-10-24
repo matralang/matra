@@ -52,9 +52,9 @@ expressions requiring execution. Select a named Markdown fence with `--entry doc
 profile. The Rust seed's common parser builds a syntax tree lowered to the existing typed linear-memory
 ABI. The self-hosted compiler also parses document programs and emits Wasm using the provisional host ABI.
 `bootstrap:verify` runs shared acceptance, rejection, and execution tests at every Stage.
-Existing `.matra.program` fences retain their compatibility entry point. Migration affects the compiler
-example, fence-reading hosts/tests, seed READMEs, and both unified specifications. Existing legacy
-Program examples do not need bulk conversion.
+All compiler modules use the unified grammar and `*.matra` fences. A module declaration selects the
+native profile; other `.matra` sources use the document profile. The legacy `.matra.program` fence is
+no longer accepted.
 
 ## Commands
 
@@ -62,7 +62,7 @@ Compile a Markdown Program with the Rust seed:
 
 ```text
 cargo run --manifest-path crates/matra-seed/Cargo.toml -- \
-  INPUT.md OUTPUT.wasm --entry NAME.matra.program
+  INPUT.md OUTPUT.wasm --entry NAME.matra
 ```
 
 Compile Matra source with the cached stage-1 compiler:

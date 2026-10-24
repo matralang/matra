@@ -34,7 +34,7 @@ const stylesheet = required<HTMLInputElement>("stylesheet")
 
 type OutputMode = "html" | "svg"
 type ResultMode = OutputMode | "math" | "program"
-type MatraFence = { filename: string; kind: "matra" | "matra.ts" | "matra.program"; source: string }
+type MatraFence = { filename: string; kind: "matra" | "matra.ts"; source: string }
 type MatraRenderer = ResultMode | "auto"
 type MatraDocument = MatraFence & { renderer: MatraRenderer; title?: string; stylesheet?: string }
 
@@ -207,7 +207,7 @@ export default matra\`svg(width=560, height=360) { rect(x=0, y=0, width=560, hei
     "Add(Power(2, 10), Factorial(5), Sin(Divide(Pi, 2)))",
     "math",
   ),
-  program: `# Program compiler\n\n\`\`\`answer.matra.program\nmodule playground\n\nexport fn answer() -> i32 {\n  let (value = 40)\n  while (value < 42) {\n    set (value = value + 1)\n  }\n  return value\n}\n\`\`\``,
+  program: `# Program compiler\n\n\`\`\`answer.matra\nmodule playground\n\nexport fn answer() -> i32 {\n  let (value = 40)\n  while (value < 42) {\n    value = value + 1\n  }\n  return value\n}\n\`\`\``,
 }
 
 let activePanel = "preview"
@@ -225,7 +225,7 @@ async function render(): Promise<void> {
 
   try {
     const document = extractMatraDocument(program)
-    if (document.kind === "matra.program") {
+    if (/^\s*module\b/.test(document.source.replace(/^(?:\s|\/\/[^\n]*(?:\n|$))*/, ""))) {
       await renderMatraProgram(document, version)
       return
     }

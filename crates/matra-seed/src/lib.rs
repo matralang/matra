@@ -1,6 +1,6 @@
-//! 統一 Matra と互換 Matra Program の seed compiler。
+//! 統一 Matra の seed compiler。
 //!
-//! `.matra` source、Markdown 内の `*.matra` / `*.matra.program` fence から
+//! `.matra` source、Markdown 内の `*.matra` fence から
 //! WebAssembly module を生成する。
 
 use std::collections::{HashMap, HashSet};
@@ -47,35 +47,24 @@ impl fmt::Display for CompileError {
 
 impl std::error::Error for CompileError {}
 
-/// 選択した `*.matra` / `*.matra.program` fence を Wasm binary に compile する。
+/// 選択した `*.matra` fence を Wasm binary に compile する。
 pub fn compile_markdown(markdown: &str, entry: Option<&str>) -> Result<Vec<u8>, CompileError> {
-    let fences = extract_programs(markdown)?;
+    let fences = extract_matra_fences(markdown)?;
     let entry_index = select_entry(&fences, entry)?;
-    if fences[entry_index].filename.ends_with(".matra") {
-        let module = unified::parse(&fences[entry_index].source)?;
-        if !matches!(module.statements.first(), Some(unified::Stmt::Module(_))) {
-            return unified_wasm::compile(&module);
-        }
+    let module = unified::parse(&fences[entry_index].source)?;
+    if !matches!(module.statements.first(), Some(unified::Stmt::Module(_))) {
+        return unified_wasm::compile(&module);
     }
     let modules: Vec<_> = fences
         .iter()
-        .filter_map(|fence| {
-            if fence.filename.ends_with(".matra") {
-                match unified::parse(&fence.source) {
-                    Ok(module)
-                        if !matches!(module.statements.first(), Some(unified::Stmt::Module(_))) =>
-                    {
-                        None
-                    }
-                    Ok(module) => Some(
-                        unified_native::lower(&module)
-                            .map(|program| (fence.filename.clone(), program)),
-                    ),
-                    Err(error) => Some(Err(error)),
-                }
-            } else {
-                Some(parse_program(&fence.source).map(|program| (fence.filename.clone(), program)))
+        .filter_map(|fence| match unified::parse(&fence.source) {
+            Ok(module) if !matches!(module.statements.first(), Some(unified::Stmt::Module(_))) => {
+                None
             }
+            Ok(module) => Some(
+                unified_native::lower(&module).map(|program| (fence.filename.clone(), program)),
+            ),
+            Err(error) => Some(Err(error)),
         })
         .collect::<Result<_, _>>()?;
     let entry_index = modules
@@ -111,12 +100,12 @@ pub fn compile_markdown(markdown: &str, entry: Option<&str>) -> Result<Vec<u8>, 
     })
 }
 
-struct ProgramFence {
+struct MatraFence {
     filename: String,
     source: String,
 }
 
-fn extract_programs(markdown: &str) -> Result<Vec<ProgramFence>, CompileError> {
+fn extract_matra_fences(markdown: &str) -> Result<Vec<MatraFence>, CompileError> {
     let mut fences = Vec::new();
     let mut lines = markdown.split_inclusive('\n').peekable();
 
@@ -133,7 +122,7 @@ fn extract_programs(markdown: &str) -> Result<Vec<ProgramFence>, CompileError> {
             .split_whitespace()
             .next()
             .unwrap_or_default();
-        if !name.ends_with(".matra.program") && !name.ends_with(".matra") {
+        if !name.ends_with(".matra") {
             continue;
         }
 
@@ -153,10 +142,10 @@ fn extract_programs(markdown: &str) -> Result<Vec<ProgramFence>, CompileError> {
         }
         if !closed {
             return Err(CompileError::new(format!(
-                "Unclosed Matra Program fence: {name}"
+                "Unclosed Matra fence: {name}"
             )));
         }
-        fences.push(ProgramFence {
+        fences.push(MatraFence {
             filename: name.to_owned(),
             source,
         });
@@ -164,20 +153,20 @@ fn extract_programs(markdown: &str) -> Result<Vec<ProgramFence>, CompileError> {
     Ok(fences)
 }
 
-fn select_entry(fences: &[ProgramFence], entry: Option<&str>) -> Result<usize, CompileError> {
+fn select_entry(fences: &[MatraFence], entry: Option<&str>) -> Result<usize, CompileError> {
     match entry {
         Some(entry) => fences
             .iter()
             .position(|fence| fence.filename == entry)
             .ok_or_else(|| {
-                CompileError::new(format!("The Matra Program entry '{entry}' was not found."))
+                CompileError::new(format!("The Matra entry '{entry}' was not found."))
             }),
         None if fences.len() == 1 => Ok(0),
         None if fences.is_empty() => Err(CompileError::new(
-            "Markdown must contain one `*.matra.program` fenced code block.",
+            "Markdown must contain one `*.matra` fenced code block.",
         )),
         None => Err(CompileError::new(
-            "Set an entry when Markdown contains multiple Matra Program blocks.",
+            "Set an entry when Markdown contains multiple Matra fences.",
         )),
     }
 }
@@ -261,34 +250,6 @@ enum BinaryOperator {
     GreaterThanOrEqual,
 }
 
-fn parse_program(source: &str) -> Result<Program, CompileError> {
-    let mut parser = Parser::new(source);
-    parser.expect_keyword("module")?;
-    let name = parser.identifier()?;
-    let mut imports = Vec::new();
-    while parser.consume_keyword("import") {
-        imports.push(parser.identifier()?);
-    }
-    let mut structs = Vec::new();
-    while parser.consume_keyword("struct") {
-        structs.push(parser.struct_definition()?);
-    }
-    let mut functions = Vec::new();
-    while !parser.at_end() {
-        functions.push(parser.function()?);
-    }
-    if functions.is_empty() {
-        return Err(parser.error("A program must declare at least one function."));
-    }
-    parser.expect_end()?;
-    Ok(Program {
-        name,
-        imports,
-        structs,
-        functions,
-    })
-}
-
 fn collect_structs(
     modules: &[(String, Program)],
     states: &[u8],
@@ -351,458 +312,6 @@ fn always_returns(statements: &[Statement]) -> bool {
         Some(Statement::DoUntil(body, _)) => always_returns(body),
         _ => false,
     }
-}
-
-struct Parser<'a> {
-    source: &'a str,
-    offset: usize,
-}
-
-impl<'a> Parser<'a> {
-    fn new(source: &'a str) -> Self {
-        Self { source, offset: 0 }
-    }
-
-    fn expect_keyword(&mut self, keyword: &str) -> Result<(), CompileError> {
-        let identifier = self.raw_identifier()?;
-        if identifier == keyword {
-            Ok(())
-        } else {
-            Err(self.error(format!("Expected '{keyword}', found '{identifier}'.")))
-        }
-    }
-
-    fn consume_keyword(&mut self, keyword: &str) -> bool {
-        let checkpoint = self.offset;
-        let Ok(identifier) = self.raw_identifier() else {
-            self.offset = checkpoint;
-            return false;
-        };
-        if identifier == keyword {
-            true
-        } else {
-            self.offset = checkpoint;
-            false
-        }
-    }
-
-    fn function(&mut self) -> Result<Function, CompileError> {
-        let exported = self.consume_keyword("export");
-        self.expect_keyword("fn")?;
-        let name = self.identifier()?;
-        self.expect('(')?;
-        let mut parameters = Vec::new();
-        if !self.consume(')') {
-            loop {
-                let parameter = self.identifier()?;
-                self.expect(':')?;
-                parameters.push(Parameter {
-                    name: parameter,
-                    value_type: self.parse_type()?,
-                });
-                if self.consume(')') {
-                    break;
-                }
-                self.expect(',')?;
-            }
-        }
-        self.expect_arrow()?;
-        let return_type = self.parse_type()?;
-        self.expect('{')?;
-        let mut statements = Vec::new();
-        while !self.consume('}') {
-            if self.at_end() {
-                return Err(self.error("Expected '}' to close function body."));
-            }
-            statements.push(self.statement()?);
-        }
-        if !always_returns(&statements) {
-            return Err(self.error(format!("Function '{name}' must end with return.")));
-        }
-        Ok(Function {
-            exported,
-            name,
-            parameters,
-            return_type,
-            statements,
-        })
-    }
-
-    fn struct_definition(&mut self) -> Result<StructDefinition, CompileError> {
-        let name = self.identifier()?;
-        self.expect('{')?;
-        let mut fields = Vec::new();
-        while !self.consume('}') {
-            if self.at_end() {
-                return Err(self.error("Expected '}' to close struct declaration."));
-            }
-            let field_name = self.identifier()?;
-            self.expect(':')?;
-            self.expect_keyword("i32")?;
-            fields.push(StructField { name: field_name });
-        }
-        Ok(StructDefinition { name, fields })
-    }
-
-    fn statement(&mut self) -> Result<Statement, CompileError> {
-        if self.consume_keyword("let") {
-            let parenthesized = self.consume('(');
-            let name = self.identifier()?;
-            let value_type = if self.consume(':') {
-                Some(self.parse_type()?)
-            } else {
-                None
-            };
-            self.expect('=')?;
-            let expression = self.expression()?;
-            if parenthesized {
-                self.expect(')')?;
-            }
-            return Ok(Statement::Let(name, value_type, expression));
-        }
-        if self.consume_keyword("set") {
-            self.expect('(')?;
-            let name = self.identifier()?;
-            self.expect('=')?;
-            let expression = self.expression()?;
-            self.expect(')')?;
-            return Ok(Statement::Assign(name, expression));
-        }
-        if self.consume_keyword("return") {
-            return Ok(Statement::Return(self.expression()?));
-        }
-        if self.consume_keyword("break") {
-            return Ok(Statement::Break);
-        }
-        if self.consume_keyword("if") {
-            return self.if_statement();
-        }
-        if self.consume_keyword("while") {
-            let condition = self.expression()?;
-            return Ok(Statement::While(condition, self.block()?));
-        }
-        if self.consume_keyword("do") {
-            let body = self.block()?;
-            self.expect_keyword("until")?;
-            self.expect('(')?;
-            let condition = self.expression()?;
-            self.expect(')')?;
-            return Ok(Statement::DoUntil(body, condition));
-        }
-        let name = self.identifier()?;
-        if name == "byte_set" {
-            self.expect('(')?;
-            let bytes = self.expression()?;
-            self.expect(',')?;
-            let index = self.expression()?;
-            self.expect(',')?;
-            let value = self.expression()?;
-            self.expect(')')?;
-            return Ok(Statement::ByteSet(bytes, index, value));
-        }
-        if name == "array_set" {
-            self.expect('(')?;
-            let array = self.expression()?;
-            self.expect(',')?;
-            let index = self.expression()?;
-            self.expect(',')?;
-            let value = self.expression()?;
-            self.expect(')')?;
-            return Ok(Statement::ArraySet(array, index, value));
-        }
-        self.expect('=')?;
-        Ok(Statement::Assign(name, self.expression()?))
-    }
-
-    fn block(&mut self) -> Result<Vec<Statement>, CompileError> {
-        self.expect('{')?;
-        let mut statements = Vec::new();
-        while !self.consume('}') {
-            if self.at_end() {
-                return Err(self.error("Expected '}' to close block."));
-            }
-            statements.push(self.statement()?);
-        }
-        Ok(statements)
-    }
-
-    fn expression(&mut self) -> Result<Expression, CompileError> {
-        self.comparison()
-    }
-
-    fn comparison(&mut self) -> Result<Expression, CompileError> {
-        let mut expression = self.additive()?;
-        loop {
-            let operator = if self.consume_text("==") {
-                Some(BinaryOperator::Equal)
-            } else if self.consume_text("!=") {
-                Some(BinaryOperator::NotEqual)
-            } else if self.consume_text("<=") {
-                Some(BinaryOperator::LessThanOrEqual)
-            } else if self.consume_text(">=") {
-                Some(BinaryOperator::GreaterThanOrEqual)
-            } else if self.consume('<') {
-                Some(BinaryOperator::LessThan)
-            } else if self.consume('>') {
-                Some(BinaryOperator::GreaterThan)
-            } else {
-                None
-            };
-            let Some(operator) = operator else {
-                return Ok(expression);
-            };
-            expression =
-                Expression::Binary(operator, Box::new(expression), Box::new(self.additive()?));
-        }
-    }
-
-    fn additive(&mut self) -> Result<Expression, CompileError> {
-        let mut expression = self.multiplicative()?;
-        loop {
-            let operator = if self.consume('+') {
-                Some(BinaryOperator::Add)
-            } else if self.consume('-') {
-                Some(BinaryOperator::Subtract)
-            } else {
-                None
-            };
-            let Some(operator) = operator else {
-                return Ok(expression);
-            };
-            expression = Expression::Binary(
-                operator,
-                Box::new(expression),
-                Box::new(self.multiplicative()?),
-            );
-        }
-    }
-
-    fn multiplicative(&mut self) -> Result<Expression, CompileError> {
-        let mut expression = self.unary()?;
-        loop {
-            let operator = if self.consume('*') {
-                Some(BinaryOperator::Multiply)
-            } else if self.consume('/') {
-                Some(BinaryOperator::Divide)
-            } else {
-                None
-            };
-            let Some(operator) = operator else {
-                return Ok(expression);
-            };
-            expression =
-                Expression::Binary(operator, Box::new(expression), Box::new(self.unary()?));
-        }
-    }
-
-    fn unary(&mut self) -> Result<Expression, CompileError> {
-        if self.consume('-') {
-            return Ok(Expression::Negate(Box::new(self.unary()?)));
-        }
-        self.primary()
-    }
-
-    fn primary(&mut self) -> Result<Expression, CompileError> {
-        let mut expression = if self.consume('(') {
-            let expression = self.expression()?;
-            self.expect(')')?;
-            expression
-        } else {
-            self.skip_trivia();
-            if matches!(self.peek(), Some('0'..='9')) {
-                Expression::Integer(self.integer()?)
-            } else {
-                let name = self.identifier()?;
-                if !self.consume('(') {
-                    Expression::Variable(name)
-                } else {
-                    let mut arguments = Vec::new();
-                    if !self.consume(')') {
-                        loop {
-                            arguments.push(self.expression()?);
-                            if self.consume(')') {
-                                break;
-                            }
-                            self.expect(',')?;
-                        }
-                    }
-                    Expression::Call(name, arguments)
-                }
-            }
-        };
-        while self.consume('.') {
-            expression = Expression::FieldAccess(Box::new(expression), self.identifier()?);
-        }
-        Ok(expression)
-    }
-
-    fn parse_type(&mut self) -> Result<ValueType, CompileError> {
-        if self.consume('[') {
-            self.expect_keyword("i32")?;
-            self.expect(']')?;
-            return Ok(ValueType::ArrayI32);
-        }
-        match self.identifier()?.as_str() {
-            "i32" => Ok(ValueType::I32),
-            "bytes" => Ok(ValueType::Bytes),
-            value => Ok(ValueType::Struct(value.to_owned())),
-        }
-    }
-
-    fn if_statement(&mut self) -> Result<Statement, CompileError> {
-        let condition = self.expression()?;
-        let then_body = self.block()?;
-        let else_body = if self.consume_keyword("else_if") {
-            vec![self.if_statement()?]
-        } else if self.consume_keyword("else") {
-            self.block()?
-        } else {
-            Vec::new()
-        };
-        Ok(Statement::If(condition, then_body, else_body))
-    }
-
-    fn identifier(&mut self) -> Result<String, CompileError> {
-        let identifier = self.raw_identifier()?;
-        if is_reserved_word(&identifier) {
-            return Err(self.error(format!(
-                "Reserved word cannot be an identifier: {identifier}"
-            )));
-        }
-        Ok(identifier)
-    }
-
-    fn raw_identifier(&mut self) -> Result<String, CompileError> {
-        self.skip_trivia();
-        let start = self.offset;
-        let Some(first) = self.peek() else {
-            return Err(self.error("Expected an identifier."));
-        };
-        if !matches!(first, 'A'..='Z' | 'a'..='z' | '_') {
-            return Err(self.error("Expected an identifier."));
-        }
-        self.bump();
-        while matches!(self.peek(), Some('A'..='Z' | 'a'..='z' | '0'..='9' | '_')) {
-            self.bump();
-        }
-        Ok(self.source[start..self.offset].to_owned())
-    }
-
-    fn integer(&mut self) -> Result<i32, CompileError> {
-        self.skip_trivia();
-        let start = self.offset;
-        if self.peek() == Some('-') {
-            self.bump();
-        }
-        let digit_start = self.offset;
-        while matches!(self.peek(), Some('0'..='9')) {
-            self.bump();
-        }
-        if digit_start == self.offset {
-            return Err(self.error("Expected an i32 literal."));
-        }
-        self.source[start..self.offset]
-            .parse()
-            .map_err(|_| self.error("i32 literal is out of range."))
-    }
-
-    fn expect(&mut self, character: char) -> Result<(), CompileError> {
-        if self.consume(character) {
-            Ok(())
-        } else {
-            Err(self.error(format!("Expected '{character}'.")))
-        }
-    }
-
-    fn consume(&mut self, character: char) -> bool {
-        self.skip_trivia();
-        if self.peek() != Some(character) {
-            return false;
-        }
-        self.bump();
-        true
-    }
-
-    fn consume_text(&mut self, text: &str) -> bool {
-        self.skip_trivia();
-        if !self.source[self.offset..].starts_with(text) {
-            return false;
-        }
-        self.offset += text.len();
-        true
-    }
-
-    fn expect_arrow(&mut self) -> Result<(), CompileError> {
-        self.skip_trivia();
-        if self.source[self.offset..].starts_with("->") {
-            self.offset += 2;
-            Ok(())
-        } else {
-            Err(self.error("Expected '->'."))
-        }
-    }
-
-    fn expect_end(&mut self) -> Result<(), CompileError> {
-        self.skip_trivia();
-        if self.offset == self.source.len() {
-            Ok(())
-        } else {
-            Err(self.error("Expected the end of the program."))
-        }
-    }
-
-    fn at_end(&mut self) -> bool {
-        self.skip_trivia();
-        self.offset == self.source.len()
-    }
-
-    fn skip_trivia(&mut self) {
-        loop {
-            while matches!(self.peek(), Some(' ' | '\t' | '\r' | '\n')) {
-                self.bump();
-            }
-            if !self.source[self.offset..].starts_with("//") {
-                return;
-            }
-            while !matches!(self.peek(), None | Some('\n')) {
-                self.bump();
-            }
-        }
-    }
-
-    fn peek(&self) -> Option<char> {
-        self.source[self.offset..].chars().next()
-    }
-
-    fn bump(&mut self) {
-        self.offset += self.peek().expect("bump requires a character").len_utf8();
-    }
-
-    fn error(&self, message: impl Into<String>) -> CompileError {
-        let before = &self.source[..self.offset];
-        let line = before.bytes().filter(|byte| *byte == b'\n').count() + 1;
-        CompileError::new(format!("{} (line {line})", message.into()))
-    }
-}
-
-fn is_reserved_word(identifier: &str) -> bool {
-    matches!(
-        identifier,
-        "fn" | "let"
-            | "set"
-            | "if"
-            | "else"
-            | "else_if"
-            | "while"
-            | "do"
-            | "until"
-            | "return"
-            | "break"
-            | "module"
-            | "import"
-            | "export"
-            | "struct"
-    )
 }
 
 fn emit_module(program: &Program) -> Result<Vec<u8>, CompileError> {
@@ -2140,7 +1649,7 @@ mod tests {
     const EXAMPLE: &str = r#"
 # Example
 
-```answer.matra.program
+```answer.matra
 module example
 
 fn double(value: i32) -> i32 {
@@ -2148,12 +1657,12 @@ fn double(value: i32) -> i32 {
 }
 
 export fn answer(input: i32) -> i32 {
-  let doubled = double(input)
-  let result: i32 = doubled + 2
-  while result < 43 {
+  let (doubled = double(input))
+  let (result: i32 = doubled + 2)
+  while (result < 43) {
     result = result + 1
   }
-  if result == 43 {
+  if (result == 43) {
     return result
   } else {
     return 0
@@ -2169,22 +1678,35 @@ export fn answer(input: i32) -> i32 {
     }
 
     #[test]
-    fn selects_a_named_entry() {
-        let markdown = format!(
-            "{EXAMPLE}\n```other.matra.program\nmodule other\nexport fn other() -> i32 {{ return 1 }}\n```\n"
-        );
-        assert!(compile_markdown(&markdown, None).is_err());
-        assert!(compile_markdown(&markdown, Some("answer.matra.program")).is_ok());
+    fn compiles_a_document_profile_from_a_matra_fence() {
+        let source = "```page.matra\n42\n```";
+        let output = compile_markdown(source, None).unwrap();
+        assert_eq!(&output[..4], b"\0asm");
     }
 
     #[test]
-    fn reports_missing_program_blocks() {
+    fn selects_a_named_entry() {
+        let markdown = format!(
+            "{EXAMPLE}\n```other.matra\nmodule other\nexport fn other() -> i32 {{ return 1 }}\n```\n"
+        );
+        assert!(compile_markdown(&markdown, None).is_err());
+        assert!(compile_markdown(&markdown, Some("answer.matra")).is_ok());
+    }
+
+    #[test]
+    fn rejects_legacy_program_fences() {
+        let source = "```answer.matra.program\nmodule answer\nexport fn answer() -> i32 { return 1 }\n```";
+        assert!(compile_markdown(source, None).is_err());
+    }
+
+    #[test]
+    fn reports_missing_matra_blocks() {
         assert!(compile_markdown("# No source", None).is_err());
     }
 
     #[test]
     fn reports_unknown_names() {
-        let source = "```broken.matra.program\nmodule broken\nexport fn answer() -> i32 { return missing }\n```";
+        let source = "```broken.matra\nmodule broken\nexport fn answer() -> i32 { return missing }\n```";
         assert!(
             compile_markdown(source, None)
                 .unwrap_err()
@@ -2196,23 +1718,23 @@ export fn answer(input: i32) -> i32 {
     #[test]
     fn resolves_imported_modules_from_markdown_fences() {
         let source = r#"
-```math.matra.program
+```math.matra
 module math
 fn double(value: i32) -> i32 { return value * 2 }
 ```
 
-```entry.matra.program
+```entry.matra
 module entry
 import math
 export fn answer() -> i32 { return double(21) }
 ```
 "#;
-        assert!(compile_markdown(source, Some("entry.matra.program")).is_ok());
+        assert!(compile_markdown(source, Some("entry.matra")).is_ok());
     }
 
     #[test]
     fn rejects_unknown_imports() {
-        let source = "```entry.matra.program\nmodule entry\nimport missing\nexport fn answer() -> i32 { return 1 }\n```";
+        let source = "```entry.matra\nmodule entry\nimport missing\nexport fn answer() -> i32 { return 1 }\n```";
         assert!(
             compile_markdown(source, None)
                 .unwrap_err()
@@ -2223,19 +1745,13 @@ export fn answer() -> i32 { return double(21) }
 
     #[test]
     fn rejects_reserved_words_as_identifiers() {
-        let source =
-            "```entry.matra.program\nmodule entry\nexport fn return() -> i32 { return 1 }\n```";
-        assert!(
-            compile_markdown(source, None)
-                .unwrap_err()
-                .to_string()
-                .contains("Reserved word")
-        );
+        let source = "```entry.matra\nmodule entry\nexport fn return() -> i32 { return 1 }\n```";
+        assert!(compile_markdown(source, None).is_err());
     }
 
     #[test]
     fn rejects_duplicate_parameter_names_across_lowered_types() {
-        let source = "```entry.matra.program\nmodule entry\nexport fn answer(value: i32, value: bytes) -> i32 { return value }\n```";
+        let source = "```entry.matra\nmodule entry\nexport fn answer(value: i32, value: bytes) -> i32 { return value }\n```";
         assert!(
             compile_markdown(source, None)
                 .unwrap_err()
@@ -2245,29 +1761,20 @@ export fn answer() -> i32 { return double(21) }
     }
 
     #[test]
-    fn accepts_parenthesized_let_and_set_statements() {
-        let source = "```entry.matra.program\nmodule entry\nexport fn answer() -> i32 { let // declaration\n(value: i32 = 40) set (value = value + 2) return value }\n```";
+    fn accepts_parenthesized_let_and_assignment_statements() {
+        let source = "```entry.matra\nmodule entry\nexport fn answer() -> i32 {\n let (value: i32 = 40)\n value = value + 2\n return value\n}\n```";
         assert!(compile_markdown(source, None).is_ok());
     }
 
     #[test]
     fn rejects_unclosed_parenthesized_statements() {
-        for statement in ["let (value = 1", "set (value = 1"] {
-            let source = format!(
-                "```entry.matra.program\nmodule entry\nexport fn answer() -> i32 {{ {statement} return 0 }}\n```"
-            );
-            assert!(
-                compile_markdown(&source, None)
-                    .unwrap_err()
-                    .to_string()
-                    .contains("Expected ')'")
-            );
-        }
+        let source = "```entry.matra\nmodule entry\nexport fn answer() -> i32 {\n let (value = 1\n return 0\n}\n```";
+        assert!(compile_markdown(source, None).is_err());
     }
 
     #[test]
-    fn rejects_set_for_an_unknown_local() {
-        let source = "```entry.matra.program\nmodule entry\nexport fn answer() -> i32 { set (value = 1) return 0 }\n```";
+    fn rejects_assignment_to_an_unknown_local() {
+        let source = "```entry.matra\nmodule entry\nexport fn answer() -> i32 {\n value = 1\n return 0\n}\n```";
         assert!(
             compile_markdown(source, None)
                 .unwrap_err()
@@ -2277,13 +1784,19 @@ export fn answer() -> i32 { return double(21) }
     }
 
     #[test]
+    fn rejects_set_statement_syntax() {
+        let source = "```entry.matra\nmodule entry\nexport fn answer() -> i32 {\n let (value = 0)\n set (value = 1)\n return value\n}\n```";
+        assert!(compile_markdown(source, None).is_err());
+    }
+
+    #[test]
     fn rejects_incomplete_do_until_statements() {
         for statement in [
-            "do { set (value = 1) } (value == 1)",
-            "do { set (value = 1) } until value == 1",
+            "do { value = 1 } (value == 1)",
+            "do { value = 1 } until value == 1",
         ] {
             let source = format!(
-                "```entry.matra.program\nmodule entry\nexport fn answer() -> i32 {{ let (value = 0) {statement} return value }}\n```"
+                "```entry.matra\nmodule entry\nexport fn answer() -> i32 {{\n let (value = 0)\n {statement}\n return value\n}}\n```"
             );
             assert!(compile_markdown(&source, None).is_err());
         }
