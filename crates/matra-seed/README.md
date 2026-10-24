@@ -104,6 +104,13 @@ pnpm run test:seed
 pnpm run lint
 ```
 
+Test fixtures use current `*.matra` fences, `let` and direct assignment, and explicit statement/field separators.
+Do not change the compiler to accept retired syntax again.
+Test subprocesses have a default 120-second deadline, overridden where a test specifies its own.
+Startup errors, timeouts, and signal termination fail explicitly with the command that was run.
+The self-host integration test generates Stage 2/3 without caching and therefore takes longer than
+ordinary individual tests. The last printed success line does not mean the entire suite has completed.
+
 ## Layout
 
 - [`src/`](src/): Rust seed compiler

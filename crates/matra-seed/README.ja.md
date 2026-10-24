@@ -102,6 +102,13 @@ pnpm run test:seed
 pnpm run lint
 ```
 
+テストfixtureは現行の`*.matra` fence、`let`と直接代入、明示的な文・field区切りを使う。
+廃止した記法を再び受理するようcompilerを変更してはならない。
+テスト用の外部プロセスは原則120秒、個別指定があればその期限で停止し、
+起動失敗・timeout・signal終了を実行command付きの失敗として報告する。
+自己ホストのintegration testはcacheを使わずStage 2/3を生成するため、
+通常の単一testより時間がかかる。最後の成功行だけでは全testの完了を意味しない。
+
 ## 構成
 
 - [`src/`](src/): Rust seed compiler

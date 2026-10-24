@@ -1,12 +1,12 @@
 import assert from "node:assert/strict"
-import { spawnSync } from "node:child_process"
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import test from "node:test"
 import { fileURLToPath } from "node:url"
 import { cachedCompiler } from "../host/bootstrap-compiler.mjs"
-import { formatCompilerDiagnostic } from "../host/compiler-host.mjs"
+import { formatCompilerDiagnostic, programSource } from "../host/compiler-host.mjs"
+import { spawnSync } from "./helpers/process.mjs"
 
 const root = fileURLToPath(new URL("../../../", import.meta.url))
 
@@ -15,7 +15,7 @@ async function seed(source) {
   try {
     const input = join(directory, "input.md")
     const output = join(directory, "output.wasm")
-    await writeFile(input, `\`\`\`compiler.matra.program\n${source}\n\`\`\`\n`)
+    await writeFile(input, `\`\`\`compiler.matra\n${source}\n\`\`\`\n`)
     const result = spawnSync(
       "cargo",
       ["run", "--quiet", "--manifest-path", "crates/matra-seed/Cargo.toml", "--", input, output],
@@ -118,7 +118,7 @@ export fn probe() -> i32 {
 
   test(`${name} materializes flat metadata after scalar extraction`, async () => {
     const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
-    const program = markdown.split("```compiler.matra\n")[1]
+    const program = programSource(markdown, "compiler.matra")
     const source =
       program.slice(0, program.indexOf("// A temporary execution probe")) +
       `
@@ -177,7 +177,7 @@ export fn probe(source: bytes) -> i32 {
 
   test(`${name} preserves consecutive lexer results and aliases`, async () => {
     const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
-    const program = markdown.split("```compiler.matra\n")[1]
+    const program = programSource(markdown, "compiler.matra")
     const source =
       program.slice(0, program.indexOf("// A temporary execution probe")) +
       `
@@ -211,11 +211,26 @@ export fn probe(source: bytes, selected: i32) -> token {
 
   test(`${name} reclaims temporary frames without reclaiming escaped allocations`, async () => {
     const source = `module demo
-struct pair { left: i32 right: i32 }
-export fn heap() -> i32 { let empty = allocate_bytes(0) return byte_pointer(empty) }
-fn make(value: i32) -> pair { let current = value return pair(current, value + 1) }
-fn read(value: i32) -> i32 { let pair_value = make(value) return pair_value.right }
-export fn nested() -> pair { let first = 20 return pair(read(first), read(40)) }
+struct pair {
+  left: i32
+  right: i32
+}
+export fn heap() -> i32 {
+  let empty = allocate_bytes(0)
+  return byte_pointer(empty)
+}
+fn make(value: i32) -> pair {
+  let current = value
+  return pair(current, value + 1)
+}
+fn read(value: i32) -> i32 {
+  let pair_value = make(value)
+  return pair_value.right
+}
+export fn nested() -> pair {
+  let first = 20
+  return pair(read(first), read(40))
+}
 export fn scalar(value: i32) -> i32 {
   let first = make(value)
   let second = make(value + 2)
@@ -226,13 +241,19 @@ export fn recursive(depth: i32) -> pair {
   let previous = recursive(depth - 1)
   return pair(previous.left + 1, previous.right + 2)
 }
-export fn retain(value: pair) -> pair { let alias = value return alias }
+export fn retain(value: pair) -> pair {
+  let alias = value
+  return alias
+}
 fn allocate_result() -> i32 {
   let output = allocate_bytes(1)
   byte_set(output, 0, 99)
   return byte_pointer(output)
 }
-export fn escape() -> i32 { let temporary = make(7) return allocate_result() }
+export fn escape() -> i32 {
+  let temporary = make(7)
+  return allocate_result()
+}
 `
     const {
       instance: { exports: e },
@@ -260,7 +281,10 @@ export fn escape() -> i32 { let temporary = make(7) return allocate_result() }
 
 test("seed evaluates constructor arguments before reserving its result", async () => {
   const source = `module demo
-struct pair { left: i32 right: i32 }
+struct pair {
+  left: i32
+  right: i32
+}
 fn make(value: i32) -> pair { return pair(value, value + 1) }
 export fn answer() -> pair { return pair(make(20).right, make(40).right) }
 `

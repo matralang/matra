@@ -1,5 +1,4 @@
 import assert from "node:assert/strict"
-import { spawnSync } from "node:child_process"
 import {
   chmod,
   copyFile,
@@ -23,6 +22,7 @@ import {
   projectPath,
 } from "../host/node-runtime.mjs"
 import { instantiateUnified } from "../host/unified-host.mjs"
+import { spawnSync } from "./helpers/process.mjs"
 
 const cli = fileURLToPath(new URL("../host/portable.mjs", import.meta.url))
 const sample = new URL("../examples/portable/", import.meta.url)

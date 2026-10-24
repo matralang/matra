@@ -1,5 +1,4 @@
 import assert from "node:assert/strict"
-import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
@@ -8,8 +7,14 @@ import { test } from "node:test"
 import { fileURLToPath } from "node:url"
 import { Worker } from "node:worker_threads"
 import { cachedCompiler } from "../host/bootstrap-compiler.mjs"
-import { formatCompilerDiagnostic, sourceExcerpt, sourcePosition } from "../host/compiler-host.mjs"
+import {
+  formatCompilerDiagnostic,
+  programSource,
+  sourceExcerpt,
+  sourcePosition,
+} from "../host/compiler-host.mjs"
 import { instantiateUnified } from "../host/unified-host.mjs"
+import { spawnSync } from "./helpers/process.mjs"
 
 const root = new URL("../../..", import.meta.url)
 
@@ -49,7 +54,7 @@ test("bootstrap compiler accepts a call comparison in a conditional condition", 
     [
       "# Conditional call comparison",
       "",
-      "```compiler.matra.program",
+      "```compiler.matra",
       "module demo",
       "",
       "fn is_arithmetic_operator(source: bytes, value: i32) -> i32 {",
@@ -82,7 +87,7 @@ test("bootstrap compiler accepts a call comparison in a conditional condition", 
         input,
         output,
         "--entry",
-        "compiler.matra.program",
+        "compiler.matra",
       ],
       { cwd: root, encoding: "utf8" },
     )
@@ -101,7 +106,7 @@ test("bootstrap compiler accepts a simple conditional return in a function body"
     [
       "# Simple conditional return",
       "",
-      "```compiler.matra.program",
+      "```compiler.matra",
       "module demo",
       "",
       "export fn answer(value: i32) -> i32 {",
@@ -127,7 +132,7 @@ test("bootstrap compiler accepts a simple conditional return in a function body"
         input,
         output,
         "--entry",
-        "compiler.matra.program",
+        "compiler.matra",
       ],
       { cwd: root, encoding: "utf8" },
     )
@@ -137,21 +142,21 @@ test("bootstrap compiler accepts a simple conditional return in a function body"
   }
 })
 
-test("Rust seed executes parenthesized let and set statements", async () => {
+test("Rust seed executes parenthesized let and assignment statements", async () => {
   const directory = await mkdtemp(join(tmpdir(), "matra-seed-let-set-"))
   const input = join(directory, "let-set.md")
   const output = join(directory, "let-set.wasm")
   await writeFile(
     input,
     [
-      "# Parenthesized let and set",
+      "# Parenthesized let and assignment",
       "",
-      "```answer.matra.program",
+      "```answer.matra",
       "module example",
       "",
       "export fn answer() -> i32 {",
-      "  let (value: i32 = 40)",
-      "  set (value = value + 2)",
+      "  let (value = 40)",
+      "  value = value + 2",
       "  return value",
       "}",
       "```",
@@ -171,7 +176,7 @@ test("Rust seed executes parenthesized let and set statements", async () => {
         input,
         output,
         "--entry",
-        "answer.matra.program",
+        "answer.matra",
       ],
       { cwd: root, encoding: "utf8" },
     )
@@ -193,16 +198,16 @@ test("Rust seed executes parenthesized if and while conditions", async () => {
     [
       "# Parenthesized conditions",
       "",
-      "```answer.matra.program",
+      "```answer.matra",
       "module example",
       "",
       "export fn answer() -> i32 {",
       "  let (value = 0)",
       "  if (value == 0) {",
-      "    set (value = 40)",
+      "    value = 40",
       "  }",
       "  while (value < 42) {",
-      "    set (value = value + 1)",
+      "    value = value + 1",
       "  }",
       "  return value",
       "}",
@@ -223,7 +228,7 @@ test("Rust seed executes parenthesized if and while conditions", async () => {
         input,
         output,
         "--entry",
-        "answer.matra.program",
+        "answer.matra",
       ],
       { cwd: root, encoding: "utf8" },
     )
@@ -245,23 +250,21 @@ test("Rust seed executes do-until loops", async () => {
     [
       "# Do until",
       "",
-      "```answer.matra.program",
+      "```answer.matra",
       "module example",
       "",
       "export fn repeat(value: i32) -> i32 {",
       "  do {",
-      "    set (value = value + 1)",
-      "  }",
-      "  until (value >= 3)",
+      "    value = value + 1",
+      "  } until (value >= 3)",
       "  return value",
       "}",
       "",
       "export fn stop(value: i32) -> i32 {",
       "  do {",
-      "    set (value = value + 1)",
+      "    value = value + 1",
       "    break",
-      "  }",
-      "  until (value >= 100)",
+      "  } until (value >= 100)",
       "  return value",
       "}",
       "```",
@@ -281,7 +284,7 @@ test("Rust seed executes do-until loops", async () => {
         input,
         output,
         "--entry",
-        "answer.matra.program",
+        "answer.matra",
       ],
       { cwd: root, encoding: "utf8" },
     )
@@ -301,7 +304,7 @@ test("Rust seed executes do-until loops", async () => {
 test("bootstrap compiler executes and validates do-until loops", async () => {
   const stage1 = await readFile(await cachedCompiler())
   const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
-  const compilerSource = markdown.split("```compiler.matra\n")[1].split("\n```")[0]
+  const compilerSource = programSource(markdown, "compiler.matra")
   const stage2 = await new Promise((resolve, reject) => {
     const worker = new Worker(new URL("../host/compile-worker.mjs", import.meta.url), {
       workerData: { compilerBytes: stage1, source: new TextEncoder().encode(compilerSource) },
@@ -339,26 +342,29 @@ test("bootstrap compiler executes and validates do-until loops", async () => {
     const { source, memory, recordPointer, record } = await compileSource(`module example
 export fn repeat(value: i32) -> i32 {
   do {
-    set (value = value + 1)
+    value = value + 1
   } until (value >= 3)
   return value
 }
 export fn stop(value: i32) -> i32 {
   do {
-    set (value = value + 1)
+    value = value + 1
     break
   } until (value >= 100)
   return value
 }
 export fn nested(value: i32) -> i32 {
   do {
-    do { set (value = value + 1) break } until (0)
+    do {
+      value = value + 1
+      break
+    } until (0)
     if (value >= 3) { break }
   } until (0)
   return value
 }
 export fn truthy(value: i32) -> i32 {
-  do { set (value = value + 1) } until (value)
+  do { value = value + 1 } until (value)
   return value
 }
 fn identity(value: i32) -> i32 { return value }
@@ -367,27 +373,27 @@ export fn mixed() -> i32 {
   while (value < 10) {
     do {
       let (increment = 1)
-      set (value = value + increment)
+      value = value + increment
       if (identity(value) >= 3) { break }
     } until (0)
     if (value >= 3) { break }
   }
   do {
     while (value < 10) {
-      set (value = value + 1)
+      value = value + 1
       if (value >= 4) { break }
     }
-    set (value = value + 1)
+    value = value + 1
   } until (identity(value) + 1 >= 6)
   return value
 }
 export fn mutation() -> i32 {
   let (data = allocate_bytes(1))
-  do // } is a comment, not a delimiter
-  { byte_set(data, 0, 42) }
-  // tokens may cross lines
-  until // required keyword
-  (byte_at(data, 0) == 42)
+  do { // } is a comment, not a delimiter
+    byte_set(data, 0, 42)
+  } until ( // tokens may cross lines within delimiters
+    byte_at(data, 0) == 42
+  )
   return byte_at(data, 0)
 }
 export fn early_return() -> i32 {
@@ -402,7 +408,7 @@ export fn skip_condition() -> i32 {
 export fn conditional() -> i32 {
   let (value = 0)
   if (value == 0) {
-    do { set (value = value + 1) } until (value == 2)
+    do { value = value + 1 } until (value == 2)
   }
   let (after = value + 40)
   return after
@@ -439,8 +445,8 @@ export fn conditional() -> i32 {
       "do { break } until (value >= 1",
       "do break } until (1)",
       "do { nonsense } until (1)",
-      "do { set (value = 1 } until (1)",
-      "do { set (value = ) } until (1)",
+      "do { value = 1 + } until (1)",
+      "do { value =  } until (1)",
       "do { do { break } until () } until (1)",
     ]) {
       const malformed = await compileSource(`module example
@@ -458,12 +464,12 @@ export fn answer(value: i32) -> i32 { ${body} return value }`)
   }
 })
 
-test("bootstrap compiler executes top-level parenthesized let and set statements", async () => {
+test("bootstrap compiler executes top-level parenthesized let and assignment statements", async () => {
   const compilerBytes = await readFile(await cachedCompiler())
   const source = new TextEncoder().encode(`module example
 export fn answer() -> i32 {
   let (value = 40)
-  set (value = value + 2)
+  value = value + 2
   return value
 }`)
   const {
@@ -483,17 +489,17 @@ export fn answer() -> i32 {
   assert.equal(generated.answer(), 42)
 })
 
-test("bootstrap compiler executes parenthesized let and set in nested blocks", async () => {
+test("bootstrap compiler executes parenthesized let and assignment in nested blocks", async () => {
   const compilerBytes = await readFile(await cachedCompiler())
   const sourceText = `module example
 export fn answer() -> i32 {
   let (value = 0)
   if (value == 0) {
     let (increment = 20)
-    set (value = value + increment)
+    value = value + increment
   }
   while (value < 42) {
-    set (value = value + 1)
+    value = value + 1
   }
   return value
 }`
@@ -542,7 +548,7 @@ test("bootstrap compiler accepts a call guard before a local and while", async (
     [
       "# Call guard before local and while",
       "",
-      "```compiler.matra.program",
+      "```compiler.matra",
       "module demo",
       "",
       "fn is_zero(source: bytes, value: i32) -> i32 {",
@@ -579,7 +585,7 @@ test("bootstrap compiler accepts a call guard before a local and while", async (
         input,
         output,
         "--entry",
-        "compiler.matra.program",
+        "compiler.matra",
       ],
       { cwd: root, encoding: "utf8" },
     )
@@ -598,7 +604,7 @@ test("bootstrap compiler accepts multiple statements inside a loop-nested condit
     [
       "# Multi-statement loop-nested conditional",
       "",
-      "```compiler.matra.program",
+      "```compiler.matra",
       "module demo",
       "",
       "export fn answer(source: bytes, offset: i32) -> i32 {",
@@ -628,7 +634,7 @@ test("bootstrap compiler accepts multiple statements inside a loop-nested condit
         input,
         output,
         "--entry",
-        "compiler.matra.program",
+        "compiler.matra",
       ],
       { cwd: root, encoding: "utf8" },
     )
@@ -647,7 +653,7 @@ test("bootstrap compiler accepts a nested while as a sibling statement inside an
     [
       "# Nested while as a sibling statement",
       "",
-      "```compiler.matra.program",
+      "```compiler.matra",
       "module demo",
       "",
       "fn is_symbol(source: bytes, value: i32, target: i32) -> i32 {",
@@ -685,7 +691,7 @@ test("bootstrap compiler accepts a nested while as a sibling statement inside an
         input,
         output,
         "--entry",
-        "compiler.matra.program",
+        "compiler.matra",
       ],
       { cwd: root, encoding: "utf8" },
     )
@@ -704,10 +710,13 @@ test("bootstrap compiler accepts a loop local conditional with a struct field RH
     [
       "# Loop local conditional with a struct field RHS",
       "",
-      "```compiler.matra.program",
+      "```compiler.matra",
       "module demo",
       "",
-      "struct pair { left: i32 right: i32 }",
+      "struct pair {",
+      "  left: i32",
+      "  right: i32",
+      "}",
       "",
       "export fn answer(value: i32, record: pair) -> i32 {",
       "  while value != 0 {",
@@ -734,7 +743,7 @@ test("bootstrap compiler accepts a loop local conditional with a struct field RH
         input,
         output,
         "--entry",
-        "compiler.matra.program",
+        "compiler.matra",
       ],
       { cwd: root, encoding: "utf8" },
     )
@@ -771,11 +780,15 @@ export fn answer(value: i32, record: pair) -> i32 {
 }
 `,
         )
-        const result = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", input, output], {
-          cwd: root,
-          encoding: "utf8",
-          timeout: 30000,
-        })
+        const result = spawnSync(
+          process.execPath,
+          ["crates/matra-seed/host/bootstrap.mjs", input, output],
+          {
+            cwd: root,
+            encoding: "utf8",
+            timeout: 30000,
+          },
+        )
         assert.equal(result.status, 0, result.stderr)
         const { instance } = await WebAssembly.instantiate(await readFile(output))
         new Int32Array(instance.exports.memory.buffer, 1024, 2).set([20, 20])
@@ -848,11 +861,15 @@ ${statements}
 
     for (const ending of ["}", "", "123 return value }", "let other = 2 }"]) {
       await writeFile(input, `module demo\nfn answer() -> i32 { let value = 1 ${ending}`)
-      const invalid = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", input, output], {
-        cwd: root,
-        encoding: "utf8",
-        timeout: 30000,
-      })
+      const invalid = spawnSync(
+        process.execPath,
+        ["crates/matra-seed/host/bootstrap.mjs", input, output],
+        {
+          cwd: root,
+          encoding: "utf8",
+          timeout: 30000,
+        },
+      )
       assert.equal(invalid.status, 1, invalid.stderr)
       assert.match(invalid.stderr, /parse error: expected return/)
     }
@@ -920,7 +937,7 @@ export fn answer(prefix: bytes, source: bytes, offset: i32) -> i32 {
 
 test("bootstrap compiler executes the bootstrap lexer with nested loop returns", async () => {
   const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
-  const program = markdown.split("```compiler.matra\n")[1]
+  const program = programSource(markdown, "compiler.matra")
   const lexer = program
     .slice(0, program.indexOf("// A temporary execution probe"))
     .replace("fn next_token(", "export fn next_token(")
@@ -966,12 +983,12 @@ test("conditional statement length matches emitted comparison and nested block b
   const directory = await mkdtemp(join(tmpdir(), "matra-conditional-bytes-"))
   try {
     const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
-    const program = markdown.split("```compiler.matra\n")[1].split("\n```")[0]
+    const program = programSource(markdown, "compiler.matra")
     const input = join(directory, "probe.md")
     const output = join(directory, "probe.wasm")
     await writeFile(
       input,
-      "```compiler.matra.program\n" +
+      "```compiler.matra\n" +
         program +
         `
 export fn conditional_probe(buffer: bytes, source: bytes, offset: i32) -> i32 {
@@ -996,7 +1013,7 @@ export fn conditional_probe(buffer: bytes, source: bytes, offset: i32) -> i32 {
         input,
         output,
         "--entry",
-        "compiler.matra.program",
+        "compiler.matra",
       ],
       { cwd: root, encoding: "utf8" },
     )
@@ -1287,7 +1304,7 @@ export fn answer(source: bytes, table: [i32], value: token) -> i32 {
 
 test("bootstrap compiler executes type_end with a conditional struct local", async () => {
   const markdown = await readFile(new URL("../examples/compiler.md", import.meta.url), "utf8")
-  const program = markdown.split("```compiler.matra\n")[1]
+  const program = programSource(markdown, "compiler.matra")
   const source = new TextEncoder().encode(
     program.slice(0, program.indexOf("fn read_small_integer(")) +
       `
@@ -1388,9 +1405,12 @@ test("seed reclaims temporary structs while preserving returned values and escap
     const output = join(directory, "output.wasm")
     await writeFile(
       input,
-      `\`\`\`arena.matra.program
+      `\`\`\`arena.matra
 module arena
-struct pair { left: i32 right: i32 }
+struct pair {
+  left: i32
+  right: i32
+}
 export fn heap() -> i32 {
   let empty = allocate_bytes(0)
   return byte_pointer(empty)
@@ -1472,7 +1492,7 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
     [
       "# Example",
       "",
-      "```math.matra.program",
+      "```math.matra",
       "module math",
       "",
       "fn double(value: i32) -> i32 {",
@@ -1480,7 +1500,7 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
       "}",
       "```",
       "",
-      "```answer.matra.program",
+      "```answer.matra",
       "module example",
       "",
       "import math",
@@ -1526,7 +1546,7 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
       "}",
       "",
       "export fn array_value() -> i32 {",
-      "  let values: [i32] = allocate_i32_array(2)",
+      "  let values = allocate_i32_array(2)",
       "  array_set(values, 0, 20)",
       "  array_set(values, 1, 22)",
       "  return array_get(values, 0) + array_get(values, 1)",
@@ -1534,7 +1554,7 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
       "",
       "export fn answer(input: i32) -> i32 {",
       "  let doubled = double(input)",
-      "  let result: i32 = doubled + 2",
+      "  let result = doubled + 2",
       "  while result < 100 {",
       "    if result == 42 {",
       "      break",
@@ -1564,7 +1584,7 @@ test("matra-seed compiles a Markdown code block to an executable Wasm module", a
         input,
         output,
         "--entry",
-        "answer.matra.program",
+        "answer.matra",
       ],
       { cwd: root, encoding: "utf8" },
     )
@@ -1614,7 +1634,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     const hostOutput = join(directory, "host-output.wasm")
     await writeFile(hostInput, "module demo\nfn answer() -> i32 { return 42 }")
     const hostResult = spawnSync(
-      "node",
+      process.execPath,
       ["crates/matra-seed/host/compile.mjs", output, hostInput, hostOutput],
       { cwd: root, encoding: "utf8" },
     )
@@ -1628,7 +1648,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
       MATRA_BOOTSTRAP_CACHE_DIR: join(directory, "bootstrap-cache"),
     }
     const pipelineResult = spawnSync(
-      "node",
+      process.execPath,
       ["crates/matra-seed/host/bootstrap.mjs", "--", hostInput, pipelineOutput],
       { cwd: root, encoding: "utf8", env: pipelineEnvironment },
     )
@@ -1646,7 +1666,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     }
     const reproducibleOutput = join(directory, "reproducible-output.wasm")
     const reproducibleResult = spawnSync(
-      "node",
+      process.execPath,
       ["crates/matra-seed/host/bootstrap.mjs", hostInput, reproducibleOutput],
       { cwd: root, encoding: "utf8", env: reproducibleEnvironment },
     )
@@ -1663,7 +1683,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
 
     const materializedCompiler = join(directory, "matra-bootstrap.wasm")
     const materializedResult = spawnSync(
-      "node",
+      process.execPath,
       ["crates/matra-seed/host/materialize.mjs", "--", materializedCompiler],
       { cwd: root, encoding: "utf8", env: pipelineEnvironment },
     )
@@ -1684,7 +1704,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     )
     const materializedOutput = join(directory, "materialized-output.wasm")
     const materializedHost = spawnSync(
-      "node",
+      process.execPath,
       ["crates/matra-seed/host/compile.mjs", materializedCompiler, hostInput, materializedOutput],
       { cwd: root, encoding: "utf8" },
     )
@@ -1692,16 +1712,20 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     const materializedModule = await WebAssembly.instantiate(await readFile(materializedOutput))
     assert.equal(materializedModule.instance.exports.answer(), 42)
 
-    const selfHostResult = spawnSync("node", ["crates/matra-seed/host/verify-self-host.mjs"], {
-      cwd: root,
-      encoding: "utf8",
-      env: {
-        ...pipelineEnvironment,
-        MATRA_SELF_HOST_CACHE: "0",
-        MATRA_SELF_HOST_TIMEOUT_MS: "60000",
+    const selfHostResult = spawnSync(
+      process.execPath,
+      ["crates/matra-seed/host/verify-self-host.mjs"],
+      {
+        cwd: root,
+        encoding: "utf8",
+        env: {
+          ...pipelineEnvironment,
+          MATRA_SELF_HOST_CACHE: "0",
+          MATRA_SELF_HOST_TIMEOUT_MS: "60000",
+        },
+        timeout: 150000,
       },
-      timeout: 150000,
-    })
+    )
     assert.equal(selfHostResult.status, 0, selfHostResult.stderr || selfHostResult.error?.message)
     for (const stage of [1, 2, 3]) {
       assert.match(
@@ -1719,7 +1743,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
 
     await writeFile(hostInput, "module demo\nfn answer() -> i32 { return value }")
     const hostDiagnostic = spawnSync(
-      "node",
+      process.execPath,
       ["crates/matra-seed/host/compile.mjs", output, hostInput, hostOutput],
       { cwd: root, encoding: "utf8" },
     )
@@ -1732,7 +1756,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     ].join("\n")
     assert.equal(hostDiagnostic.stderr, expectedHostDiagnostic)
     const pipelineDiagnostic = spawnSync(
-      "node",
+      process.execPath,
       ["crates/matra-seed/host/bootstrap.mjs", hostInput, pipelineOutput],
       { cwd: root, encoding: "utf8", env: pipelineEnvironment },
     )

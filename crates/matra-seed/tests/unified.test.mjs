@@ -1,10 +1,10 @@
 import assert from "node:assert/strict"
-import { spawnSync } from "node:child_process"
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
 import { instantiateUnified } from "../host/unified-host.mjs"
+import { spawnSync } from "./helpers/process.mjs"
 
 const root = new URL("../../..", import.meta.url)
 async function compile(source, extension = "matra", entry) {
@@ -253,23 +253,23 @@ for (const fixture of conformance.native) {
   test(`native conformance: ${fixture.name}`, async () => {
     for (const [source, extension] of [
       [fixture.source, "matra"],
-      [`\`\`\`entry.matra.program\n${fixture.source}\n\`\`\``, "md"],
+      [`\`\`\`entry.matra\n${fixture.source}\n\`\`\``, "md"],
     ]) {
       const { instance } = await WebAssembly.instantiate(await compile(source, extension))
       assert.equal(instance.exports.answer(), fixture.value)
     }
-    for (const source of conformance.nativeReject) {
-      test(`native rejects: ${source}`, async () => {
-        await assert.rejects(
-          () => compile(source),
-          error => {
-            assert.match(error.message, /offset|Reserved word/)
-            assert.doesNotMatch(error.message, /panicked|unreachable|out of bounds/i)
-            return true
-          },
-        )
-      })
-    }
+  })
+}
+for (const source of conformance.nativeReject) {
+  test(`native rejects: ${source}`, async () => {
+    await assert.rejects(
+      () => compile(source),
+      error => {
+        assert.match(error.message, /offset|Reserved word/)
+        assert.doesNotMatch(error.message, /panicked|unreachable|out of bounds/i)
+        return true
+      },
+    )
   })
 }
 for (const fixture of conformance.accept) {
@@ -292,11 +292,15 @@ test("bootstrap CLI reserves document workspace and runs generated Wasm", async 
       input,
       `${"// document workspace\n".repeat(500)}fn value(x) { x * 2 }\np { ...for x in [1, 2] { value(x) } }`,
     )
-    const result = spawnSync("node", ["crates/matra-seed/host/bootstrap.mjs", input, output], {
-      cwd: root,
-      encoding: "utf8",
-      timeout: 30000,
-    })
+    const result = spawnSync(
+      process.execPath,
+      ["crates/matra-seed/host/bootstrap.mjs", input, output],
+      {
+        cwd: root,
+        encoding: "utf8",
+        timeout: 30000,
+      },
+    )
     assert.equal(result.status, 0, result.stderr || result.error?.message)
     assert.deepEqual((await instantiateUnified(await readFile(output))).run(), {
       tag: "p",
