@@ -247,6 +247,11 @@ Declare formal support only after satisfying phase 4.
 
 ## Design decisions after v0.3
 
+The [literate programming proposal](./literate-modules.md) describes multilingual integration
+using named Markdown fences as virtual files.
+It considers JavaScript module exposure, shorthands, and future Python integration; none is implemented.
+It does not change the v0.3 minimal contract or existing grammar.
+
 Build on the v0.3 Node.js host and single-source execution to decide formal PC host distribution
 and the support matrix, file/path API extensions, local package loading units, and general task definitions.
 Evaluate WASI, the Component Model, and reuse of existing hosts such as Node.js against this contract.
