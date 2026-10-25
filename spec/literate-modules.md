@@ -24,8 +24,9 @@ Resolve the open questions below and compatibility with existing fence selection
 - Treat named code blocks as virtual files, making use of paths and extensions.
 - Keep JavaScript as JavaScript. Do not introduce a JavaScript dialect inside Matra
   as a way to achieve npm compatibility.
-- Give each shorthand a corresponding explicit form with the same public name and calling contract.
-- Connect languages through explicitly exposed functions rather than implicitly sharing all variables.
+- Treat JavaScript expressions as values, exposing datasets, objects, arrays, and numbers as well as functions.
+- Give the value form a corresponding explicit export form with the same public name and value usage contract.
+- Connect languages through explicitly exposed values rather than implicitly sharing all variables.
 - Connect execution through dependencies, without unnecessarily depending on the narrative order of blocks.
 
 ## Named fences as virtual files
@@ -82,9 +83,29 @@ but lookup rules and precedence between virtual and physical files must be speci
 
 ## Explicit form and shorthands
 
-The following three forms are intended to expose the same function as `analytics.total`.
-Shorthands are Markdown loader rules, not standard JavaScript module syntax.
-They require expansion to the explicit form when extracted into ordinary `.js` files.
+JavaScript blocks have an explicit module form and a value form exposing the value of one expression.
+The value form treats the entire body as a value definition, much as JSON represents data,
+not as a series of module declarations.
+A function is one kind of value; this is not a shorthand mechanism specifically for functions.
+The parameter-header form is shorthand for defining a function value returning the expression.
+
+Select the form by virtual filename rather than guessing from the body.
+
+| Filename | Body interpretation |
+| --- | --- |
+| `foo.js` | Standard JavaScript module |
+| `foo.js.part` | Value represented by one JavaScript expression |
+| `foo.js.part?values` | Function value taking `values` and returning the body expression |
+
+`.js.part` denotes an expression fragment; remove the entire suffix when constructing public names.
+For example, `analytics/total.js.part` exposes `analytics.total`.
+Do not adopt `.partial.js` as an alias. Ordinary `.js` does not implicitly switch to the value form,
+and `.js.part` does not accept import/export declarations as a module.
+If the two forms produce the same public name, apply the collision rule described above.
+
+The following function examples all expose the same function as `analytics.total`.
+The value form and parameter headers are Markdown loader rules, not standard JavaScript module syntax.
+They require expansion to an explicit export form when extracted into ordinary `.js` files.
 
 ### 1. Explicit form: a standard JavaScript module
 
@@ -99,39 +120,76 @@ export default function (values) {
 The module form allows ordinary imports, named exports, and multiple declarations.
 How a mixture of default and named exports is exposed to Matra remains undecided.
 
-### 2. Function-expression shorthand
+### 2. Value form: one JavaScript expression
 
 ````markdown
-```analytics/total.js
+```analytics/total.js.part
 function (values) {
   return values.reduce((sum, value) => sum + value, 0)
 }
 ```
 ````
 
-When the entire block is one function expression, treat that function as the default export.
-Arrow functions are also candidates.
+Interpret the entire body as one JavaScript expression and expose its evaluated value at the corresponding path.
+The example above defines a function expression as a value; arrow functions follow the same model.
 
 ````markdown
-```analytics/total.js
+```analytics/total.js.part
 values => values.reduce((sum, value) => sum + value, 0)
 ```
 ````
 
-A standalone anonymous `function (values) { ... }` is not a valid statement in a standard JavaScript module.
-The loader treats it as a function expression and expands it to the explicit form.
-Specify how to distinguish module and function-expression forms before implementation.
+A standalone anonymous `function (values) { ... }` is not a valid statement in a standard JavaScript module,
+but it is a valid function expression in the value form.
+The explicit counterpart can be expressed as `export default <expression>`.
+This describes corresponding public contracts, not interpreting the value-form body as a module.
+
+The design supports datasets and numbers as well as functions.
+
+````markdown
+```datasets/sales.js.part
+[
+  { label: "A", amount: 10 },
+  { label: "B", amount: 20 }
+]
+```
+
+```settings.js.part
+{ title: "Sales", scale: 2 }
+```
+
+```constants/taxRate.js.part
+0.1
+```
+
+```main.matra
+let rows = datasets.sales
+p { settings.title }
+for (row in rows) {
+  p { row.amount }
+}
+p { constants.taxRate }
+```
+````
+
+An object's `{ ... }` is an expression, not a statement block.
+The value form covers arrays, objects, numbers, strings, booleans, null, and similar values;
+only function values are callable.
+The intended experience resembles JSON, but does not use a JSON parser or serialize values to JSON.
+JavaScript expressions can have side effects such as function calls, so they do not guarantee static-data safety.
+Specify evaluation timing and frequency, sharing and mutability, and names available to expressions before implementation.
+Distinguish module and value forms by filename as described above.
 Do not retry a different form as a fallback after a syntax error.
 
 ### 3. Parameter-header and expression shorthand
 
 ````markdown
-```analytics/total.js?values
+```analytics/total.js.part?values
 values.reduce((sum, value) => sum + value, 0)
 ```
 ````
 
-- `analytics/total.js` is the virtual file path.
+- `analytics/total.js.part` is the virtual file path.
 - `?values` declares the function parameter; it is neither a URL query value nor a call argument.
 - The body is one JavaScript expression whose evaluation supplies the return value.
 - `?values` is excluded from module identity and public names.
@@ -173,6 +231,29 @@ The contract must also cover exceptions, asynchronous execution, timeouts, cance
 module initialization, and cyclic dependencies.
 Do not assume that current synchronous host calls automatically await JavaScript Promises.
 
+## Compilation and evaluation semantics
+
+Compilation and interpretation must not change evaluation order or side-effect semantics for the same program.
+Compilation performs parsing, validation, and code generation; it does not mean executing user
+expressions or module initialization at build time.
+These evaluations happen at runtime.
+
+Distinguish three phases:
+
+1. Name registration: collect virtual file paths and public names without executing user code in the bodies.
+2. Value initialization: evaluate expressions to create data or function values, or initialize modules.
+   Side effects can occur in this phase.
+3. Function invocation: execute the body of an exposed function.
+
+JavaScript function declaration hoisting does not mean evaluating all code at the start.
+A function declaration can be called before its declaration in the same scope, but its body runs on invocation.
+For function expressions and arrow functions, also distinguish creating a function value from running its body.
+Registering a name does not imply its value has been initialized.
+
+The specific initialization order and frequency, dependencies and forward references,
+cyclic dependencies, and state across reruns remain undecided.
+Selecting compilation or interpretation must not implicitly switch these rules.
+
 ## Execution selection and developer experience
 
 The presence of filename-based fences must not automatically execute all code in a document.
@@ -181,7 +262,7 @@ duplicate paths, and initialization order.
 Make permission approval and environment constraints explicit; neither virtual files nor Wasm is an OS sandbox.
 
 Developer tooling should identify languages by extension and recognize parameter headers.
-Ordinary Markdown tools may not automatically highlight `analytics/total.js?values` as JavaScript.
+Ordinary Markdown tools may not automatically highlight `analytics/total.js.part?values` as JavaScript.
 Connect completion, import resolution, type checking, formatting, and debugging to existing language tools.
 Include shorthand parameters in completion and analysis.
 Maintain mappings between original Markdown and generated modules rather than relying on fixed
@@ -198,13 +279,15 @@ Make the relationship to the common runtime's existing logical path contract exp
 Implement incrementally:
 
 1. Implement named virtual files, entry selection, and exposure/calling of standard JavaScript modules.
-2. Implement function-expression and parameter-header shorthands using unambiguous classification rules.
+2. Implement the value form for functions and data using `.js.part`, and parameter-header shorthand.
 3. Complete dependency management, error mapping, completion, and debugging support.
 4. Independently design and validate Python integration against the calling contract.
 
 Add at least the following regression tests:
 
 - Calling all three forms and the named-export form from Matra produces `60`.
+- Matra can use arrays, objects, numbers, strings, booleans, and null from value-form blocks,
+  referring to datasets without turning them into functions. Calling non-functions fails explicitly.
 - Verify generated modules and Matra document output, not just successful parsing.
 - Reject colliding public names, duplicate virtual paths, invalid paths, and missing modules or exports.
 - Reject `return` statements, multiple statements, and invalid JavaScript in the parameter-header form,
@@ -212,7 +295,10 @@ Add at least the following regression tests:
 - Do not execute explanatory blocks; follow dependencies even when blocks are reordered.
 - Report exceptions, asynchronous failures, and initialization failures according to the contract
   and at original Markdown locations.
-- Test comments, line breaks, delimiters, and boundaries between shorthand and module forms.
+- Test comments, line breaks, delimiters, and boundaries between value and module forms.
+- Test classification by `.js` and `.js.part`, public names with suffixes removed, and name collisions between forms.
+- Do not execute user code during name registration or compilation.
+  Verify that both execution approaches have the same specified initialization order, side effects, and results.
 - Preserve existing Matra document and compiler source fence selection and execution.
 
 Assess parser, AST/data model, lowering, runtime, and diagnostic effects individually;

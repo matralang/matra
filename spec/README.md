@@ -30,7 +30,7 @@ Historical proposal (not the current specification): [Matra Program for syntax](
   PC OSes, v0.3 minimal host API and execution procedure, and package/task/validation roadmap;
   not a declaration of formal support.
 - [Multilingual literate programming in Markdown](./literate-modules.md) — proposal for virtual files
-  in named fences connecting JavaScript public functions to Matra, including shorthands and open questions.
+  in named fences connecting JavaScript public values (functions and data) to Matra, including shorthands and open questions.
   Not implemented.
 
 ## Scope
