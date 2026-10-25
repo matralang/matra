@@ -251,3 +251,10 @@ Build on the v0.3 Node.js host and single-source execution to decide formal PC h
 and the support matrix, file/path API extensions, local package loading units, and general task definitions.
 Evaluate WASI, the Component Model, and reuse of existing hosts such as Node.js against this contract.
 Do not settle on a Wasm format while postponing required host capabilities or distribution prerequisites.
+
+For runtime distribution, prioritize making setup easy for users, then minimize installation time and
+download size as well as distribution and maintenance costs. Prefer automatically obtaining and
+configuring supported runtimes when practical, while considering distributions that bundle the
+required runtimes for offline or restricted-network use. Decide supported versions, update behavior,
+platform-specific packaging, and required license and third-party notices before formal support.
+This is a future direction, not a promise that runtimes are currently installed or distributed this way.

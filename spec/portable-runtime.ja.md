@@ -237,3 +237,9 @@ v0.3のNode.jsホストと単一sourceの実行を足場に、正式なPCホス�
 file/path APIの拡張、ローカルパッケージの読み込み単位、汎用タスク定義を決める。
 WASIやComponent Modelの採否、Node.jsなど既存hostの利用範囲も、この契約に照らして比較する。
 Wasm形式だけを先に固定して、必要なhost機能や配布条件を後回しにしない。
+
+runtimeの配布では、まず利用者の導入の簡単さを優先し、次に導入時間・download sizeと
+配布・保守の負担を抑える。実現可能な場合は、対応runtimeを自動取得・設定する方式を優先候補とし、
+offline環境やnetwork制限向けに必要runtimeを同梱する配布物も検討する。
+正式サポート前に、対応version、更新方法、OS別のpackage形式、必要なlicense・第三者表示を決める。
+これは将来の方針であり、現在その方法でruntimeを導入・配布していることを示すものではない。
