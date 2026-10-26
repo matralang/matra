@@ -13,7 +13,7 @@ import {
   sourceExcerpt,
   sourcePosition,
 } from "../host/compiler-host.mjs"
-import { instantiateUnified } from "../host/unified-host.mjs"
+import { instantiateMatra } from "../host/value-host.mjs"
 import { spawnSync } from "./helpers/process.mjs"
 
 const root = new URL("../../..", import.meta.url)
@@ -1737,7 +1737,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
       selfHostResult.stdout,
       /Self-host verification: stage 2 and stage 3 are byte-identical\./,
     )
-    assert.match(selfHostResult.stdout, /Stage 3: unified grammar conformance/)
+    assert.match(selfHostResult.stdout, /Stage 3: standard grammar conformance/)
     assert.doesNotMatch(selfHostResult.stdout, /using cached artifact/)
     assert.doesNotMatch(selfHostResult.stderr, /blocked|RuntimeError|memory access out of bounds/)
 
@@ -1777,7 +1777,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     assert.equal(record.getInt32(28, true), 0)
     assert.equal(record.getInt32(32, true), 0)
     const bytes = new Uint8Array(module.instance.exports.memory.buffer, pointer, length)
-    assert.equal((await instantiateUnified(bytes)).run(), null)
+    assert.equal((await instantiateMatra(bytes)).run(), null)
 
     const nextRecordPointer = module.instance.exports.compile(0, 0)
     const nextRecord = new DataView(module.instance.exports.memory.buffer, nextRecordPointer, 20)
@@ -1787,7 +1787,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
     assert.equal(nextLength, length)
     assert.notEqual(nextPointer, pointer)
     const nextBytes = new Uint8Array(module.instance.exports.memory.buffer, nextPointer, nextLength)
-    assert.equal((await instantiateUnified(nextBytes)).run(), null)
+    assert.equal((await instantiateMatra(nextBytes)).run(), null)
     assert.equal(typeof module.instance.exports.alloc, "function")
 
     const whitespacePointer = module.instance.exports.alloc(3)
@@ -1804,7 +1804,7 @@ test("bootstrap compiler self-hosts and executes document and native profiles", 
       whitespaceRecord.getInt32(4, true),
       whitespaceRecord.getInt32(8, true),
     )
-    assert.equal((await instantiateUnified(whitespaceOutput)).run(), null)
+    assert.equal((await instantiateMatra(whitespaceOutput)).run(), null)
 
     const identifierPointer = module.instance.exports.alloc(8)
     new Uint8Array(module.instance.exports.memory.buffer, identifierPointer, 8).set(

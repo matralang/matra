@@ -26,6 +26,21 @@ export { extractMarkdownFences, extractMatraMarkdown } from "./markdown.js"
 export { formatCodeFrame, MatraSyntaxError } from "./parser/error.js"
 export { parse } from "./parser/index.js"
 export { printJSON } from "./printer.js"
+export type {
+  MatraExpression,
+  MatraModule,
+  MatraStatement,
+  StaticNode,
+  StaticToASTNode,
+  StaticValue,
+} from "./program.js"
+export {
+  EvaluationRequiredError,
+  evaluate,
+  evaluateStatic,
+  ProgramSyntaxError,
+  staticValueToAST,
+} from "./program.js"
 export type { MatraRenderer } from "./render.js"
 export { renderWith } from "./render.js"
 export type { StandardEvaluationOptions, StandardFunction } from "./standard.js"
@@ -35,23 +50,6 @@ export {
   mapValues as Map,
   Range,
 } from "./standard.js"
-export type {
-  StaticNode,
-  StaticToASTNode,
-  StaticValue,
-  UnifiedExpression,
-  UnifiedModule,
-  UnifiedScalar,
-  UnifiedStatement,
-} from "./unified.js"
-export {
-  EvaluationRequiredError,
-  evaluateStatic,
-  evaluateUnified,
-  parseUnified,
-  staticValueToAST,
-  UnifiedSyntaxError,
-} from "./unified.js"
 
 import { astToMatraJSON, matraJSONToAST } from "./ast/convert.js"
 import { evaluatePropExpressions } from "./ast/evaluate.js"

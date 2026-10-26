@@ -1,5 +1,5 @@
 //! 文書値は host handle とし、制御フローと関数本体を Wasm に生成する。
-use crate::unified::{Expr, Module, Stmt, Value};
+use crate::program::{Expr, Module, Stmt, Value};
 use crate::{CompileError, encode_i32, encode_name, encode_u32, section};
 
 pub(crate) const HELPERS: &[(&str, u32)] = &[

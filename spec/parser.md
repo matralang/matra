@@ -2,7 +2,7 @@
 
 [English](./parser.md) | [日本語](./parser.ja.md) | [Index](./README.md)
 
-This document describes the Core v0.2 parser contract. See the [unified grammar](./unified-grammar.md)
+This document describes the Core v0.2 parser contract. See the [grammar specification](./grammar.md)
 for v0.3 parsing and evaluation. The single-root, duplicate-attribute rejection, and syntaxMode rules
 below do not apply to v0.3.
 

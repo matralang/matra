@@ -1,6 +1,6 @@
 import { lstatSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { instantiateUnified } from "./unified-host.mjs"
+import { instantiateMatra } from "./value-host.mjs"
 
 export class PortableRuntimeError extends Error {
   constructor(code, message, options) {
@@ -131,5 +131,5 @@ export function createNodeRuntime({ root, args = [], stdout = process.stdout }) 
 
 export async function instantiatePortable(bytes, options) {
   const runtime = createNodeRuntime(options)
-  return instantiateUnified(bytes, { globals: { runtime } })
+  return instantiateMatra(bytes, { globals: { runtime } })
 }

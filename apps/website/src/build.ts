@@ -14,8 +14,8 @@ declare const process: {
 
 import type { MatraAST, StaticToASTNode, StaticValue } from "@matra/core"
 import {
+  evaluate,
   evaluateStatic,
-  evaluateUnified,
   extractMarkdownFences,
   extractMatraMarkdown,
   parse,
@@ -33,7 +33,7 @@ type PageMetadata = {
 function parseWebsiteDocument(source: string, sourceId = "Matra source", execute = false) {
   let value: StaticValue | undefined
   try {
-    value = (execute ? evaluateUnified : evaluateStatic)(parse(source))
+    value = (execute ? evaluate : evaluateStatic)(parse(source))
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     throw new SyntaxError(`${sourceId}: ${message}`, { cause: error })

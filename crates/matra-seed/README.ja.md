@@ -1,6 +1,6 @@
 # Matra seed compiler
 
-統一 Matra と互換 Matra Program を WebAssembly へ compile する Rust 製 seed compiler と、Matra で記述した bootstrap compiler の
+Matra source を WebAssembly へ compile する Rust 製 seed compiler と、Matra で記述した bootstrap compiler の
 開発資産です。bootstrap基盤は成立していますが、本番compilerとしての利用は推奨しません。
 
 ## 現在地
@@ -19,9 +19,9 @@ byte一致を判定する。成功時は各StageのSHA-256と処理時間を表�
 pnpm bootstrap:verify
 ```
 
-## 統一文法
+## 標準文法
 
-Rust seed は [統一文法](../../spec/unified-grammar.ja.md) の文書 profile と native compiler profile を扱う。
+Rust seed は [標準文法](../../spec/grammar.ja.md) の文書 profile と native compiler profile を扱う。
 文書 profile は string/number/boolean/null、array/object、member/call、node、`fn`、`return`、
 `if` / `else`、`for`、代入、`while`、`do-until`、`break` を Wasm で実行する。
 制御構文は式で、if は分岐の値、for は反復結果の配列、while/do-until は null を返す。
@@ -37,14 +37,14 @@ cargo run --manifest-path crates/matra-seed/Cargo.toml -- \
 
 ```js
 import { readFile } from "node:fs/promises"
-import { instantiateUnified } from "./crates/matra-seed/host/unified-host.mjs"
+import { instantiateMatra } from "./crates/matra-seed/host/value-host.mjs"
 
-const program = await instantiateUnified(await readFile("/tmp/document.wasm"))
+const program = await instantiateMatra(await readFile("/tmp/document.wasm"))
 console.log(program.run())
 ```
 
-Rust library は `compile_unified(source)`、`unified::parse(source)`、
-`unified::evaluate_static(&module)` を提供する。static 取得は動的な式を実行せず
+Rust library は `compile(source)`、`program::parse(source)`、
+`program::evaluate_static(&module)` を提供する。static 取得は動的な式を実行せず
 `EvaluationRequired` error を返す。Markdown では `--entry document.matra` で名前付き fence を選べる。
 
 `examples/compiler.md` は `compiler.matra` fence に移行済みで、`module compiler` が native profile を選ぶ。
@@ -53,7 +53,7 @@ Rust seed の共通 parser で構文木を作り、既存の型・linear-memory 
 `bootstrap:verify` は各 Stage で共通の受理・拒否・実行テストも実施する。
 各Stageのcompilerで生成したportableサンプルのWasmについても、
 共通host API経由のfile読み書き・引数・標準出力を検証する。
-compiler module は統一文法と `*.matra` fence に統一する。`module` 宣言が native profile を選び、
+compiler module は標準文法と `*.matra` fence に統一する。`module` 宣言が native profile を選び、
 それ以外の `.matra` source は document profile として扱う。旧 `.matra.program` fence は受理しない。
 
 ## Command
@@ -104,6 +104,8 @@ pnpm run lint
 
 テストfixtureは現行の`*.matra` fence、`let`と直接代入、明示的な文・field区切りを使う。
 廃止した記法を再び受理するようcompilerを変更してはならない。
+`test:seed`はtest fileを直列実行する。各fileがCargoや自己ホストcompilerを起動するため、
+並列実行によるbuild lock・CPU・memoryの競合で外部プロセスの期限を消費しないようにする。
 テスト用の外部プロセスは原則120秒、個別指定があればその期限で停止し、
 起動失敗・timeout・signal終了を実行command付きの失敗として報告する。
 自己ホストのintegration testはcacheを使わずStage 2/3を生成するため、

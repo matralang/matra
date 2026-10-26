@@ -1,7 +1,7 @@
 # Bootstrap compiler
 
-統一文法の native compiler profile を使用する。正本は
-[`unified-grammar.ja.md`](../../../spec/unified-grammar.ja.md) を参照する。
+標準文法の native compiler profile を使用する。正本は
+[`grammar.ja.md`](../../../spec/grammar.ja.md) を参照する。
 型と memory ABI は維持し、条件は丸括弧で囲み、文は改行で区切る。
 
 `do { ... } until (condition)` は既存sourceと互換の追加構文です。
@@ -6342,7 +6342,7 @@ export fn workspace_pages(source: bytes) -> i32 {
 
 export fn compile(source: bytes) -> i32 {
   let initial = next_token(source, 0)
-  if (is_module_keyword(source, initial) == 0) { return unified_compile_record(source) }
+  if (is_module_keyword(source, initial) == 0) { return document_compile_record(source) }
   if (parse_empty_program(source) == 1) {
     let function = first_function(source)
     let table = function_table(source)
@@ -6365,15 +6365,15 @@ export fn compile(source: bytes) -> i32 {
   return diagnostic_record(source, parse_diagnostic.kind, parse_diagnostic.offset, parse_diagnostic.expected)
 }
 
-// 統一文法 frontend の状態は i32 配列、構文木は 8-field record の arena とする。
+// 標準文法 frontend の状態は i32 配列、構文木は 8-field record の arena とする。
 // state: cursor/kind/start/length/enclosed/bare/node/function/loop/error/nodes/functions/head/tail。
 // node: kind/a/b/c/d/next/source/aux。0 は空リスト。
-fn unified_get(nodes: [i32], node: i32, field: i32) -> i32 {
+fn document_get(nodes: [i32], node: i32, field: i32) -> i32 {
   let offset = node * 8 + field
   return array_get(nodes, offset)
 }
 
-fn unified_node(state: [i32], nodes: [i32], kind: i32, a: i32, b: i32, c: i32, d: i32) -> i32 {
+fn document_node(state: [i32], nodes: [i32], kind: i32, a: i32, b: i32, c: i32, d: i32) -> i32 {
   let index = array_get(state, 10) + 1
   array_set(state, 10, index)
   array_set(nodes, index * 8, kind)
@@ -6388,7 +6388,7 @@ fn unified_node(state: [i32], nodes: [i32], kind: i32, a: i32, b: i32, c: i32, d
   return index
 }
 
-fn unified_error(state: [i32]) -> i32 {
+fn document_error(state: [i32]) -> i32 {
   if (array_get(state, 9) == 0) {
     let argument_2 = array_get(state, 2)
     array_set(state, 9, argument_2 + 1)
@@ -6396,7 +6396,7 @@ fn unified_error(state: [i32]) -> i32 {
   return 0
 }
 
-fn unified_next(source: bytes, state: [i32]) -> i32 {
+fn document_next(source: bytes, state: [i32]) -> i32 {
   let position = array_get(state, 0)
   let size = byte_length(source)
   let current = 0
@@ -6595,7 +6595,7 @@ fn unified_next(source: bytes, state: [i32]) -> i32 {
   return kind
 }
 
-fn unified_symbol(source: bytes, state: [i32]) -> i32 {
+fn document_symbol(source: bytes, state: [i32]) -> i32 {
   if (array_get(state, 1) != 4) {
     return 0
   }
@@ -6611,94 +6611,94 @@ fn unified_symbol(source: bytes, state: [i32]) -> i32 {
   return value
 }
 
-fn unified_take(source: bytes, state: [i32], symbol: i32) -> i32 {
-  if (unified_symbol(source, state) != symbol) {
+fn document_take(source: bytes, state: [i32], symbol: i32) -> i32 {
+  if (document_symbol(source, state) != symbol) {
     return 0
   }
-  let ignored = unified_next(source, state)
+  let ignored = document_next(source, state)
   return 1
 }
 
-fn unified_expect(source: bytes, state: [i32], symbol: i32) -> i32 {
-  if (unified_take(source, state, symbol) == 1) {
+fn document_expect(source: bytes, state: [i32], symbol: i32) -> i32 {
+  if (document_take(source, state, symbol) == 1) {
     return 1
   }
-  return unified_error(state)
+  return document_error(state)
 }
 
-fn unified_inline(source: bytes, state: [i32]) -> i32 {
+fn document_inline(source: bytes, state: [i32]) -> i32 {
   while (array_get(state, 1) == 5) {
-    let ignored = unified_next(source, state)
+    let ignored = document_next(source, state)
   }
   return 0
 }
 
-fn unified_trivia(source: bytes, state: [i32]) -> i32 {
+fn document_trivia(source: bytes, state: [i32]) -> i32 {
   if (array_get(state, 4) == 1) {
-    return unified_inline(source, state)
+    return document_inline(source, state)
   }
   return 0
 }
 
-fn unified_separators(source: bytes, state: [i32]) -> i32 {
+fn document_separators(source: bytes, state: [i32]) -> i32 {
   let consumed = 0
   while (array_get(state, 9) == 0) {
     if (array_get(state, 1) != 5) {
-      if (unified_symbol(source, state) != 59) {
+      if (document_symbol(source, state) != 59) {
         break
       }
     }
-    let ignored = unified_next(source, state)
+    let ignored = document_next(source, state)
     consumed = 1
   }
   return consumed
 }
 
-fn unified_name(source: bytes, state: [i32], nodes: [i32]) -> i32 {
-  if (unified_keyword(source, state) != 0) { return unified_error(state) }
-  return unified_property_name(source, state, nodes)
+fn document_name(source: bytes, state: [i32], nodes: [i32]) -> i32 {
+  if (document_keyword(source, state) != 0) { return document_error(state) }
+  return document_property_name(source, state, nodes)
 }
 
-fn unified_property_name(source: bytes, state: [i32], nodes: [i32]) -> i32 {
-  if (array_get(state, 1) != 1) { return unified_error(state) }
+fn document_property_name(source: bytes, state: [i32], nodes: [i32]) -> i32 {
+  if (array_get(state, 1) != 1) { return document_error(state) }
   let argument_4 = array_get(state, 2)
   let argument_5 = array_get(state, 3)
-  let node = unified_node(state, nodes, 2, argument_4, argument_5, 0, 0)
-  let ignored = unified_next(source, state)
+  let node = document_node(state, nodes, 2, argument_4, argument_5, 0, 0)
+  let ignored = document_next(source, state)
   return node
 }
 
-fn unified_body(source: bytes, state: [i32], nodes: [i32], document: i32) -> i32 {
-  let ignored = unified_expect(source, state, 123)
+fn document_body(source: bytes, state: [i32], nodes: [i32], document: i32) -> i32 {
+  let ignored = document_expect(source, state, 123)
   let enclosed = array_get(state, 4)
   let bare = array_get(state, 5)
   let outer = array_get(state, 6)
   array_set(state, 4, 0)
   array_set(state, 5, 0)
   array_set(state, 6, document)
-  let body = unified_statements(source, state, nodes, 125)
-  ignored = unified_expect(source, state, 125)
+  let body = document_statements(source, state, nodes, 125)
+  ignored = document_expect(source, state, 125)
   array_set(state, 4, enclosed)
   array_set(state, 5, bare)
   array_set(state, 6, outer)
   return body
 }
 
-fn unified_statements(source: bytes, state: [i32], nodes: [i32], end: i32) -> i32 {
+fn document_statements(source: bytes, state: [i32], nodes: [i32], end: i32) -> i32 {
   let head = 0
   let tail = 0
-  let ignored = unified_separators(source, state)
+  let ignored = document_separators(source, state)
   while (array_get(state, 9) == 0) {
-    if (unified_ended(source, state, end) == 1) {
+    if (document_ended(source, state, end) == 1) {
       break
     }
     if (array_get(state, 1) == 0) {
       if (end != 0) {
-        ignored = unified_error(state)
+        ignored = document_error(state)
       }
       break
     }
-    let statement = unified_statement(source, state, nodes)
+    let statement = document_statement(source, state, nodes)
     if (head == 0) {
       head = statement
     }
@@ -6706,10 +6706,10 @@ fn unified_statements(source: bytes, state: [i32], nodes: [i32], end: i32) -> i3
       array_set(nodes, tail * 8 + 5, statement)
     }
     tail = statement
-    if (unified_ended(source, state, end) == 0) {
+    if (document_ended(source, state, end) == 0) {
       if (array_get(state, 1) != 0) {
-        if (unified_separators(source, state) == 0) {
-          ignored = unified_error(state)
+        if (document_separators(source, state) == 0) {
+          ignored = document_error(state)
         }
 
       }
@@ -6718,59 +6718,59 @@ fn unified_statements(source: bytes, state: [i32], nodes: [i32], end: i32) -> i3
   return head
 }
 
-fn unified_statement(source: bytes, state: [i32], nodes: [i32]) -> i32 {
-  let keyword = unified_keyword(source, state)
+fn document_statement(source: bytes, state: [i32], nodes: [i32]) -> i32 {
+  let keyword = document_keyword(source, state)
   let ignored = 0
   if (keyword == 1) {
-    ignored = unified_next(source, state)
-    let parenthesized = unified_take(source, state, 40)
+    ignored = document_next(source, state)
+    let parenthesized = document_take(source, state, 40)
     let enclosed = array_get(state, 4)
     if (parenthesized == 1) {
       array_set(state, 4, 1)
     }
-    ignored = unified_trivia(source, state)
-    let name = unified_name(source, state, nodes)
-    ignored = unified_trivia(source, state)
-    ignored = unified_expect(source, state, 61)
-    let value = unified_expression(source, state, nodes, 1)
+    ignored = document_trivia(source, state)
+    let name = document_name(source, state, nodes)
+    ignored = document_trivia(source, state)
+    ignored = document_expect(source, state, 61)
+    let value = document_expression(source, state, nodes, 1)
     if (parenthesized == 1) {
-      ignored = unified_expect(source, state, 41)
+      ignored = document_expect(source, state, 41)
     }
     array_set(state, 4, enclosed)
-    return unified_node(state, nodes, 21, name, value, 0, 0)
+    return document_node(state, nodes, 21, name, value, 0, 0)
   }
   if (keyword == 2) {
-    ignored = unified_next(source, state)
+    ignored = document_next(source, state)
     if (array_get(state, 7) == 0) {
-      return unified_error(state)
+      return document_error(state)
     }
-    let value_2 = unified_expression(source, state, nodes, 1)
-    return unified_node(state, nodes, 23, value_2, 0, 0, 0)
+    let value_2 = document_expression(source, state, nodes, 1)
+    return document_node(state, nodes, 23, value_2, 0, 0, 0)
   }
   if (keyword == 3) {
-    ignored = unified_next(source, state)
+    ignored = document_next(source, state)
     if (array_get(state, 8) == 0) {
-      return unified_error(state)
+      return document_error(state)
     }
-    return unified_node(state, nodes, 24, 0, 0, 0, 0)
+    return document_node(state, nodes, 24, 0, 0, 0, 0)
   }
   if (keyword == 4) {
-    ignored = unified_next(source, state)
-    let name_2 = unified_name(source, state, nodes)
-    ignored = unified_expect(source, state, 40)
-    let parameters = unified_list(source, state, nodes, 41, 2)
+    ignored = document_next(source, state)
+    let name_2 = document_name(source, state, nodes)
+    ignored = document_expect(source, state, 40)
+    let parameters = document_list(source, state, nodes, 41, 2)
     let parameter = parameters
     while (parameter != 0) {
       let previous = parameters
       while (previous != parameter) {
-        if (unified_same_name(source, nodes, previous, parameter) == 1) { return unified_error(state) }
-        previous = unified_get(nodes, previous, 5)
+        if (document_same_name(source, nodes, previous, parameter) == 1) { return document_error(state) }
+        previous = document_get(nodes, previous, 5)
       }
-      parameter = unified_get(nodes, parameter, 5)
+      parameter = document_get(nodes, parameter, 5)
     }
     let id = array_get(state, 11)
     array_set(state, 11, id + 1)
-    let node = unified_node(state, nodes, 25, name_2, parameters, 0, id)
+    let node = document_node(state, nodes, 25, name_2, parameters, 0, id)
     let tail = array_get(state, 13)
     if (tail == 0) {
       array_set(state, 12, node)
@@ -6783,32 +6783,32 @@ fn unified_statement(source: bytes, state: [i32], nodes: [i32]) -> i32 {
     array_set(state, 8, 0)
     let argument_6 = array_get(state, 7)
     array_set(state, 7, argument_6 + 1)
-    let body = unified_body(source, state, nodes, 0)
+    let body = document_body(source, state, nodes, 0)
     let argument_7 = array_get(state, 7)
     array_set(state, 7, argument_7 - 1)
     array_set(state, 8, loops)
     array_set(nodes, node * 8 + 3, body)
     return node
   }
-  if (unified_take(source, state, 1000) == 1) {
+  if (document_take(source, state, 1000) == 1) {
     if (array_get(state, 6) == 0) {
-      return unified_error(state)
+      return document_error(state)
     }
-    let value_3 = unified_expression(source, state, nodes, 1)
-    return unified_node(state, nodes, 26, value_3, 0, 0, 0)
+    let value_3 = document_expression(source, state, nodes, 1)
+    return document_node(state, nodes, 26, value_3, 0, 0, 0)
   }
-  let value_4 = unified_expression(source, state, nodes, 1)
-  if (unified_take(source, state, 61) == 1) {
-    if (unified_get(nodes, value_4, 0) != 2) {
-      return unified_error(state)
+  let value_4 = document_expression(source, state, nodes, 1)
+  if (document_take(source, state, 61) == 1) {
+    if (document_get(nodes, value_4, 0) != 2) {
+      return document_error(state)
     }
-    let assigned = unified_expression(source, state, nodes, 1)
-    return unified_node(state, nodes, 22, value_4, assigned, 0, 0)
+    let assigned = document_expression(source, state, nodes, 1)
+    return document_node(state, nodes, 22, value_4, assigned, 0, 0)
   }
-  return unified_node(state, nodes, 20, value_4, 0, 0, 0)
+  return document_node(state, nodes, 20, value_4, 0, 0, 0)
 }
 // list mode: 0 は式、1 は object entry、2 は parameter、3 は node attribute。
-fn unified_attribute_boundary(source: bytes, state: [i32]) -> i32 {
+fn document_attribute_boundary(source: bytes, state: [i32]) -> i32 {
   if (array_get(state, 1) != 1) { return 0 }
   let position = array_get(state, 2)
   if (position == 0) { return 0 }
@@ -6819,29 +6819,29 @@ fn unified_attribute_boundary(source: bytes, state: [i32]) -> i32 {
   if (previous == 13) { whitespace = 1 }
   if (previous == 10) { whitespace = 1 }
   if (whitespace == 0) { return 0 }
-  let ignored = unified_next(source, state)
-  ignored = unified_inline(source, state)
+  let ignored = document_next(source, state)
+  ignored = document_inline(source, state)
   let result = 0
-  if (unified_symbol(source, state) == 61) { result = 1 }
+  if (document_symbol(source, state) == 61) { result = 1 }
   array_set(state, 0, position)
-  ignored = unified_next(source, state)
+  ignored = document_next(source, state)
   return result
 }
 
-fn unified_list(source: bytes, state: [i32], nodes: [i32], end: i32, mode: i32) -> i32 {
+fn document_list(source: bytes, state: [i32], nodes: [i32], end: i32, mode: i32) -> i32 {
   let enclosed = array_get(state, 4)
   let bare = array_get(state, 5)
   array_set(state, 4, 1)
   array_set(state, 5, 0)
-  let ignored = unified_inline(source, state)
+  let ignored = document_inline(source, state)
   let head = 0
   let tail = 0
-  if (unified_take(source, state, end) == 0) {
+  if (document_take(source, state, end) == 0) {
     while (array_get(state, 9) == 0) {
-      ignored = unified_inline(source, state)
+      ignored = document_inline(source, state)
       let item = 0
       if (mode == 0) {
-        item = unified_expression(source, state, nodes, 1)
+        item = document_expression(source, state, nodes, 1)
       }
       else {
         let name = 0
@@ -6849,33 +6849,33 @@ fn unified_list(source: bytes, state: [i32], nodes: [i32], end: i32, mode: i32) 
           if (array_get(state, 1) == 3) {
             let argument_8 = array_get(state, 2)
             let argument_9 = array_get(state, 3)
-            name = unified_node(state, nodes, 1, argument_8, argument_9, 0, 0)
-            ignored = unified_next(source, state)
+            name = document_node(state, nodes, 1, argument_8, argument_9, 0, 0)
+            ignored = document_next(source, state)
 
           }
           else {
-            name = unified_property_name(source, state, nodes)
+            name = document_property_name(source, state, nodes)
           }
 
         }
         else {
           if (mode == 2) {
-            name = unified_name(source, state, nodes)
+            name = document_name(source, state, nodes)
           } else {
-            name = unified_property_name(source, state, nodes)
+            name = document_property_name(source, state, nodes)
           }
         }
         item = name
         if (mode != 2) {
-          ignored = unified_trivia(source, state)
+          ignored = document_trivia(source, state)
           if (mode == 1) {
-            ignored = unified_expect(source, state, 58)
+            ignored = document_expect(source, state, 58)
           }
           else {
-            ignored = unified_expect(source, state, 61)
+            ignored = document_expect(source, state, 61)
           }
-          let value = unified_expression(source, state, nodes, 1)
-          item = unified_node(state, nodes, 14, name, value, 0, 0)
+          let value = document_expression(source, state, nodes, 1)
+          item = document_node(state, nodes, 14, name, value, 0, 0)
 
         }
 
@@ -6887,13 +6887,13 @@ fn unified_list(source: bytes, state: [i32], nodes: [i32], end: i32, mode: i32) 
         array_set(nodes, tail * 8 + 5, item)
       }
       tail = item
-      ignored = unified_inline(source, state)
-      if (unified_take(source, state, end) == 1) {
+      ignored = document_inline(source, state)
+      if (document_take(source, state, end) == 1) {
         break
       }
       let optional_separator = 0
-      if (mode == 3) { optional_separator = unified_attribute_boundary(source, state) }
-      if (optional_separator == 0) { ignored = unified_expect(source, state, 44) }
+      if (mode == 3) { optional_separator = document_attribute_boundary(source, state) }
+      if (optional_separator == 0) { ignored = document_expect(source, state, 44) }
     }
   }
   array_set(state, 4, enclosed)
@@ -6901,44 +6901,44 @@ fn unified_list(source: bytes, state: [i32], nodes: [i32], end: i32, mode: i32) 
   return head
 }
 
-fn unified_condition(source: bytes, state: [i32], nodes: [i32]) -> i32 {
-  let parentheses = unified_take(source, state, 40)
+fn document_condition(source: bytes, state: [i32], nodes: [i32]) -> i32 {
+  let parentheses = document_take(source, state, 40)
   let enclosed = array_get(state, 4)
   let bare = array_get(state, 5)
   array_set(state, 4, parentheses)
   array_set(state, 5, 1 - parentheses)
-  let value = unified_expression(source, state, nodes, 1)
+  let value = document_expression(source, state, nodes, 1)
   if (parentheses == 1) {
-    let ignored = unified_expect(source, state, 41)
+    let ignored = document_expect(source, state, 41)
   }
   array_set(state, 4, enclosed)
   array_set(state, 5, bare)
   return value
 }
 
-fn unified_expression(source: bytes, state: [i32], nodes: [i32], minimum: i32) -> i32 {
-  let ignored = unified_trivia(source, state)
-  let left = unified_unary(source, state, nodes)
+fn document_expression(source: bytes, state: [i32], nodes: [i32], minimum: i32) -> i32 {
+  let ignored = document_trivia(source, state)
+  let left = document_unary(source, state, nodes)
   while (array_get(state, 9) == 0) {
-    ignored = unified_trivia(source, state)
-    let operator = unified_symbol(source, state)
-    let precedence = unified_precedence(operator)
+    ignored = document_trivia(source, state)
+    let operator = document_symbol(source, state)
+    let precedence = document_precedence(operator)
     if (precedence < minimum) {
       break
     }
     let argument_10 = array_get(state, 2)
     let argument_11 = array_get(state, 3)
-    let operation = unified_node(state, nodes, 2, argument_10, argument_11, 0, 0)
-    ignored = unified_next(source, state)
-    let right = unified_expression(source, state, nodes, precedence + 1)
-    left = unified_node(state, nodes, 8, operation, left, right, operator)
+    let operation = document_node(state, nodes, 2, argument_10, argument_11, 0, 0)
+    ignored = document_next(source, state)
+    let right = document_expression(source, state, nodes, precedence + 1)
+    left = document_node(state, nodes, 8, operation, left, right, operator)
   }
   return left
 }
 
-fn unified_unary(source: bytes, state: [i32], nodes: [i32]) -> i32 {
-  let ignored = unified_trivia(source, state)
-  let symbol = unified_symbol(source, state)
+fn document_unary(source: bytes, state: [i32], nodes: [i32]) -> i32 {
+  let ignored = document_trivia(source, state)
+  let symbol = document_symbol(source, state)
   let prefix = 0
   if (symbol == 33) {
     prefix = 1
@@ -6949,22 +6949,22 @@ fn unified_unary(source: bytes, state: [i32], nodes: [i32]) -> i32 {
   if (prefix == 1) {
     let argument_12 = array_get(state, 2)
     let argument_13 = array_get(state, 3)
-    let operator = unified_node(state, nodes, 2, argument_12, argument_13, 0, 0)
-    ignored = unified_next(source, state)
-    let value = unified_unary(source, state, nodes)
-    return unified_node(state, nodes, 7, operator, value, 0, 0)
+    let operator = document_node(state, nodes, 2, argument_12, argument_13, 0, 0)
+    ignored = document_next(source, state)
+    let value = document_unary(source, state, nodes)
+    return document_node(state, nodes, 7, operator, value, 0, 0)
   }
-  let value_2 = unified_primary(source, state, nodes)
+  let value_2 = document_primary(source, state, nodes)
   while (array_get(state, 9) == 0) {
-    ignored = unified_trivia(source, state)
-    if (unified_take(source, state, 46) == 1) {
-      let name = unified_property_name(source, state, nodes)
-      value_2 = unified_node(state, nodes, 5, value_2, name, 0, 0)
+    ignored = document_trivia(source, state)
+    if (document_take(source, state, 46) == 1) {
+      let name = document_property_name(source, state, nodes)
+      value_2 = document_node(state, nodes, 5, value_2, name, 0, 0)
     }
     else {
-      if (unified_take(source, state, 40) == 1) {
-        let arguments = unified_list(source, state, nodes, 41, 0)
-        value_2 = unified_node(state, nodes, 6, value_2, arguments, 0, 0)
+      if (document_take(source, state, 40) == 1) {
+        let arguments = document_list(source, state, nodes, 41, 0)
+        value_2 = document_node(state, nodes, 6, value_2, arguments, 0, 0)
 
       }
       else {
@@ -6983,7 +6983,7 @@ fn markup_byte(source: bytes, position: i32) -> i32 {
 
 fn markup_error(state: [i32], position: i32) -> i32 {
   array_set(state, 2, position)
-  return unified_error(state)
+  return document_error(state)
 }
 
 fn markup_space(source: bytes, state: [i32]) -> i32 {
@@ -7035,7 +7035,7 @@ fn markup_name(source: bytes, state: [i32], nodes: [i32], mode: i32) -> i32 {
     if (scanning == 1) { position = position + 1 }
   }
   array_set(state, 0, position)
-  return unified_node(state, nodes, 2, start, position - start, 0, 0)
+  return document_node(state, nodes, 2, start, position - start, 0, 0)
 }
 
 fn markup_entity(source: bytes, start: i32, size: i32) -> i32 {
@@ -7191,7 +7191,7 @@ fn markup_text(source: bytes, state: [i32], nodes: [i32], end: i32) -> i32 {
     let ignored = markup_character(source, state)
   }
   let finish = array_get(state, 0)
-  return unified_node(state, nodes, 15, start, finish - start, 0, 0)
+  return document_node(state, nodes, 15, start, finish - start, 0, 0)
 }
 
 fn markup_node(source: bytes, state: [i32], nodes: [i32]) -> i32 {
@@ -7230,11 +7230,11 @@ fn markup_node(source: bytes, state: [i32], nodes: [i32]) -> i32 {
     if (array_get(state, 9) != 0) { return 0 }
     let current = attributes
     while (current != 0) {
-      let previous = unified_get(nodes, current, 1)
-      if (unified_same_name(source, nodes, key, previous) == 1) {
+      let previous = document_get(nodes, current, 1)
+      if (document_same_name(source, nodes, key, previous) == 1) {
         return markup_error(state, position)
       }
-      current = unified_get(nodes, current, 5)
+      current = document_get(nodes, current, 5)
     }
     ignored = markup_space(source, state)
     ignored = markup_expect(source, state, 61)
@@ -7247,7 +7247,7 @@ fn markup_node(source: bytes, state: [i32], nodes: [i32]) -> i32 {
     array_set(state, 0, quote_position + 1)
     let value = markup_text(source, state, nodes, quote)
     ignored = markup_expect(source, state, quote)
-    let entry = unified_node(state, nodes, 14, key, value, 0, 0)
+    let entry = document_node(state, nodes, 14, key, value, 0, 0)
     if (attributes == 0) { attributes = entry }
     else { array_set(nodes, tail * 8 + 5, entry) }
     tail = entry
@@ -7264,7 +7264,7 @@ fn markup_node(source: bytes, state: [i32], nodes: [i32]) -> i32 {
           array_set(state, 0, content_position + 2)
           let closing = markup_name(source, state, nodes, 1)
           if (array_get(state, 9) != 0) { return 0 }
-          if (unified_same_name(source, nodes, name, closing) == 0) {
+          if (document_same_name(source, nodes, name, closing) == 0) {
             return markup_error(state, content_position + 2)
           }
           ignored = markup_space(source, state)
@@ -7275,86 +7275,86 @@ fn markup_node(source: bytes, state: [i32], nodes: [i32]) -> i32 {
       let child = 0
       if (content_byte == 60) { child = markup_node(source, state, nodes) }
       else { child = markup_text(source, state, nodes, 60) }
-      let statement = unified_node(state, nodes, 20, child, 0, 0, 0)
+      let statement = document_node(state, nodes, 20, child, 0, 0, 0)
       if (body == 0) { body = statement }
       else { array_set(nodes, body_tail * 8 + 5, statement) }
       body_tail = statement
     }
   }
-  return unified_node(state, nodes, 9, name, classes, attributes, body)
+  return document_node(state, nodes, 9, name, classes, attributes, body)
 }
 
-fn unified_primary(source: bytes, state: [i32], nodes: [i32]) -> i32 {
-  let ignored = unified_trivia(source, state)
+fn document_primary(source: bytes, state: [i32], nodes: [i32]) -> i32 {
+  let ignored = document_trivia(source, state)
   if (array_get(state, 9) != 0) {
     return 0
   }
-  if (unified_symbol(source, state) == 60) {
+  if (document_symbol(source, state) == 60) {
     let markup_start = array_get(state, 2)
     array_set(state, 0, markup_start)
     let markup = markup_node(source, state, nodes)
     if (array_get(state, 9) != 0) { return 0 }
-    ignored = unified_next(source, state)
+    ignored = document_next(source, state)
     return markup
   }
-  let keyword = unified_keyword(source, state)
+  let keyword = document_keyword(source, state)
   if (keyword == 5) {
-    return unified_if(source, state, nodes)
+    return document_if(source, state, nodes)
   }
   if (keyword == 7) {
-    ignored = unified_next(source, state)
-    let parentheses = unified_take(source, state, 40)
+    ignored = document_next(source, state)
+    let parentheses = document_take(source, state, 40)
     let enclosed = array_get(state, 4)
     let bare = array_get(state, 5)
     array_set(state, 4, parentheses)
     array_set(state, 5, 1 - parentheses)
-    ignored = unified_trivia(source, state)
-    let name = unified_name(source, state, nodes)
-    ignored = unified_trivia(source, state)
-    if (unified_keyword(source, state) != 8) {
-      return unified_error(state)
+    ignored = document_trivia(source, state)
+    let name = document_name(source, state, nodes)
+    ignored = document_trivia(source, state)
+    if (document_keyword(source, state) != 8) {
+      return document_error(state)
     }
-    ignored = unified_next(source, state)
-    let iterable = unified_expression(source, state, nodes, 1)
+    ignored = document_next(source, state)
+    let iterable = document_expression(source, state, nodes, 1)
     if (parentheses == 1) {
-      ignored = unified_expect(source, state, 41)
+      ignored = document_expect(source, state, 41)
     }
     array_set(state, 4, enclosed)
     array_set(state, 5, bare)
     let argument_14 = array_get(state, 8)
     array_set(state, 8, argument_14 + 1)
-    let body = unified_body(source, state, nodes, 0)
+    let body = document_body(source, state, nodes, 0)
     let argument_15 = array_get(state, 8)
     array_set(state, 8, argument_15 - 1)
-    return unified_node(state, nodes, 11, name, iterable, body, 0)
+    return document_node(state, nodes, 11, name, iterable, body, 0)
   }
   if (keyword == 9) {
-    ignored = unified_next(source, state)
-    let condition_2 = unified_condition(source, state, nodes)
+    ignored = document_next(source, state)
+    let condition_2 = document_condition(source, state, nodes)
     let argument_16 = array_get(state, 8)
     array_set(state, 8, argument_16 + 1)
-    let body_2 = unified_body(source, state, nodes, 0)
+    let body_2 = document_body(source, state, nodes, 0)
     let argument_17 = array_get(state, 8)
     array_set(state, 8, argument_17 - 1)
-    return unified_node(state, nodes, 12, condition_2, body_2, 0, 0)
+    return document_node(state, nodes, 12, condition_2, body_2, 0, 0)
   }
   if (keyword == 10) {
-    ignored = unified_next(source, state)
+    ignored = document_next(source, state)
     let argument_18 = array_get(state, 8)
     array_set(state, 8, argument_18 + 1)
-    let body_3 = unified_body(source, state, nodes, 0)
+    let body_3 = document_body(source, state, nodes, 0)
     let argument_19 = array_get(state, 8)
     array_set(state, 8, argument_19 - 1)
-    ignored = unified_inline(source, state)
-    if (unified_keyword(source, state) != 11) {
-      return unified_error(state)
+    ignored = document_inline(source, state)
+    if (document_keyword(source, state) != 11) {
+      return document_error(state)
     }
-    ignored = unified_next(source, state)
-    if (unified_symbol(source, state) != 40) {
-      return unified_error(state)
+    ignored = document_next(source, state)
+    if (document_symbol(source, state) != 40) {
+      return document_error(state)
     }
-    let condition_3 = unified_condition(source, state, nodes)
-    return unified_node(state, nodes, 13, body_3, condition_3, 0, 0)
+    let condition_3 = document_condition(source, state, nodes)
+    return document_node(state, nodes, 13, body_3, condition_3, 0, 0)
   }
   let literal = 0
   if (array_get(state, 1) == 2) {
@@ -7371,35 +7371,35 @@ fn unified_primary(source: bytes, state: [i32], nodes: [i32]) -> i32 {
   if (literal == 1) {
     let argument_20 = array_get(state, 2)
     let argument_21 = array_get(state, 3)
-    let value = unified_node(state, nodes, 1, argument_20, argument_21, 0, 0)
-    ignored = unified_next(source, state)
+    let value = document_node(state, nodes, 1, argument_20, argument_21, 0, 0)
+    ignored = document_next(source, state)
     return value
   }
-  if (unified_take(source, state, 40) == 1) {
+  if (document_take(source, state, 40) == 1) {
     let enclosed_2 = array_get(state, 4)
     let bare_2 = array_get(state, 5)
     array_set(state, 4, 1)
     array_set(state, 5, 0)
-    let value_2 = unified_expression(source, state, nodes, 1)
-    ignored = unified_expect(source, state, 41)
+    let value_2 = document_expression(source, state, nodes, 1)
+    ignored = document_expect(source, state, 41)
     array_set(state, 4, enclosed_2)
     array_set(state, 5, bare_2)
     return value_2
   }
-  if (unified_take(source, state, 91) == 1) {
-    let values = unified_list(source, state, nodes, 93, 0)
-    return unified_node(state, nodes, 3, values, 0, 0, 0)
+  if (document_take(source, state, 91) == 1) {
+    let values = document_list(source, state, nodes, 93, 0)
+    return document_node(state, nodes, 3, values, 0, 0, 0)
   }
-  if (unified_take(source, state, 123) == 1) {
-    let entries = unified_list(source, state, nodes, 125, 1)
-    return unified_node(state, nodes, 4, entries, 0, 0, 0)
+  if (document_take(source, state, 123) == 1) {
+    let entries = document_list(source, state, nodes, 125, 1)
+    return document_node(state, nodes, 4, entries, 0, 0, 0)
   }
-  let name_2 = unified_name(source, state, nodes)
+  let name_2 = document_name(source, state, nodes)
   let checkpoint = array_get(state, 2)
   let classes = 0
   let tail = 0
-  while (unified_take(source, state, 46) == 1) {
-    let item = unified_property_name(source, state, nodes)
+  while (document_take(source, state, 46) == 1) {
+    let item = document_property_name(source, state, nodes)
     if (classes == 0) {
       classes = item
     }
@@ -7411,57 +7411,57 @@ fn unified_primary(source: bytes, state: [i32], nodes: [i32]) -> i32 {
   let attributes_start = array_get(state, 2)
   let document = 0
   let body_candidate = 1
-  if (unified_take(source, state, 40) == 1) {
-    ignored = unified_inline(source, state)
-    if (unified_take(source, state, 41) == 0) {
+  if (document_take(source, state, 40) == 1) {
+    ignored = document_inline(source, state)
+    if (document_take(source, state, 41) == 0) {
       body_candidate = 0
       if (array_get(state, 1) == 1) {
-        ignored = unified_next(source, state)
-        ignored = unified_inline(source, state)
-        if (unified_symbol(source, state) == 61) { document = 1 }
+        ignored = document_next(source, state)
+        ignored = document_inline(source, state)
+        if (document_symbol(source, state) == 61) { document = 1 }
       }
     }
   }
   if (body_candidate == 1) {
-    if (unified_symbol(source, state) == 123) { document = 1 }
+    if (document_symbol(source, state) == 123) { document = 1 }
   }
   if (array_get(state, 5) != 0) { document = 0 }
   if (document == 1) {
     array_set(state, 0, attributes_start)
-    ignored = unified_next(source, state)
+    ignored = document_next(source, state)
     let attributes = 0
-    if (unified_take(source, state, 40) == 1) {
-      attributes = unified_list(source, state, nodes, 41, 3)
+    if (document_take(source, state, 40) == 1) {
+      attributes = document_list(source, state, nodes, 41, 3)
     }
-    let body_4 = unified_body(source, state, nodes, 1)
-    return unified_node(state, nodes, 9, name_2, classes, attributes, body_4)
+    let body_4 = document_body(source, state, nodes, 1)
+    return document_node(state, nodes, 9, name_2, classes, attributes, body_4)
   }
   array_set(state, 0, checkpoint)
-  ignored = unified_next(source, state)
+  ignored = document_next(source, state)
   return name_2
 }
 
-fn unified_if(source: bytes, state: [i32], nodes: [i32]) -> i32 {
-  let ignored = unified_next(source, state)
-  let condition = unified_condition(source, state, nodes)
-  let yes = unified_body(source, state, nodes, 0)
+fn document_if(source: bytes, state: [i32], nodes: [i32]) -> i32 {
+  let ignored = document_next(source, state)
+  let condition = document_condition(source, state, nodes)
+  let yes = document_body(source, state, nodes, 0)
   let cursor = array_get(state, 2)
-  ignored = unified_inline(source, state)
+  ignored = document_inline(source, state)
   let no = 0
-  if (unified_keyword(source, state) == 21) {
-    let nested = unified_if(source, state, nodes)
-    no = unified_node(state, nodes, 20, nested, 0, 0, 0)
-  } else_if (unified_keyword(source, state) == 6) {
-    ignored = unified_next(source, state)
-    no = unified_body(source, state, nodes, 0)
+  if (document_keyword(source, state) == 21) {
+    let nested = document_if(source, state, nodes)
+    no = document_node(state, nodes, 20, nested, 0, 0, 0)
+  } else_if (document_keyword(source, state) == 6) {
+    ignored = document_next(source, state)
+    no = document_body(source, state, nodes, 0)
   } else {
     array_set(state, 0, cursor)
-    ignored = unified_next(source, state)
+    ignored = document_next(source, state)
   }
-  return unified_node(state, nodes, 10, condition, yes, no, 0)
+  return document_node(state, nodes, 10, condition, yes, no, 0)
 }
 
-fn unified_keyword(source: bytes, state: [i32]) -> i32 {
+fn document_keyword(source: bytes, state: [i32]) -> i32 {
   if (array_get(state, 1) != 1) {
     return 0
   }
@@ -7825,7 +7825,7 @@ fn unified_keyword(source: bytes, state: [i32]) -> i32 {
   return 0
 }
 
-fn unified_precedence(operator: i32) -> i32 {
+fn document_precedence(operator: i32) -> i32 {
   if (operator == 31868) {
     return 1
   }
@@ -7865,7 +7865,7 @@ fn unified_precedence(operator: i32) -> i32 {
   return 0
 }
 // emitter state: 14 local数、15 scope local、16 結果local、17 block深さ、18 break先、19 code位置、20 data位置。
-fn unified_ins(code: bytes, state: [i32], opcode: i32, operand: i32) -> i32 {
+fn document_ins(code: bytes, state: [i32], opcode: i32, operand: i32) -> i32 {
   let position = array_get(state, 19)
   byte_set(code, position, opcode)
   let ignored = code
@@ -7882,33 +7882,33 @@ fn unified_ins(code: bytes, state: [i32], opcode: i32, operand: i32) -> i32 {
   return 0
 }
 
-fn unified_byte(code: bytes, state: [i32], value: i32) -> i32 {
+fn document_byte(code: bytes, state: [i32], value: i32) -> i32 {
   let position = array_get(state, 19)
   byte_set(code, position, value)
   array_set(state, 19, position + 1)
   return 0
 }
 
-fn unified_local(state: [i32]) -> i32 {
+fn document_local(state: [i32]) -> i32 {
   let value = array_get(state, 14)
   array_set(state, 14, value + 1)
   return value
 }
 
-fn unified_null(code: bytes, state: [i32]) -> i32 {
-  let ignored = unified_ins(code, state, 65, 0)
-  ignored = unified_ins(code, state, 65, 4)
-  ignored = unified_ins(code, state, 16, 0)
+fn document_null(code: bytes, state: [i32]) -> i32 {
+  let ignored = document_ins(code, state, 65, 0)
+  ignored = document_ins(code, state, 65, 4)
+  ignored = document_ins(code, state, 16, 0)
   return 0
 }
 
-fn unified_reset(code: bytes, state: [i32]) -> i32 {
-  let ignored = unified_null(code, state)
+fn document_reset(code: bytes, state: [i32]) -> i32 {
+  let ignored = document_null(code, state)
   let argument_22 = array_get(state, 16)
-  return unified_ins(code, state, 33, argument_22)
+  return document_ins(code, state, 33, argument_22)
 }
 
-fn unified_literal(source: bytes, data: bytes, code: bytes, state: [i32], start: i32, size: i32, quoted: i32) -> i32 {
+fn document_literal(source: bytes, data: bytes, code: bytes, state: [i32], start: i32, size: i32, quoted: i32) -> i32 {
   let begin = array_get(state, 20)
   let position = begin
   if (quoted == 1) {
@@ -7958,29 +7958,29 @@ fn unified_literal(source: bytes, data: bytes, code: bytes, state: [i32], start:
     }
   }
   array_set(state, 20, position)
-  let ignored = unified_ins(code, state, 65, begin)
-  ignored = unified_ins(code, state, 65, position - begin)
-  return unified_ins(code, state, 16, 0)
+  let ignored = document_ins(code, state, 65, begin)
+  ignored = document_ins(code, state, 65, position - begin)
+  return document_ins(code, state, 16, 0)
 }
 
-fn unified_emit_name(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], node: i32) -> i32 {
+fn document_emit_name(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], node: i32) -> i32 {
   let quoted = 0
-  if (unified_get(nodes, node, 0) == 2) {
+  if (document_get(nodes, node, 0) == 2) {
     quoted = 1
   }
-  let argument_23 = unified_get(nodes, node, 1)
-  let argument_24 = unified_get(nodes, node, 2)
-  return unified_literal(source, data, code, state, argument_23, argument_24, quoted)
+  let argument_23 = document_get(nodes, node, 1)
+  let argument_24 = document_get(nodes, node, 2)
+  return document_literal(source, data, code, state, argument_23, argument_24, quoted)
 }
 
-fn unified_same_name(source: bytes, nodes: [i32], left: i32, right: i32) -> i32 {
-  let size = unified_get(nodes, left, 2)
-  if (size != unified_get(nodes, right, 2)) {
+fn document_same_name(source: bytes, nodes: [i32], left: i32, right: i32) -> i32 {
+  let size = document_get(nodes, left, 2)
+  if (size != document_get(nodes, right, 2)) {
     return 0
   }
   let index = 0
-  let a = unified_get(nodes, left, 1)
-  let b = unified_get(nodes, right, 1)
+  let a = document_get(nodes, left, 1)
+  let b = document_get(nodes, right, 1)
   while (index < size) {
     if (byte_at(source, a + index) != byte_at(source, b + index)) {
       return 0
@@ -7990,7 +7990,7 @@ fn unified_same_name(source: bytes, nodes: [i32], left: i32, right: i32) -> i32 
   return 1
 }
 
-fn unified_classes(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], classes: i32) -> i32 {
+fn document_classes(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], classes: i32) -> i32 {
   let begin = array_get(state, 20)
   let position = begin + 1
   byte_set(data, begin, 34)
@@ -8000,18 +8000,18 @@ fn unified_classes(source: bytes, data: bytes, code: bytes, state: [i32], nodes:
     let previous = classes
     let duplicate = 0
     while (previous != current) {
-      if (unified_same_name(source, nodes, previous, current) == 1) {
+      if (document_same_name(source, nodes, previous, current) == 1) {
         duplicate = 1
       }
-      previous = unified_get(nodes, previous, 5)
+      previous = document_get(nodes, previous, 5)
     }
     if (duplicate == 0) {
       if (count > 0) {
         byte_set(data, position, 32)
         position = position + 1
       }
-      let start = unified_get(nodes, current, 1)
-      let size = unified_get(nodes, current, 2)
+      let start = document_get(nodes, current, 1)
+      let size = document_get(nodes, current, 2)
       let index = 0
       while (index < size) {
         let argument_25 = byte_at(source, start + index)
@@ -8022,121 +8022,121 @@ fn unified_classes(source: bytes, data: bytes, code: bytes, state: [i32], nodes:
       }
       count = count + 1
     }
-    current = unified_get(nodes, current, 5)
+    current = document_get(nodes, current, 5)
   }
   byte_set(data, position, 34)
   position = position + 1
   array_set(state, 20, position)
-  let ignored = unified_ins(code, state, 65, begin)
-  ignored = unified_ins(code, state, 65, position - begin)
-  return unified_ins(code, state, 16, 0)
+  let ignored = document_ins(code, state, 65, begin)
+  ignored = document_ins(code, state, 65, position - begin)
+  return document_ins(code, state, 16, 0)
 }
 
-fn unified_emit_list(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], head: i32, object: i32) -> i32 {
+fn document_emit_list(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], head: i32, object: i32) -> i32 {
   let constructor = 5
   let push = 6
   if (object == 1) {
     constructor = 7
     push = 8
   }
-  let ignored = unified_ins(code, state, 16, constructor)
+  let ignored = document_ins(code, state, 16, constructor)
   let current = head
   while (current != 0) {
     if (object == 1) {
-      let argument_26 = unified_get(nodes, current, 1)
-      ignored = unified_emit_name(source, data, code, state, nodes, argument_26)
-      let argument_27 = unified_get(nodes, current, 2)
-      ignored = unified_emit_expression(source, data, code, state, nodes, argument_27)
+      let argument_26 = document_get(nodes, current, 1)
+      ignored = document_emit_name(source, data, code, state, nodes, argument_26)
+      let argument_27 = document_get(nodes, current, 2)
+      ignored = document_emit_expression(source, data, code, state, nodes, argument_27)
     }
     else {
-      ignored = unified_emit_expression(source, data, code, state, nodes, current)
+      ignored = document_emit_expression(source, data, code, state, nodes, current)
     }
-    ignored = unified_ins(code, state, 16, push)
-    current = unified_get(nodes, current, 5)
+    ignored = document_ins(code, state, 16, push)
+    current = document_get(nodes, current, 5)
   }
   return 0
 }
 
-fn unified_emit_scoped(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], body: i32, children: i32) -> i32 {
+fn document_emit_scoped(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], body: i32, children: i32) -> i32 {
   let outer = array_get(state, 15)
-  let local = unified_local(state)
-  let ignored = unified_ins(code, state, 32, outer)
-  ignored = unified_ins(code, state, 16, 1)
-  ignored = unified_ins(code, state, 33, local)
+  let local = document_local(state)
+  let ignored = document_ins(code, state, 32, outer)
+  ignored = document_ins(code, state, 16, 1)
+  ignored = document_ins(code, state, 33, local)
   array_set(state, 15, local)
-  ignored = unified_emit_statements(source, data, code, state, nodes, body, children)
+  ignored = document_emit_statements(source, data, code, state, nodes, body, children)
   array_set(state, 15, outer)
   return 0
 }
 
-fn unified_emit_statements(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], body: i32, children: i32) -> i32 {
-  let ignored = unified_reset(code, state)
+fn document_emit_statements(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], body: i32, children: i32) -> i32 {
+  let ignored = document_reset(code, state)
   let current = body
   while (current != 0) {
-    let kind = unified_get(nodes, current, 0)
-    let a = unified_get(nodes, current, 1)
-    let b = unified_get(nodes, current, 2)
-    ignored = unified_reset(code, state)
+    let kind = document_get(nodes, current, 0)
+    let a = document_get(nodes, current, 1)
+    let b = document_get(nodes, current, 2)
+    ignored = document_reset(code, state)
     if (kind == 20) {
-      ignored = unified_emit_expression(source, data, code, state, nodes, a)
+      ignored = document_emit_expression(source, data, code, state, nodes, a)
       let argument_28 = array_get(state, 16)
-      ignored = unified_ins(code, state, 33, argument_28)
+      ignored = document_ins(code, state, 33, argument_28)
       if (children >= 0) {
-        ignored = unified_ins(code, state, 32, children)
+        ignored = document_ins(code, state, 32, children)
         let argument_29 = array_get(state, 16)
-        ignored = unified_ins(code, state, 32, argument_29)
-        ignored = unified_ins(code, state, 16, 6)
-        ignored = unified_byte(code, state, 26)
+        ignored = document_ins(code, state, 32, argument_29)
+        ignored = document_ins(code, state, 16, 6)
+        ignored = document_byte(code, state, 26)
 
       }
     }
     if (kind == 26) {
-      ignored = unified_ins(code, state, 32, children)
-      ignored = unified_emit_expression(source, data, code, state, nodes, a)
-      ignored = unified_ins(code, state, 16, 18)
-      ignored = unified_byte(code, state, 26)
-      ignored = unified_reset(code, state)
+      ignored = document_ins(code, state, 32, children)
+      ignored = document_emit_expression(source, data, code, state, nodes, a)
+      ignored = document_ins(code, state, 16, 18)
+      ignored = document_byte(code, state, 26)
+      ignored = document_reset(code, state)
     }
     if (kind == 21) {
       let argument_30 = array_get(state, 15)
-      ignored = unified_ins(code, state, 32, argument_30)
-      ignored = unified_emit_name(source, data, code, state, nodes, a)
-      ignored = unified_emit_expression(source, data, code, state, nodes, b)
-      ignored = unified_ins(code, state, 16, 2)
-      ignored = unified_byte(code, state, 26)
-      ignored = unified_reset(code, state)
+      ignored = document_ins(code, state, 32, argument_30)
+      ignored = document_emit_name(source, data, code, state, nodes, a)
+      ignored = document_emit_expression(source, data, code, state, nodes, b)
+      ignored = document_ins(code, state, 16, 2)
+      ignored = document_byte(code, state, 26)
+      ignored = document_reset(code, state)
     }
     if (kind == 22) {
       let argument_31 = array_get(state, 15)
-      ignored = unified_ins(code, state, 32, argument_31)
-      ignored = unified_emit_name(source, data, code, state, nodes, a)
-      ignored = unified_emit_expression(source, data, code, state, nodes, b)
-      ignored = unified_ins(code, state, 16, 3)
-      ignored = unified_byte(code, state, 26)
-      ignored = unified_reset(code, state)
+      ignored = document_ins(code, state, 32, argument_31)
+      ignored = document_emit_name(source, data, code, state, nodes, a)
+      ignored = document_emit_expression(source, data, code, state, nodes, b)
+      ignored = document_ins(code, state, 16, 3)
+      ignored = document_byte(code, state, 26)
+      ignored = document_reset(code, state)
     }
     if (kind == 23) {
-      ignored = unified_emit_expression(source, data, code, state, nodes, a)
-      ignored = unified_byte(code, state, 15)
+      ignored = document_emit_expression(source, data, code, state, nodes, a)
+      ignored = document_byte(code, state, 15)
     }
     if (kind == 24) {
       let argument_32 = array_get(state, 17)
       let argument_33 = array_get(state, 18)
-      ignored = unified_ins(code, state, 12, argument_32 - argument_33)
+      ignored = document_ins(code, state, 12, argument_32 - argument_33)
     }
     if (kind == 25) {
       let argument_34 = array_get(state, 15)
-      ignored = unified_ins(code, state, 32, argument_34)
-      ignored = unified_emit_name(source, data, code, state, nodes, a)
-      let argument_35 = unified_get(nodes, current, 4)
-      ignored = unified_ins(code, state, 65, argument_35)
+      ignored = document_ins(code, state, 32, argument_34)
+      ignored = document_emit_name(source, data, code, state, nodes, a)
+      let argument_35 = document_get(nodes, current, 4)
+      ignored = document_ins(code, state, 65, argument_35)
       let argument_36 = array_get(state, 15)
-      ignored = unified_ins(code, state, 32, argument_36)
-      ignored = unified_ins(code, state, 16, 13)
-      ignored = unified_ins(code, state, 16, 2)
-      ignored = unified_byte(code, state, 26)
+      ignored = document_ins(code, state, 32, argument_36)
+      ignored = document_ins(code, state, 16, 13)
+      ignored = document_ins(code, state, 16, 2)
+      ignored = document_byte(code, state, 26)
     }
-    current = unified_get(nodes, current, 5)
+    current = document_get(nodes, current, 5)
   }
   return 0
 }
@@ -8179,50 +8179,50 @@ fn markup_emit_text(source: bytes, data: bytes, code: bytes, state: [i32], start
   byte_set(data, position, 34)
   position = position + 1
   array_set(state, 20, position)
-  let ignored = unified_ins(code, state, 65, begin)
-  ignored = unified_ins(code, state, 65, position - begin)
-  return unified_ins(code, state, 16, 0)
+  let ignored = document_ins(code, state, 65, begin)
+  ignored = document_ins(code, state, 65, position - begin)
+  return document_ins(code, state, 16, 0)
 }
 
-fn unified_emit_expression(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], node: i32) -> i32 {
-  let kind = unified_get(nodes, node, 0)
-  let a = unified_get(nodes, node, 1)
-  let b = unified_get(nodes, node, 2)
-  let c = unified_get(nodes, node, 3)
-  let d = unified_get(nodes, node, 4)
+fn document_emit_expression(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], node: i32) -> i32 {
+  let kind = document_get(nodes, node, 0)
+  let a = document_get(nodes, node, 1)
+  let b = document_get(nodes, node, 2)
+  let c = document_get(nodes, node, 3)
+  let d = document_get(nodes, node, 4)
   let ignored = 0
   if (kind == 15) {
     return markup_emit_text(source, data, code, state, a, b)
   }
   if (kind == 1) {
-    return unified_emit_name(source, data, code, state, nodes, node)
+    return document_emit_name(source, data, code, state, nodes, node)
   }
   if (kind == 2) {
     let argument_37 = array_get(state, 15)
-    ignored = unified_ins(code, state, 32, argument_37)
-    ignored = unified_emit_name(source, data, code, state, nodes, node)
-    return unified_ins(code, state, 16, 4)
+    ignored = document_ins(code, state, 32, argument_37)
+    ignored = document_emit_name(source, data, code, state, nodes, node)
+    return document_ins(code, state, 16, 4)
   }
   if (kind == 3) {
-    return unified_emit_list(source, data, code, state, nodes, a, 0)
+    return document_emit_list(source, data, code, state, nodes, a, 0)
   }
   if (kind == 4) {
-    return unified_emit_list(source, data, code, state, nodes, a, 1)
+    return document_emit_list(source, data, code, state, nodes, a, 1)
   }
   if (kind == 5) {
-    ignored = unified_emit_expression(source, data, code, state, nodes, a)
-    ignored = unified_emit_name(source, data, code, state, nodes, b)
-    return unified_ins(code, state, 16, 9)
+    ignored = document_emit_expression(source, data, code, state, nodes, a)
+    ignored = document_emit_name(source, data, code, state, nodes, b)
+    return document_ins(code, state, 16, 9)
   }
   if (kind == 6) {
-    ignored = unified_emit_expression(source, data, code, state, nodes, a)
-    ignored = unified_emit_list(source, data, code, state, nodes, b, 0)
-    return unified_ins(code, state, 16, 14)
+    ignored = document_emit_expression(source, data, code, state, nodes, a)
+    ignored = document_emit_list(source, data, code, state, nodes, b, 0)
+    return document_ins(code, state, 16, 14)
   }
   if (kind == 7) {
-    ignored = unified_emit_name(source, data, code, state, nodes, a)
-    ignored = unified_emit_expression(source, data, code, state, nodes, b)
-    return unified_ins(code, state, 16, 10)
+    ignored = document_emit_name(source, data, code, state, nodes, a)
+    ignored = document_emit_expression(source, data, code, state, nodes, b)
+    return document_ins(code, state, 16, 10)
   }
   if (kind == 8) {
     let logical = 0
@@ -8233,132 +8233,132 @@ fn unified_emit_expression(source: bytes, data: bytes, code: bytes, state: [i32]
       logical = 1
     }
     if (logical == 1) {
-      let local = unified_local(state)
-      ignored = unified_emit_expression(source, data, code, state, nodes, b)
-      ignored = unified_ins(code, state, 34, local)
-      ignored = unified_ins(code, state, 16, 12)
-      ignored = unified_ins(code, state, 4, 127)
+      let local = document_local(state)
+      ignored = document_emit_expression(source, data, code, state, nodes, b)
+      ignored = document_ins(code, state, 34, local)
+      ignored = document_ins(code, state, 16, 12)
+      ignored = document_ins(code, state, 4, 127)
       let argument_38 = array_get(state, 17)
       array_set(state, 17, argument_38 + 1)
       if (d == 9766) {
-        ignored = unified_emit_expression(source, data, code, state, nodes, c)
+        ignored = document_emit_expression(source, data, code, state, nodes, c)
       }
       else {
-        ignored = unified_ins(code, state, 32, local)
+        ignored = document_ins(code, state, 32, local)
       }
-      ignored = unified_byte(code, state, 5)
+      ignored = document_byte(code, state, 5)
       if (d == 9766) {
-        ignored = unified_ins(code, state, 32, local)
+        ignored = document_ins(code, state, 32, local)
       }
       else {
-        ignored = unified_emit_expression(source, data, code, state, nodes, c)
+        ignored = document_emit_expression(source, data, code, state, nodes, c)
       }
-      ignored = unified_byte(code, state, 11)
+      ignored = document_byte(code, state, 11)
       let argument_39 = array_get(state, 17)
       array_set(state, 17, argument_39 - 1)
       return 0
     }
-    ignored = unified_emit_name(source, data, code, state, nodes, a)
-    ignored = unified_emit_expression(source, data, code, state, nodes, b)
-    ignored = unified_emit_expression(source, data, code, state, nodes, c)
-    return unified_ins(code, state, 16, 11)
+    ignored = document_emit_name(source, data, code, state, nodes, a)
+    ignored = document_emit_expression(source, data, code, state, nodes, b)
+    ignored = document_emit_expression(source, data, code, state, nodes, c)
+    return document_ins(code, state, 16, 11)
   }
   if (kind == 9) {
-    let saved = unified_local(state)
+    let saved = document_local(state)
     let argument_40 = array_get(state, 16)
-    ignored = unified_ins(code, state, 32, argument_40)
-    ignored = unified_ins(code, state, 33, saved)
-    let props = unified_local(state)
-    ignored = unified_emit_list(source, data, code, state, nodes, c, 1)
+    ignored = document_ins(code, state, 32, argument_40)
+    ignored = document_ins(code, state, 33, saved)
+    let props = document_local(state)
+    ignored = document_emit_list(source, data, code, state, nodes, c, 1)
     if (b != 0) {
-      ignored = unified_ins(code, state, 65, 4)
-      ignored = unified_ins(code, state, 65, 7)
-      ignored = unified_ins(code, state, 16, 0)
-      ignored = unified_classes(source, data, code, state, nodes, b)
-      ignored = unified_ins(code, state, 16, 8)
+      ignored = document_ins(code, state, 65, 4)
+      ignored = document_ins(code, state, 65, 7)
+      ignored = document_ins(code, state, 16, 0)
+      ignored = document_classes(source, data, code, state, nodes, b)
+      ignored = document_ins(code, state, 16, 8)
     }
-    ignored = unified_ins(code, state, 33, props)
-    let children = unified_local(state)
-    ignored = unified_ins(code, state, 16, 5)
-    ignored = unified_ins(code, state, 33, children)
-    ignored = unified_emit_scoped(source, data, code, state, nodes, d, children)
-    ignored = unified_ins(code, state, 32, saved)
+    ignored = document_ins(code, state, 33, props)
+    let children = document_local(state)
+    ignored = document_ins(code, state, 16, 5)
+    ignored = document_ins(code, state, 33, children)
+    ignored = document_emit_scoped(source, data, code, state, nodes, d, children)
+    ignored = document_ins(code, state, 32, saved)
     let argument_41 = array_get(state, 16)
-    ignored = unified_ins(code, state, 33, argument_41)
-    ignored = unified_emit_name(source, data, code, state, nodes, a)
-    ignored = unified_ins(code, state, 32, props)
-    ignored = unified_ins(code, state, 32, children)
-    return unified_ins(code, state, 16, 15)
+    ignored = document_ins(code, state, 33, argument_41)
+    ignored = document_emit_name(source, data, code, state, nodes, a)
+    ignored = document_ins(code, state, 32, props)
+    ignored = document_ins(code, state, 32, children)
+    return document_ins(code, state, 16, 15)
   }
   if (kind == 10) {
-    ignored = unified_emit_expression(source, data, code, state, nodes, a)
-    ignored = unified_ins(code, state, 16, 12)
-    ignored = unified_ins(code, state, 4, 64)
+    ignored = document_emit_expression(source, data, code, state, nodes, a)
+    ignored = document_ins(code, state, 16, 12)
+    ignored = document_ins(code, state, 4, 64)
     let argument_42 = array_get(state, 17)
     array_set(state, 17, argument_42 + 1)
-    ignored = unified_emit_scoped(source, data, code, state, nodes, b, -1)
-    ignored = unified_byte(code, state, 5)
-    ignored = unified_emit_scoped(source, data, code, state, nodes, c, -1)
-    ignored = unified_byte(code, state, 11)
+    ignored = document_emit_scoped(source, data, code, state, nodes, b, -1)
+    ignored = document_byte(code, state, 5)
+    ignored = document_emit_scoped(source, data, code, state, nodes, c, -1)
+    ignored = document_byte(code, state, 11)
     let argument_43 = array_get(state, 17)
     array_set(state, 17, argument_43 - 1)
     let argument_44 = array_get(state, 16)
-    return unified_ins(code, state, 32, argument_44)
+    return document_ins(code, state, 32, argument_44)
   }
   if (kind == 11) {
-    let results = unified_local(state)
-    let values = unified_local(state)
-    let index = unified_local(state)
-    let size = unified_local(state)
-    let scope = unified_local(state)
-    ignored = unified_ins(code, state, 16, 5)
-    ignored = unified_ins(code, state, 33, results)
-    ignored = unified_emit_expression(source, data, code, state, nodes, b)
-    ignored = unified_ins(code, state, 34, values)
-    ignored = unified_ins(code, state, 16, 16)
-    ignored = unified_ins(code, state, 33, size)
-    ignored = unified_ins(code, state, 65, 0)
-    ignored = unified_ins(code, state, 33, index)
+    let results = document_local(state)
+    let values = document_local(state)
+    let index = document_local(state)
+    let size = document_local(state)
+    let scope = document_local(state)
+    ignored = document_ins(code, state, 16, 5)
+    ignored = document_ins(code, state, 33, results)
+    ignored = document_emit_expression(source, data, code, state, nodes, b)
+    ignored = document_ins(code, state, 34, values)
+    ignored = document_ins(code, state, 16, 16)
+    ignored = document_ins(code, state, 33, size)
+    ignored = document_ins(code, state, 65, 0)
+    ignored = document_ins(code, state, 33, index)
     let outer_break = array_get(state, 18)
     let argument_45 = array_get(state, 17)
     array_set(state, 18, argument_45 + 1)
     let argument_46 = array_get(state, 17)
     array_set(state, 17, argument_46 + 2)
-    ignored = unified_ins(code, state, 2, 64)
-    ignored = unified_ins(code, state, 3, 64)
-    ignored = unified_ins(code, state, 32, index)
-    ignored = unified_ins(code, state, 32, size)
-    ignored = unified_byte(code, state, 79)
-    ignored = unified_ins(code, state, 13, 1)
+    ignored = document_ins(code, state, 2, 64)
+    ignored = document_ins(code, state, 3, 64)
+    ignored = document_ins(code, state, 32, index)
+    ignored = document_ins(code, state, 32, size)
+    ignored = document_byte(code, state, 79)
+    ignored = document_ins(code, state, 13, 1)
     let outer = array_get(state, 15)
-    ignored = unified_ins(code, state, 32, outer)
-    ignored = unified_ins(code, state, 16, 1)
-    ignored = unified_ins(code, state, 34, scope)
-    ignored = unified_emit_name(source, data, code, state, nodes, a)
-    ignored = unified_ins(code, state, 32, values)
-    ignored = unified_ins(code, state, 32, index)
-    ignored = unified_ins(code, state, 16, 17)
-    ignored = unified_ins(code, state, 16, 2)
-    ignored = unified_byte(code, state, 26)
+    ignored = document_ins(code, state, 32, outer)
+    ignored = document_ins(code, state, 16, 1)
+    ignored = document_ins(code, state, 34, scope)
+    ignored = document_emit_name(source, data, code, state, nodes, a)
+    ignored = document_ins(code, state, 32, values)
+    ignored = document_ins(code, state, 32, index)
+    ignored = document_ins(code, state, 16, 17)
+    ignored = document_ins(code, state, 16, 2)
+    ignored = document_byte(code, state, 26)
     array_set(state, 15, scope)
-    ignored = unified_emit_statements(source, data, code, state, nodes, c, -1)
+    ignored = document_emit_statements(source, data, code, state, nodes, c, -1)
     array_set(state, 15, outer)
-    ignored = unified_ins(code, state, 32, results)
+    ignored = document_ins(code, state, 32, results)
     let argument_47 = array_get(state, 16)
-    ignored = unified_ins(code, state, 32, argument_47)
-    ignored = unified_ins(code, state, 16, 6)
-    ignored = unified_byte(code, state, 26)
-    ignored = unified_ins(code, state, 32, index)
-    ignored = unified_ins(code, state, 65, 1)
-    ignored = unified_byte(code, state, 106)
-    ignored = unified_ins(code, state, 33, index)
-    ignored = unified_ins(code, state, 12, 0)
-    ignored = unified_byte(code, state, 11)
-    ignored = unified_byte(code, state, 11)
+    ignored = document_ins(code, state, 32, argument_47)
+    ignored = document_ins(code, state, 16, 6)
+    ignored = document_byte(code, state, 26)
+    ignored = document_ins(code, state, 32, index)
+    ignored = document_ins(code, state, 65, 1)
+    ignored = document_byte(code, state, 106)
+    ignored = document_ins(code, state, 33, index)
+    ignored = document_ins(code, state, 12, 0)
+    ignored = document_byte(code, state, 11)
+    ignored = document_byte(code, state, 11)
     let argument_48 = array_get(state, 17)
     array_set(state, 17, argument_48 - 2)
     array_set(state, 18, outer_break)
-    return unified_ins(code, state, 32, results)
+    return document_ins(code, state, 32, results)
   }
   if (kind >= 12) {
     let condition = a
@@ -8372,41 +8372,41 @@ fn unified_emit_expression(source: bytes, data: bytes, code: bytes, state: [i32]
     array_set(state, 18, argument_49 + 1)
     let argument_50 = array_get(state, 17)
     array_set(state, 17, argument_50 + 2)
-    ignored = unified_ins(code, state, 2, 64)
-    ignored = unified_ins(code, state, 3, 64)
+    ignored = document_ins(code, state, 2, 64)
+    ignored = document_ins(code, state, 3, 64)
     if (kind == 12) {
-      ignored = unified_emit_expression(source, data, code, state, nodes, condition)
-      ignored = unified_ins(code, state, 16, 12)
-      ignored = unified_byte(code, state, 69)
-      ignored = unified_ins(code, state, 13, 1)
+      ignored = document_emit_expression(source, data, code, state, nodes, condition)
+      ignored = document_ins(code, state, 16, 12)
+      ignored = document_byte(code, state, 69)
+      ignored = document_ins(code, state, 13, 1)
     }
-    ignored = unified_emit_scoped(source, data, code, state, nodes, body, -1)
+    ignored = document_emit_scoped(source, data, code, state, nodes, body, -1)
     if (kind == 13) {
-      ignored = unified_emit_expression(source, data, code, state, nodes, condition)
-      ignored = unified_ins(code, state, 16, 12)
-      ignored = unified_byte(code, state, 69)
-      ignored = unified_ins(code, state, 13, 0)
+      ignored = document_emit_expression(source, data, code, state, nodes, condition)
+      ignored = document_ins(code, state, 16, 12)
+      ignored = document_byte(code, state, 69)
+      ignored = document_ins(code, state, 13, 0)
     }
     else {
-      ignored = unified_ins(code, state, 12, 0)
+      ignored = document_ins(code, state, 12, 0)
     }
-    ignored = unified_byte(code, state, 11)
-    ignored = unified_byte(code, state, 11)
+    ignored = document_byte(code, state, 11)
+    ignored = document_byte(code, state, 11)
     let argument_51 = array_get(state, 17)
     array_set(state, 17, argument_51 - 2)
     array_set(state, 18, outer_break_2)
-    return unified_null(code, state)
+    return document_null(code, state)
   }
   return 0
 }
 
-fn unified_out_u32(output: bytes, index: i32, value: i32) -> i32 {
+fn document_out_u32(output: bytes, index: i32, value: i32) -> i32 {
   let ignored = write_u32_leb(output, index, value)
   let length = u32_leb_length(value)
   return index + length
 }
 
-fn unified_copy(output: bytes, index: i32, source: bytes, size: i32) -> i32 {
+fn document_copy(output: bytes, index: i32, source: bytes, size: i32) -> i32 {
   let offset = 0
   while (offset < size) {
     let argument_52 = byte_at(source, offset)
@@ -8416,13 +8416,13 @@ fn unified_copy(output: bytes, index: i32, source: bytes, size: i32) -> i32 {
   return index + size
 }
 
-fn unified_section(output: bytes, index: i32, id: i32, source: bytes, size: i32) -> i32 {
+fn document_section(output: bytes, index: i32, id: i32, source: bytes, size: i32) -> i32 {
   byte_set(output, index, id)
-  let position = unified_out_u32(output, index + 1, size)
-  return unified_copy(output, position, source, size)
+  let position = document_out_u32(output, index + 1, size)
+  return document_copy(output, position, source, size)
 }
 
-fn unified_emit_module(source: bytes, state: [i32], nodes: [i32], root: i32) -> bytes {
+fn document_emit_module(source: bytes, state: [i32], nodes: [i32], root: i32) -> bytes {
   let capacity = byte_length(source) * 256 + 65536
   let data = allocate_bytes(capacity)
   let code = allocate_bytes(capacity)
@@ -8443,7 +8443,7 @@ fn unified_emit_module(source: bytes, state: [i32], nodes: [i32], root: i32) -> 
   let count = array_get(state, 11)
   let current = array_get(state, 12)
   let function_index = 0
-  let body_position = unified_out_u32(bodies, 0, count + 1)
+  let body_position = document_out_u32(bodies, 0, count + 1)
   while (function_index <= count) {
     let parameters = 2
     if (function_index == count) {
@@ -8457,50 +8457,50 @@ fn unified_emit_module(source: bytes, state: [i32], nodes: [i32], root: i32) -> 
     array_set(state, 19, 0)
     let ignored = 0
     if (parameters == 0) {
-      ignored = unified_ins(code, state, 65, 0)
+      ignored = document_ins(code, state, 65, 0)
     }
     else {
-      ignored = unified_ins(code, state, 32, 0)
+      ignored = document_ins(code, state, 32, 0)
     }
-    ignored = unified_ins(code, state, 16, 1)
-    ignored = unified_ins(code, state, 33, parameters)
+    ignored = document_ins(code, state, 16, 1)
+    ignored = document_ins(code, state, 33, parameters)
     let body = root
     if (parameters != 0) {
-      body = unified_get(nodes, current, 3)
-      let parameter = unified_get(nodes, current, 2)
+      body = document_get(nodes, current, 3)
+      let parameter = document_get(nodes, current, 2)
       let argument_index = 0
       while (parameter != 0) {
-        ignored = unified_ins(code, state, 32, parameters)
-        ignored = unified_emit_name(source, data, code, state, nodes, parameter)
-        ignored = unified_ins(code, state, 32, 1)
-        ignored = unified_ins(code, state, 65, argument_index)
-        ignored = unified_ins(code, state, 16, 17)
-        ignored = unified_ins(code, state, 16, 2)
-        ignored = unified_byte(code, state, 26)
-        parameter = unified_get(nodes, parameter, 5)
+        ignored = document_ins(code, state, 32, parameters)
+        ignored = document_emit_name(source, data, code, state, nodes, parameter)
+        ignored = document_ins(code, state, 32, 1)
+        ignored = document_ins(code, state, 65, argument_index)
+        ignored = document_ins(code, state, 16, 17)
+        ignored = document_ins(code, state, 16, 2)
+        ignored = document_byte(code, state, 26)
+        parameter = document_get(nodes, parameter, 5)
         argument_index = argument_index + 1
 
       }
     }
-    ignored = unified_emit_statements(source, data, code, state, nodes, body, -1)
-    ignored = unified_ins(code, state, 32, parameters + 1)
-    ignored = unified_byte(code, state, 11)
+    ignored = document_emit_statements(source, data, code, state, nodes, body, -1)
+    ignored = document_ins(code, state, 32, parameters + 1)
+    ignored = document_byte(code, state, 11)
     let local_count = array_get(state, 14) - parameters
     let local_length = 2 + u32_leb_length(local_count)
     let code_length = array_get(state, 19)
-    body_position = unified_out_u32(bodies, body_position, local_length + code_length)
+    body_position = document_out_u32(bodies, body_position, local_length + code_length)
     byte_set(bodies, body_position, 1)
-    body_position = unified_out_u32(bodies, body_position + 1, local_count)
+    body_position = document_out_u32(bodies, body_position + 1, local_count)
     byte_set(bodies, body_position, 127)
-    body_position = unified_copy(bodies, body_position + 1, code, code_length)
+    body_position = document_copy(bodies, body_position + 1, code, code_length)
     if (current != 0) {
-      current = unified_get(nodes, current, 7)
+      current = document_get(nodes, current, 7)
     }
     function_index = function_index + 1
   }
   let output = allocate_bytes(capacity * 2)
-  let position = unified_header(output)
-  let cursor = unified_out_u32(scratch, 0, count + 1)
+  let position = document_header(output)
+  let cursor = document_out_u32(scratch, 0, count + 1)
   let index = 0
   while (index < count) {
     byte_set(scratch, cursor, 2)
@@ -8508,12 +8508,12 @@ fn unified_emit_module(source: bytes, state: [i32], nodes: [i32], root: i32) -> 
     index = index + 1
   }
   byte_set(scratch, cursor, 0)
-  position = unified_section(output, position, 3, scratch, cursor + 1)
+  position = document_section(output, position, 3, scratch, cursor + 1)
   byte_set(scratch, 0, 1)
   byte_set(scratch, 1, 112)
   byte_set(scratch, 2, 0)
-  cursor = unified_out_u32(scratch, 3, count)
-  position = unified_section(output, position, 4, scratch, cursor)
+  cursor = document_out_u32(scratch, 3, count)
+  position = document_section(output, position, 4, scratch, cursor)
   byte_set(scratch, 0, 1)
   byte_set(scratch, 1, 0)
   let data_length = array_get(state, 20)
@@ -8522,37 +8522,37 @@ fn unified_emit_module(source: bytes, state: [i32], nodes: [i32], root: i32) -> 
   if (pages == 0) {
     pages = 1
   }
-  cursor = unified_out_u32(scratch, 2, pages)
-  position = unified_section(output, position, 5, scratch, cursor)
-  cursor = unified_exports(scratch, count)
-  position = unified_section(output, position, 7, scratch, cursor)
+  cursor = document_out_u32(scratch, 2, pages)
+  position = document_section(output, position, 5, scratch, cursor)
+  cursor = document_exports(scratch, count)
+  position = document_section(output, position, 7, scratch, cursor)
   byte_set(scratch, 0, 1)
   byte_set(scratch, 1, 0)
   byte_set(scratch, 2, 65)
   byte_set(scratch, 3, 0)
   byte_set(scratch, 4, 11)
-  cursor = unified_out_u32(scratch, 5, count)
+  cursor = document_out_u32(scratch, 5, count)
   index = 0
   while (index < count) {
-    cursor = unified_out_u32(scratch, cursor, index + 19)
+    cursor = document_out_u32(scratch, cursor, index + 19)
     index = index + 1
   }
-  position = unified_section(output, position, 9, scratch, cursor)
-  position = unified_section(output, position, 10, bodies, body_position)
+  position = document_section(output, position, 9, scratch, cursor)
+  position = document_section(output, position, 10, bodies, body_position)
   byte_set(scratch, 0, 1)
   byte_set(scratch, 1, 0)
   byte_set(scratch, 2, 65)
   byte_set(scratch, 3, 0)
   byte_set(scratch, 4, 11)
-  cursor = unified_out_u32(scratch, 5, data_length)
-  cursor = unified_copy(scratch, cursor, data, data_length)
-  position = unified_section(output, position, 11, scratch, cursor)
+  cursor = document_out_u32(scratch, 5, data_length)
+  cursor = document_copy(scratch, cursor, data, data_length)
+  position = document_section(output, position, 11, scratch, cursor)
   let result = allocate_bytes(position)
-  let copied = unified_copy(result, 0, output, position)
+  let copied = document_copy(result, 0, output, position)
   return result
 }
 
-fn unified_compile_record(source: bytes) -> i32 {
+fn document_compile_record(source: bytes) -> i32 {
   let state = allocate_i32_array(32)
   let argument_53 = byte_length(source)
   let nodes = allocate_i32_array(argument_53 * 32 + 32)
@@ -8561,30 +8561,30 @@ fn unified_compile_record(source: bytes) -> i32 {
     array_set(state, index, 0)
     index = index + 1
   }
-  let ignored = unified_next(source, state)
-  let root = unified_statements(source, state, nodes, 0)
+  let ignored = document_next(source, state)
+  let root = document_statements(source, state, nodes, 0)
   let error = array_get(state, 9)
   if (error != 0) {
     return diagnostic_record(source, 1, error - 1, 12)
   }
-  let output = unified_emit_module(source, state, nodes, root)
+  let output = document_emit_module(source, state, nodes, root)
   return success_record(output)
 }
 
-fn unified_ended(source: bytes, state: [i32], end: i32) -> i32 {
+fn document_ended(source: bytes, state: [i32], end: i32) -> i32 {
   if (end == 0) {
     if (array_get(state, 1) == 0) {
       return 1
     }
     return 0
   }
-  if (unified_symbol(source, state) == end) {
+  if (document_symbol(source, state) == end) {
     return 1
   }
   return 0
 }
 
-fn unified_header(output: bytes) -> i32 {
+fn document_header(output: bytes) -> i32 {
   byte_set(output, 0, 0)
   byte_set(output, 1, 97)
   byte_set(output, 2, 115)
@@ -8899,7 +8899,7 @@ fn unified_header(output: bytes) -> i32 {
   return 311
 }
 
-fn unified_exports(output: bytes, functions: i32) -> i32 {
+fn document_exports(output: bytes, functions: i32) -> i32 {
   byte_set(output, 0, 3)
   byte_set(output, 1, 6)
   byte_set(output, 2, 109)
@@ -8929,7 +8929,7 @@ fn unified_exports(output: bytes, functions: i32) -> i32 {
   byte_set(output, 26, 117)
   byte_set(output, 27, 110)
   byte_set(output, 28, 0)
-  return unified_out_u32(output, 29, functions + 19)
+  return document_out_u32(output, 29, functions + 19)
 }
 
 ```

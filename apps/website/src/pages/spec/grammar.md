@@ -1,5 +1,5 @@
 ---
-title: Grammar — Matra Unified Grammar v0.3
+title: Grammar — Matra Grammar v0.3
 description: Matraの標準構文。
 layout: specification
 ---
@@ -13,7 +13,7 @@ article.docs-content {
     "Grammar"
   }
   p.lede {
-    "関数呼び出しと、body を持つノード構築を区別する統一文法 v0.3 です。"
+    "関数呼び出しと、body を持つノード構築を区別する Matra の標準文法 v0.3 です。"
   }
   h2 {
     "Function syntax"
@@ -28,7 +28,7 @@ article.docs-content {
     code(src="matra:document-syntax.matra"){}
   }
   p.source-link {
-    a(href="https://github.com/matralang/matra/blob/main/spec/unified-grammar.ja.md") {
+    a(href="https://github.com/matralang/matra/blob/main/spec/grammar.ja.md") {
       "完全な仕様をGitHubで読む →"
     }
   }

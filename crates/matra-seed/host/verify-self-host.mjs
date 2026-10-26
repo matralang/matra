@@ -8,7 +8,7 @@ import { Worker } from "node:worker_threads"
 import { CommandError, cachedCompiler } from "./bootstrap-compiler.mjs"
 import { programSource, sourcePosition } from "./compiler-host.mjs"
 import { instantiatePortable } from "./node-runtime.mjs"
-import { instantiateUnified } from "./unified-host.mjs"
+import { instantiateMatra } from "./value-host.mjs"
 
 const compilerSourcePath = fileURLToPath(new URL("../examples/compiler.md", import.meta.url))
 const artifactCacheDirectory = fileURLToPath(
@@ -45,7 +45,7 @@ try {
           ["Stage 2", stage2.output],
           ["Stage 3", stage3.output],
         ]) {
-          await verifyUnified(name, compiler)
+          await verifyGrammar(name, compiler)
         }
       } else {
         console.error("Self-host verification: stage 2 and stage 3 differ.")
@@ -136,10 +136,10 @@ function elapsedSeconds(started) {
   return ((performance.now() - started) / 1000).toFixed(1)
 }
 
-// bootstrap の一致だけでなく、各段階の compiler が統一文法を実行可能な Wasm にすることを確認する。
-async function verifyUnified(name, compiler) {
+// bootstrap の一致だけでなく、各段階の compiler が標準文法を実行可能な Wasm にすることを確認する。
+async function verifyGrammar(name, compiler) {
   const fixtures = JSON.parse(
-    await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"),
+    await readFile(new URL("../../../spec/fixtures/grammar.json", import.meta.url), "utf8"),
   )
   for (const fixture of fixtures.markupDiagnostics) {
     const source = new TextEncoder().encode(fixture.source)
@@ -173,7 +173,7 @@ async function verifyUnified(name, compiler) {
   for (const fixture of fixtures.accept) {
     const result = await compile(compiler, new TextEncoder().encode(fixture.source))
     assert.ok(result.output, `${name}: ${fixture.name}: ${result.diagnostic}`)
-    const instance = await instantiateUnified(result.output)
+    const instance = await instantiateMatra(result.output)
     assert.deepEqual(instance.run(), fixture.value, `${name}: ${fixture.name}`)
   }
   for (const source of fixtures.reject) {
@@ -185,7 +185,7 @@ async function verifyUnified(name, compiler) {
       )
       continue
     }
-    const instance = await instantiateUnified(result.output)
+    const instance = await instantiateMatra(result.output)
     assert.throws(
       () => instance.run(),
       error => !(error instanceof WebAssembly.RuntimeError),
@@ -220,7 +220,7 @@ export fn answer() -> i32 {
   const { instance } = await WebAssembly.instantiate(native.output)
   assert.equal(instance.exports.answer(), -1)
   console.log(
-    `${name}: unified grammar conformance (${fixtures.accept.length + fixtures.reject.length} document cases, ${fixtures.native.length + fixtures.nativeReject.length} native cases).`,
+    `${name}: standard grammar conformance (${fixtures.accept.length + fixtures.reject.length} document cases, ${fixtures.native.length + fixtures.nativeReject.length} native cases).`,
   )
   await verifyPortable(name, compiler)
 }

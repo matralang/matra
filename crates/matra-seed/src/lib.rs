@@ -1,4 +1,4 @@
-//! 統一 Matra の seed compiler。
+//! Matra の seed compiler。
 //!
 //! `.matra` source、Markdown 内の `*.matra` fence から
 //! WebAssembly module を生成する。
@@ -6,15 +6,15 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-pub mod unified;
-mod unified_native;
-mod unified_wasm;
+mod document_wasm;
+mod native;
+pub mod program;
 
-/// 統一文法を解析し、宣言された profile の Wasm を生成する。
-pub fn compile_unified(source: &str) -> Result<Vec<u8>, CompileError> {
-    let module = unified::parse(source)?;
-    if matches!(module.statements.first(), Some(unified::Stmt::Module(_))) {
-        let program = unified_native::lower(&module)?;
+/// 標準文法を解析し、宣言された profile の Wasm を生成する。
+pub fn compile(source: &str) -> Result<Vec<u8>, CompileError> {
+    let module = program::parse(source)?;
+    if matches!(module.statements.first(), Some(program::Stmt::Module(_))) {
+        let program = native::lower(&module)?;
         if !program.imports.is_empty() {
             return Err(CompileError::new(
                 "Imports require a Markdown source bundle.",
@@ -22,7 +22,7 @@ pub fn compile_unified(source: &str) -> Result<Vec<u8>, CompileError> {
         }
         emit_module(&program)
     } else {
-        unified_wasm::compile(&module)
+        document_wasm::compile(&module)
     }
 }
 
@@ -51,19 +51,19 @@ impl std::error::Error for CompileError {}
 pub fn compile_markdown(markdown: &str, entry: Option<&str>) -> Result<Vec<u8>, CompileError> {
     let fences = extract_matra_fences(markdown)?;
     let entry_index = select_entry(&fences, entry)?;
-    let module = unified::parse(&fences[entry_index].source)?;
-    if !matches!(module.statements.first(), Some(unified::Stmt::Module(_))) {
-        return unified_wasm::compile(&module);
+    let module = program::parse(&fences[entry_index].source)?;
+    if !matches!(module.statements.first(), Some(program::Stmt::Module(_))) {
+        return document_wasm::compile(&module);
     }
     let modules: Vec<_> = fences
         .iter()
-        .filter_map(|fence| match unified::parse(&fence.source) {
-            Ok(module) if !matches!(module.statements.first(), Some(unified::Stmt::Module(_))) => {
+        .filter_map(|fence| match program::parse(&fence.source) {
+            Ok(module) if !matches!(module.statements.first(), Some(program::Stmt::Module(_))) => {
                 None
             }
-            Ok(module) => Some(
-                unified_native::lower(&module).map(|program| (fence.filename.clone(), program)),
-            ),
+            Ok(module) => {
+                Some(native::lower(&module).map(|program| (fence.filename.clone(), program)))
+            }
             Err(error) => Some(Err(error)),
         })
         .collect::<Result<_, _>>()?;

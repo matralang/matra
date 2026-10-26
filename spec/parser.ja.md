@@ -2,8 +2,8 @@
 
 [English](./parser.md) | [日本語](./parser.ja.md) | [索引](./README.ja.md)
 
-この文書は Core v0.2 の parser 契約です。統一文法 v0.3 の parse／評価の契約は
-[統一文法](./unified-grammar.ja.md)を参照してください。以下の単一 root、重複属性の拒否、
+この文書は Core v0.2 の parser 契約です。v0.3 の parse／評価の契約は
+[文法仕様](./grammar.ja.md)を参照してください。以下の単一 root、重複属性の拒否、
 syntaxMode の規則は v0.3 には適用しません。
 
 ## 契約

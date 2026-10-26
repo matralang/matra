@@ -7,7 +7,7 @@
 本書は設計・実装の判断基準と、v0.3の小さな実動版の契約を記述する。正式サポートの宣言ではない。
 共通ホストAPIは下記の最小subsetを実装し、広範なAPI、パッケージ形式、タスク定義の具体仕様は未決とする。
 一般のMatra Programとcompiler sourceの文法、既存ABI、公開APIは変更しない。
-構文と評価の正本は引き続き[統一文法](./unified-grammar.ja.md)とする。
+構文と評価の正本は引き続き[文法仕様](./grammar.ja.md)とする。
 
 ## v0.3の小さな実動版
 
@@ -61,7 +61,7 @@ Matraの式で`Matra v0.3:`と半角spaceを付け、`output.txt`へ書き、`Wr
 
 文書profileのWasmに、次の`runtime` bindingを明示的に注入する。
 既存のmember/callとhost value ABIを使い、文法やWasm importを追加しない。
-通常の`instantiateUnified()`には自動注入せず、既存の文書実行の動作を維持する。
+通常の`instantiateMatra()`には自動注入せず、既存の文書実行の動作を維持する。
 
 | API | v0.3の契約 |
 | --- | --- |
@@ -144,7 +144,7 @@ Web環境の対応機能も別に示し、利用できない機能は実行前�
 - [Rust seedとMatra製compiler](../crates/matra-seed/README.ja.md)には、Wasm生成と
   Stage 1/2/3の自己ホスト検証がある。Stage 2/3のbyte一致はcompilerの検証であり、
   3 OSでのプロジェクト移植性を証明するものではない。
-- [統一文法のWasm host](../crates/matra-seed/host/unified-host.mjs)は暫定のhost value ABIを提供する。
+- [標準文法のWasm host](../crates/matra-seed/host/value-host.mjs)は暫定のhost value ABIを提供する。
   [Node.js版の最小host](../crates/matra-seed/host/node-runtime.mjs)はその上にv0.3のfile I/Oなどを提供する。
   これは広範な共通ランタイムの完成を意味しない。
 - [Matra Command](../packages/command/README.ja.md)は、実行計画と明示的な権限承認を持つ

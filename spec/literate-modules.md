@@ -14,7 +14,7 @@ The scope is loading Markdown documents containing ordinary Matra Programs, modu
 language interoperation, and developer tooling. Changes to Matra compiler source grammar are out of scope.
 The dedicated CLI is an additive change; existing source, APIs, ABIs, AST/data models,
 parsers, and CLI behavior are unchanged.
-The [unified grammar](./unified-grammar.md) and existing compiler source bootstrap contracts remain intact.
+The [grammar specification](./grammar.md) and existing compiler source bootstrap contracts remain intact.
 Questions outside the initial contract remain for later stages.
 
 ## Initial implementation contract
@@ -288,7 +288,7 @@ Markdown
 The common runtime handles startup, dependencies, public function connections, and error propagation.
 Compiling every language to Wasm is not required.
 The Node.js host and existing
-[provisional host value ABI](../crates/matra-seed/host/unified-host.mjs) can provide a starting point,
+[provisional host value ABI](../crates/matra-seed/host/value-host.mjs) can provide a starting point,
 but the existing ABI is not thereby guaranteed as a stable common protocol.
 Decide on WASI and the Component Model separately.
 

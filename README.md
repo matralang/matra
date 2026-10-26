@@ -58,7 +58,7 @@ The `<>` delimiters make Matra node boundaries explicit and also support `.class
 ```
 
 Full XML and HTML omission/tree-repair rules are not supported. See the
-[unified grammar](spec/unified-grammar.md#xml-style-markup) for the supported subset.
+[grammar specification](spec/grammar.md#xml-style-markup) for the supported subset.
 
 ## Compiler bootstrap
 

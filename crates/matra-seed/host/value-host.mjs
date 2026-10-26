@@ -1,5 +1,5 @@
-/** 統一文法の暫定 host value ABI。制御フローは生成 Wasm が実行する。 */
-export async function instantiateUnified(bytes, { globals = {} } = {}) {
+/** 標準文法の暫定 host value ABI。制御フローは生成 Wasm が実行する。 */
+export async function instantiateMatra(bytes, { globals = {} } = {}) {
   const values = [undefined]
   const intern = value => {
     values.push(value)

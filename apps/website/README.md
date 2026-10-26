@@ -34,7 +34,7 @@ package are available to the website locally without `file:` dependencies or
 Pages are Markdown files under `src/pages`. Native `*.matra` pages start with front matter (`title`, `description`, and `layout`) and contain only the content inside `main`; the shared layout provides the HTML document. Styles live in `src/styles`.
 Place reusable source in a named Markdown fence and reference it from a Matra element with `src="matra:filename"`; the build injects that fence's text content.
 The build extracts that Matra code block, parses it, and renders it to HTML.
-Use a `page.program.matra` fence for repeated content. It shares front matter and layout with static pages, and explicitly executes the existing unified grammar (`fn`, `for`, member access, and child spread) through `evaluateUnified()`. A `page.matra` fence continues to use only `evaluateStatic()`, without execution fallback.
+Use a `page.program.matra` fence for repeated content. It shares front matter and layout with static pages, and explicitly executes the existing standard grammar (`fn`, `for`, member access, and child spread) through `evaluate()`. A `page.matra` fence continues to use only `evaluateStatic()`, without execution fallback.
 Pages requiring TypeScript integration may use a trusted `*.matra.ts` fenced code block. It executes as JavaScript during the build, so use it only for repository-managed source.
 Write a `.matra.ts` block as a valid TypeScript module: `export default matra\`...\``.
 GitHub Pagesのproject pathはworkflowから`SITE_BASE_PATH`として自動設定されます。

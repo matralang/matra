@@ -3,7 +3,7 @@ import { types } from "node:util"
 import { createContext, Script } from "node:vm"
 import { cachedCompiler } from "./bootstrap-compiler.mjs"
 import { formatCompilerDiagnostic, reserveCompilerWorkspace } from "./compiler-host.mjs"
-import { instantiateUnified } from "./unified-host.mjs"
+import { instantiateMatra } from "./value-host.mjs"
 
 export class LiterateError extends Error {
   constructor(code, block, message, cause) {
@@ -249,7 +249,7 @@ export async function runLiterate(bundle) {
     target[parts.at(-1)] = copyValue(value, { block, prototypes, functions: true })
   }
   try {
-    const program = await instantiateUnified(Buffer.from(bundle.wasm, "base64"), { globals })
+    const program = await instantiateMatra(Buffer.from(bundle.wasm, "base64"), { globals })
     const result = program.run()
     return copyValue(result, { block: bundle.entry, prototypes, functions: false })
   } catch (error) {

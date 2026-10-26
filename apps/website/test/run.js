@@ -196,7 +196,7 @@ for (const page of specPages) {
 }
 assert.match(specPages[1], /\n {11}↕\n/)
 assert.match(specPages[2], /p \{ &quot;Body&quot; \}/)
-assert.match(specPages[2], /spec\/unified-grammar\.ja\.md/)
+assert.match(specPages[2], /spec\/grammar\.ja\.md/)
 assert.doesNotMatch(specPages[2], /p`Body`/)
 assert.doesNotMatch(specPages[2], /p\\`Body\\`/)
 assert.match(playground, /<title>Playground — Matra/)

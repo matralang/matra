@@ -1,4 +1,4 @@
-//! 統一文法の構文木。native profile と文書 profile は同じ parser を使う。
+//! 標準文法の構文木。native profile と文書 profile は同じ parser を使う。
 use crate::CompileError;
 use std::cell::{Cell, RefCell};
 
@@ -1253,7 +1253,7 @@ mod tests {
             Stmt::Expression(Expr::Binary(op, _, _)) if op == "<"
         ));
         assert_eq!(static_value("let node = <p/>; node"), static_value("<p/>"));
-        assert!(crate::compile_unified("module x\nexport fn f() -> i32 { return <p/> }").is_err());
+        assert!(crate::compile("module x\nexport fn f() -> i32 { return <p/> }").is_err());
     }
 
     #[test]
@@ -1403,7 +1403,7 @@ mod tests {
             "module x\nfn f() { return 1 }",
             "module x\nexport fn f() -> i32 { return \"text\" }",
         ] {
-            assert!(crate::compile_unified(source).is_err(), "compiled {source}");
+            assert!(crate::compile(source).is_err(), "compiled {source}");
         }
     }
 }

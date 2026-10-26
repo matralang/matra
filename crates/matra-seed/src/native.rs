@@ -1,5 +1,5 @@
-//! 統一構文木から既存 native ABI への lowering。
-use crate::unified::{Expr, Module, Stmt, Value};
+//! 標準構文木から既存 native ABI への lowering。
+use crate::program::{Expr, Module, Stmt, Value};
 use crate::{
     BinaryOperator as B, CompileError, Expression as E, Function, Parameter, Program,
     Statement as S, StructDefinition, StructField, ValueType,

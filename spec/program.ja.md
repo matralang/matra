@@ -5,7 +5,7 @@
 ## 目的
 
 Matra Programは、自己ホストcompilerを含むMatra toolingを実装するnative実行profileです。
-一般のMatra sourceと統一文法を共有し、`module`宣言がこのprofileと実行意味を選択します。
+一般のMatra sourceと標準文法を共有し、`module`宣言がこのprofileと実行意味を選択します。
 
 Markdown文書をsource bundleとし、名前付き`*.matra` fenced code blockをmoduleとして扱います。
 seed compilerはentry blockとそのimportを1つのWebAssembly moduleへcompileします。
@@ -67,8 +67,8 @@ cargo run --manifest-path crates/matra-seed/Cargo.toml -- \
 
 ## 文法
 
-native profileは統一文法を使用します。source形式、制約、parser契約は
-[統一文法](./unified-grammar.ja.md)を正本とし、本書では別の文法を定義しません。
+native profileは標準文法を使用します。source形式、制約、parser契約は
+[文法仕様](./grammar.ja.md)を正本とし、本書では別の文法を定義しません。
 
 ## WebAssembly境界
 

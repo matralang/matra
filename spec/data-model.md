@@ -85,13 +85,13 @@ encoding. Object-shaped ASTs preserve it as an object-shaped node.
 
 ## Equality
 
-XML-style markup in the unified grammar constructs the same nodes. `<hr />`, `<hr></hr>`,
+XML-style markup in the standard grammar constructs the same nodes. `<hr />`, `<hr></hr>`,
 and `hr {}` are equivalent. Markup attributes are strings; content becomes strings and child nodes,
 with character references decoded. Quote style and self-closing spelling are not retained.
 Namespace names are retained as strings without URI resolution.
 In `<a.button>Link</a>`, `.button` is class shorthand, not part of the tag name;
 it is equivalent to `a.button { "Link" }`.
-See the [unified grammar](./unified-grammar.md).
+See the [grammar specification](./grammar.md).
 
 Two Matra documents are data-model-equivalent when their tags, property keys
 and values, child values, and child order are recursively equal. Property

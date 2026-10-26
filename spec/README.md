@@ -9,14 +9,14 @@ The key words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** express normative
 requirements.
 
 The current source grammar is v0.3. The v0.2 Data Model/AST documents describe document values;
-the old Parser contract is historical. The unified grammar is authoritative for syntax and evaluation.
+the old Parser contract is historical. The grammar specification is authoritative for syntax and evaluation.
 
 ## Specifications
 
 1. [Data Model](./data-model.md) — abstract values represented by Matra
 2. [AST](./ast.md) — object-shaped in-memory representation
-3. [Unified Grammar v0.3](./unified-grammar.md) — unified `.matra` source and syntax
-4. [Parser](./parser.md) — parsing interface, output, modes, and errors
+3. [Grammar v0.3](./grammar.md) — standard `.matra` source grammar, parsing, and evaluation contracts
+4. [Parser v0.2 (historical)](./parser.md) — old parsing interface, output, modes, and errors
 5. [Matra Program](./program.md) — draft executable profile for WebAssembly
 
 Each English document is named `name.md`; its Japanese counterpart is named
@@ -40,6 +40,9 @@ interpolation, directives, and evaluation belong to domain packages and are
 outside v0.2.
 
 ## Historical documents
+
+The old [Core v0.2 grammar](./archive/core-v0.2/grammar.md) is historical and must not
+be applied to current source or parser implementations.
 
 The non-normative, HTML-oriented Core v0.8 guides are retained in
 [`archive/core-v0.8`](./archive/core-v0.8/README.md).

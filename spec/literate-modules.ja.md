@@ -13,7 +13,7 @@ v0.3の最小実動版にnpm・Python連携を追加するものではない。
 言語間連携と開発環境である。Matra compiler sourceの文法変更は対象外とする。
 専用CLIを追加する互換変更であり、既存source、API、ABI、AST/data model、
 parserと既存CLIの動作を変更しない。
-[統一文法](./unified-grammar.ja.md)と既存のcompiler sourceのbootstrap契約を維持する。
+[文法仕様](./grammar.ja.md)と既存のcompiler sourceのbootstrap契約を維持する。
 以下の初版契約以外の未決事項は、後続段階で確定する。
 
 ## 初版の実装契約
@@ -283,7 +283,7 @@ Markdown
 共通ランタイムは起動、依存関係、公開関数の接続、エラーの伝播を担当する。
 全言語をWasmへcompileすることは必須ではない。
 最初はNode.jsホストと既存の
-[暫定host value ABI](../crates/matra-seed/host/unified-host.mjs)を足場にできるが、
+[暫定host value ABI](../crates/matra-seed/host/value-host.mjs)を足場にできるが、
 既存ABIをそのまま安定した共通プロトコルとして保証しない。
 WASIやComponent Modelの採否も別途判断する。
 

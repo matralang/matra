@@ -5,7 +5,7 @@
 ## Purpose
 
 Matra Program is the native executable profile for implementing Matra tooling,
-including the self-hosted compiler. It shares the unified grammar with ordinary
+including the self-hosted compiler. It shares the standard grammar with ordinary
 Matra source; a `module` declaration selects this profile and its execution
 semantics.
 
@@ -74,8 +74,8 @@ cargo run --manifest-path crates/matra-seed/Cargo.toml -- \
 
 ## Syntax
 
-The native profile uses the unified grammar. Its source forms, restrictions,
-and parser contract are defined by the [unified grammar](./unified-grammar.md);
+The native profile uses the standard grammar. Its source forms, restrictions,
+and parser contract are defined by the [grammar specification](./grammar.md);
 this document does not define a separate syntax.
 
 ## WebAssembly boundary

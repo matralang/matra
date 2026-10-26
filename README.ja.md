@@ -59,7 +59,7 @@ HTML、Math、Graphics、実行環境統合などのdomain-specificな責務を�
 ```
 
 XML 全体や HTML の省略・補正規則には対応しません。範囲と制約は
-[統一文法](spec/unified-grammar.ja.md#xml-style-markup)を参照してください。
+[文法仕様](spec/grammar.ja.md#xml-style-markup)を参照してください。
 
 ## Compiler bootstrap
 

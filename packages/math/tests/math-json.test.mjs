@@ -8,13 +8,13 @@ describe("Matra MathJSON bridge", () => {
   })
   it("preserves signed numeric operands without executing arbitrary unary expressions", () => {
     assert.deepEqual(parseMath("point(-.5, -0)"), ["point", -0.5, -0])
-    assert.throws(() => parseMath("-value"), /does not support unified unary/)
+    assert.throws(() => parseMath("-value"), /does not support Matra unary/)
   })
   it("unwraps the optional Formula document node", () => {
     assert.deepEqual(parseMath("Formula(Divide(1, 2))"), ["Divide", 1, 2])
   })
   it("rejects node construction instead of silently treating it as MathJSON", () => {
-    assert.throws(() => parseMath('Add(axis="x") { 1; 2 }'), /does not support unified node/)
+    assert.throws(() => parseMath('Add(axis="x") { 1; 2 }'), /does not support Matra node/)
   })
   it("round-trips nested MathJSON through the Core AST", () => {
     const expression = ["Add", ["Power", "x", 2], -1]

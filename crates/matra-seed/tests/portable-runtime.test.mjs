@@ -21,7 +21,7 @@ import {
   PortableRuntimeError,
   projectPath,
 } from "../host/node-runtime.mjs"
-import { instantiateUnified } from "../host/unified-host.mjs"
+import { instantiateMatra } from "../host/value-host.mjs"
 import { spawnSync } from "./helpers/process.mjs"
 
 const cli = fileURLToPath(new URL("../host/portable.mjs", import.meta.url))
@@ -255,7 +255,7 @@ test("self-hosted build and run execute the unchanged portable project", async t
   })
   assert.equal(portable.run(), null)
   assert.deepEqual(output, ["Wrote output.txt\n"])
-  const plain = await instantiateUnified(bytes)
+  const plain = await instantiateMatra(bytes)
   assert.throws(() => plain.run(), /Unknown name: runtime/)
 
   await t.test("failures exit nonzero without a success message or changed output", async () => {

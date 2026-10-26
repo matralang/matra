@@ -1,6 +1,6 @@
 import {
   astToMatraJSON,
-  evaluateUnified,
+  evaluate,
   extractMatraMarkdown,
   parse,
   printJSON,
@@ -241,7 +241,7 @@ async function render(): Promise<void> {
       return
     }
     const parsedModule = parse(value)
-    const evaluatedValue = evaluateUnified(parsedModule)
+    const evaluatedValue = evaluate(parsedModule)
     if (evaluatedValue === undefined)
       throw new TypeError("A preview requires an output expression.")
     const parsedAst = staticValueToAST(evaluatedValue)

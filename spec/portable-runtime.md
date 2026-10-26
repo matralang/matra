@@ -7,7 +7,7 @@
 This document guides design and implementation and defines the small working v0.3 subset, not formal support.
 The minimal host API below is implemented; broader APIs, package formats, and task definitions remain undecided.
 It changes neither general Matra Program nor compiler source grammar, existing ABIs, or public APIs.
-The [unified grammar](./unified-grammar.md) remains authoritative for syntax and evaluation.
+The [grammar specification](./grammar.md) remains authoritative for syntax and evaluation.
 
 ## Small working v0.3 subset
 
@@ -64,7 +64,7 @@ Git pins the input fixture to LF; generated files are ignored.
 
 Explicitly inject the following `runtime` binding into document-profile Wasm.
 Reuse existing member/call semantics and the host value ABI without adding grammar or Wasm imports.
-Ordinary `instantiateUnified()` does not inject it automatically, preserving existing document execution.
+Ordinary `instantiateMatra()` does not inject it automatically, preserving existing document execution.
 
 | API | v0.3 contract |
 | --- | --- |
@@ -153,7 +153,7 @@ Build reproducibility needs a separate contract specifying inputs, toolchains, a
 - The [Rust seed and Matra compiler](../crates/matra-seed/README.md) provide Wasm generation and
   Stage 1/2/3 self-host verification. Stage 2/3 byte equality verifies the compiler;
   it does not prove project portability across the three OSes.
-- The [unified grammar Wasm host](../crates/matra-seed/host/unified-host.mjs) provides a provisional
+- The [standard grammar Wasm host](../crates/matra-seed/host/value-host.mjs) provides a provisional
   host value ABI. The [minimal Node.js host](../crates/matra-seed/host/node-runtime.mjs) adds v0.3 file I/O
   and related features on top of it, not a completed broad common runtime.
 - [Matra Command](../packages/command/README.md) provides external process integration through execution

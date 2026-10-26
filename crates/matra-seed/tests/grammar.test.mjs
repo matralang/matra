@@ -3,12 +3,12 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
-import { instantiateUnified } from "../host/unified-host.mjs"
+import { instantiateMatra } from "../host/value-host.mjs"
 import { spawnSync } from "./helpers/process.mjs"
 
 const root = new URL("../../..", import.meta.url)
 async function compile(source, extension = "matra", entry) {
-  const directory = await mkdtemp(join(tmpdir(), "matra-unified-"))
+  const directory = await mkdtemp(join(tmpdir(), "matra-grammar-"))
   try {
     const input = join(directory, `source.${extension}`)
     const output = join(directory, "output.wasm")
@@ -40,10 +40,10 @@ async function compile(source, extension = "matra", entry) {
   }
 }
 async function run(source) {
-  return (await instantiateUnified(await compile(source))).run()
+  return (await instantiateMatra(await compile(source))).run()
 }
 
-test("unified seed preserves the mixed markup document example", async () => {
+test("Matra seed preserves the mixed markup document example", async () => {
   const source = await readFile(new URL("../examples/document.matra", import.meta.url), "utf8")
   assert.deepEqual(await run(source), {
     tag: "article",
@@ -63,7 +63,7 @@ test("unified seed preserves the mixed markup document example", async () => {
   })
 })
 
-test("unified seed executes documents, member access, classes and data", async () => {
+test("Matra seed executes documents, member access, classes and data", async () => {
   assert.deepEqual(
     await run(`let page = {title: "日本語", url: "/"}
 article.card.card(lang="ja", options={theme: "dark"}, series=[10, 20]) {
@@ -83,7 +83,7 @@ article.card.card(lang="ja", options={theme: "dark"}, series=[10, 20]) {
   )
 })
 
-test("unified seed emits explicitly expanded loop results", async () => {
+test("Matra seed emits explicitly expanded loop results", async () => {
   assert.deepEqual(
     await run(`fn label(value) { return value + "!" }
 ul {
@@ -104,7 +104,7 @@ ul {
   )
 })
 
-test("unified seed uses lexical scopes, closures, recursion and null returns", async () => {
+test("Matra seed uses lexical scopes, closures, recursion and null returns", async () => {
   assert.deepEqual(
     await run(`let x = 10
 fn outer(x) {
@@ -119,7 +119,7 @@ let add = outer(2)
   )
 })
 
-test("unified seed evaluates precedence, decimals, unary and short circuit", async () => {
+test("Matra seed evaluates precedence, decimals, unary and short circuit", async () => {
   assert.deepEqual(
     await run(
       `[5 - 2, -2 + 3, 1 + 2 * 3 == 7, !(false || false) && true, -(.5 + .25), false && unknown(), true || unknown(), 0 || 9]`,
@@ -128,7 +128,7 @@ test("unified seed evaluates precedence, decimals, unary and short circuit", asy
   )
 })
 
-test("unified seed executes assignment, while, do-until and nested break", async () => {
+test("Matra seed executes assignment, while, do-until and nested break", async () => {
   assert.deepEqual(
     await run(`let n = 0
 let total = 0
@@ -142,7 +142,7 @@ do { total = total + 1 } until (total >= 10)
   )
 })
 
-test("unified seed preserves string delimiters and prototype-shaped data keys", async () => {
+test("Matra seed preserves string delimiters and prototype-shaped data keys", async () => {
   assert.deepEqual(
     await run(`let value = {"__proto__": "safe", "constructor": "data"}
 p { "}"; ")"; "null"; "if"; value.__proto__; value.constructor }`),
@@ -150,19 +150,19 @@ p { "}"; ")"; "null"; "if"; value.__proto__; value.constructor }`),
   )
 })
 
-test("unified host rejects non-array loops and unknown assignments", async () => {
+test("Matra host rejects non-array loops and unknown assignments", async () => {
   await assert.rejects(() => run("for (x in 1) { x }"), /Expected an array/)
   await assert.rejects(() => run("x = 2"), /Unknown name/)
   await assert.rejects(() => run("let value = {}\nvalue.constructor"), /Unknown member/)
 })
 
-test("unified seed compiles a named document fence and native module imports", async () => {
+test("Matra seed compiles a named document fence and native module imports", async () => {
   const document = await compile(
     '```doc.matra\np { "ok" }\n```\n```ignored.matra\n"ignored"\n```',
     "md",
     "doc.matra",
   )
-  assert.deepEqual((await instantiateUnified(document)).run(), {
+  assert.deepEqual((await instantiateMatra(document)).run(), {
     tag: "p",
     props: {},
     children: ["ok"],
@@ -186,13 +186,13 @@ export fn answer() -> i32 { return twice(21) }
   assert.equal((await WebAssembly.instantiate(native)).instance.exports.answer(), 42)
 })
 
-test("unified run creates a fresh top-level scope on each call", async () => {
-  const program = await instantiateUnified(await compile("let x = 1\nx = x + 1\nx"))
+test("Matra run creates a fresh top-level scope on each call", async () => {
+  const program = await instantiateMatra(await compile("let x = 1\nx = x + 1\nx"))
   assert.equal(program.run(), 2)
   assert.equal(program.run(), 2)
 })
 
-test("native unified profile executes migrated condition syntax and struct returns", async () => {
+test("native profile executes migrated condition syntax and struct returns", async () => {
   const source = `module sample
 struct pair {
   left: i32
@@ -235,9 +235,9 @@ export fn answer() -> i32 {
 })
 
 const conformance = JSON.parse(
-  await readFile(new URL("../../../spec/fixtures/unified.json", import.meta.url), "utf8"),
+  await readFile(new URL("../../../spec/fixtures/grammar.json", import.meta.url), "utf8"),
 )
-test("unified seed reports markup diagnostic byte offsets", async () => {
+test("Matra seed reports markup diagnostic byte offsets", async () => {
   for (const { source, offset } of conformance.markupDiagnostics) {
     const byteOffset = Buffer.byteLength(source.slice(0, offset))
     await assert.rejects(
@@ -273,18 +273,18 @@ for (const source of conformance.nativeReject) {
   })
 }
 for (const fixture of conformance.accept) {
-  test(`unified conformance: ${fixture.name}`, async () => {
+  test(`grammar conformance: ${fixture.name}`, async () => {
     assert.deepEqual(await run(fixture.source), fixture.value)
   })
 }
 for (const source of conformance.reject) {
-  test(`unified rejects: ${source}`, async () => {
+  test(`Matra rejects: ${source}`, async () => {
     await assert.rejects(() => run(source))
   })
 }
 
 test("bootstrap CLI reserves document workspace and runs generated Wasm", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "matra-unified-cli-"))
+  const directory = await mkdtemp(join(tmpdir(), "matra-grammar-cli-"))
   try {
     const input = join(directory, "source.matra")
     const output = join(directory, "output.wasm")
@@ -302,7 +302,7 @@ test("bootstrap CLI reserves document workspace and runs generated Wasm", async 
       },
     )
     assert.equal(result.status, 0, result.stderr || result.error?.message)
-    assert.deepEqual((await instantiateUnified(await readFile(output))).run(), {
+    assert.deepEqual((await instantiateMatra(await readFile(output))).run(), {
       tag: "p",
       props: {},
       children: [2, 4],

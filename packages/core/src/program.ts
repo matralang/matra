@@ -1,60 +1,57 @@
-/** 統一文法の parser と、静的取得・明示的実行。 */
-export type UnifiedScalar = string | number | boolean | null
-export type UnifiedExpression =
-  | { kind: "literal"; value: UnifiedScalar }
-  | { kind: "array"; items: UnifiedExpression[] }
-  | { kind: "object"; entries: { key: string; value: UnifiedExpression }[] }
+/** 標準文法の parser と、静的取得・明示的実行。 */
+import type { MatraScalar } from "./ast/types.js"
+
+export type MatraExpression =
+  | { kind: "literal"; value: MatraScalar }
+  | { kind: "array"; items: MatraExpression[] }
+  | { kind: "object"; entries: { key: string; value: MatraExpression }[] }
   | { kind: "reference"; name: string }
-  | { kind: "member"; object: UnifiedExpression; name: string }
-  | { kind: "call"; callee: UnifiedExpression; arguments: UnifiedExpression[] }
-  | { kind: "binary"; operator: string; left: UnifiedExpression; right: UnifiedExpression }
-  | { kind: "unary"; operator: string; operand: UnifiedExpression }
+  | { kind: "member"; object: MatraExpression; name: string }
+  | { kind: "call"; callee: MatraExpression; arguments: MatraExpression[] }
+  | { kind: "binary"; operator: string; left: MatraExpression; right: MatraExpression }
+  | { kind: "unary"; operator: string; operand: MatraExpression }
   | {
       kind: "node"
       tag: string
       classes: string[]
-      attributes: { key: string; value: UnifiedExpression }[]
-      body: UnifiedStatement[]
+      attributes: { key: string; value: MatraExpression }[]
+      body: MatraStatement[]
     }
   | {
       kind: "if"
-      condition: UnifiedExpression
-      thenBody: UnifiedStatement[]
-      elseBody: UnifiedStatement[]
+      condition: MatraExpression
+      thenBody: MatraStatement[]
+      elseBody: MatraStatement[]
     }
-  | { kind: "for"; name: string; iterable: UnifiedExpression; body: UnifiedStatement[] }
-  | { kind: "while"; condition: UnifiedExpression; body: UnifiedStatement[] }
-  | { kind: "do"; condition: UnifiedExpression; body: UnifiedStatement[] }
+  | { kind: "for"; name: string; iterable: MatraExpression; body: MatraStatement[] }
+  | { kind: "while"; condition: MatraExpression; body: MatraStatement[] }
+  | { kind: "do"; condition: MatraExpression; body: MatraStatement[] }
 
-export type UnifiedStatement =
-  | { kind: "expression"; expression: UnifiedExpression }
-  | { kind: "spread"; expression: UnifiedExpression }
-  | { kind: "let"; name: string; value: UnifiedExpression }
-  | { kind: "assign"; name: string; value: UnifiedExpression }
-  | { kind: "return"; value: UnifiedExpression }
+export type MatraStatement =
+  | { kind: "expression"; expression: MatraExpression }
+  | { kind: "spread"; expression: MatraExpression }
+  | { kind: "let"; name: string; value: MatraExpression }
+  | { kind: "assign"; name: string; value: MatraExpression }
+  | { kind: "return"; value: MatraExpression }
   | { kind: "break" }
-  | { kind: "fn"; name: string; parameters: string[]; body: UnifiedStatement[] }
+  | { kind: "fn"; name: string; parameters: string[]; body: MatraStatement[] }
 
-export interface UnifiedModule {
+export interface MatraModule {
   kind: "module"
-  statements: UnifiedStatement[]
+  statements: MatraStatement[]
 }
 export interface StaticNode {
   tag: string
   props: Record<string, StaticValue>
   children: StaticValue[]
 }
-export type StaticValue =
-  | UnifiedScalar
-  | StaticValue[]
-  | { [key: string]: StaticValue }
-  | StaticNode
+export type StaticValue = MatraScalar | StaticValue[] | { [key: string]: StaticValue } | StaticNode
 export interface StaticToASTNode {
   tag: string
   props: Record<string, StaticValue>
   children: (StaticToASTNode | StaticValue)[]
 }
-export class UnifiedSyntaxError extends SyntaxError {}
+export class ProgramSyntaxError extends SyntaxError {}
 export class EvaluationRequiredError extends Error {
   constructor(message: string) {
     super(message)
@@ -88,13 +85,13 @@ class Broken {}
 // biome-ignore lint/suspicious/noExplicitAny: The evaluator executes dynamically typed expressions and functions.
 type RuntimeValue = any
 
-export function parseUnified(source: string): UnifiedModule {
-  return new UnifiedParser(source).module()
+export function parse(source: string): MatraModule {
+  return new ProgramParser(source).module()
 }
-export function evaluateStatic(module: UnifiedModule): StaticValue | undefined {
+export function evaluateStatic(module: MatraModule): StaticValue | undefined {
   return new Evaluator(true).run(module.statements, new Scope())
 }
-export function evaluateUnified(module: UnifiedModule): StaticValue | undefined {
+export function evaluate(module: MatraModule): StaticValue | undefined {
   return new Evaluator(false).run(module.statements, new Scope())
 }
 
@@ -104,7 +101,7 @@ class Evaluator {
     if (this.staticOnly)
       throw new EvaluationRequiredError(`Static evaluation does not execute ${kind}.`)
   }
-  run(statements: UnifiedStatement[], scope: Scope, children?: RuntimeValue[]): RuntimeValue {
+  run(statements: MatraStatement[], scope: Scope, children?: RuntimeValue[]): RuntimeValue {
     let output: RuntimeValue = null
     for (const statement of statements) {
       output = null
@@ -153,7 +150,7 @@ class Evaluator {
     }
     return output
   }
-  private expression(expr: UnifiedExpression, scope: Scope): RuntimeValue {
+  private expression(expr: MatraExpression, scope: Scope): RuntimeValue {
     switch (expr.kind) {
       case "literal":
         return expr.value
@@ -306,7 +303,7 @@ const reserved = new Set(
     " ",
   ),
 )
-class UnifiedParser {
+class ProgramParser {
   private readonly tokens: Token[] = []
   private lexer: Generator<Token>
   private index = 0
@@ -318,13 +315,13 @@ class UnifiedParser {
   constructor(private readonly source: string) {
     this.lexer = tokenize(source)
   }
-  module(): UnifiedModule {
+  module(): MatraModule {
     const statements = this.statements("eof")
     this.expect("eof")
     return { kind: "module", statements }
   }
-  private statements(end: string): UnifiedStatement[] {
-    const result: UnifiedStatement[] = []
+  private statements(end: string): MatraStatement[] {
+    const result: MatraStatement[] = []
     this.separators()
     while (!this.at(end)) {
       if (this.at("eof")) this.fail(`Expected '${end}'`)
@@ -334,10 +331,10 @@ class UnifiedParser {
     }
     return result
   }
-  private statement(): UnifiedStatement {
+  private statement(): MatraStatement {
     if (this.consume("let")) {
       const parenthesized = this.consume("(")
-      const binding = (): UnifiedStatement => {
+      const binding = (): MatraStatement => {
         const name = this.word("Expected a variable name")
         this.trivia()
         this.expect("=")
@@ -379,7 +376,7 @@ class UnifiedParser {
     }
     return { kind: "expression", expression: this.expression() }
   }
-  private block(node = false): UnifiedStatement[] {
+  private block(node = false): MatraStatement[] {
     this.expect("{")
     const saved = [this.enclosed, this.bareHeader, this.nodeBody]
     this.enclosed = false
@@ -413,7 +410,7 @@ class UnifiedParser {
     ;[this.enclosed, this.bareHeader] = saved
     return value
   }
-  private expression(minimum = 1): UnifiedExpression {
+  private expression(minimum = 1): MatraExpression {
     this.trivia()
     let value = this.unary()
     const precedence: Record<string, number> = {
@@ -439,7 +436,7 @@ class UnifiedParser {
     }
     return value
   }
-  private unary(): UnifiedExpression {
+  private unary(): MatraExpression {
     this.trivia()
     if (this.at("!") || this.at("-")) {
       const operator = this.next().value
@@ -456,12 +453,12 @@ class UnifiedParser {
     }
     return value
   }
-  private ifExpression(): UnifiedExpression {
+  private ifExpression(): MatraExpression {
     const condition = this.header(() => this.expression())
     const thenBody = this.block()
     const checkpoint = this.index
     this.inline()
-    let elseBody: UnifiedStatement[] = []
+    let elseBody: MatraStatement[] = []
     if (this.consume("else_if")) {
       elseBody = [{ kind: "expression", expression: this.ifExpression() }]
     } else if (this.consume("else")) {
@@ -471,7 +468,7 @@ class UnifiedParser {
     }
     return { kind: "if", condition, thenBody, elseBody }
   }
-  private primary(): UnifiedExpression {
+  private primary(): MatraExpression {
     if (this.at("<")) {
       const markup = new MarkupParser(this.source, this.peek().offset)
       const value = markup.node()
@@ -670,7 +667,7 @@ class UnifiedParser {
     return token
   }
   private fail(message: string): never {
-    throw new UnifiedSyntaxError(`${message} at offset ${this.peek().offset}.`)
+    throw new ProgramSyntaxError(`${message} at offset ${this.peek().offset}.`)
   }
 }
 
@@ -696,13 +693,13 @@ function* tokenize(source: string, index = 0): Generator<Token> {
       let value = ""
       while (index < source.length && source[index] !== '"') {
         if ("\\\r\n".includes(source[index]))
-          throw new UnifiedSyntaxError(
+          throw new ProgramSyntaxError(
             `String escapes and multiline strings are not implemented at offset ${index}.`,
           )
         value += source[index++]
       }
       if (source[index] !== '"')
-        throw new UnifiedSyntaxError(`Unterminated string at offset ${offset}.`)
+        throw new ProgramSyntaxError(`Unterminated string at offset ${offset}.`)
       index++
       yield { kind: "string", value, offset }
       continue
@@ -730,7 +727,7 @@ function* tokenize(source: string, index = 0): Generator<Token> {
       yield { kind: "symbol", value: char, offset }
       continue
     }
-    throw new UnifiedSyntaxError(`Unexpected '${char}' at offset ${offset}.`)
+    throw new ProgramSyntaxError(`Unexpected '${char}' at offset ${offset}.`)
   }
   yield { kind: "eof", value: "", offset: source.length }
 }
@@ -740,7 +737,7 @@ class MarkupParser {
     private readonly source: string,
     public offset: number,
   ) {}
-  node(): UnifiedExpression {
+  node(): MatraExpression {
     this.expect("<")
     const tag = this.name("tag")
     const classes: string[] = []
@@ -748,7 +745,7 @@ class MarkupParser {
       const name = this.name("class")
       if (!classes.includes(name)) classes.push(name)
     }
-    const attributes: { key: string; value: UnifiedExpression }[] = []
+    const attributes: { key: string; value: MatraExpression }[] = []
     const keys = new Set<string>()
     while (true) {
       const separated = this.whitespace()
@@ -769,7 +766,7 @@ class MarkupParser {
       this.expect(quote)
       attributes.push({ key, value: { kind: "literal", value } })
     }
-    const body: UnifiedStatement[] = []
+    const body: MatraStatement[] = []
     while (!this.take("</")) {
       if (this.offset === this.source.length) this.fail(`Expected closing tag '${tag}'`)
       const expression =
@@ -861,6 +858,6 @@ class MarkupParser {
     if (!this.take(value)) this.fail(`Expected '${value}'`)
   }
   private fail(message: string, offset = this.offset): never {
-    throw new UnifiedSyntaxError(`${message} at offset ${offset}.`)
+    throw new ProgramSyntaxError(`${message} at offset ${offset}.`)
   }
 }

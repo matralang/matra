@@ -23,7 +23,7 @@ fn main() {
         if entry.is_some() {
             fail("--entry is only available for Markdown bundles".into());
         }
-        matra_seed::compile_unified(&markdown)
+        matra_seed::compile(&markdown)
     } else {
         matra_seed::compile_markdown(&markdown, entry.as_deref())
     };

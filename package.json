@@ -16,7 +16,7 @@
     "lint:markdown": "markdownlint-cli2 '**/*.md'",
     "format": "biome format --write .",
     "test": "pnpm -r --if-present run test && pnpm run test:seed",
-    "test:seed": "cargo test --manifest-path crates/matra-seed/Cargo.toml && node --test crates/matra-seed/tests/*.test.mjs",
+    "test:seed": "cargo test --manifest-path crates/matra-seed/Cargo.toml && node --test --test-concurrency=1 crates/matra-seed/tests/*.test.mjs",
     "typecheck": "pnpm -r --if-present run check"
   },
   "devDependencies": {

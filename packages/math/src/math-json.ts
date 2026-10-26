@@ -2,8 +2,8 @@ import {
   isMatraAST,
   type MatraAST,
   type MatraASTChild,
+  type MatraExpression,
   parse,
-  type UnifiedExpression,
 } from "@matra/core"
 import type { MathJson } from "./types.js"
 
@@ -36,9 +36,9 @@ export function parseMath(source: string): MathJson {
   }
 }
 
-function expressionToMathJson(expression: UnifiedExpression): MathJson {
+function expressionToMathJson(expression: MatraExpression): MathJson {
   if (expression.kind === "literal") return expression.value
-  // 統一文法では負数の符号が unary AST になるため、数値 operand を復元する。
+  // 標準文法では負数の符号が unary AST になるため、数値 operand を復元する。
   if (
     expression.kind === "unary" &&
     expression.operator === "-" &&
@@ -57,7 +57,7 @@ function expressionToMathJson(expression: UnifiedExpression): MathJson {
     }
     return [expression.callee.name, ...expression.arguments.map(expressionToMathJson)]
   }
-  throw new TypeError(`MathJSON does not support unified ${expression.kind} expressions`)
+  throw new TypeError(`MathJSON does not support Matra ${expression.kind} expressions`)
 }
 
 /** Convert MathJSON to a Core AST. Scalar roots have no Matra AST equivalent. */

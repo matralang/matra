@@ -1,0 +1,112 @@
+# Matra Grammar v0.2 (superseded)
+
+[English](./grammar.md) | [日本語](./grammar.ja.md) | [Index](../../README.md)
+
+This is the historical Core v0.2 grammar. The authoritative grammar for general
+`.matra` source is now the [Grammar v0.3](../../grammar.md).
+New source and parser implementations must not use the rules below.
+
+## Source text
+
+Source text is Unicode. Space, tab, carriage return, and line feed are
+whitespace. Whitespace between tokens is insignificant except inside text
+delimiters. A document MUST contain exactly one root expression.
+
+## Function syntax
+
+Function syntax is the canonical notation:
+
+```matra
+section(id="intro", heading("Title"), paragraph("Body"))
+```
+
+The identifier before `(` is the tag. Positional arguments become children in
+source order. `name=value` arguments become properties. Properties MUST appear
+before positional arguments, so all children follow all properties.
+
+An identifier begins with an ASCII letter or `_`, followed by ASCII letters,
+digits, `_`, or `-`. `true`, `false`, and `null` are reserved.
+
+Literals are double-quoted strings, numbers, booleans, and `null`. Numbers may
+be signed and may contain a decimal fraction or exponent. v0.2 does not define
+string escape sequences. A bare identifier in value position denotes a
+string.
+
+For compatibility, `{key: value}` MAY supply properties as an argument.
+Keyword properties are canonical; new documents SHOULD NOT use this
+object-style form.
+
+## Document syntax
+
+Document syntax is the compact alternative:
+
+```matra
+article.card#main[lang="en"] {
+  h1 { "Title" }
+  p`Body`
+}
+```
+
+`.name` adds a class and `#name` sets the ID. `[name=value]` adds a property;
+`value` may be a string, number, boolean, `null`, array, or object. Attributes
+MUST be comma-separated: whitespace alone is not a separator. This keeps the
+end of an attribute list unambiguous with array values.
+
+```matra
+chart[options=[{theme: "dark"}], series=[[1, 2, 3]]]
+```
+
+Multiple classes are joined with one space. When several ID selectors or
+properties with the same name are specified, the last source-order value wins.
+A brace body contains child nodes or a quoted string.
+
+Backtick and tilde text each produce one string child:
+
+```matra
+p`hello`
+p~hello~
+```
+
+Their delimiters cannot be escaped in v0.2. `$root { ... }` MAY provide a
+synthetic root for several children. `<!-- text -->` produces a `#comment`
+node whose single child is the comment text.
+
+## Reference grammar
+
+The following EBNF is descriptive. Lexical exclusions and error handling in a
+conforming parser MUST produce the behavior specified above.
+
+```ebnf
+document       = expression ;
+expression     = function-node | document-node | root-node | comment ;
+function-node  = identifier, "(", [ property-list, [ ",", child-list ] | child-list ], ")" ;
+property-list  = property-or-object, { ",", property-or-object } ;
+property-or-object = property | object-props ;
+child-list     = child, { ",", child } ;
+child          = function-node | array | literal | identifier ;
+property       = identifier, "=", (value | function-node) ;
+object-props   = "{", [ pair, { ",", pair } ], "}" ;
+pair           = (identifier | string), ":", value ;
+value          = array | object | string | number | boolean | null | identifier ;
+array          = "[", [ value, { ",", value } ], "]" ;
+object         = "{", [ pair, { ",", pair } ], "}" ;
+document-node  = tag, { class | id }, [ attributes ], [ body | short-text ] ;
+attributes     = "[", [ attribute, { ",", attribute } ], "]" ;
+attribute      = identifier, "=", value ;
+body           = "{", { expression }, "}" | "{", string, "}" ;
+short-text     = "`", text, "`" | "~", text, "~" ;
+root-node      = "$root", [ body ] ;
+comment        = "<!--", text, "-->" ;
+class          = ".", tag ;
+id             = "#", tag ;
+literal        = string | number | boolean | null ;
+```
+
+## Equivalent forms
+
+These forms MUST produce data-model-equivalent nodes:
+
+```matra
+p(class="lead", "hello")
+p.lead { "hello" }
+```
