@@ -8,6 +8,7 @@
     "bootstrap:artifact": "node crates/matra-seed/host/materialize.mjs",
     "bootstrap:verify": "node crates/matra-seed/host/verify-self-host.mjs",
     "portable": "node crates/matra-seed/host/portable.mjs",
+    "literate": "node crates/matra-seed/host/literate.mjs",
     "test:portable": "node --test crates/matra-seed/tests/portable-runtime.test.mjs",
     "check": "pnpm run build && pnpm -r --if-present run check",
     "lint": "pnpm run check && pnpm run lint:biome && pnpm run lint:markdown",

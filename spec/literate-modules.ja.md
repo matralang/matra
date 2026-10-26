@@ -4,17 +4,86 @@
 
 ## 状態と対象
 
-本書は将来の設計案であり、実装済みの機能や正式な文法仕様ではない。
-以下の複数言語の連携例は、現在のCLIでは実行できない。
+本書は初版の実装契約と将来の設計案を区別して記述する。正式な文法仕様ではない。
+実装範囲は次節の明示入口と`.js.part`に限定する。後続の`.js`・npm・Python連携例は未実装である。
 [共通ランタイムのロードマップ](./portable-runtime.ja.md)を補足するが、
 v0.3の最小実動版にnpm・Python連携を追加するものではない。
 
 対象は、一般のMatra Programを含むMarkdown文書の読み込み、モジュール解決、
 言語間連携と開発環境である。Matra compiler sourceの文法変更は対象外とする。
-本変更は文書の追加のみであり、既存source、API、ABI、AST/data model、
-parser、runtime、diagnosticの動作を変更しない。
+専用CLIを追加する互換変更であり、既存source、API、ABI、AST/data model、
+parserと既存CLIの動作を変更しない。
 [統一文法](./unified-grammar.ja.md)と既存のcompiler sourceのbootstrap契約を維持する。
-将来の実装前に、本書の未決事項と既存のfence選択との互換性を確定する。
+以下の初版契約以外の未決事項は、後続段階で確定する。
+
+## 初版の実装契約
+
+対象は一般のMatra Programのホスト連携であり、Matra文法とcompiler sourceは変更しない。
+既存のmember/call、文書生成とhost value ABIを利用する。
+
+```text
+pnpm literate -- build ROOT DOCUMENT.md main.matra OUTPUT.json --value datasets/sales.js.part --value analytics/total.js.part
+pnpm literate -- run ROOT OUTPUT.json
+```
+
+入口は明示した単一の`.matra`仮想ファイルのみとする。`--value`を繰り返して依存する値を
+明示する。指定しないブロックは初期化・実行しない。暗黙のimportや実ファイル検索はない。
+`ROOT`と実ファイルのパスは[共通ランタイムの論理パス契約](./portable-runtime.ja.md)に従う。
+出力はversion付きJSON bundle（Wasm、選択した式と元位置）とし、`run`は文書data modelの
+JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結果はエラーとする。
+[実行可能なサンプル](../crates/matra-seed/examples/literate-values.md)は合計`60`を含む文書を生成する。
+回帰testは`node --test crates/matra-seed/tests/literate-runtime.test.mjs`で実行する。
+
+### 仮想ファイルと形式
+
+- fenceは行頭から0〜3個のspace、3個以上のbacktickまたはtildeで開く。
+  閉じdelimiterは同種で開き以上の長さとし、後ろはspace/tabのみとする。
+  CRLFはLFへ正規化する。本文の行番号を保持し、閉じ忘れを拒否する。
+  外側fence内の説明例を仮想ファイルとして再走査しない。
+- info全体を前後trimした単一のファイル名として扱う。拡張子のない言語名fenceは説明用とする。
+  ファイル名は`/`区切り、各componentはASCIIのidentifierまたはそれにdot接尾辞を付けた形とし、
+  `.`・`..`、空component、絶対パス、backslash、queryを拒否する。
+  パスは大小文字を区別するが、大小文字だけ異なる重複も拒否する。
+- 全名前付きfenceの重複パスを登録時に拒否する。`.js`と`.js.part`は別形式として登録し、
+  接尾辞を除いたパスをdot区切りの公開名へ対応させる。
+  同じ公開名と親子の公開名（`a`と`a.b`）は、未選択ブロックを含め衝突エラーとする。
+- 選択した入口は`.matra`、値は`.js.part`のみ受理する。標準`.js`モジュール、その他の形式、
+  `?values`引数ヘッダーは未対応として診断する。本文から形式を推測しない。
+  Matraのbindingと同名の公開rootは既存のduplicate-binding診断で拒否する。
+- `.js.part`はstrict modeで本文全体を括弧で囲んだ単一のJavaScript式として構文検証する。
+  object式、関数式、arrow、改行とJavaScript commentを受理する。
+  import/export宣言、複数文、末尾semicolonを拒否する。別形式へのfallbackはない。
+
+### 登録・build・実行
+
+登録は名前・衝突・選択対象を検証し、buildは選択した式の構文検証とMatraのWasm生成だけを行う。
+どちらもユーザー式や関数本体を実行しない。実行時は選択した値をASCIIパス昇順で各1回初期化し、
+その後に入口を実行する。関数本体は呼び出し時だけ実行する。
+再実行では新しいJavaScript contextと値を作り、同一実行内のclosure状態だけを保持する。
+各式は共通の新規contextで評価するが、公開名・MatraのbindingはJavaScriptへ注入しない。
+JavaScript標準の同期組み込みのみを想定し、Node.jsの`process`・`require`、timer、import、
+文字列からのcode生成、Wasm生成を提供しない。OS sandboxやtimeout保証ではないため、
+信頼した文書だけを選択して実行する。
+初版はWasm実行のみを提供し、別のインタプリタ方式は追加しない。
+将来の方式もこの初期化・呼び出し契約を共有し、build時評価を導入しない。
+
+### 値境界とdiagnostic
+
+境界では`null`、boolean、有限数、文字列、密な配列、plain objectのown enumerableな
+文字列key/data propertyを再帰copyする。JavaScriptからMatraへは関数値も公開できる。
+Matraから渡す引数はcopyし、JavaScript側の変更をMatraへ反映しない。戻り値もcopyする。
+共有参照は保存せず、循環、accessor、symbol key、非enumerable property、疎配列、
+独自prototype、`undefined`、BigInt、非有限数、Promise/thenableを拒否する。
+文書ノードはplain dataとして渡せるが、数式・binary・クラスinstanceの特別な変換は行わない。
+Matra関数のJavaScriptへの引き渡し、非同期処理は未対応とする。
+JavaScript関数の`this`は`undefined`とし、非関数の呼び出しは既存hostの明示的エラーとする。
+文書出力は上記data subsetのみを受理し、関数値は拒否する。
+
+loaderは`LiterateError.code`と元文書・仮想パス・本文開始行を報告し、
+JavaScript例外はcause/stackに元の行・列を保持する。Matraのcompile診断は元文書行へ対応させる。
+Matra実行時エラーは入口ブロック位置を報告する（式単位のsource mapは後続段階）。
+重複、未対応形式、欠落、構文・初期化・呼び出し・値境界の失敗を成功扱いにしない。
+後続の設計例と初版の制約が異なる場合、この節を初版の正本とする。
 
 ## 中心方針
 
@@ -275,8 +344,8 @@ JavaScriptの関数宣言の巻き上げは「最初に全コードを評価す�
 
 実装は次の順で段階的に進める。
 
-1. 名前付き仮想ファイル、入口選択、標準JavaScriptモジュールの公開・呼び出しを実装する。
-2. `.js.part`で関数・データを扱う値形式と引数ヘッダーの短縮形を実装する。
+1. 名前付き仮想ファイル、明示入口、選択した`.js.part`の同期的な値・関数連携を実装する（初版）。
+2. 標準JavaScriptモジュールとimport・npm依存、引数ヘッダーを別段階で検討する。
 3. 依存管理とエラー位置・補完・デバッグの対応を整える。
 4. 呼び出し契約に沿ってPython連携を個別に検討・検証する。
 

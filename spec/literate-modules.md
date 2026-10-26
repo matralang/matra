@@ -4,17 +4,90 @@
 
 ## Status and scope
 
-This document proposes a future design, not an implemented feature or a formal grammar specification.
-The multilingual examples below cannot be executed with the current CLI.
+This document separates the initial implementation contract from future design proposals.
+It is not a formal grammar specification. Only the explicit entry and `.js.part` subset below is
+implemented; the later `.js`, npm, and Python examples remain proposals.
 It supplements the [common runtime roadmap](./portable-runtime.md) without adding
 npm or Python integration to the v0.3 minimal implementation.
 
 The scope is loading Markdown documents containing ordinary Matra Programs, module resolution,
 language interoperation, and developer tooling. Changes to Matra compiler source grammar are out of scope.
-This documentation-only change does not alter existing source, APIs, ABIs, AST/data models,
-or parser, runtime, and diagnostic behavior.
+The dedicated CLI is an additive change; existing source, APIs, ABIs, AST/data models,
+parsers, and CLI behavior are unchanged.
 The [unified grammar](./unified-grammar.md) and existing compiler source bootstrap contracts remain intact.
-Resolve the open questions below and compatibility with existing fence selection before implementation.
+Questions outside the initial contract remain for later stages.
+
+## Initial implementation contract
+
+This is host interoperation for ordinary Matra Programs, not a change to Matra or compiler source
+grammar. It uses existing member/call syntax, document generation, and the host value ABI.
+
+```text
+pnpm literate -- build ROOT DOCUMENT.md main.matra OUTPUT.json --value datasets/sales.js.part --value analytics/total.js.part
+pnpm literate -- run ROOT OUTPUT.json
+```
+
+Only the explicitly selected single `.matra` virtual file is the entry. Repeated `--value` options
+select dependencies. Unselected blocks are never initialized or executed. There is no implicit import
+or physical file lookup. `ROOT` and physical paths follow the
+[portable runtime path contract](./portable-runtime.md).
+Build produces a versioned JSON bundle containing Wasm, selected expressions, and source locations.
+Run writes the document data model as one JSON line to stdout; non-JSON document results such as
+functions are errors.
+The [executable sample](../crates/matra-seed/examples/literate-values.md) produces a document containing
+the total `60`. Run regressions with `node --test crates/matra-seed/tests/literate-runtime.test.mjs`.
+
+### Virtual files and formats
+
+- Fences open with zero to three spaces and at least three backticks or tildes. Closing delimiters
+  use the same character, at least the opening length, followed only by spaces/tabs.
+  CRLF is normalized to LF. Body line numbers are retained; unclosed fences are errors.
+  Examples nested inside an outer fence are not scanned again as virtual files.
+- The entire trimmed info string is a single filename. Language labels without an extension are
+  explanatory. Paths use `/`; components are ASCII identifiers optionally followed by dot suffixes.
+  Reject `.`, `..`, empty components, absolute paths, backslashes, and queries.
+  Paths are case-sensitive, but case-only duplicates are also rejected.
+- Registration rejects duplicate paths across all named fences. `.js` and `.js.part` register distinct
+  formats, removing the whole suffix and mapping path separators to dots for public names.
+  Equal or ancestor/descendant public names (`a` and `a.b`) conflict even in unselected blocks.
+- Only `.matra` entries and `.js.part` values can be selected. Standard `.js` modules, other formats,
+  and `?values` headers are diagnosed as unsupported, never inferred from the body.
+  A public root colliding with a Matra binding uses the existing duplicate-binding diagnostic.
+- A `.js.part` body is syntax-checked as one parenthesized JavaScript expression in strict mode.
+  Object/function/arrow expressions, newlines, and JavaScript comments are accepted.
+  Import/export declarations, multiple statements, and trailing semicolons are rejected without fallback.
+
+### Registration, build, and execution
+
+Registration validates names, collisions, and selection. Build only syntax-checks selected expressions
+and compiles Matra to Wasm. Neither executes user expressions or function bodies.
+At runtime, selected values initialize exactly once in ascending ASCII path order, before the entry.
+Function bodies execute only when called. Each run creates a fresh JavaScript context and values;
+closure state persists only within that run. Expressions share that fresh context, but public names
+and Matra bindings are not injected into JavaScript.
+Only standard synchronous JavaScript built-ins are intended; Node.js `process`, `require`, timers,
+imports, string code generation, and Wasm generation are not provided.
+This is not an OS sandbox or a timeout guarantee: execute trusted documents only.
+The initial implementation offers Wasm execution only, not a second interpreter mode.
+Future modes must share these initialization/call semantics without build-time evaluation.
+
+### Value boundary and diagnostics
+
+Recursively copy `null`, booleans, finite numbers, strings, dense arrays, and plain objects with own
+enumerable string-keyed data properties. JavaScript-to-Matra values may also contain functions.
+Arguments passed from Matra are copied; JavaScript mutations do not update Matra data.
+Return values are copied too. Aliasing is not preserved. Reject cycles, accessors, symbol keys,
+non-enumerable properties, sparse arrays, custom prototypes, `undefined`, BigInt, non-finite numbers,
+and Promises/thenables. Document nodes can cross as plain data; there is no special conversion
+for math, binary data, or class instances. Matra function arguments and asynchronous work are unsupported.
+JavaScript functions receive `undefined` as `this`; calling non-functions is an explicit existing host error.
+Document output accepts only the data subset above, not functions.
+
+The loader reports `LiterateError.code`, original document, virtual path, and body start line.
+JavaScript causes/stacks retain original line/column locations. Matra compile diagnostics map to
+original document lines. Matra runtime errors identify the entry block (expression-level source maps
+are deferred). Duplicate, unsupported, missing, syntax, initialization, call, and boundary errors
+must never become successful output. This section takes precedence over later proposals for the initial release.
 
 ## Core policy
 
@@ -278,8 +351,8 @@ Make the relationship to the common runtime's existing logical path contract exp
 
 Implement incrementally:
 
-1. Implement named virtual files, entry selection, and exposure/calling of standard JavaScript modules.
-2. Implement the value form for functions and data using `.js.part`, and parameter-header shorthand.
+1. Implement named virtual files, explicit entry selection, and synchronous selected `.js.part` values/functions (initial release).
+2. Consider standard JavaScript modules, imports/npm dependencies, and parameter headers in separate stages.
 3. Complete dependency management, error mapping, completion, and debugging support.
 4. Independently design and validate Python integration against the calling contract.
 
