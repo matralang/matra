@@ -67,6 +67,7 @@ that order, respecting dependencies. The table is based on source inspection.
 | `@matra/core` | v0.3 parser, static retrieval, explicit evaluation, document AST, traversal, JSONMatra helpers; document Morphion conversions added here | P0 | Document Morphion round trips and exponent validation, Module/document distinction, document construction and loops, current API documentation, diagnostic limitations | General `.jsonm`, unified source maps, strict type system |
 | `@matra/html` | Escaping, void elements, pretty output, base paths | P0 | Complete document, escaping and repetition from JS data in the validation example | Full Web framework, hydration, general site generator |
 | literate host / `matra-seed` | Rust seed, Matra-written Wasm compiler, explicit entry and `.js.part`, JSON bundle, portable file APIs | P0 | Build→execute→HTML, original-document diagnostics, preserve Stage 2/3 byte equality | Standard JS modules, npm/Python import, standalone runtime or package manager |
+| `@matra/core/literate` (planned) | Internal build/run functions and repository CLI; public subpath, types, and distribution validation are pending | P0 user-facing delivery | Experimental Node.js APIs, FrontMatter configuration, bundled compiler Wasm, dependency separation from ordinary Core entry, CLI over the same API, installation example outside the checkout | Browser support, a separate evaluator, general sandbox guarantees, extraction into a separate npm package |
 | `@matra/math` | MathJSON bridge, object form, Content MathML MVP, Morphion types | P1 | Distinguish document Morphion, describe semantic boundaries, round-trip representative supported expressions | Full MathML, MathML 4, general equivalence testing |
 | `@matra/math-compute-engine` | Evaluation, simplification, numeric approximation, Morphion conversion, property evaluation | P1 | Test finite sums, like terms, function atoms, negative integer powers, 256-term limit; inspect domains including division by zero and reproducible ordering | Complete engine-independent computation, general equivalence testing |
 | `@matra/styles` | No-class CSS and a few helpers | P0 validation route | Bundle CSS with generated pages for offline reading | New design system or themes |
@@ -75,6 +76,13 @@ that order, respecting dependencies. The table is based on source inspection.
 | `@matra/kernel` | Jupyter protocol, HTML/SVG/AST display using static retrieval | P2 | Preserve tests; include only after actual Jupyter validation | Persistent Matra sessions, comprehensive Notebook/Colab support |
 | `matra-vscode` | Highlighting, formatting, outline, simple diagnostics | P1 current syntax / P2 expansion | Formatting preserves validation examples using current syntax | LSP, full type inference, new legacy-directive features |
 | `apps/website` and separate official site | Legacy site remains in monorepo; README points to another repository | P1 user entry | Align linked v0.3 instructions after separately auditing the official site | Claiming the official site is updated based on this repository |
+
+The [literate public API contract](./literate-modules.md#v03-public-api-and-distribution-contract-planned)
+defines APIs and distribution gates. Preserve existing P0 correctness, value
+boundaries, diagnostics, and bootstrap first, then establish bundled compiler
+generation/verification and complete the subpath and installation examples
+before P1/P2 expansion. Internal functions are not already published APIs.
+Standalone packaging is deferred; fix the CLI name before publication.
 
 ## First validation example
 
@@ -95,6 +103,11 @@ pnpm test:web-page
 Outputs are `packages/html/examples/dist/index.html` and `matra.css`.
 Regression tests check language and charset, three expanded articles, the 24-minute
 total, and text escaping. Generated pages can be read offline.
+Currently this is an in-checkout integration example using relative imports of
+internal build/run functions. The v0.3 installation example must migrate to
+public package imports and run from a separate project. The current Rust
+requirement applies to repository bootstrap. The planned public subpath uses
+the bundled compiler without requiring user-side Rust or compiler downloads.
 
 ## Validation status
 
@@ -117,6 +130,7 @@ Local success alone does not complete the release criteria.
 | --- | --- | --- |
 | 1: Baseline | Audit packages, correct outdated API examples, add document→HTML validation | Baseline build/test/lint results, generated HTML and regression test |
 | 2: Foundation | Check document Morphion implementation against its contract and fix document/JS integration | Model contract, domain and acceptance/rejection tests, reproducible instructions |
+| Between 2 and 3: Distribution preparation | Specify public build/run contracts; bundle compiler Wasm and provide Core subpath, types, and CLI | Public exports, dependency separation from ordinary entry, supported ABIs, compiler versions/checksums and size, first-use and failure tests |
 | 3: Applied routes | Validate existing SVG, math, and editor features with representative examples; test distribution | Packed packages, rendered output, supported OS validation |
 | 4: Release candidate | Freeze grammar, APIs and validation examples; verify v0.3 candidate | Pinned commit, versions/checksums, release notes, Stage 2/3 equality, successful CI |
 | 5: Release decision | Check required criteria and known limitations, then publish experimental v0.3 | Reproducibility from the pinned version, installation and acquisition instructions, implementation/specification agreement |
@@ -134,6 +148,8 @@ label alone does not satisfy the criteria.
 - [ ] Verify Stage 2/3 byte equality with `pnpm bootstrap:verify`
 - [ ] Obtain the same validation HTML on Windows/macOS/Linux with Node.js 22/24
 - [ ] Pack release packages and run validation examples from a separate empty project
+- [ ] Implement literate public APIs, types, and error contracts; run build→run→HTML without internal relative imports or checkout dependencies
+- [ ] Document compiler provisioning, supported ABIs, and network/Rust requirements; verify uncached first use
 - [ ] Pin instructions for compiler Wasm, checksums, source, and execution host
 - [ ] Align official site, README and specifications on environments, dependencies and limitations
 - [ ] Do not describe standard JS modules, npm/Python integration or general `.jsonm` as implemented

@@ -1,3 +1,12 @@
+---
+matra:
+  entry: main.matra
+  values:
+    - content.js.part
+    - analytics/total.js.part
+    - format/minutes.js.part
+---
+
 # 説明とコードを一緒に持つWebページ
 
 この文書では、Matraでページの構造を記述し、JavaScriptでデータと集計・表示処理を記述します。
@@ -12,6 +21,11 @@ pnpm test:web-page
 Node.js 22/24、repository指定のpnpmとRust toolchainが必要です。
 出力は`packages/html/examples/dist/index.html`と`matra.css`です。
 生成したHTMLはブラウザで直接開けます。生成後の閲覧にはネットワークもRustも不要です。
+この作例はrepository内の検証用です。build/run関数は内部runtimeから直接importしており、
+npm packageの公開APIではありません。v0.3ではNode.js向けの実験的サブパス
+`@matra/core/literate`からの提供と、公開importだけで動く導入作例への移行を予定しています。
+対応するcompiler Wasmを同梱し、将来の独立package化を予定しています。
+公開条件と未決事項は[literateの公開API契約](../../../spec/literate-modules.ja.md#v03の公開api配布契約実装予定)を参照してください。
 
 ## ページの構造はMatraで書く
 
@@ -85,15 +99,21 @@ value => `${value}分`
 
 ## 実行の範囲
 
-build scriptは入口と上記3つの値だけを明示的に選択します。
+文書先頭のFrontMatterで入口と上記3つの値だけを明示的に選択します。
 Matra製compilerでWasmへ変換し、実行結果を文書ASTへ変換して`@matra/html`へ渡します。
 この実用経路ではMorphion変換を行いません。文書Morphionは、ASTの構造を数学モデルとして
 一貫して扱うための概念と対応規則であり、通常のHTML生成に不要な変換を加えないためです。
 
 ```js
-const ast = staticValueToAST(await runLiterate(bundle))
+const bundle = await buildLiterate(markdown, { document: "web-page.md" })
+const value = await runLiterate(bundle)
+const ast = staticValueToAST(value)
 const html = toHTML(ast)
 ```
+
+`buildLiterate()`はユーザーコードを実行せず、設定の検証とコンパイルを行います。
+`runLiterate()`はJavaScriptの値を初期化し、Matraを実行して文書の値を返します。
+この作例ではbundleをメモリ内で受け渡し、中間ファイルや子プロセスを使いません。
 
 Morphionの定義とASTとの対応は[文書モデル](../../../spec/data-model.ja.md#モーフィオンとの対応)で説明します。
 JavaScriptの値や関数は実行時に初期化されます。自分が信頼する文書を実行してください。

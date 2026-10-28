@@ -15,20 +15,28 @@ import { spawnSync } from "./helpers/process.mjs"
 const sample = new URL("../examples/literate-values.md", import.meta.url)
 const cli = fileURLToPath(new URL("../host/literate.mjs", import.meta.url))
 const fence = (path, source) => `\`\`\`${path}\n${source}\n\`\`\`\n`
+const frontMatter = (entry = "main.matra", values = []) =>
+  `---\nmatra:\n  entry: ${JSON.stringify(entry)}\n  values: ${
+    values.length ? `\n${values.map(value => `    - ${JSON.stringify(value)}`).join("\n")}` : "[]"
+  }\n---\n`
+const withFrontMatter = (markdown, entry = "main.matra", values = []) =>
+  frontMatter(entry, values) + markdown
 const document = (source, parts = {}) =>
-  fence("main.matra", source) +
-  Object.entries(parts)
-    .map(([path, body]) => fence(path, body))
-    .join("\n")
-const options = (values = []) => ({ document: "guide.md", entry: "main.matra", values })
+  withFrontMatter(
+    fence("main.matra", source) +
+      Object.entries(parts)
+        .map(([path, body]) => fence(path, body))
+        .join("\n"),
+    "main.matra",
+    Object.keys(parts),
+  )
+const options = () => ({ document: "guide.md" })
 const code = expected => error => error instanceof LiterateError && error.code === expected
-const build = (source, parts = {}) =>
-  buildLiterate(document(source, parts), options(Object.keys(parts)))
+const build = (source, parts = {}) => buildLiterate(document(source, parts), options())
 
-test("explicit entry and selected values produce the complete document, independent of block order", async () => {
+test("front matter selects the entry and values independent of block order", async () => {
   const markdown = await readFile(sample, "utf8")
-  const selection = options(["analytics/total.js.part", "datasets/sales.js.part"])
-  const bundle = await buildLiterate(markdown, selection)
+  const bundle = await buildLiterate(markdown, options())
   assert.equal(WebAssembly.validate(Buffer.from(bundle.wasm, "base64")), true)
   const expected = {
     tag: "article",
@@ -48,16 +56,27 @@ test("explicit entry and selected values produce the complete document, independ
     ],
   }
   assert.deepEqual(await runLiterate(JSON.parse(JSON.stringify(bundle))), expected)
-  const registered = registerLiterate(markdown, selection)
+  const registered = registerLiterate(markdown, options())
   const reordered = [...registered.values, registered.entry]
     .reverse()
     .map(block => fence(block.path, block.source))
     .join("\n")
-  assert.deepEqual(await runLiterate(await buildLiterate(reordered, selection)), expected)
+  assert.deepEqual(
+    await runLiterate(
+      await buildLiterate(
+        withFrontMatter(reordered, "main.matra", [
+          "analytics/total.js.part",
+          "datasets/sales.js.part",
+        ]),
+        options(),
+      ),
+    ),
+    expected,
+  )
 })
 
 test("registration rejects duplicate paths, ambiguous public names, invalid paths and selections", () => {
-  const main = fence("main.matra", "p { 1 }")
+  const main = document("p { 1 }")
   for (const [extra, expected] of [
     [fence("main.matra", "2"), "DUPLICATE_PATH"],
     [fence("MAIN.matra", "2"), "DUPLICATE_PATH"],
@@ -71,25 +90,72 @@ test("registration rejects duplicate paths, ambiguous public names, invalid path
   ]) {
     assert.throws(() => registerLiterate(main + extra, options()), code(expected))
   }
-  assert.throws(() => registerLiterate(main, { entry: "missing.matra" }), code("NOT_FOUND"))
-  assert.throws(() => registerLiterate(main, {}), code("NOT_FOUND"))
-  assert.throws(() => registerLiterate(main, options(["missing.js.part"])), code("NOT_FOUND"))
+  assert.throws(
+    () =>
+      registerLiterate(withFrontMatter(fence("main.matra", "p { 1 }"), "missing.matra"), options()),
+    code("NOT_FOUND"),
+  )
+  assert.throws(
+    () =>
+      registerLiterate(
+        withFrontMatter(fence("main.matra", "p { 1 }"), "main.matra", ["missing.js.part"]),
+        options(),
+      ),
+    code("NOT_FOUND"),
+  )
   for (const path of ["module.js", "value.py", "a.partial.js"]) {
-    const markdown = main + fence(path, "42")
+    const markdown = document("p { 1 }", { [path]: "42" })
     assert.throws(
-      () => registerLiterate(markdown, options([path])),
+      () => registerLiterate(markdown, options()),
       code(path === "a.partial.js" ? "INVALID_PATH" : "UNSUPPORTED_FORMAT"),
     )
   }
-  const markdown = main + fence("x.js.part", "1")
+  const markdown = document("p { x }", { "x.js.part": "1" })
   assert.throws(
-    () => registerLiterate(markdown, options(["x.js.part", "x.js.part"])),
+    () =>
+      registerLiterate(
+        withFrontMatter(fence("main.matra", "p { x }") + fence("x.js.part", "1"), "main.matra", [
+          "x.js.part",
+          "x.js.part",
+        ]),
+        options(),
+      ),
     code("DUPLICATE_SELECTION"),
   )
   assert.throws(
-    () => registerLiterate(markdown, { entry: "x.js.part" }),
-    code("UNSUPPORTED_FORMAT"),
+    () => registerLiterate(markdown, { ...options(), entry: "x.js.part" }),
+    code("INVALID_OPTIONS"),
   )
+})
+
+test("front matter is required, parsed as YAML and validated", () => {
+  for (const markdown of [
+    fence("main.matra", "p {}"),
+    "---\nmatra:\n  entry: main.matra\n",
+    "---\nmatra: [\n---\n" + fence("main.matra", "p {}"),
+    "---\nmatra:\n  entry: 42\n---\n" + fence("main.matra", "p {}"),
+    "---\nmatra:\n  entry: main.matra\n  values: invalid\n---\n" + fence("main.matra", "p {}"),
+    "---\nmatra:\n  entry: main.matra\n  values: null\n---\n" + fence("main.matra", "p {}"),
+  ]) {
+    assert.throws(
+      () => registerLiterate(markdown, options()),
+      error => ["FRONTMATTER_REQUIRED", "INVALID_FRONTMATTER"].includes(error.code),
+    )
+  }
+})
+
+test("omitted matra.values leaves named value blocks unselected", async () => {
+  const markdown = withFrontMatter(
+    fence("main.matra", "p { 1 }") +
+      fence("unused.js.part", '(() => { throw new Error("must remain unused") })()'),
+  )
+  const registration = registerLiterate(markdown, options())
+  assert.deepEqual(registration.values, [])
+  assert.deepEqual(await runLiterate(await buildLiterate(markdown, options())), {
+    tag: "p",
+    props: {},
+    children: [1],
+  })
 })
 
 test("fence collection handles CRLF, comments, delimiters, nested examples and source positions", async () => {
@@ -114,10 +180,11 @@ test("fence collection handles CRLF, comments, delimiters, nested examples and s
     "p { data.title; data.n }",
     "```",
   ].join("\r\n")
-  const registration = registerLiterate(markdown, options(["data.js.part"]))
-  assert.equal(registration.entry.line, 18)
-  assert.equal(registration.values[0].line, 8)
-  assert.deepEqual(await runLiterate(await buildLiterate(markdown, options(["data.js.part"]))), {
+  const withMetadata = withFrontMatter(markdown, "main.matra", ["data.js.part"])
+  const registration = registerLiterate(withMetadata, options())
+  assert.equal(registration.entry.line, 24)
+  assert.equal(registration.values[0].line, 14)
+  assert.deepEqual(await runLiterate(await buildLiterate(withMetadata, options())), {
     tag: "p",
     props: {},
     children: ["ok", 2],
@@ -135,8 +202,7 @@ test("expression syntax has no module, statement or semicolon fallback", () => {
     "",
   ]) {
     assert.throws(
-      () =>
-        registerLiterate(document("data", { "data.js.part": source }), options(["data.js.part"])),
+      () => registerLiterate(document("data", { "data.js.part": source }), options()),
       code("JS_SYNTAX"),
       source,
     )
@@ -158,8 +224,8 @@ test("build never initializes user values, runtime initializes once in path orde
     () => runLiterate(failing),
     error => {
       assert.ok(code("JS_INITIALIZE")(error))
-      assert.match(error.message, /guide.md:5:1 \(data.js.part\).*initialization failed/)
-      assert.match(error.cause.stack, /guide.md \(data.js.part\):5:\d+/)
+      assert.match(error.message, /guide.md:11:1 \(data.js.part\).*initialization failed/)
+      assert.match(error.cause.stack, /guide.md \(data.js.part\):11:\d+/)
       return true
     },
   )
@@ -263,8 +329,8 @@ test("the JavaScript context exposes no Node globals and rejects string code gen
 
 test("compile, missing member, non-function, binding collision and JavaScript errors remain explicit", async () => {
   await assert.rejects(
-    () => buildLiterate("# Title\n\n" + fence("main.matra", "let ="), options()),
-    error => code("MATRA_COMPILE")(error) && /guide.md:4:/.test(error.message),
+    () => buildLiterate(withFrontMatter("# Title\n\n" + fence("main.matra", "let =")), options()),
+    error => code("MATRA_COMPILE")(error) && /guide.md:\d+:/.test(error.message),
   )
   for (const source of ["value()", "value.missing", "let value = 1\nvalue"]) {
     const bundle = await build(source, { "value.js.part": "{}" })
@@ -286,22 +352,12 @@ test("CLI persists build without executing, runs the bundle and reports failures
   t.after(() => rm(root, { recursive: true, force: true }))
   const invoke = (...args) => spawnSync(process.execPath, [cli, ...args], { encoding: "utf8" })
   await writeFile(join(root, "guide.md"), await readFile(sample))
-  const built = invoke(
-    "build",
-    root,
-    "guide.md",
-    "main.matra",
-    "result.json",
-    "--value",
-    "datasets/sales.js.part",
-    "--value",
-    "analytics/total.js.part",
-  )
+  const built = invoke("build", root, "guide.md", "result.json")
   assert.equal(built.status, 0, built.stderr)
   const run = invoke("run", root, "result.json")
   assert.equal(run.status, 0, run.stderr)
   assert.equal(JSON.parse(run.stdout).children[1].children[0], 60)
-  const overwritten = invoke("build", root, "guide.md", "main.matra", "guide.md")
+  const overwritten = invoke("build", root, "guide.md", "guide.md")
   assert.equal(overwritten.status, 1)
   assert.match(overwritten.stderr, /overwrite/)
   await writeFile(
@@ -310,18 +366,10 @@ test("CLI persists build without executing, runs the bundle and reports failures
       "value.js.part": '(() => { throw new Error("runtime only") })()',
     }),
   )
-  const deferred = invoke(
-    "build",
-    root,
-    "throw.md",
-    "main.matra",
-    "throw.json",
-    "--value",
-    "value.js.part",
-  )
+  const deferred = invoke("build", root, "throw.md", "throw.json")
   assert.equal(deferred.status, 0, deferred.stderr)
   const failed = invoke("run", root, "throw.json")
   assert.equal(failed.status, 1)
-  assert.match(failed.stderr, /JS_INITIALIZE: throw.md:5:1 \(value.js.part\).*runtime only/)
+  assert.match(failed.stderr, /JS_INITIALIZE: throw.md:11:1 \(value.js.part\).*runtime only/)
   assert.equal(failed.stdout, "")
 })

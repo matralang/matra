@@ -56,6 +56,7 @@ P2は動作を維持するが新しい完成条件を増やさない対象です
 | `@matra/core` | v0.3 parser、静的取得・明示評価、文書AST、変換・走査、JSONMatra補助API。今回、文書Morphion相互変換を追加 | P0 | 文書Morphionの往復・指数検証、Moduleと文書ASTの区別、文書構築・loop・JS接続経路、現行APIで動くREADME、診断の制限を明記 | 汎用`.jsonm`、全APIで統一したsource map、厳密な型システム |
 | `@matra/html` | escaping、void element、pretty出力、base path | P0 | 完全なHTML文書、本文・属性・値のescape、JSデータからの繰り返しを検証サンプルで検証 | Web framework全体、hydration、汎用site generator |
 | literate host / `matra-seed` | Rust seed、Matra製Wasm compiler、明示入口と`.js.part`、JSON bundle、portable file API | P0 | 検証文書のbuild→実行→HTML出力、元文書の診断、bootstrapのStage 2/3 byte equalityを維持 | 標準`.js` module/npm/Pythonの直接import、standalone runtime・package manager |
+| `@matra/core/literate`（実装予定） | build/run内部関数とrepository内CLI。サブパスの公開入口・型定義・配布検証は未整備 | P0：利用者への提供経路 | Node.js向け実験的API、FrontMatter設定、compiler Wasm同梱、通常のCore入口との依存分離、同じAPIを使うCLI、checkout外で動く導入作例 | ブラウザ対応、独自の評価系、一般的なsandbox保証、独立npm packageへの分離 |
 | `@matra/math` | MathJSON変換、object形式、Content MathML MVP、Morphion型 | P1 | 文書Morphionとの役割の区別、表現境界・保持する意味・制限を説明し、対応する数式を代表例で往復検証 | MathML全体、MathML 4、全数学的同値性の判定 |
 | `@matra/math-compute-engine` | 評価・簡約・数値化、Morphion化、property評価 | P1 | 有限和・同類項・関数原子・負の整数冪・256項制限の検証。ゼロ除算などの定義域と順序の再現性を確認 | engine非依存の完全な数式処理、一般式の同値判定 |
 | `@matra/styles` | no-class CSSと少数の補助class | P0：検証経路に必要な範囲 | 生成ページとCSSを同梱し、ネットワーク不要で読める出力を確認 | 新しいdesign system、theme拡充 |
@@ -64,6 +65,11 @@ P2は動作を維持するが新しい完成条件を増やさない対象です
 | `@matra/kernel` | Jupyter protocolとHTML/SVG/AST表示、現在の評価は静的取得 | P2 | 既存テストを維持し、対応範囲を実際のJupyterで検証する | 持続するMatra session、完全なNotebook/Colab体験 |
 | `matra-vscode` | highlight、format、outline、簡易diagnostic | P1：現行文法 / P2：新機能 | 標準文法の検証サンプルをformatして壊さないことを確認 | LSP、完全な型推論、旧directive中心の新機能 |
 | `apps/website`と別repositoryの公式サイト | monorepoに旧siteが残り、READMEは公式siteの別管理を明記 | P1：利用者の入口 | 公式ドキュメントとv0.3の導入・実行手順を一致させる。別repositoryは別途監査する | 旧siteを根拠に公式siteの更新済みを宣言すること |
+
+公開APIと配布条件は[literateの公開API契約](./literate-modules.ja.md#v03の公開api配布契約実装予定)で定めます。
+既存P0経路の正しさ・値境界・diagnostic・bootstrapを先に保ち、同梱compilerの生成・検証手順を
+整えてからサブパスと導入作例を完成させます。P1/P2の拡張より優先しますが、現在の内部関数を
+公開済みとは扱いません。独立package化は将来に延期し、CLI名は公開前に固定します。
 
 ## 最初の検証サンプル
 
@@ -84,6 +90,10 @@ Node.js 22/24と指定のRust toolchainを前提とします。
 出力は`packages/html/examples/dist/index.html`と`matra.css`です。
 HTMLの言語・文字コード、3件の展開、合計24分、文字列のescapeを回帰testで確認します。
 生成後の閲覧はオフラインでできます。
+現時点ではcheckout内の統合検証サンプルであり、内部build/run関数を相対importしています。
+v0.3の導入作例は公開packageのimportへ移行し、別projectからの実行を検証します。
+現在のRust要件はrepository内のbootstrap経路に対するものです。公開予定のサブパスは
+同梱compilerを使い、利用者のRustやcompilerの追加downloadを不要にします。
 
 ## 検証状況
 
@@ -104,6 +114,7 @@ READMEの静的文書・テンプレート・関数/loopの例も実行してHTM
 | --- | --- | --- |
 | 1：基準確認 | 全packageの現状監査、古いAPI例の修正、文書→HTMLの検証サンプル | build/test/lintの基準結果、生成HTMLと回帰test |
 | 2：基盤整備 | 文書Morphion契約と実装の照合、文書・JavaScript連携の不具合修正 | モデルの契約、受理・拒否・定義域のtest、再現できる手順 |
+| 2から3への配布準備 | build/runの公開契約、compiler Wasm同梱、Coreのサブパス・型定義・CLIの整備 | 公開export、通常入口との依存分離、対応ABI、compilerのversion/checksumと容量、初回利用と失敗時のtest |
 | 3：応用経路 | SVG・数式・編集環境の既存機能を代表例で検証、配布物を試す | packageされた状態でのサンプル実行、実際の表示、対応OSの検証 |
 | 4：release候補 | 文法/APIと検証サンプルを固定、v0.3候補を検証 | 固定commit、version・checksum、release note、Stage 2/3一致、CI成功 |
 | 5：公開判定 | 下記の必須条件と既知の制限を照合し、実験版v0.3を公開 | 固定版での再現性、導入・取得手順、仕様と実装の一致 |
@@ -120,6 +131,8 @@ P0が未達の場合は、「実験的」という名称だけで成功扱いに
 - [ ] `pnpm bootstrap:verify`でStage 2/3の生成Wasmがbyte単位で一致する
 - [ ] 検証サンプルをNode.js 22/24で確認し、Windows/macOS/Linuxで同じHTMLを得る
 - [ ] 公開対象のpackageをpackし、別の空のprojectから導入して検証サンプルが動く
+- [ ] literateの公開API・型定義・error契約を実装し、内部相対importやcheckout依存なしでbuild→run→HTML生成できる
+- [ ] compiler供給方式と対応ABI、ネットワーク・Rustの要否を明記し、キャッシュのない初回利用も検証する
 - [ ] compiler Wasm・checksum・ソース・実行hostの取得手順を固定する
 - [ ] 公式site・README・仕様書の対応環境、依存関係、制限が一致する
 - [ ] 未実装の`.js` module・npm/Python連携と汎用`.jsonm`を実装済みとして説明していない

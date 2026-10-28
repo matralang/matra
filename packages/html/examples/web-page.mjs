@@ -7,14 +7,10 @@ import { buildLiterate, runLiterate } from "../../../crates/matra-seed/host/lite
 
 export const sourceURL = new URL("./web-page.md", import.meta.url)
 
-// 検証文書の入口と依存値を固定し、説明用ブロックを実行対象にしない。
 export async function renderWebPage(markdown) {
-  const bundle = await buildLiterate(markdown, {
-    document: "web-page.md",
-    entry: "main.matra",
-    values: ["content.js.part", "analytics/total.js.part", "format/minutes.js.part"],
-  })
-  const ast = staticValueToAST(await runLiterate(bundle))
+  const bundle = await buildLiterate(markdown, { document: "web-page.md" })
+  const value = await runLiterate(bundle)
+  const ast = staticValueToAST(value)
   return `<!doctype html>\n${toHTML(ast)}\n`
 }
 

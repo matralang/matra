@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises"
 import { types } from "node:util"
 import { createContext, Script } from "node:vm"
+import { load as loadYaml } from "js-yaml"
 import { cachedCompiler } from "./bootstrap-compiler.mjs"
 import { formatCompilerDiagnostic, reserveCompilerWorkspace } from "./compiler-host.mjs"
 import { instantiateMatra } from "./value-host.mjs"
@@ -33,7 +34,49 @@ function expression(block) {
   }
 }
 
-export function registerLiterate(markdown, { document = "<markdown>", entry, values = [] }) {
+function frontMatterConfig(markdown, document) {
+  const opening = /^(?:\uFEFF)?---[ \t]*\r?\n/.exec(markdown)
+  const location = { document, path: "<frontmatter>", line: 1 }
+  if (!opening)
+    fail("FRONTMATTER_REQUIRED", location, "Document configuration must be in YAML front matter")
+  const rest = markdown.slice(opening[0].length)
+  const closing = /(?:^|\r?\n)---[ \t]*(?:\r?\n|$)/.exec(rest)
+  if (!closing) fail("INVALID_FRONTMATTER", location, "Unclosed YAML front matter")
+  const source = rest.slice(0, closing.index)
+  let metadata
+  try {
+    metadata = loadYaml(source)
+  } catch (error) {
+    const line = (error.mark?.line ?? 0) + 2
+    fail("INVALID_FRONTMATTER", { ...location, line }, error.message, error)
+  }
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    fail("INVALID_FRONTMATTER", location, "Front matter must be a mapping")
+  }
+  const config = metadata.matra
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    fail("INVALID_FRONTMATTER", location, "Front matter must define a matra mapping")
+  }
+  if (typeof config.entry !== "string" || config.entry.length === 0) {
+    fail("INVALID_FRONTMATTER", location, "matra.entry must be a non-empty path")
+  }
+  const values = config.values === undefined ? [] : config.values
+  if (!Array.isArray(values) || values.some(value => typeof value !== "string")) {
+    fail("INVALID_FRONTMATTER", location, "matra.values must be a list of paths")
+  }
+  return { entry: config.entry, values }
+}
+
+export function registerLiterate(markdown, options = {}) {
+  const { document = "<markdown>" } = options
+  if (Object.hasOwn(options, "entry") || Object.hasOwn(options, "values")) {
+    fail(
+      "INVALID_OPTIONS",
+      { document, path: "<options>", line: 1 },
+      "Configure entry and values in YAML front matter",
+    )
+  }
+  const { entry, values } = frontMatterConfig(markdown, document)
   const collected = []
   const lines = markdown.replaceAll("\r\n", "\n").split("\n")
   for (let index = 0; index < lines.length; index++) {
@@ -102,7 +145,7 @@ function selectBlocks(collected, { document, entry, values }) {
   return { entry: main, values: selected }
 }
 
-export async function buildLiterate(markdown, options) {
+export async function buildLiterate(markdown, options = {}) {
   const registration = registerLiterate(markdown, options)
   const { entry } = registration
   const compiler = await WebAssembly.instantiate(await readFile(await cachedCompiler()))

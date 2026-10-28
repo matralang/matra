@@ -12,8 +12,10 @@ npm or Python integration to the v0.3 minimal implementation.
 
 The scope is loading Markdown documents containing ordinary Matra Programs, module resolution,
 language interoperation, and developer tooling. Changes to Matra compiler source grammar are out of scope.
-The dedicated CLI is an additive change; existing source, APIs, ABIs, AST/data models,
-parsers, and CLI behavior are unchanged.
+The dedicated CLI and FrontMatter configuration are additive to Matra source,
+compiler ABI, AST/data models, and parsers. The literate host API and CLI move
+from caller-supplied entry/value selections to document FrontMatter as their
+source of truth.
 The [grammar specification](./grammar.md) and existing compiler source bootstrap contracts remain intact.
 Questions outside the initial contract remain for later stages.
 
@@ -23,13 +25,18 @@ This is host interoperation for ordinary Matra Programs, not a change to Matra o
 grammar. It uses existing member/call syntax, document generation, and the host value ABI.
 
 ```text
-pnpm literate -- build ROOT DOCUMENT.md main.matra OUTPUT.json --value datasets/sales.js.part --value analytics/total.js.part
+pnpm literate -- build ROOT DOCUMENT.md OUTPUT.json
 pnpm literate -- run ROOT OUTPUT.json
 ```
 
-Only the explicitly selected single `.matra` virtual file is the entry. Repeated `--value` options
-select dependencies. Unselected blocks are never initialized or executed. There is no implicit import
-or physical file lookup. `ROOT` and physical paths follow the
+The YAML FrontMatter at the start of the document specifies `matra.entry` and
+`matra.values`. The entry is one `.matra` virtual file; values are a list of
+`.js.part` paths. If `matra.values` is omitted, it defaults to an empty list.
+Unselected blocks are never initialized or executed. The build API and CLI
+receive the document's runtime name/path only; entry and value selection comes
+from the document. Missing FrontMatter, invalid YAML, or missing/invalid
+configuration produces a diagnostic. There is no implicit import or physical
+file lookup. `ROOT` and physical paths follow the
 [portable runtime path contract](./portable-runtime.md).
 Build produces a versioned JSON bundle containing Wasm, selected expressions, and source locations.
 Run writes the document data model as one JSON line to stdout; non-JSON document results such as
@@ -39,6 +46,10 @@ the total `60`. Run regressions with `node --test crates/matra-seed/tests/litera
 
 ### Virtual files and formats
 
+- FrontMatter appears at the start of the document and configures `entry` and
+  optional `values` under a `matra` mapping. `entry` is a required string;
+  `values` is an optional list of strings. Other FrontMatter fields are unused
+  by this runtime. Parse FrontMatter as YAML and reject invalid syntax or types.
 - Fences open with zero to three spaces and at least three backticks or tildes. Closing delimiters
   use the same character, at least the opening length, followed only by spaces/tabs.
   CRLF is normalized to LF. Body line numbers are retained; unclosed fences are errors.
@@ -88,6 +99,97 @@ JavaScript causes/stacks retain original line/column locations. Matra compile di
 original document lines. Matra runtime errors identify the entry block (expression-level source maps
 are deferred). Duplicate, unsupported, missing, syntax, initialization, call, and boundary errors
 must never become successful output. This section takes precedence over later proposals for the initial release.
+
+## v0.3 public API and distribution contract (planned)
+
+This section defines the v0.3 target, not an already published API.
+Rather than adding an npm package in v0.3, the experimental Node.js subpath
+`@matra/core/literate` will expose `buildLiterate`, `runLiterate`,
+`LiterateError`, and corresponding types. Keep Node-specific execution and
+compiler provisioning separate from the ordinary Core entry, with a future
+standalone package planned. Its name and extraction schedule are undecided;
+provide migration instructions when extracting it. Importing `@matra/core`
+must not load the literate host or compiler Wasm, or introduce new dependencies
+on Node.js-specific modules. The HTML renderer does not gain execution features.
+Fix the CLI command name before publication.
+Browser execution and direct imports of standard JavaScript modules, npm
+packages, or Python are outside this API's scope.
+
+### Functions and values
+
+| API | Input | Successful result | Does not perform |
+| --- | --- | --- | --- |
+| `buildLiterate(markdown, options?)` | Markdown string and optional `options.document` name | Promise of an executable bundle | Execution of document JavaScript expressions/functions or Matra programs; HTML generation |
+| `runLiterate(bundle)` | Executable bundle with a supported format and ABI | Promise of a value in the document data subset | Recompilation, HTML generation, or file output |
+
+`options.document` is a diagnostic name, defaulting to `<markdown>`, not an
+instruction to read a file. FrontMatter is the source of truth for entry and
+values; caller overrides are rejected. Bundle the matching compiler Wasm so
+ordinary use does not require compiler path or acquisition configuration.
+
+Build returns a versioned bundle that can be saved and restored as JSON.
+It contains Wasm, selected JavaScript sources, and source locations; it does not
+hide sources or promise compatibility across arbitrary versions. Document the
+supported bundle formats and compiler/host ABIs, and reject unsupported
+combinations before execution. A bundle can be run repeatedly, with fresh
+JavaScript contexts and values each time. Context isolation does not guarantee
+identical results for arbitrary user code.
+
+Run returns a value satisfying the existing boundary, not an AST-specific type.
+Convert document nodes using Core's `staticValueToAST()` where needed by a
+renderer. Ordinary examples pass bundles in memory without requiring
+intermediate files, JSON serialization round trips, or child processes.
+
+```js
+import { staticValueToAST } from "@matra/core"
+import { buildLiterate, runLiterate } from "@matra/core/literate"
+import { toHTML } from "@matra/html"
+
+const bundle = await buildLiterate(markdown, { document: "web-page.md" })
+const value = await runLiterate(bundle)
+const ast = staticValueToAST(value)
+const html = toHTML(ast)
+```
+
+The example shows the planned public interface; subpath exports and distribution
+are not implemented yet. Current repository-relative imports are temporary validation
+routes, not installation instructions for separate projects. The CLI is a thin
+entry point over the same build/run implementation, without separate evaluation
+rules.
+
+### Failures, dependencies, and publication gates
+
+- Configuration, compilation, execution, and boundary failures reject the
+  Promise. Preserve `LiterateError.code`, document/virtual path/location, and
+  available causes; make compiler acquisition, loading, and ABI failures
+  distinguishable too. Exact message and stack strings are not compatibility
+  contracts.
+- APIs return results without ordinary progress output on stdout. CLI run stdout
+  contains only result JSON; diagnostics go to stderr and failures use nonzero
+  exit status. Build does not execute code from the document.
+- Validate Node.js 22/24 on Windows/macOS/Linux. There is no OS sandbox or timeout
+  guarantee: execute trusted documents/bundles only. Installation does not execute
+  document code.
+- Bundle verified compiler Wasm in the `@matra/core` distribution and record its
+  version, checksum, and supported ABI. After installation, build/run must not
+  download another compiler or require user-side Rust or checkout-local
+  bootstrap/cache machinery. Distribution preparation and validation may use
+  Rust and bootstrap. Check the added package size. Missing, corrupt, or
+  ABI-incompatible Wasm must fail explicitly, without implicit download or
+  local-build fallbacks.
+- Verify public APIs, types, runtime dependencies, and compiler artifacts from
+  packed distributions. Install in an empty project outside the checkout and
+  exercise build→run→HTML using only public imports. Test uncached first use,
+  supported OS/Node versions, unsupported bundles, and compiler provisioning
+  failures.
+- Publish as experimental official v0.x APIs, documenting breaking changes and
+  migration steps in release notes. Creating a package alone does not complete
+  publication; distribution validation blocks the release.
+
+Preserve correctness, value boundaries, diagnostics, and bootstrap verification
+of existing P0 routes first. Then establish bundled Wasm generation/verification,
+provide subpath exports and types, connect the CLI, and migrate examples to public imports. This completes the v0.3
+user-facing route and takes precedence over P1/P2 feature expansion.
 
 ## Core policy
 

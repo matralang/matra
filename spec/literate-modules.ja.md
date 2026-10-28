@@ -11,8 +11,9 @@ v0.3の最小実動版にnpm・Python連携を追加するものではない。
 
 対象は、一般のMatra Programを含むMarkdown文書の読み込み、モジュール解決、
 言語間連携と開発環境である。Matra compiler sourceの文法変更は対象外とする。
-専用CLIを追加する互換変更であり、既存source、API、ABI、AST/data model、
-parserと既存CLIの動作を変更しない。
+専用CLIとFrontMatter設定を追加する変更であり、Matra source、compiler ABI、AST/data model、
+parserは変更しない。literate hostの設定APIとCLIは、呼び出し側のentry/value指定から
+文書FrontMatterを正本とする契約へ移行する。
 [文法仕様](./grammar.ja.md)と既存のcompiler sourceのbootstrap契約を維持する。
 以下の初版契約以外の未決事項は、後続段階で確定する。
 
@@ -22,12 +23,16 @@ parserと既存CLIの動作を変更しない。
 既存のmember/call、文書生成とhost value ABIを利用する。
 
 ```text
-pnpm literate -- build ROOT DOCUMENT.md main.matra OUTPUT.json --value datasets/sales.js.part --value analytics/total.js.part
+pnpm literate -- build ROOT DOCUMENT.md OUTPUT.json
 pnpm literate -- run ROOT OUTPUT.json
 ```
 
-入口は明示した単一の`.matra`仮想ファイルのみとする。`--value`を繰り返して依存する値を
-明示する。指定しないブロックは初期化・実行しない。暗黙のimportや実ファイル検索はない。
+文書先頭のYAML FrontMatterに`matra.entry`と`matra.values`を指定する。
+入口は単一の`.matra`仮想ファイル、値は`.js.part`のlistとする。
+`matra.values`を省略した場合は空listとし、指定しないblockは初期化・実行しない。
+build APIとCLIは実行環境上の文書名・pathだけを受け取り、entry/value設定は文書から読む。
+FrontMatterのない文書、無効なYAML、欠落または不正な設定はdiagnosticにする。
+暗黙のimportや実ファイル検索はない。
 `ROOT`と実ファイルのパスは[共通ランタイムの論理パス契約](./portable-runtime.ja.md)に従う。
 出力はversion付きJSON bundle（Wasm、選択した式と元位置）とし、`run`は文書data modelの
 JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結果はエラーとする。
@@ -36,6 +41,9 @@ JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結�
 
 ### 仮想ファイルと形式
 
+- FrontMatterは文書の先頭に置き、`matra` mappingの`entry`と`values`を設定する。
+  `entry`は必須の文字列、`values`は省略可能な文字列listである。
+  他のFrontMatter項目はこのruntimeでは使用しない。YAMLとしてparseし、不正な形式や型を拒否する。
 - fenceは行頭から0〜3個のspace、3個以上のbacktickまたはtildeで開く。
   閉じdelimiterは同種で開き以上の長さとし、後ろはspace/tabのみとする。
   CRLFはLFへ正規化する。本文の行番号を保持し、閉じ忘れを拒否する。
@@ -84,6 +92,79 @@ JavaScript例外はcause/stackに元の行・列を保持する。Matraのcompil
 Matra実行時エラーは入口ブロック位置を報告する（式単位のsource mapは後続段階）。
 重複、未対応形式、欠落、構文・初期化・呼び出し・値境界の失敗を成功扱いにしない。
 後続の設計例と初版の制約が異なる場合、この節を初版の正本とする。
+
+## v0.3の公開API・配布契約（実装予定）
+
+この節はv0.3で完成させる契約であり、現在の内部関数が公開済みであることを意味しない。
+v0.3では新しいnpm packageを増やさず、`@matra/core/literate`サブパスからNode.js向けの
+`buildLiterate`、`runLiterate`、`LiterateError`と対応する型定義を実験的に提供する。
+Node.js固有の実行機構とcompiler供給の実装は通常のCore入口から分離し、
+将来の独立package化を予定する。独立packageの名称と分離時期は未定であり、分離時には移行手順を示す。
+通常の`@matra/core`のimportはliterate hostやcompiler Wasmを読み込まず、
+Node.js固有moduleへの新しい依存を持たせない。HTML rendererにも実行機能を含めない。
+CLIのcommand名は公開前に固定する。
+ブラウザ実行、標準JavaScript module・npm・Pythonの直接importはこの公開APIの範囲外とする。
+
+### 関数と値の契約
+
+| API | 入力 | 成功時の結果 | 実行しないこと |
+| --- | --- | --- | --- |
+| `buildLiterate(markdown, options?)` | Markdown文字列、省略可能な文書名`options.document` | 実行用bundleを返すPromise | 文書中のJavaScript式・関数とMatraプログラムの実行、HTML生成 |
+| `runLiterate(bundle)` | 対応する形式・ABIの実行用bundle | 文書data subsetの値を返すPromise | 再コンパイル、HTML生成、ファイルへの出力 |
+
+`options.document`は診断用の名前で、省略時は`<markdown>`とする。ファイルを自動で読み込む指定ではない。
+entryとvaluesはFrontMatterを正本とし、呼び出し側からの上書きは拒否する。
+対応するcompiler Wasmを同梱するため、通常の利用でcompilerのpath指定や取得設定は要求しない。
+
+buildの戻り値はJSONとして保存・復元できるversion付きbundleとする。Wasmに加えて選択した
+JavaScriptソースと元位置を含み、ソース秘匿や任意version間の互換性は保証しない。
+対応するbundle形式とcompiler/host ABIを明記し、非対応の組み合わせは実行前に拒否する。
+同じbundleの複数回実行は可能だが、JavaScript contextと値は毎回新規に作る。
+contextの分離は、任意のユーザーコードの結果が常に同じになることを保証しない。
+
+runの結果はAST専用型ではなく、既存の値境界を満たす値とする。
+rendererへ渡す文書nodeは、必要に応じてCoreの`staticValueToAST()`でASTへ変換する。
+通常の作例ではbundleをメモリ内で渡し、中間ファイル、JSONへの変換と読み戻し、
+子プロセスを必須にしない。
+
+```js
+import { staticValueToAST } from "@matra/core"
+import { buildLiterate, runLiterate } from "@matra/core/literate"
+import { toHTML } from "@matra/html"
+
+const bundle = await buildLiterate(markdown, { document: "web-page.md" })
+const value = await runLiterate(bundle)
+const ast = staticValueToAST(value)
+const html = toHTML(ast)
+```
+
+上記は公開予定の利用例であり、サブパスのexportと配布実装は未完了である。現在のrepository内の相対importは
+暫定的な検証経路であり、別project向けの導入手順として掲載しない。
+CLIは同じbuild/run実装を利用する薄い入口とし、別の評価規則を持たせない。
+
+### 失敗・依存関係・公開条件
+
+- 設定・compile・実行・値境界の失敗はPromiseのrejectとして伝える。
+  `LiterateError.code`、文書・仮想パス・位置、利用可能なcauseを保持し、
+  compilerの取得・読込・ABI不一致の失敗も識別できるようにする。
+  メッセージ全文やstack文字列の一致は互換性契約にしない。
+- APIは結果を返し、通常の進捗をstdoutへ出力しない。CLIのrunのstdoutは結果JSONだけとし、
+  診断はstderr、失敗は非zero終了statusで伝える。build時に文書中のコードを実行しない。
+- Node.js 22/24、Windows/macOS/Linuxを検証対象とする。OS sandboxやtimeoutは保証せず、
+  信頼した文書・bundleだけを実行する。install時に文書コードを実行しない。
+- 検証済みのcompiler Wasmを`@matra/core`の配布物へ同梱し、version・checksum・対応ABIを記録する。
+  導入後のbuild/runはcompilerを追加downloadせず、利用者のRustやcheckout内のbootstrap/cacheを要求しない。
+  配布物の作成・検証側ではRustとbootstrapを利用できる。同梱による配布容量の増加も確認する。
+  Wasmの欠落・破損・非対応ABIを明示エラーとし、downloadやローカルbuildへ暗黙にfallbackしない。
+- 公開API・型定義・runtime依存・compiler artifactがpackした配布物で揃うことを確認する。
+  checkout外の空projectから導入し、公開importだけでbuild→run→HTML生成できることを検証する。
+  キャッシュのない初回利用、対応OS/Node、非対応bundle、compiler供給の失敗も検証する。
+- v0.xの実験的な公式APIとして提供し、破壊的変更はrelease noteと移行手順で明示する。
+  packageを作成しただけで公開完了とはせず、配布検証をreleaseの必須条件とする。
+
+実装順序は、既存のP0経路の正しさ・値境界・diagnostic・bootstrap検証を先に保ち、
+同梱Wasmの生成・検証手順を整えてからサブパスのexport・型定義・CLI接続・作例の公開importへの移行を行う。
+これはv0.3の利用者向け経路を完成させる作業であり、P1/P2の機能拡張より優先する。
 
 ## 中心方針
 

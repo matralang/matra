@@ -10,23 +10,18 @@ const [command, root, input, ...rest] = args
 try {
   if (!root || !input) throw new Error("Missing project root or input")
   const runtime = createNodeRuntime({ root })
-  if (command === "build" && rest.length >= 2 && rest.length % 2 === 0) {
-    const [entry, output, ...selection] = rest
-    const values = []
-    for (let index = 0; index < selection.length; index += 2) {
-      if (selection[index] !== "--value") throw new Error("Expected --value VIRTUAL.js.part")
-      values.push(selection[index + 1])
-    }
+  if (command === "build" && rest.length === 1) {
+    const [output] = rest
     const outputPath = projectPath(root, output, { write: true })
     if (outputPath === projectPath(root, input)) throw new Error("Output must not overwrite source")
-    const bundle = await buildLiterate(runtime.read_text(input), { document: input, entry, values })
+    const bundle = await buildLiterate(runtime.read_text(input), { document: input })
     await writeFile(outputPath, `${JSON.stringify(bundle)}\n`, "utf8")
   } else if (command === "run" && rest.length === 0) {
     const result = await runLiterate(JSON.parse(runtime.read_text(input)))
     process.stdout.write(`${JSON.stringify(result)}\n`)
   } else {
     throw new Error(
-      "Usage: pnpm literate -- build ROOT DOCUMENT.md ENTRY.matra OUTPUT.json [--value FILE.js.part]...\n" +
+      "Usage: pnpm literate -- build ROOT DOCUMENT.md OUTPUT.json\n" +
         "       pnpm literate -- run ROOT OUTPUT.json",
     )
   }
