@@ -76,7 +76,8 @@ pnpm test:web-page
 ```
 
 Matraの文書構築と明示展開、JavaScriptのデータ・集計・表示関数、Wasm実行、
-文書Morphionの往復、HTML出力、同梱CSSまでを1つのサンプルで通します。
+HTML出力、同梱CSSまでを1つの実用サンプルで通します。
+文書MorphionはASTの数学モデルとしてCoreと仕様で定義・検証し、このHTML生成経路では不要なため変換しません。
 記事内容は架空データで、数式展開用Morphionの計算は行いません。
 Node.js 22/24と指定のRust toolchainを前提とします。
 

@@ -86,18 +86,17 @@ value => `${value}分`
 ## 実行の範囲
 
 build scriptは入口と上記3つの値だけを明示的に選択します。
-Matra製compilerでWasmへ変換し、実行結果の文書nodeをモーフィオンの項表現へ写し、
-renderer用のASTへ戻して`@matra/html`へ渡します。
+Matra製compilerでWasmへ変換し、実行結果を文書ASTへ変換して`@matra/html`へ渡します。
+この実用経路ではMorphion変換を行いません。文書Morphionは、ASTの構造を数学モデルとして
+一貫して扱うための概念と対応規則であり、通常のHTML生成に不要な変換を加えないためです。
 
 ```js
-const terms = astToMorphion(ast)
-const html = toHTML(morphionToAST(terms))
+const ast = staticValueToAST(await runLiterate(bundle))
+const html = toHTML(ast)
 ```
 
-指数0の`val`がtag、正整数nの`val`がchildren[n - 1]、文字列keyの`val`がprops[key]です。
-この作例のrootは`html`なので、先頭の項は`{ exponent: 0, val: "html" }`になります。
-詳細は[文書モデルの対応](../../../spec/data-model.ja.md#モーフィオンとの対応)を参照してください。
+Morphionの定義とASTとの対応は[文書モデル](../../../spec/data-model.ja.md#モーフィオンとの対応)で説明します。
 JavaScriptの値や関数は実行時に初期化されます。自分が信頼する文書を実行してください。
 この作例は`.js`のimport/export、npm module、Python連携を実装したものではありません。
-記事データのモーフィオンは記事の題名です。この作例で行うのは文書モデルの変換で、
-Compute Engineを使う数式の展開・計算は行っていません。
+記事の題名に「モーフィオン」が含まれますが、この作例では文書Morphion変換も、
+Compute Engineを使う数式の展開・計算も行いません。

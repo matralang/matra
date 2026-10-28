@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { pathToFileURL } from "node:url"
-import { astToMorphion, morphionToAST, staticValueToAST } from "@matra/core"
+import { staticValueToAST } from "@matra/core"
 import { toHTML } from "@matra/html"
 import { buildLiterate, runLiterate } from "../../../crates/matra-seed/host/literate-runtime.mjs"
 
@@ -15,9 +15,7 @@ export async function renderWebPage(markdown) {
     values: ["content.js.part", "analytics/total.js.part", "format/minutes.js.part"],
   })
   const ast = staticValueToAST(await runLiterate(bundle))
-  // 同じ文書をモーフィオンの項表現へ写し、renderer用のASTへ戻す。
-  const terms = astToMorphion(ast)
-  return `<!doctype html>\n${toHTML(morphionToAST(terms))}\n`
+  return `<!doctype html>\n${toHTML(ast)}\n`
 }
 
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {

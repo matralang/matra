@@ -80,8 +80,10 @@ that order, respecting dependencies. The table is based on source inspection.
 
 The [Web page document](../packages/html/examples/web-page.md) exercises
 Matra construction and expansion, JavaScript data and functions, Wasm execution,
-document Morphion round trips, HTML rendering, and bundled CSS. Article data is
-fictional and does not perform expression-expansion Morphion computation.
+HTML rendering, and bundled CSS. Core and the specification define and validate
+document Morphion as a mathematical model; this practical HTML route does not
+perform an unnecessary Morphion conversion. Article data is fictional and does
+not perform expression-expansion Morphion computation.
 Node.js 22/24 and the repository's Rust toolchain are required.
 
 ```text
