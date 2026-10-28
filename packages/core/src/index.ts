@@ -8,6 +8,8 @@ export {
 } from "./ast/convert.js"
 export type { PropExpressionEvaluator } from "./ast/evaluate.js"
 export { evaluatePropExpressions } from "./ast/evaluate.js"
+export type { MatraMorphion, MatraMorphionTerm } from "./ast/morphion.js"
+export { astToMorphion, morphionToAST } from "./ast/morphion.js"
 export { transform, visit } from "./ast/transform.js"
 export type * from "./ast/types.js"
 export { CORE_VERSION, SPEC_VERSION } from "./ast/types.js"
@@ -53,6 +55,7 @@ export {
 
 import { astToMatraJSON, matraJSONToAST } from "./ast/convert.js"
 import { evaluatePropExpressions } from "./ast/evaluate.js"
+import { astToMorphion, morphionToAST } from "./ast/morphion.js"
 import { transform, visit } from "./ast/transform.js"
 import { CORE_VERSION } from "./ast/types.js"
 import { loadMatra, matra, normalizeMatra } from "./jsonmatra.js"
@@ -68,6 +71,8 @@ export default {
   parse,
   astToMatraJSON,
   matraJSONToAST,
+  astToMorphion,
+  morphionToAST,
   printJSON,
   extractMarkdownFences,
   extractMatraMarkdown,

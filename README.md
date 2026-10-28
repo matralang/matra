@@ -7,8 +7,25 @@ Matra is maintained as a pnpm workspace monorepo. Published packages keep the
 
 ## Specification
 
-- [Matra Specification v0.2](spec/README.md)
-- [Matra Specification v0.2（日本語）](spec/README.ja.md)
+- [Matra Specification (source grammar v0.3)](spec/README.md)
+- [Matra Specification（日本語）](spec/README.ja.md)
+- [Proposed v0.3 scope and release criteria](spec/release-v0.3.md)
+
+## Web page validation example
+
+Keep prose, Matra structure, and JavaScript data/functions in
+[one Markdown document](packages/html/examples/web-page.md), then generate a complete
+HTML page with bundled CSS. With Node.js 22/24, pnpm and the repository's Rust toolchain:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm example:web-page
+pnpm test:web-page
+```
+
+Open `packages/html/examples/dist/index.html` in a browser. The generated page works
+offline. This example uses the implemented `.js.part` subset; standard JavaScript
+modules, npm and Python integration remain outside this route.
 
 ## Portability policy
 

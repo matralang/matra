@@ -2,246 +2,197 @@
 
 [English](./README.md) | [日本語](./README.ja.md)
 
-Matra Core is the small, domain-neutral foundation shared by HTML, Math,
-Docs, and Graphics packages. It defines tree representations, conversion,
-traversal, transformation, and replaceable parser and renderer boundaries.
-Domain-specific evaluation and output rules live outside Core.
+Matra Core provides source parsing and evaluation, and the domain-neutral document
+tree shared by HTML, Math, and Graphics. Output rules belong to domain packages.
 
-Domain packages implement the small `MatraRenderer` contract and can be
-invoked consistently with `renderWith(renderer, ast, options)`. Core owns the
-boundary, while SVG, HTML, and other output rules remain in their packages.
+## v0.3 source and document trees
 
-## Two tree representations
-
-MatraJSON is the compact three-element representation emitted by parsers and
-used for interchange:
-
-```ts
-["tag", { role: "example" }, ["text", ["child", {}, []]]]
-```
-
-The AST used by Core visitors, transformers, and renderers is object-shaped:
-
-```ts
-{
-  tag: "tag",
-  props: { role: "example" },
-  children: ["text", { tag: "child", props: {}, children: [] }]
-}
-```
-
-Convert explicitly at the boundary:
-
-```ts
-import { astToMatraJSON, matraJSONToAST } from "@matra/core"
-```
-
-## Replaceable parsers
-
-A parser only needs a `parse(source, options?)` method and may return either
-AST or MatraJSON. `parseWith()` normalizes both forms to AST.
-
-```ts
-import { parseWith } from "@matra/core"
-
-const ast = parseWith(peggyParser, source)
-```
-
-The bundled Peggy implementation emits MatraJSON. Core's public `parse()`
-adapts that output to AST, keeping the parser replaceable.
-
-## JSONMatra file family
-
-Matra data can enter Core through three related JSONMatra formats:
-
-```text
-.matra.json  = strict JSON-compatible Matra exchange format
-.matra.js    = JavaScript-compatible Matra generation module
-.jsonm       = JSONMatra custom human-readable data format
-```
-
-Use `.matra.json` for storage, exchange, and other-language integration. It is
-read with `JSON.parse`, so comments, trailing commas, `undefined`, `BigInt`,
-functions, imports, and `matra(...)` calls are rejected.
-
-Use `.matra.js` for TypeScript and JavaScript application integration. It is a
-trusted JavaScript module whose default export is normalized as a Matra value:
-
-```js
-import { matra } from "@matra/core"
-
-export default matra.ast({
-  tag: "tag",
-  props: { prop1: "value1" },
-  children: ["child1", "child2"],
-})
-```
-
-Because `.matra.js` is loaded with dynamic `import()`, it executes arbitrary
-JavaScript and should only be used for trusted code. Use `.matra.json`, or a
-future safe `.jsonm` parser, for untrusted input.
-
-Use `.jsonm` for hand-written, experimental, and DSL-mixed data. It aims to be
-a JSON superset for Matra, but it is not JavaScript and is not evaluated. The
-initial implementation only preserves `matra.doc\`...\`` and
-`matra.expr\`...\`` sources as placeholder values.
-
-All three formats pass through the same normalization layer:
-
-```ts
-import { loadMatra, matra, normalizeMatra } from "@matra/core"
-
-await loadMatra("example.matra.json")
-await loadMatra("example.matra.js")
-await loadMatra("example.jsonm")
-
-normalizeMatra({ tag: "tag", children: ["child"] })
-matra.tuple("tag", { prop1: "value1" }, ["child1", "child2"])
-matra.doc`tag { child }`
-matra.expr`Divide(Plus(1, Sqrt(5)), 2)`
-```
-
-Request optional source positions when diagnostics or editor integration need
-them. Syntax errors always include a location and code frame.
-
-```ts
-const ast = parse(source, {
-  locations: true,
-  sourceId: "drawing.matra",
-})
-
-ast.position
-// { start: { offset: 0, line: 1, column: 1 }, ... }
-```
-
-Positions are omitted when converting to MatraJSON.
-
-## HTML
-
-HTML rendering is provided by the separate workspace package:
+Public `parse(source)` returns a `MatraModule` containing statements and expressions.
+It does not directly return a renderer-ready `MatraAST` or MatraJSON.
+[Grammar v0.3](../../spec/grammar.md) defines source syntax and evaluation.
 
 ```ts
 import { evaluateStatic, parse, staticValueToAST } from "@matra/core"
+
+const module = parse(`
+let title = "Matra"
+article {
+  h1 { title }
+  <p.lead>Hello <strong>Matra</strong>!</p>
+}
+`)
+const ast = staticValueToAST(evaluateStatic(module))
+```
+
+`evaluateStatic()` retrieves static values, references, and nodes. Calls, operators,
+and control flow that require execution throw `EvaluationRequiredError`.
+Use `evaluate(module)` for explicit execution.
+For JavaScript values and functions, use the separate
+[literate host](../../spec/literate-modules.md).
+
+```ts
+import { evaluate, parse, staticValueToAST } from "@matra/core"
+
+const ast = staticValueToAST(evaluate(parse(`
+fn double(n) { return n * 2 }
+ul {
+  ...for (n in [1, 2, 3]) { li { double(n) } }
+}
+`)))
+```
+
+Node construction includes a body: `circle(cx=10, cy=20, r=5) {}`.
+`Sin(x)` is a function call, distinct from document node construction.
+Syntax errors use `ProgramSyntaxError` with a source offset in the message.
+Current `parse()` has no `locations` or `sourceId` options; `parseWith()` is not exported.
+
+## Morphion document model
+
+Represent each document node as finite terms with an exponent and coefficient
+`val`. Exponent 0 denotes the tag, positive integer n denotes children[n - 1],
+and string key denotes props[key].
+
+```ts
+import { astToMorphion, morphionToAST } from "@matra/core"
+
+const terms = astToMorphion({ tag: "p", props: { class: "lead" }, children: ["Hello"] })
+// [{ exponent: 0, val: "p" }, { exponent: 1, val: "Hello" },
+//  { exponent: "class", val: "lead" }]
+const ast = morphionToAST(terms)
+```
+
+Both conversions copy values and omit node positions. Zero coefficients remain
+part of the document. This is a node-local correspondence with nested nodes
+retained as document ASTs. See the
+[Data Model](../../spec/data-model.md#morphion-correspondence) for the contract.
+It is distinct from the expression-expansion `MorphionForm` in
+`@matra/math-compute-engine`.
+
+## Two document tree representations
+
+`staticValueToAST()` converts a document value into the object-shaped AST used by
+visitors, transformers, and renderers.
+
+```ts
+const ast = {
+  tag: "article",
+  props: { lang: "ja" },
+  children: ["text", { tag: "p", props: {}, children: ["Hello"] }],
+}
+```
+
+MatraJSON is the three-element interchange representation:
+
+```ts
+["article", { lang: "ja" }, ["text", ["p", {}, ["Hello"]]]]
+```
+
+Use `astToMatraJSON(ast)` and `matraJSONToAST(tuple)` to convert between them.
+`visit()` and `transform()` also operate on document ASTs, not `MatraModule`.
+See the [Data Model](../../spec/data-model.md) for document values.
+
+## HTML and SVG
+
+```ts
+import { evaluateStatic, parse, renderWith, staticValueToAST } from "@matra/core"
 import { toHTML } from "@matra/html"
 
 const ast = staticValueToAST(evaluateStatic(parse('<p.lead>Hello</p>')))
 toHTML(ast)
+// <p class="lead">Hello</p>
 ```
 
-Use markup for static documents and `tag(attrs) { ... }` to construct nodes from expressions.
-See the [HTML package examples](../html/README.md) for differences in attribute types and text whitespace.
+Domain packages implement `MatraRenderer`, also callable through
+`renderWith(renderer, ast, options)`. Evaluate source expressions before rendering.
+`evaluatePropExpressions(ast, evaluator)` is a separate helper for property
+expressions in document ASTs constructed by the host.
 
-Function-style syntax uses Python-like keyword arguments for props:
+## JSONMatra file family
 
-```matra
-circle(x=10, y=20, r=5)
+```text
+.matra.json  = strict JSON-compatible Matra exchange format
+.matra.js    = JavaScript-compatible Matra generation module
+.jsonm       = experimental source placeholders
 ```
 
-Ordinary positional arguments become children. The earlier
-`circle({x: 10, y: 20, r: 5})` form remains available for compatibility but
-is not the canonical notation.
+`loadMatra(path)` reads `.matra.json` with `JSON.parse`, and loads the default
+export of a trusted JavaScript module for `.matra.js`. The latter executes
+arbitrary JavaScript. Currently `.jsonm` only preserves tagged `matra.doc` and
+`matra.expr` sources as placeholders; it is not a general JSON superset parser
+or evaluator.
 
-Function calls are also accepted as unevaluated prop expressions:
+```js
+import { matra, normalizeMatra } from "@matra/core"
 
-```matra
-circle(cx=Cos(theta), r=Divide(3, 8))
+export default matra.ast({
+  tag: "article",
+  props: {},
+  children: ["Hello"],
+})
 ```
 
-They are represented as AST nodes inside `props`. Use
-`evaluatePropExpressions(ast, evaluator)` to replace them immutably before
-rendering.
-
-Array and object literals may be nested in prop values. They remain ordinary
-JSON-compatible values in the AST:
-
-```matra
-command(
-  args=["solve.py", "--format", "json"],
-  env={MODE: "production"},
-  stdin={format: "json", value: {items: [1, 2, 3]}}
-)
-```
-
-A positional object such as `circle({x: 10})` retains its legacy meaning of
-merging entries into props.
+`normalizeMatra()` and `matra.ast()` normalize host values. Their acceptance
+boundary is not document data model validation. Use JSON-compatible values for
+interchange and output, and satisfy each renderer's input contract.
+`matra.doc` and `matra.expr` preserve source without executing it.
 
 ## Markdown documents
 
-`extractMatraMarkdown()` reads one `*.matra` or `*.matra.ts` fenced code block from a Markdown document. Use `entry` when a document includes multiple Matra blocks. Fences may use three or more backticks, allowing a Matra source to contain Markdown examples.
+`extractMatraMarkdown(markdown, { entry: "page.matra" })` extracts a named fence.
+It does not resolve or execute JavaScript dependencies. Pass its `.source` to
+`parse()`. `extractMarkdownFences()` lists named fences.
 
-```ts
-import { extractMatraMarkdown } from "@matra/core"
-
-const document = extractMatraMarkdown(markdown, { entry: "page.matra" })
-```
-
-`extractMarkdownFences()` returns every named fence. Site builders can use it
-to keep page snippets beside their page source.
+See [literate programming](../../spec/literate-modules.md) for execution with
+published values and functions. The [Web page validation example](../html/examples/web-page.md)
+generates HTML from Markdown through JavaScript integration and Wasm execution.
 
 ## TypeScript templates
 
-Use `matra` and `matra.raw()` to compose Matra source in an ordinary TypeScript module.
+The `matra` template returns source text. Ordinary string interpolation is quoted
+and escaped. `matra.raw()` inserts a trusted source fragment verbatim.
 
 ```ts
-import { matra } from "@matra/core"
+import { evaluateStatic, matra, parse, staticValueToAST } from "@matra/core"
 
-const items = matra.raw('item { "one" }')
-export default matra`group { ${items} }`
+const title = "Matra & Web"
+const source = matra`article { h1 { ${title} } }`
+const ast = staticValueToAST(evaluateStatic(parse(source)))
 ```
 
 ## Standard collection functions
 
-`Range` creates an inclusive sequence, and `Map` applies a registered function
-to each value. `evaluateStandard()` evaluates their application-style Matra
-syntax without storing JavaScript functions in the JSON-compatible AST.
+`Range` creates an inclusive sequence; `Map` applies a JavaScript function.
 
 ```ts
-import { evaluateStandard, parse } from "@matra/core"
+import { Map, Range, evaluateStandard } from "@matra/core"
 
-evaluateStandard(parse("Range(1, 4)"))
+Map(value => Number(value) ** 2, Range(1, 4))
+// [1, 4, 9, 16]
+evaluateStandard({ tag: "Range", props: {}, children: [1, 4] })
 // [1, 2, 3, 4]
-
-evaluateStandard(parse("Map(square, Range(1, 4))"), {
-  functions: { square: value => Number(value) ** 2 },
-})
-// [1, 4, 9, 16]
 ```
 
-`Map` also accepts a single-parameter `Lambda`. Use `Var(name)` for lexical
-variable references; this keeps identifiers distinct from string values in the
-current JSON-compatible syntax.
-
-```ts
-evaluateStandard(
-  parse("Map(Lambda(n, multiply(Var(n), Var(n))), Range(1, 4))"),
-  { functions: { multiply: (a, b) => Number(a) * Number(b) } },
-)
-// [1, 4, 9, 16]
-```
+`evaluateStandard()` handles document ASTs containing `Range`, `Map`, `Lambda`,
+`Var`, and registered functions. It is not the evaluator for the `MatraModule`
+returned by v0.3 `parse()`.
 
 ## Package structure
 
 ```text
 src/
-├── ast/       # types, conversion, traversal, transformation
-├── parser/    # public parser boundary, grammar, generated parser
-├── index.ts   # public exports
-├── printer.ts # domain-neutral JSON serialization
-├── render.ts  # replaceable renderer boundary
-└── standard.ts # Range, Map, and standard evaluation
-tests/
-├── ast.test.mjs
-├── parser.test.mjs
-├── render.test.mjs
-└── standard.test.mjs
+├── ast/        # document types, conversion, traversal, transformation
+├── program.ts  # current source parser, static retrieval, explicit evaluation
+├── parser/     # public parse export, historical Peggy grammar assets
+├── jsonmatra.ts # file input and host value helpers
+├── markdown.ts # source fence extraction
+├── render.ts   # renderer boundary
+└── standard.ts # standard functions on document ASTs
 ```
 
-The generated parser is rebuilt from `src/parser/grammar.pegjs`; edit the
-grammar rather than `generated.mjs`. Language-level behavior is defined by the
-[Matra Specification](../../spec/README.md).
+Current `parse()` uses `program.ts`. The Peggy parser regenerated during builds
+is not the current public parser. Do not edit generated files directly.
 
 ## Documentation languages
 
-English documents use `name.md`; their Japanese counterparts use
-`name.ja.md`. Both versions should keep the same heading structure and code
-examples so changes are easy to synchronize.
+English documents use `name.md`; Japanese counterparts use `name.ja.md`.
+Keep heading structure and code examples aligned.

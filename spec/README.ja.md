@@ -25,6 +25,8 @@ Matraはルート付きツリーを記述する、ドメイン非依存の記法
 
 ## 設計方針とロードマップ
 
+- [v0.3の完成範囲案とrelease条件](./release-v0.3.ja.md) — package優先度、
+  実装段階、検証サンプルと公開前の検証条件。
 - [移植性方針と共通ランタイム](./portable-runtime.ja.md) — PC 3 OSで目指す保証範囲、
   v0.3の最小host APIと実行手順、パッケージ・タスク・検証のロードマップ。正式サポートの宣言ではない。
 - [Markdownによる多言語の文芸的プログラミング](./literate-modules.ja.md) — 名前付きfenceを

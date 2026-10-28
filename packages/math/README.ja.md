@@ -29,6 +29,11 @@ adapterを分けることで、`@matra/math`は特定のsymbolic computation imp
 
 ### Morphion
 
+文書nodeの指数0をtag、整数指数をchildren、文字列指数をpropsに対応させる
+[Coreの文書モーフィオン](../../spec/data-model.ja.md#モーフィオンとの対応)とは区別します。
+以下は数式展開のための`MorphionForm`であり、文書nodeの変換にはCoreの
+`astToMorphion()`と`morphionToAST()`を使います。
+
 Math NotebookのMorphion表示は、legacy Morphionの単一base形式を一般化した多変数形式です。
 式を次の有限和へ正規化します。
 

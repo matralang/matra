@@ -26,6 +26,8 @@ Historical proposal (not the current specification): [Matra Program for syntax](
 
 ## Design policy and roadmap
 
+- [Proposed v0.3 scope and release criteria](./release-v0.3.md) — package priorities,
+  implementation stages, executable validation examples, and release criteria.
 - [Portability policy and common runtime](./portable-runtime.md) — intended guarantee across the three
   PC OSes, v0.3 minimal host API and execution procedure, and package/task/validation roadmap;
   not a declaration of formal support.

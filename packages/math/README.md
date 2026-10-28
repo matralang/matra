@@ -36,6 +36,11 @@ without requiring a particular symbolic computation implementation.
 
 ### Morphion
 
+This is distinct from [Core's document Morphion](../../spec/data-model.md#morphion-correspondence),
+where exponent 0 denotes the tag, integer exponents denote children, and string
+exponents denote properties. The following `MorphionForm` supports expression
+expansion; use Core's `astToMorphion()` and `morphionToAST()` for document nodes.
+
 The Math Notebook's Morphion view generalizes the legacy single-base form to a
 multivariate form. It normalizes an expression to a finite sum:
 

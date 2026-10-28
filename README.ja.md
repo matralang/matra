@@ -7,8 +7,25 @@ Matraはpnpm workspaceのmonorepoとして管理されています。公開パ�
 
 ## 仕様
 
-- [Matra Specification v0.2](spec/README.md)
-- [Matra Specification v0.2（日本語）](spec/README.ja.md)
+- [Matra Specification（ソース文法v0.3）](spec/README.md)
+- [Matra Specification（日本語）](spec/README.ja.md)
+- [v0.3の完成範囲案とrelease条件](spec/release-v0.3.ja.md)
+
+## Webページの検証サンプル
+
+[1つのMarkdown文書](packages/html/examples/web-page.md)に説明・Matraの構造・
+JavaScriptのデータと関数をまとめ、HTML文書と同梱CSSを生成します。
+Node.js 22/24、pnpm、repository指定のRust toolchainを用意して実行します。
+
+```sh
+pnpm install --frozen-lockfile
+pnpm example:web-page
+pnpm test:web-page
+```
+
+`packages/html/examples/dist/index.html`をブラウザで開いてください。生成後はオフラインで
+閲覧できます。実装済みの`.js.part`を使う作例で、標準JavaScript module・npm・Python連携は
+この経路に含みません。
 
 ## 移植性の方針
 
