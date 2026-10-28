@@ -136,6 +136,47 @@ JSON互換値を使い、rendererごとの入力条件を満たしてくださ�
 これはJavaScriptの依存解決・実行を行いません。抽出結果の`.source`を`parse()`へ渡します。
 `extractMarkdownFences()`は名前付きfenceの一覧を返します。
 
+### 実験的なNode.js向けliterate API
+
+`@matra/core/experimental/literate`は文書のコンパイルと実行を提供します。Node.js 22/24を対象とし、
+将来は独立packageへ分離予定です。通常のCore入口はNode.js固有のhostやcompilerを読み込みません。
+文書化・テストされた公開APIですが、安定APIとしての互換性は保証しません。変更・移動時には移行手順を示します。
+
+```js
+import { readFile } from "node:fs/promises"
+import { staticValueToAST } from "@matra/core"
+import { buildLiterate, runLiterate } from "@matra/core/experimental/literate"
+import { toHTML } from "@matra/html"
+
+const markdown = await readFile("web-page.md", "utf8")
+const bundle = await buildLiterate(markdown, { document: "web-page.md" })
+const value = await runLiterate(bundle)
+const html = toHTML(staticValueToAST(value))
+```
+
+文書先頭のYAML FrontMatterで`matra.entry`と省略可能な`matra.values`を指定します。
+buildは文書コードを実行せず、runは実行結果の値を返します。通常の利用に中間ファイルは不要です。
+関数・options・bundle・errorの型定義もサブパスから提供します。
+`LiterateError`は`code`・`document`・`path`・`line`・利用可能な`cause`を持ちます。
+bundleは`format: "matra-literate-1"`と`abi: "matra-value-1"`を持ち、JSON保存・復元が可能です。
+ABIのない旧内部bundleは再buildしてください。
+
+対応するcompiler Wasmとversion・SHA-256・ABIを記録したmanifestを同梱します。
+導入後の利用にRust、checkout、compilerの追加downloadは不要です。
+packageの開発・build・packにはRustが必要で、Stage 2/3のbyte一致を確認してWasmを生成します。
+`pnpm test:literate:package`はcheckout外へのpack導入と、RustなしのAPI/CLI実行を検証します。
+生成Wasmは配布物へ含めますが、ソース管理へは追加しません。
+
+CLIも同じAPIを使います。
+
+```sh
+pnpm exec matra-literate build . web-page.md bundle.json
+pnpm exec matra-literate run . bundle.json
+```
+
+信頼した文書・bundleだけを実行してください。OS sandboxやtimeoutは保証しません。
+詳細は[公開API契約](../../spec/literate-modules.ja.md#v03の公開api配布契約)を参照してください。
+
 値と関数の公開を含めて実行する経路は[文芸的プログラミング](../../spec/literate-modules.ja.md)を
 参照してください。検証用の[Webページ作例](../html/examples/web-page.md)は、
 MarkdownからJavaScript連携・Wasm実行を経てHTMLを生成します。

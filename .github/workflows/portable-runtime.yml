@@ -24,6 +24,12 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Install Rust toolchain
         run: rustup toolchain install 1.97.1 --profile minimal
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify public literate API
+        run: pnpm --filter @matra/core run test
+      - name: Verify packed literate distribution
+        run: pnpm test:literate:package
       - name: Verify host contracts and self-hosted sample
         run: pnpm test:portable
       - name: Verify compiler bootstrap

@@ -2,8 +2,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 import { staticValueToAST } from "@matra/core"
+import { buildLiterate, runLiterate } from "@matra/core/experimental/literate"
 import { toHTML } from "@matra/html"
-import { buildLiterate, runLiterate } from "../../../crates/matra-seed/host/literate-runtime.mjs"
 
 export const sourceURL = new URL("./web-page.md", import.meta.url)
 

@@ -145,10 +145,10 @@ test("front matter is required, parsed as YAML and validated", () => {
 })
 
 test("omitted matra.values leaves named value blocks unselected", async () => {
-  const markdown = withFrontMatter(
+  const markdown =
+    "---\nmatra:\n  entry: main.matra\n---\n" +
     fence("main.matra", "p { 1 }") +
-      fence("unused.js.part", '(() => { throw new Error("must remain unused") })()'),
-  )
+    fence("unused.js.part", '(() => { throw new Error("must remain unused") })()')
   const registration = registerLiterate(markdown, options())
   assert.deepEqual(registration.values, [])
   assert.deepEqual(await runLiterate(await buildLiterate(markdown, options())), {

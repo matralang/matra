@@ -67,7 +67,7 @@ that order, respecting dependencies. The table is based on source inspection.
 | `@matra/core` | v0.3 parser, static retrieval, explicit evaluation, document AST, traversal, JSONMatra helpers; document Morphion conversions added here | P0 | Document Morphion round trips and exponent validation, Module/document distinction, document construction and loops, current API documentation, diagnostic limitations | General `.jsonm`, unified source maps, strict type system |
 | `@matra/html` | Escaping, void elements, pretty output, base paths | P0 | Complete document, escaping and repetition from JS data in the validation example | Full Web framework, hydration, general site generator |
 | literate host / `matra-seed` | Rust seed, Matra-written Wasm compiler, explicit entry and `.js.part`, JSON bundle, portable file APIs | P0 | Build→execute→HTML, original-document diagnostics, preserve Stage 2/3 byte equality | Standard JS modules, npm/Python import, standalone runtime or package manager |
-| `@matra/core/literate` (planned) | Internal build/run functions and repository CLI; public subpath, types, and distribution validation are pending | P0 user-facing delivery | Experimental Node.js APIs, FrontMatter configuration, bundled compiler Wasm, dependency separation from ordinary Core entry, CLI over the same API, installation example outside the checkout | Browser support, a separate evaluator, general sandbox guarantees, extraction into a separate npm package |
+| `@matra/core/experimental/literate` | Public subpath and types, build/run, bundled compiler, `matra-literate` CLI, and packed distribution tests implemented; npm publication and remote validation pending | P0 user-facing delivery | Experimental Node.js APIs, FrontMatter configuration, bundled compiler Wasm, dependency separation from ordinary Core entry, CLI over the same API, installation example outside the checkout | Browser support, a separate evaluator, general sandbox guarantees, extraction into a separate npm package |
 | `@matra/math` | MathJSON bridge, object form, Content MathML MVP, Morphion types | P1 | Distinguish document Morphion, describe semantic boundaries, round-trip representative supported expressions | Full MathML, MathML 4, general equivalence testing |
 | `@matra/math-compute-engine` | Evaluation, simplification, numeric approximation, Morphion conversion, property evaluation | P1 | Test finite sums, like terms, function atoms, negative integer powers, 256-term limit; inspect domains including division by zero and reproducible ordering | Complete engine-independent computation, general equivalence testing |
 | `@matra/styles` | No-class CSS and a few helpers | P0 validation route | Bundle CSS with generated pages for offline reading | New design system or themes |
@@ -77,12 +77,12 @@ that order, respecting dependencies. The table is based on source inspection.
 | `matra-vscode` | Highlighting, formatting, outline, simple diagnostics | P1 current syntax / P2 expansion | Formatting preserves validation examples using current syntax | LSP, full type inference, new legacy-directive features |
 | `apps/website` and separate official site | Legacy site remains in monorepo; README points to another repository | P1 user entry | Align linked v0.3 instructions after separately auditing the official site | Claiming the official site is updated based on this repository |
 
-The [literate public API contract](./literate-modules.md#v03-public-api-and-distribution-contract-planned)
+The [literate public API contract](./literate-modules.md#v03-public-api-and-distribution-contract)
 defines APIs and distribution gates. Preserve existing P0 correctness, value
 boundaries, diagnostics, and bootstrap first, then establish bundled compiler
 generation/verification and complete the subpath and installation examples
 before P1/P2 expansion. Internal functions are not already published APIs.
-Standalone packaging is deferred; fix the CLI name before publication.
+Standalone packaging is deferred; the CLI is named `matra-literate`.
 
 ## First validation example
 
@@ -103,9 +103,9 @@ pnpm test:web-page
 Outputs are `packages/html/examples/dist/index.html` and `matra.css`.
 Regression tests check language and charset, three expanded articles, the 24-minute
 total, and text escaping. Generated pages can be read offline.
-Currently this is an in-checkout integration example using relative imports of
-internal build/run functions. The v0.3 installation example must migrate to
-public package imports and run from a separate project. The current Rust
+The example imports the public subpath. `pnpm test:literate:package` packs Core
+and HTML and checks APIs, CLI, types, and HTML generation in an empty project
+outside the checkout. The current Rust
 requirement applies to repository bootstrap. The planned public subpath uses
 the bundled compiler without requiring user-side Rust or compiler downloads.
 
@@ -120,9 +120,16 @@ package tests. Static document, template, and function/loop README examples were
 also executed and their HTML verified.
 
 The new Core API and validation example were directly tested with Node.js 24.17.0.
-The new remote CI, validation examples on other OSes, packed-package installation,
+The new remote CI, validation examples on other OSes,
 official site alignment, and visual review of the generated page remain pending.
 Local success alone does not complete the release criteria.
+
+Literate distribution tests verify first use with a PATH that cannot locate Rust
+and a nonexistent bootstrap cache, and reject missing/corrupt compiler Wasm and
+unsupported bundles. The compiler is 111,064 bytes; a manifest records version,
+SHA-256, and ABI, and builds verify Stage 2/3 byte equality. These are local
+results; packed distribution validation across all supported OS/Node versions
+still awaits successful CI.
 
 ## Implementation stages and completion criteria
 

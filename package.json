@@ -11,6 +11,7 @@
     "literate": "node crates/matra-seed/host/literate.mjs",
     "example:web-page": "pnpm --filter @matra/core run build && pnpm --filter @matra/html run build && node packages/html/examples/web-page.mjs",
     "test:web-page": "node --test packages/html/examples/verify-web-page.mjs",
+    "test:literate:package": "node packages/core/scripts/verify-package.mjs",
     "test:portable": "node --test crates/matra-seed/tests/portable-runtime.test.mjs",
     "check": "pnpm run build && pnpm -r --if-present run check",
     "lint": "pnpm run check && pnpm run lint:biome && pnpm run lint:markdown",
@@ -23,7 +24,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.2",
-    "js-yaml": "^5.2.2",
     "markdownlint-cli2": "^0.23.2"
   }
 }

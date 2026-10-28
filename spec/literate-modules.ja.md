@@ -44,6 +44,7 @@ JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結�
 - FrontMatterは文書の先頭に置き、`matra` mappingの`entry`と`values`を設定する。
   `entry`は必須の文字列、`values`は省略可能な文字列listである。
   他のFrontMatter項目はこのruntimeでは使用しない。YAMLとしてparseし、不正な形式や型を拒否する。
+  FrontMatter内の文字列に含まれるfenceは登録せず、閉じdelimiterの後の本文だけを走査する。
 - fenceは行頭から0〜3個のspace、3個以上のbacktickまたはtildeで開く。
   閉じdelimiterは同種で開き以上の長さとし、後ろはspace/tabのみとする。
   CRLFはLFへ正規化する。本文の行番号を保持し、閉じ忘れを拒否する。
@@ -93,16 +94,19 @@ Matra実行時エラーは入口ブロック位置を報告する（式単位の
 重複、未対応形式、欠落、構文・初期化・呼び出し・値境界の失敗を成功扱いにしない。
 後続の設計例と初版の制約が異なる場合、この節を初版の正本とする。
 
-## v0.3の公開API・配布契約（実装予定）
+## v0.3の公開API・配布契約
 
-この節はv0.3で完成させる契約であり、現在の内部関数が公開済みであることを意味しない。
-v0.3では新しいnpm packageを増やさず、`@matra/core/literate`サブパスからNode.js向けの
+この節はv0.3の契約を定める。サブパスと配布実装はrepositoryにあり、npm公開済みという意味ではない。
+v0.3では新しいnpm packageを増やさず、`@matra/core/experimental/literate`サブパスからNode.js向けの
 `buildLiterate`、`runLiterate`、`LiterateError`と対応する型定義を実験的に提供する。
+文書化・テストされた公開APIだが、安定APIとしての互換性は保証せず、変更・移動時には移行手順を示す。
+公開前の旧パス`@matra/core/literate`はexportせず、互換aliasも提供しない。
+実験的という位置付けはliterate APIと配布方式に限り、通常のCore APIの位置付けは変更しない。
 Node.js固有の実行機構とcompiler供給の実装は通常のCore入口から分離し、
 将来の独立package化を予定する。独立packageの名称と分離時期は未定であり、分離時には移行手順を示す。
 通常の`@matra/core`のimportはliterate hostやcompiler Wasmを読み込まず、
 Node.js固有moduleへの新しい依存を持たせない。HTML rendererにも実行機能を含めない。
-CLIのcommand名は公開前に固定する。
+CLIは`matra-literate build ROOT DOCUMENT.md OUTPUT.json`と`matra-literate run ROOT OUTPUT.json`を提供する。
 ブラウザ実行、標準JavaScript module・npm・Pythonの直接importはこの公開APIの範囲外とする。
 
 ### 関数と値の契約
@@ -119,6 +123,8 @@ entryとvaluesはFrontMatterを正本とし、呼び出し側からの上書き�
 buildの戻り値はJSONとして保存・復元できるversion付きbundleとする。Wasmに加えて選択した
 JavaScriptソースと元位置を含み、ソース秘匿や任意version間の互換性は保証しない。
 対応するbundle形式とcompiler/host ABIを明記し、非対応の組み合わせは実行前に拒否する。
+現在の形式は`matra-literate-1`、ABIは`matra-value-1`とし、bundleの`format`と`abi`に記録する。
+ABIのない旧内部bundleは再buildする。公開型は`LiterateBuildOptions`、`LiterateBlock`、`LiterateBundle`である。
 同じbundleの複数回実行は可能だが、JavaScript contextと値は毎回新規に作る。
 contextの分離は、任意のユーザーコードの結果が常に同じになることを保証しない。
 
@@ -129,7 +135,7 @@ rendererへ渡す文書nodeは、必要に応じてCoreの`staticValueToAST()`�
 
 ```js
 import { staticValueToAST } from "@matra/core"
-import { buildLiterate, runLiterate } from "@matra/core/literate"
+import { buildLiterate, runLiterate } from "@matra/core/experimental/literate"
 import { toHTML } from "@matra/html"
 
 const bundle = await buildLiterate(markdown, { document: "web-page.md" })
@@ -138,8 +144,8 @@ const ast = staticValueToAST(value)
 const html = toHTML(ast)
 ```
 
-上記は公開予定の利用例であり、サブパスのexportと配布実装は未完了である。現在のrepository内の相対importは
-暫定的な検証経路であり、別project向けの導入手順として掲載しない。
+上記のサブパスはrepositoryに実装されている。pack検証ではcheckout外から同じimportを使用する。
+別project向けの導入手順では、内部ファイルの相対importを使用しない。
 CLIは同じbuild/run実装を利用する薄い入口とし、別の評価規則を持たせない。
 
 ### 失敗・依存関係・公開条件
@@ -147,6 +153,8 @@ CLIは同じbuild/run実装を利用する薄い入口とし、別の評価規�
 - 設定・compile・実行・値境界の失敗はPromiseのrejectとして伝える。
   `LiterateError.code`、文書・仮想パス・位置、利用可能なcauseを保持し、
   compilerの取得・読込・ABI不一致の失敗も識別できるようにする。
+  エラーは`document`・`path`・`line`を持つ。同梱compilerの読込・checksum・ABI失敗は
+  `COMPILER_LOAD`とcauseで、非対応bundleは`INVALID_BUNDLE`で報告する。
   メッセージ全文やstack文字列の一致は互換性契約にしない。
 - APIは結果を返し、通常の進捗をstdoutへ出力しない。CLIのrunのstdoutは結果JSONだけとし、
   診断はstderr、失敗は非zero終了statusで伝える。build時に文書中のコードを実行しない。

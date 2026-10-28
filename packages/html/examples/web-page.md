@@ -21,11 +21,11 @@ pnpm test:web-page
 Node.js 22/24、repository指定のpnpmとRust toolchainが必要です。
 出力は`packages/html/examples/dist/index.html`と`matra.css`です。
 生成したHTMLはブラウザで直接開けます。生成後の閲覧にはネットワークもRustも不要です。
-この作例はrepository内の検証用です。build/run関数は内部runtimeから直接importしており、
-npm packageの公開APIではありません。v0.3ではNode.js向けの実験的サブパス
-`@matra/core/literate`からの提供と、公開importだけで動く導入作例への移行を予定しています。
-対応するcompiler Wasmを同梱し、将来の独立package化を予定しています。
-公開条件と未決事項は[literateの公開API契約](../../../spec/literate-modules.ja.md#v03の公開api配布契約実装予定)を参照してください。
+build/run関数はNode.js向けの実験的サブパス`@matra/core/experimental/literate`からimportします。
+対応するcompiler Wasmを同梱し、将来の独立package化を予定しています。利用時のRustは不要ですが、
+このrepositoryで配布物をbuildするにはRustが必要です。`pnpm test:literate:package`で
+packしたCoreとHTMLをcheckout外へ導入し、この文書からのHTML生成を検証できます。
+npm公開済みという意味ではありません。詳細は[literateの公開API契約](../../../spec/literate-modules.ja.md#v03の公開api配布契約)を参照してください。
 
 ## ページの構造はMatraで書く
 

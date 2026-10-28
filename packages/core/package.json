@@ -5,10 +5,17 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "matra-literate": "dist/literate/cli.mjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./experimental/literate": {
+      "types": "./dist/literate.d.ts",
+      "node": "./dist/literate.js"
     }
   },
   "files": [
@@ -17,7 +24,8 @@
   ],
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-    "build": "pnpm run clean && pnpm run build:parser && pnpm run build:types",
+    "build": "pnpm run clean && pnpm run build:parser && pnpm run build:types && pnpm run build:compiler",
+    "build:compiler": "node scripts/build-compiler.mjs",
     "build:parser": "peggy --format es --output src/parser/generated.mjs src/parser/grammar.pegjs",
     "build:types": "tsc",
     "check": "tsc --noEmit",
@@ -33,6 +41,9 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org"
+  },
+  "dependencies": {
+    "js-yaml": "^5.2.2"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",

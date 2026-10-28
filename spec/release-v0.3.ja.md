@@ -56,7 +56,7 @@ P2は動作を維持するが新しい完成条件を増やさない対象です
 | `@matra/core` | v0.3 parser、静的取得・明示評価、文書AST、変換・走査、JSONMatra補助API。今回、文書Morphion相互変換を追加 | P0 | 文書Morphionの往復・指数検証、Moduleと文書ASTの区別、文書構築・loop・JS接続経路、現行APIで動くREADME、診断の制限を明記 | 汎用`.jsonm`、全APIで統一したsource map、厳密な型システム |
 | `@matra/html` | escaping、void element、pretty出力、base path | P0 | 完全なHTML文書、本文・属性・値のescape、JSデータからの繰り返しを検証サンプルで検証 | Web framework全体、hydration、汎用site generator |
 | literate host / `matra-seed` | Rust seed、Matra製Wasm compiler、明示入口と`.js.part`、JSON bundle、portable file API | P0 | 検証文書のbuild→実行→HTML出力、元文書の診断、bootstrapのStage 2/3 byte equalityを維持 | 標準`.js` module/npm/Pythonの直接import、standalone runtime・package manager |
-| `@matra/core/literate`（実装予定） | build/run内部関数とrepository内CLI。サブパスの公開入口・型定義・配布検証は未整備 | P0：利用者への提供経路 | Node.js向け実験的API、FrontMatter設定、compiler Wasm同梱、通常のCore入口との依存分離、同じAPIを使うCLI、checkout外で動く導入作例 | ブラウザ対応、独自の評価系、一般的なsandbox保証、独立npm packageへの分離 |
+| `@matra/core/experimental/literate` | 公開サブパス・型定義、build/run、同梱compiler、`matra-literate` CLI、pack検証を実装。npm公開とremote検証は未完了 | P0：利用者への提供経路 | Node.js向け実験的API、FrontMatter設定、compiler Wasm同梱、通常のCore入口との依存分離、同じAPIを使うCLI、checkout外で動く導入作例 | ブラウザ対応、独自の評価系、一般的なsandbox保証、独立npm packageへの分離 |
 | `@matra/math` | MathJSON変換、object形式、Content MathML MVP、Morphion型 | P1 | 文書Morphionとの役割の区別、表現境界・保持する意味・制限を説明し、対応する数式を代表例で往復検証 | MathML全体、MathML 4、全数学的同値性の判定 |
 | `@matra/math-compute-engine` | 評価・簡約・数値化、Morphion化、property評価 | P1 | 有限和・同類項・関数原子・負の整数冪・256項制限の検証。ゼロ除算などの定義域と順序の再現性を確認 | engine非依存の完全な数式処理、一般式の同値判定 |
 | `@matra/styles` | no-class CSSと少数の補助class | P0：検証経路に必要な範囲 | 生成ページとCSSを同梱し、ネットワーク不要で読める出力を確認 | 新しいdesign system、theme拡充 |
@@ -66,10 +66,10 @@ P2は動作を維持するが新しい完成条件を増やさない対象です
 | `matra-vscode` | highlight、format、outline、簡易diagnostic | P1：現行文法 / P2：新機能 | 標準文法の検証サンプルをformatして壊さないことを確認 | LSP、完全な型推論、旧directive中心の新機能 |
 | `apps/website`と別repositoryの公式サイト | monorepoに旧siteが残り、READMEは公式siteの別管理を明記 | P1：利用者の入口 | 公式ドキュメントとv0.3の導入・実行手順を一致させる。別repositoryは別途監査する | 旧siteを根拠に公式siteの更新済みを宣言すること |
 
-公開APIと配布条件は[literateの公開API契約](./literate-modules.ja.md#v03の公開api配布契約実装予定)で定めます。
+公開APIと配布条件は[literateの公開API契約](./literate-modules.ja.md#v03の公開api配布契約)で定めます。
 既存P0経路の正しさ・値境界・diagnostic・bootstrapを先に保ち、同梱compilerの生成・検証手順を
 整えてからサブパスと導入作例を完成させます。P1/P2の拡張より優先しますが、現在の内部関数を
-公開済みとは扱いません。独立package化は将来に延期し、CLI名は公開前に固定します。
+npm公開済みとは扱いません。独立package化は将来に延期し、CLIは`matra-literate`として提供します。
 
 ## 最初の検証サンプル
 
@@ -90,8 +90,8 @@ Node.js 22/24と指定のRust toolchainを前提とします。
 出力は`packages/html/examples/dist/index.html`と`matra.css`です。
 HTMLの言語・文字コード、3件の展開、合計24分、文字列のescapeを回帰testで確認します。
 生成後の閲覧はオフラインでできます。
-現時点ではcheckout内の統合検証サンプルであり、内部build/run関数を相対importしています。
-v0.3の導入作例は公開packageのimportへ移行し、別projectからの実行を検証します。
+作例は公開サブパスをimportし、`pnpm test:literate:package`ではCoreとHTMLをpackして
+checkout外の空projectからAPI・CLI・型定義・HTML生成を検証します。
 現在のRust要件はrepository内のbootstrap経路に対するものです。公開予定のサブパスは
 同梱compilerを使い、利用者のRustやcompilerの追加downloadを不要にします。
 
@@ -104,9 +104,14 @@ Coreは追加6件を含む241件、HTMLは9件、Rust seedは28件、compiler/ho
 READMEの静的文書・テンプレート・関数/loopの例も実行してHTML出力を確認しました。
 
 追加したCoreと検証サンプルはNode.js 24.17.0で直接検証しています。
-新しいCIのremote実行、他OSでの検証サンプル、pack後の導入、公式siteの照合、
+新しいCIのremote実行、他OSでの検証サンプル、公式siteの照合、
 生成ページの見た目の確認は未完了です。これらを公開前の残作業として扱い、
 ローカルtestの成功だけでrelease完了とはしません。
+
+literateの配布検証では、Rustを参照できないPATHと存在しないbootstrap cacheで初回利用を確認します。
+同梱Wasmの欠落・破損、非対応bundleの拒否も検証します。compilerは111,064 bytesで、
+manifestにversion・SHA-256・ABIを記録し、build時にStage 2/3のbyte一致を確認します。
+この結果はローカルのものであり、対応する全OS/Nodeでの配布検証はCIの成功を待ちます。
 
 ## 実装段階と完了条件
 

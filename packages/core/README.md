@@ -142,6 +142,51 @@ interchange and output, and satisfy each renderer's input contract.
 It does not resolve or execute JavaScript dependencies. Pass its `.source` to
 `parse()`. `extractMarkdownFences()` lists named fences.
 
+### Experimental Node.js literate API
+
+`@matra/core/experimental/literate` provides compilation and execution for Node.js 22/24.
+Extraction into a standalone package is planned. The ordinary Core entry does
+not load the Node-specific host or compiler.
+This is a documented and tested public API, but stable-API compatibility is not
+guaranteed. Changes or moves will include migration instructions.
+
+```js
+import { readFile } from "node:fs/promises"
+import { staticValueToAST } from "@matra/core"
+import { buildLiterate, runLiterate } from "@matra/core/experimental/literate"
+import { toHTML } from "@matra/html"
+
+const markdown = await readFile("web-page.md", "utf8")
+const bundle = await buildLiterate(markdown, { document: "web-page.md" })
+const value = await runLiterate(bundle)
+const html = toHTML(staticValueToAST(value))
+```
+
+Configure `matra.entry` and optional `matra.values` in leading YAML FrontMatter.
+Build does not execute document code; run returns the execution result.
+Ordinary use requires no intermediate files. The subpath also exports function,
+options, bundle, and error types. `LiterateError` has `code`, `document`, `path`,
+`line`, and an available `cause`. JSON-serializable bundles use
+`format: "matra-literate-1"` and `abi: "matra-value-1"`. Rebuild older internal
+bundles that lack the ABI field.
+
+The matching compiler Wasm and a version/SHA-256/ABI manifest are bundled.
+After installation, Rust, a checkout, and compiler downloads are unnecessary.
+Package development, build, and packing require Rust; compiler generation verifies
+Stage 2/3 byte equality. `pnpm test:literate:package` validates installation outside
+the checkout and Rust-free API/CLI execution. Generated Wasm is distributed but
+not committed to source control.
+
+The CLI uses the same API.
+
+```sh
+pnpm exec matra-literate build . web-page.md bundle.json
+pnpm exec matra-literate run . bundle.json
+```
+
+Execute trusted documents/bundles only; there is no OS sandbox or timeout
+guarantee. See the [public API contract](../../spec/literate-modules.md#v03-public-api-and-distribution-contract).
+
 See [literate programming](../../spec/literate-modules.md) for execution with
 published values and functions. The [Web page validation example](../html/examples/web-page.md)
 generates HTML from Markdown through JavaScript integration and Wasm execution.

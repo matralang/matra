@@ -50,6 +50,7 @@ the total `60`. Run regressions with `node --test crates/matra-seed/tests/litera
   optional `values` under a `matra` mapping. `entry` is a required string;
   `values` is an optional list of strings. Other FrontMatter fields are unused
   by this runtime. Parse FrontMatter as YAML and reject invalid syntax or types.
+  Do not register fences inside FrontMatter strings; scan only the body after its closing delimiter.
 - Fences open with zero to three spaces and at least three backticks or tildes. Closing delimiters
   use the same character, at least the opening length, followed only by spaces/tabs.
   CRLF is normalized to LF. Body line numbers are retained; unclosed fences are errors.
@@ -100,20 +101,28 @@ original document lines. Matra runtime errors identify the entry block (expressi
 are deferred). Duplicate, unsupported, missing, syntax, initialization, call, and boundary errors
 must never become successful output. This section takes precedence over later proposals for the initial release.
 
-## v0.3 public API and distribution contract (planned)
+## v0.3 public API and distribution contract
 
-This section defines the v0.3 target, not an already published API.
+This section defines the v0.3 contract. Subpath and distribution implementations
+are in the repository; this does not mean they have been published to npm.
 Rather than adding an npm package in v0.3, the experimental Node.js subpath
-`@matra/core/literate` will expose `buildLiterate`, `runLiterate`,
+`@matra/core/experimental/literate` will expose `buildLiterate`, `runLiterate`,
 `LiterateError`, and corresponding types. Keep Node-specific execution and
 compiler provisioning separate from the ordinary Core entry, with a future
 standalone package planned. Its name and extraction schedule are undecided;
 provide migration instructions when extracting it. Importing `@matra/core`
 must not load the literate host or compiler Wasm, or introduce new dependencies
 on Node.js-specific modules. The HTML renderer does not gain execution features.
-Fix the CLI command name before publication.
+The CLI provides `matra-literate build ROOT DOCUMENT.md OUTPUT.json` and
+`matra-literate run ROOT OUTPUT.json`.
 Browser execution and direct imports of standard JavaScript modules, npm
 packages, or Python are outside this API's scope.
+
+This is a documented and tested public API, but stable-API compatibility is not
+guaranteed. Provide migration instructions for changes or moves. The unpublished
+old path `@matra/core/literate` is not exported and has no compatibility alias.
+The experimental status applies only to the literate API and distribution
+approach, not to ordinary Core APIs.
 
 ### Functions and values
 
@@ -134,6 +143,9 @@ supported bundle formats and compiler/host ABIs, and reject unsupported
 combinations before execution. A bundle can be run repeatedly, with fresh
 JavaScript contexts and values each time. Context isolation does not guarantee
 identical results for arbitrary user code.
+The current format is `matra-literate-1`, with ABI `matra-value-1`, recorded in
+`format` and `abi`. Rebuild older internal bundles without an ABI field. Public
+types are `LiterateBuildOptions`, `LiterateBlock`, and `LiterateBundle`.
 
 Run returns a value satisfying the existing boundary, not an AST-specific type.
 Convert document nodes using Core's `staticValueToAST()` where needed by a
@@ -142,7 +154,7 @@ intermediate files, JSON serialization round trips, or child processes.
 
 ```js
 import { staticValueToAST } from "@matra/core"
-import { buildLiterate, runLiterate } from "@matra/core/literate"
+import { buildLiterate, runLiterate } from "@matra/core/experimental/literate"
 import { toHTML } from "@matra/html"
 
 const bundle = await buildLiterate(markdown, { document: "web-page.md" })
@@ -151,9 +163,9 @@ const ast = staticValueToAST(value)
 const html = toHTML(ast)
 ```
 
-The example shows the planned public interface; subpath exports and distribution
-are not implemented yet. Current repository-relative imports are temporary validation
-routes, not installation instructions for separate projects. The CLI is a thin
+The subpath above is implemented in the repository; packed distribution tests
+use the same imports outside the checkout. Installation examples must not use
+internal relative imports. The CLI is a thin
 entry point over the same build/run implementation, without separate evaluation
 rules.
 
@@ -164,6 +176,9 @@ rules.
   available causes; make compiler acquisition, loading, and ABI failures
   distinguishable too. Exact message and stack strings are not compatibility
   contracts.
+  Errors have `document`, `path`, and `line`. Bundled compiler loading, checksum,
+  and ABI failures use `COMPILER_LOAD` with a cause; unsupported bundles use
+  `INVALID_BUNDLE`.
 - APIs return results without ordinary progress output on stdout. CLI run stdout
   contains only result JSON; diagnostics go to stderr and failures use nonzero
   exit status. Build does not execute code from the document.
