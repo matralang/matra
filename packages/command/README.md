@@ -20,14 +20,24 @@ command(
     write: ["./out"],
     network: false
   }
-)
+) {}
 ```
 
 ```ts
-import { parse } from "@matra/core"
+import { evaluateStatic, parse, staticValueToAST } from "@matra/core"
 import { authorizePlan, executePlan, planCommands } from "@matra/command"
 
-const plan = planCommands(parse(source, { locations: true }))
+const source = `command(
+  program="python",
+  args=["scripts/solve.py", "--format", "json"],
+  stdin={problem: 42},
+  stdout="json",
+  bind="solution",
+  timeout=30000,
+  capabilities={read: ["./data"], write: ["./out"], network: false}
+) {}`
+const ast = staticValueToAST(evaluateStatic(parse(source, { locations: true })))
+const plan = planCommands(ast)
 
 // Display or audit `plan` before granting authority.
 const authorized = authorizePlan(plan, {

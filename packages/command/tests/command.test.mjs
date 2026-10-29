@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
+import { evaluateStatic, parse, staticValueToAST } from "@matra/core"
 import {
   authorizePlan,
   CommandAuthorizationError,
@@ -13,6 +14,30 @@ const workflow = children => ({ tag: "workflow", props: {}, children })
 const nodejs = (props, code) => ({ tag: "nodejs", props, children: [code] })
 
 describe("Matra command planning", () => {
+  it("plans a command parsed from current Matra source", () => {
+    const source = `command(
+      program="python",
+      args=["scripts/solve.py", "--format", "json"],
+      stdin={problem: 42},
+      stdout="json",
+      bind="solution",
+      timeout=30000,
+      capabilities={read: ["./data"], write: ["./out"], network: false}
+    ) {}`
+    const ast = staticValueToAST(evaluateStatic(parse(source, { locations: true })))
+    const plan = planCommands(ast)
+
+    assert.equal(plan.commands[0].program, "python")
+    assert.deepEqual(plan.commands[0].args, ["scripts/solve.py", "--format", "json"])
+    assert.deepEqual(plan.commands[0].stdin, { problem: 42 })
+    assert.deepEqual(plan.capabilities, {
+      commands: ["python"],
+      read: ["./data"],
+      write: ["./out"],
+      network: false,
+    })
+  })
+
   it("validates command nodes and builds a dependency-ordered plan", () => {
     const ast = workflow([
       command({
