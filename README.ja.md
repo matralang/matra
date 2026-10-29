@@ -50,6 +50,15 @@ pnpm portable -- run crates/matra-seed/examples/portable main.wasm
 パッケージ管理、npm・Python連携、独立したruntimeの配布はこの実動版に含めません。
 3 OS検証のCI定義はありますが、正式サポートの宣言ではありません。
 
+## 文芸的プログラミング文書
+
+`@matra/core/experimental/literate`はNode.js 22/24向けの実験的APIで、
+文芸的プログラミング文書をbuild・実行します。信頼した文書コードを実行し、
+OS sandboxやtimeoutは保証しません。compiler Wasmを同梱するため、導入後にRustは不要です。
+標準JavaScript module・npm・Python連携は未実装です。
+[Core APIと制限](packages/core/README.ja.md#実験的なnodejs向けliterate-api)と
+[文芸的プログラミング仕様](spec/literate-modules.ja.md)を参照してください。
+
 ## パッケージ
 
 - [`@matra/core`](packages/core)

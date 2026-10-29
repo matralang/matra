@@ -52,6 +52,16 @@ pnpm portable -- run crates/matra-seed/examples/portable main.wasm
 This subset excludes package management, npm/Python integration, and standalone runtime distribution.
 Three-OS CI is configured; this is not a declaration of formal support.
 
+## Literate documents
+
+`@matra/core/experimental/literate` provides an experimental Node.js 22/24 API
+for building and running literate documents. It runs trusted document code
+without an OS sandbox or timeout guarantee. Its compiler Wasm is bundled, so
+Rust is not needed after installation. Standard JavaScript modules, npm, and
+Python integration are not implemented. See the
+[Core API and limitations](packages/core/README.md#experimental-nodejs-literate-api)
+and [literate module contract](spec/literate-modules.md).
+
 ## Packages
 
 - [`@matra/core`](packages/core)

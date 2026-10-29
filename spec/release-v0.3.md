@@ -158,8 +158,8 @@ label alone does not satisfy the criteria.
 - [x] Implement literate public APIs, types, and error contracts; run build→run→HTML without internal relative imports or checkout dependencies
 - [x] Document compiler provisioning, supported ABIs, and network/Rust requirements; verify uncached first use
 - [x] Pin instructions for compiler Wasm, checksums, source, and execution host
-- [ ] Align official site, README and specifications on environments, dependencies and limitations
-- [ ] Do not describe standard JS modules, npm/Python integration or general `.jsonm` as implemented
+- [x] Align official site, README and specifications on environments, dependencies and limitations
+- [x] Do not describe standard JS modules, npm/Python integration or general `.jsonm` as implemented
 
 The existing [portable CI](https://github.com/matralang/matra/actions/runs/40418928782)
 passed at the baseline commit. This does not validate the example HTML, all
