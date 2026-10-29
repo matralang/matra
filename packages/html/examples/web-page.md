@@ -20,6 +20,9 @@ pnpm test:web-page
 
 Node.js 22/24、repository指定のpnpmとRust toolchainが必要です。
 出力は`packages/html/examples/dist/index.html`と`matra.css`です。
+検証commitで生成する`index.html`はSHA-256
+`26206c023dbefc9467ff51a1698e58b96705bd242ebbf244ac5141217fbc9f5b`（971 bytes）です。
+`pnpm test:web-page`は生成fileとrender結果の一致、およびこのchecksumを検証します。
 生成したHTMLはブラウザで直接開けます。生成後の閲覧にはネットワークもRustも不要です。
 build/run関数はNode.js向けの実験的サブパス`@matra/core/experimental/literate`からimportします。
 対応するcompiler Wasmを同梱し、将来の独立package化を予定しています。利用時のRustは不要ですが、

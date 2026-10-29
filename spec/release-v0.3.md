@@ -150,7 +150,7 @@ label alone does not satisfy the criteria.
 ## Release checklist
 
 - [x] Specify and test document Morphion correspondence, conversions, and undefined operations
-- [ ] Pin validation sources, commands and outputs to a commit
+- [x] Pin validation sources, commands and outputs to a commit
 - [x] Pass `pnpm run build`, `pnpm test`, `pnpm run lint`, and `pnpm test:web-page`
 - [x] Verify Stage 2/3 byte equality with `pnpm bootstrap:verify`
 - [ ] Obtain the same validation HTML on Windows/macOS/Linux with Node.js 22/24
