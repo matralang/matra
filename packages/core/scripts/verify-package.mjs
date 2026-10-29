@@ -36,6 +36,8 @@ try {
   assert.equal(installedCore.version, corePackage.version)
   assert.equal(installedHtml.version, htmlPackage.version)
   assert.equal(installedHtml.peerDependencies["@matra/core"], `^${corePackage.version}`)
+  assert.equal(installedCore.exports["./browser"].import, "./dist/browser.js")
+  assert.equal(installedCore.exports["./browser"].types, "./dist/browser.d.ts")
   const markdown = await readFile(
     new URL("../../html/examples/web-page.md", import.meta.url),
     "utf8",
@@ -44,9 +46,18 @@ try {
   const script = `
 import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
+import {
+  evaluate,
+  parse,
+  staticValueToAST as staticValueToBrowserAST,
+} from "@matra/core/browser"
 import { staticValueToAST } from "@matra/core"
 import { buildLiterate, runLiterate, LiterateError } from "@matra/core/experimental/literate"
 import { toHTML } from "@matra/html"
+assert.deepEqual(
+  staticValueToBrowserAST(evaluate(parse('article { h1 { "Browser entry" } }'))),
+  { tag: "article", props: {}, children: [{ tag: "h1", props: {}, children: ["Browser entry"] }] },
+)
 await assert.rejects(import("@matra/core/literate"), {
   code: "ERR_PACKAGE_PATH_NOT_EXPORTED",
 })
@@ -114,11 +125,14 @@ assert.notEqual(process.env.EXPECT_COMPILER_ERROR, "1")
     `
 import { buildLiterate, runLiterate, LiterateError } from "@matra/core/experimental/literate"
 import type { LiterateBundle, LiterateBuildOptions } from "@matra/core/experimental/literate"
+import { evaluate, parse, staticValueToAST } from "@matra/core/browser"
 const options: LiterateBuildOptions = { document: "example.md" }
 const bundle: LiterateBundle = await buildLiterate("", options)
 await runLiterate(bundle)
 const inspect = (error: LiterateError): string => error.code + error.document + error.path + error.line
 void inspect
+const browserValue = evaluate(parse('p { "Browser" }'))
+if (browserValue !== undefined) void staticValueToAST(browserValue)
 `,
   )
   execFileSync(

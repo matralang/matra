@@ -2,6 +2,8 @@
 export { astToMatraJSON, isMatraAST, isMatraJSON, matraJSONToAST, } from "./ast/convert.js";
 export type { PropExpressionEvaluator } from "./ast/evaluate.js";
 export { evaluatePropExpressions } from "./ast/evaluate.js";
+export type { MatraMorphion, MatraMorphionTerm } from "./ast/morphion.js";
+export { astToMorphion, morphionToAST } from "./ast/morphion.js";
 export { transform, visit } from "./ast/transform.js";
 export type * from "./ast/types.js";
 export { CORE_VERSION, SPEC_VERSION } from "./ast/types.js";
@@ -20,6 +22,7 @@ export type { StandardEvaluationOptions, StandardFunction } from "./standard.js"
 export { evaluateStandard, evaluateStandardProps, mapValues as Map, Range, } from "./standard.js";
 import { astToMatraJSON, matraJSONToAST } from "./ast/convert.js";
 import { evaluatePropExpressions } from "./ast/evaluate.js";
+import { astToMorphion, morphionToAST } from "./ast/morphion.js";
 import { transform, visit } from "./ast/transform.js";
 import { loadMatra, normalizeMatra } from "./jsonmatra.js";
 import { extractMarkdownFences, extractMatraMarkdown } from "./markdown.js";
@@ -32,6 +35,8 @@ declare const _default: {
     parse: typeof parse;
     astToMatraJSON: typeof astToMatraJSON;
     matraJSONToAST: typeof matraJSONToAST;
+    astToMorphion: typeof astToMorphion;
+    morphionToAST: typeof morphionToAST;
     printJSON: typeof printJSON;
     extractMarkdownFences: typeof extractMarkdownFences;
     extractMatraMarkdown: typeof extractMatraMarkdown;

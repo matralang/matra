@@ -6,6 +6,12 @@
 
 このchangelogは[Keep a Changelog](https://keepachangelog.com/en/1.0.0/)の形式を参考にし、projectは[Semantic Versioning](https://semver.org/spec/v2.0.0.html)に従います。
 
+## [Unreleased]
+
+### Added
+
+- Browser向けの安全なparse・文書評価を提供する`@matra/core/browser`公開entrypointを追加しました。
+
 ## [0.8.0] - 2025-10-24
 
 ### Added

@@ -45,6 +45,24 @@ ul {
 文法エラーは`ProgramSyntaxError`で、メッセージにsource offsetを含みます。
 現在の`parse()`は`locations`・`sourceId`オプションや`parseWith()`を提供しません。
 
+## Browser entrypoint
+
+Browser applicationでは、Node.jsのfile loaderを読み込まない部分API
+`@matra/core/browser`を利用できます。Matraのparse、静的または明示的な文書評価、
+document ASTへの変換を提供します。HTMLには`@matra/html`などのdomain rendererを組み合わせます。
+
+```js
+import { evaluate, parse, staticValueToAST } from "@matra/core/browser"
+import { toHTML } from "@matra/html"
+
+const ast = staticValueToAST(evaluate(parse('article { h1 { "Hello" } }')))
+const html = toHTML(ast)
+```
+
+`loadMatra()`、Node.js向けliterate API、JavaScript module loaderは含みません。
+Matraの評価は同期的にcontrol flowを実行します。UIの応答性が必要な場合はWorkerを利用してください。
+信頼できないprogramに対する汎用sandboxではありません。
+
 ## モーフィオン文書モデル
 
 文書nodeを指数と係数`val`の有限項として表します。

@@ -46,6 +46,26 @@ Node construction includes a body: `circle(cx=10, cy=20, r=5) {}`.
 Syntax errors use `ProgramSyntaxError` with a source offset in the message.
 Current `parse()` has no `locations` or `sourceId` options; `parseWith()` is not exported.
 
+## Browser entry point
+
+Browser applications can import the browser-safe subset from `@matra/core/browser`.
+It provides Matra parsing, explicit or static document evaluation, and conversion
+to the document AST without loading the Node.js file loader. Pair it with a domain
+renderer such as `@matra/html`.
+
+```js
+import { evaluate, parse, staticValueToAST } from "@matra/core/browser"
+import { toHTML } from "@matra/html"
+
+const ast = staticValueToAST(evaluate(parse('article { h1 { "Hello" } }')))
+const html = toHTML(ast)
+```
+
+This entry point does not include `loadMatra()`, the Node.js literate API, or
+JavaScript module loading. Evaluation executes Matra control flow synchronously;
+use an appropriate Worker if the application needs to remain responsive. It is
+not a general-purpose sandbox for untrusted programs.
+
 ## Morphion document model
 
 Represent each document node as finite terms with an exponent and coefficient

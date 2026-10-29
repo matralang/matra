@@ -1,6 +1,7 @@
 /** @matra/core — domain-neutral Matra tree primitives. */
 export { astToMatraJSON, isMatraAST, isMatraJSON, matraJSONToAST, } from "./ast/convert.js";
 export { evaluatePropExpressions } from "./ast/evaluate.js";
+export { astToMorphion, morphionToAST } from "./ast/morphion.js";
 export { transform, visit } from "./ast/transform.js";
 export { CORE_VERSION, SPEC_VERSION } from "./ast/types.js";
 export { loadMatra, matra, normalizeMatra } from "./jsonmatra.js";
@@ -13,6 +14,7 @@ export { renderWith } from "./render.js";
 export { evaluateStandard, evaluateStandardProps, mapValues as Map, Range, } from "./standard.js";
 import { astToMatraJSON, matraJSONToAST } from "./ast/convert.js";
 import { evaluatePropExpressions } from "./ast/evaluate.js";
+import { astToMorphion, morphionToAST } from "./ast/morphion.js";
 import { transform, visit } from "./ast/transform.js";
 import { CORE_VERSION } from "./ast/types.js";
 import { loadMatra, matra, normalizeMatra } from "./jsonmatra.js";
@@ -26,6 +28,8 @@ export default {
     parse,
     astToMatraJSON,
     matraJSONToAST,
+    astToMorphion,
+    morphionToAST,
     printJSON,
     extractMarkdownFences,
     extractMatraMarkdown,
