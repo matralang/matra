@@ -132,8 +132,8 @@ P0が未達の場合は、「実験的」という名称だけで成功扱いに
 
 - [x] 文書モーフィオンの対応規則・相互変換・未定義の演算を仕様とテストで明確にする
 - [ ] 検証サンプルのsource、実行command、出力例が固定commitに対応する
-- [ ] `pnpm run build`、`pnpm test`、`pnpm run lint`、`pnpm test:web-page`が成功する
-- [ ] `pnpm bootstrap:verify`でStage 2/3の生成Wasmがbyte単位で一致する
+- [x] `pnpm run build`、`pnpm test`、`pnpm run lint`、`pnpm test:web-page`が成功する
+- [x] `pnpm bootstrap:verify`でStage 2/3の生成Wasmがbyte単位で一致する
 - [ ] 検証サンプルをNode.js 22/24で確認し、Windows/macOS/Linuxで同じHTMLを得る
 - [ ] 公開対象のpackageをpackし、別の空のprojectから導入して検証サンプルが動く
 - [ ] literateの公開API・型定義・error契約を実装し、内部相対importやcheckout依存なしでbuild→run→HTML生成できる

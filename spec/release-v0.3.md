@@ -151,8 +151,8 @@ label alone does not satisfy the criteria.
 
 - [x] Specify and test document Morphion correspondence, conversions, and undefined operations
 - [ ] Pin validation sources, commands and outputs to a commit
-- [ ] Pass `pnpm run build`, `pnpm test`, `pnpm run lint`, and `pnpm test:web-page`
-- [ ] Verify Stage 2/3 byte equality with `pnpm bootstrap:verify`
+- [x] Pass `pnpm run build`, `pnpm test`, `pnpm run lint`, and `pnpm test:web-page`
+- [x] Verify Stage 2/3 byte equality with `pnpm bootstrap:verify`
 - [ ] Obtain the same validation HTML on Windows/macOS/Linux with Node.js 22/24
 - [ ] Pack release packages and run validation examples from a separate empty project
 - [ ] Implement literate public APIs, types, and error contracts; run build→run→HTML without internal relative imports or checkout dependencies
