@@ -141,6 +141,42 @@ npm view @matra/html dist-tags --json
 `0.3.0-alpha.0`へ固定してlockfileを管理する。`next`は移動するタグなので、
 再現性が必要な依存指定には使用しない。
 
+#### alpha.0公開記録
+
+2026年10月30日（日本時間）にCore・HTMLの`0.3.0-alpha.0`をnpmの`next`タグへ公開した。
+公開元は[`930d378`](https://github.com/matralang/matra/commit/930d3780d02ff9ca9c4bbfea4b9101da51dfbd6d)、
+対応tagは`v0.3.0-alpha.0`である。このtagはCore・HTMLの先行配布だけを示し、
+他のpackageや公式websiteの完成を示さない。
+[対応CI](https://github.com/matralang/matra/actions/runs/40959292210)は
+Windows/macOS/Linux × Node.js 22/24の6環境すべてで成功した。
+ローカルでもlint、Core 247件・HTML 9件・Web出力1件と配布検証が成功した。
+
+npmから両packageをcheckout外の空projectへ導入し、静的HTML・base path・文書→HTML・CLIを
+検証した。実行時はPATHを空にし、存在しないbootstrap cacheを指定してRustなしの動作を確認した。
+registryのtarball integrityは公開前に検証したtarballと一致した。
+`latest`はCore `0.2.1`、HTML `0.1.0`を維持している。
+registry配布物の実行確認はmacOS・Node.js 24.17.0で行い、全OSのregistry導入確認とは区別する。
+
+```text
+@matra/core@0.3.0-alpha.0
+integrity: sha512-JQa+0M05E9squGXE2O/+VJgvFKLVLWnVGlE8iPitFzI9VnB3Sqxla4bzL5HHdzLIsgHC/ZoHWpQVQkWx3lTElA==
+@matra/html@0.3.0-alpha.0
+integrity: sha512-CtxcF6t8o/6HBvZhuMb4eyetHQNDMCNAIGBjCyn7++Wlxlk/CSrE/9cf3757RxyxTnQt15cuPRVAPYrb0Tpo/w==
+compiler version: 0.3.0-alpha.0
+compiler ABI: matra-value-1
+compiler bytes: 111064
+compiler SHA-256: c9778e9e641bf82031b7fb5c0658dce2167d833c31487409cbdcac09fbad2efd
+compiler source SHA-256: 14bf69578be0b705a83942ddfdcf6ada34eb0dfd519702daad6051a6ad6e10c6
+Stage 2/3: byte-identical
+```
+
+website側では次のように固定versionを導入する。Graphics・Math系の依存移行と、
+公式website・Playgroundの改修は別途必要である。
+
+```sh
+npm install --save-exact @matra/core@0.3.0-alpha.0 @matra/html@0.3.0-alpha.0
+```
+
 2026年10月29日に追加したv0.3タスクです。実装先は
 [`matralang/website`](https://github.com/matralang/website)とし、monorepoの`apps/website`を
 公式siteとして作り直しません。[白書](./whitepaper-v0.3.ja.md)は技術的な根拠を担い、

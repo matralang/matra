@@ -160,6 +160,45 @@ registry and associate tarball integrity and the bundled compiler manifest with 
 release record. Pin both website dependencies to `0.3.0-alpha.0` and maintain the
 lockfile. Do not use the moving `next` tag for reproducible dependency specifications.
 
+#### alpha.0 publication record
+
+Core and HTML `0.3.0-alpha.0` were published under the npm `next` tag on
+October 30, 2026 (Japan time), from
+[`930d378`](https://github.com/matralang/matra/commit/930d3780d02ff9ca9c4bbfea4b9101da51dfbd6d),
+with the corresponding tag `v0.3.0-alpha.0`. This tag covers only the Core/HTML
+prerelease, not completion of other packages or the official website.
+[CI](https://github.com/matralang/matra/actions/runs/40959292210) passed all six
+Windows/macOS/Linux × Node.js 22/24 combinations. Local lint, 247 Core tests,
+9 HTML tests, 1 web-output test, and packed distribution verification also passed.
+
+Both packages were installed from npm into an empty project outside the checkout.
+Static HTML, base paths, document-to-HTML generation, and the CLI passed with an
+empty PATH and a nonexistent bootstrap cache, confirming Rust-free execution.
+Registry tarball integrity matched the tarballs verified before publication.
+The `latest` tags remain Core `0.2.1` and HTML `0.1.0`.
+Registry-installed execution was verified on macOS with Node.js 24.17.0;
+this is not registry-installation verification across all operating systems.
+
+```text
+@matra/core@0.3.0-alpha.0
+integrity: sha512-JQa+0M05E9squGXE2O/+VJgvFKLVLWnVGlE8iPitFzI9VnB3Sqxla4bzL5HHdzLIsgHC/ZoHWpQVQkWx3lTElA==
+@matra/html@0.3.0-alpha.0
+integrity: sha512-CtxcF6t8o/6HBvZhuMb4eyetHQNDMCNAIGBjCyn7++Wlxlk/CSrE/9cf3757RxyxTnQt15cuPRVAPYrb0Tpo/w==
+compiler version: 0.3.0-alpha.0
+compiler ABI: matra-value-1
+compiler bytes: 111064
+compiler SHA-256: c9778e9e641bf82031b7fb5c0658dce2167d833c31487409cbdcac09fbad2efd
+compiler source SHA-256: 14bf69578be0b705a83942ddfdcf6ada34eb0dfd519702daad6051a6ad6e10c6
+Stage 2/3: byte-identical
+```
+
+Install exact versions in the website as follows. Migrating Graphics/Math dependencies
+and updating the official website and Playground remain separate tasks.
+
+```sh
+npm install --save-exact @matra/core@0.3.0-alpha.0 @matra/html@0.3.0-alpha.0
+```
+
 These v0.3 tasks were added on October 29, 2026. Implement them in
 [`matralang/website`](https://github.com/matralang/website), not by rebuilding
 the monorepo's legacy `apps/website` as the official site.
