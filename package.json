@@ -12,7 +12,7 @@
     "example:web-page": "pnpm --filter @matra/core run build && pnpm --filter @matra/html run build && node packages/html/examples/web-page.mjs",
     "test:web-page": "node --test packages/html/examples/verify-web-page.mjs",
     "test:literate:package": "node packages/core/scripts/verify-package.mjs",
-    "test:applied-routes": "pnpm --filter @matra/graphics run test && pnpm --filter @matra/math run test && pnpm --filter @matra/math-compute-engine run test && pnpm --filter matra-vscode run test",
+    "test:applied-routes": "pnpm --filter @matra/math run test && pnpm --filter @matra/math-compute-engine run test && pnpm --filter @matra/graphics run test && pnpm --filter matra-vscode run test",
     "test:applied-routes:package": "node packages/core/scripts/verify-applied-routes-package.mjs",
     "test:portable": "node --test crates/matra-seed/tests/portable-runtime.test.mjs",
     "check": "pnpm run build && pnpm -r --if-present run check",
