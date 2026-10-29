@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { readFile } from "node:fs/promises"
+import { readdir, readFile } from "node:fs/promises"
 import test from "node:test"
 import { renderWith } from "@matra/core"
 import { toHTML } from "@matra/html"
@@ -45,6 +45,27 @@ test("compiles the whitespace-separated basic artwork example", async () => {
     compile(source),
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><rect x="0" y="0" width="256" height="256" fill="#fffaf0"></rect><circle cx="128" cy="128" r="72" fill="#ff4d6d" stroke="#171717" stroke-width="4"></circle><text x="128" y="132" fill="white" text-anchor="middle" dominant-baseline="middle">Matra</text></svg>',
   )
+})
+
+test("builds every existing artwork example as a complete SVG document", async () => {
+  const outputDirectory = new URL("../example/dist/", import.meta.url)
+  const outputs = (await readdir(outputDirectory)).filter(file => file.endsWith(".svg")).sort()
+
+  assert.deepEqual(outputs, [
+    "bagua.svg",
+    "basic.svg",
+    "flkm-circle.svg",
+    "flkm-torus.svg",
+    "kami.svg",
+    "kamomi.svg",
+    "raiun-rasen.svg",
+    "raiun-torus.svg",
+  ])
+  for (const file of outputs) {
+    const svg = await readFile(new URL(file, outputDirectory), "utf8")
+    assert.match(svg, /^<svg\b/)
+    assert.match(svg, /<\/svg>\n$/)
+  }
 })
 
 test("implements the core renderer contract", () => {

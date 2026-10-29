@@ -25,7 +25,7 @@
     "build:lib": "tsc",
     "build:examples": "node --import tsx build.ts",
     "check": "tsc --noEmit",
-    "test": "pnpm run build:lib && node --import tsx --test tests/*.test.ts",
+    "test": "pnpm run build && node --import tsx --test tests/*.test.ts",
     "prepack": "pnpm run build:lib"
   },
   "license": "MIT",
