@@ -75,7 +75,7 @@ that order, respecting dependencies. The table is based on source inspection.
 | `@matra/command` | Planning, authorization, processes, JSON/NDJSON, Node/Worker adapters | P1 | Correct current-grammar planning example; one JSON command if needed | Python package integration, arbitrary-process isolation, new workflow system |
 | `@matra/kernel` | Jupyter protocol, HTML/SVG/AST display using static retrieval | P2 | Preserve tests; include only after actual Jupyter validation | Persistent Matra sessions, comprehensive Notebook/Colab support |
 | `matra-vscode` | Highlighting, formatting, outline, simple diagnostics | P1 current syntax / P2 expansion | Formatting preserves validation examples using current syntax | LSP, full type inference, new legacy-directive features |
-| `apps/website` and separate official site | Legacy site remains in monorepo; README points to another repository | P1 user entry | Align linked v0.3 instructions after separately auditing the official site | Claiming the official site is updated based on this repository |
+| Separate official website (`apps/website` is legacy) | Official source also retains old parser APIs/syntax and sibling-checkout dependencies; initial inspection below is not runtime validation | P0 bilingual user entry and current-spec alignment / P1 migration to the new system | General-audience Japanese/English pages, setup/example/white-paper links, and a v0.3 Playground plan; validate static generation separately from browser execution | Full migration before a Playground prototype, browser support for the Node.js literate API, a new general site generator |
 
 The [literate public API contract](./literate-modules.md#v03-public-api-and-distribution-contract)
 defines APIs and distribution gates. Preserve existing P0 correctness, value
@@ -131,6 +131,72 @@ SHA-256, and ABI, and builds verify Stage 2/3 byte equality. These are local
 results; packed distribution validation across all supported OS/Node versions
 still awaits successful CI.
 
+## Official website: bilingual entry and migration to the new system
+
+These v0.3 tasks were added on October 29, 2026. Implement them in
+[`matralang/website`](https://github.com/matralang/website), not by rebuilding
+the monorepo's legacy `apps/website` as the official site.
+The [white paper](./whitepaper-v0.3.md) supplies technical grounding; the website
+should start with what readers can use Matra for and what they can create.
+This section is a work plan, not a record of completed website changes.
+
+### P0: general-audience Japanese and English content
+
+- Provide the top page and “What is Matra?” in Japanese and English, explaining
+  uses, completed examples, and development status without requiring knowledge of
+  ASTs, Morphion, or Wasm. Link interested readers to the white paper.
+- Pair a short source document with its generated page and connect it to setup,
+  runnable examples, the white paper, and specifications. Distinguish unimplemented features.
+- Provide language switching between corresponding pages, navigation, and document
+  language metadata. Keep instructions and scope consistent in both languages.
+- Check existing URLs and the GitHub Pages base path; provide migration links if URLs
+  change. Validate mobile layout, keyboard use, links, example code, and output.
+
+### P1: site generation with the new system
+
+Here, the “new system” means current v0.3 document construction, build/run through
+the Node.js `@matra/core/experimental/literate` API, and HTML output through `@matra/html`.
+First generate representative Japanese/English pages from Markdown prose, named fences,
+and explicit entries. Validate shared layout, navigation, CSS, static assets, base paths,
+and reproducibility. Use Node.js at build time and serve the generated static site on
+GitHub Pages. Do not introduce arbitrary JavaScript module integration or a browser
+literate API as prerequisites.
+
+The initial official-site inspection baseline is
+[`42d663f`](https://github.com/matralang/website/commit/42d663f4a6557808e0a50adec073fc4f7ddd6505).
+Its `src/build.ts` passes old `parse()` results directly to the renderer;
+`src/client/core-browser.ts` and browser bundling reference internal build outputs
+from a sibling Matra checkout. Dependencies also include `file:../matra/...`.
+Move toward reproducible builds using distributed packages or explicitly pinned source
+in CI. Record versions, commits, and compiler artifacts, without implicit dependence
+on a developer's directory layout.
+
+### Prototype the Playground first
+
+Generating the Playground page with the new system and executing user input in the
+browser are separate tasks. The current `src/client/playground.ts` uses old parse
+options, treats parse results as document ASTs, and includes old-syntax examples.
+Do not move the Node.js literate API directly into the browser.
+
+1. Inventory HTML, SVG, Math, and JavaScript modes, examples, previews, diagnostics,
+   and copy/download behavior; identify what is retained, migrated, or deferred.
+2. Prototype current v0.3 parsing, static extraction or explicit evaluation, document
+   AST conversion, and rendering in the browser. Validate Math through its domain
+   route. Investigate browser compiler/host compatibility separately only if Wasm is needed.
+3. Validate explicit execution, running status, cancellation/restart through Workers
+   or equivalent isolation, timeout and syntax/runtime diagnostics, and isolated previews.
+   Verify that an infinite loop cannot freeze the UI, without claiming a general sandbox.
+4. Test representative HTML/SVG examples, invalid input, and cancellation in real browsers.
+   Measure initial download size, startup time, and execution response; record results
+   and acceptance criteria before deciding the scope and feasibility of full migration.
+
+Even a full migration can generate static content separately from Playground client assets.
+If browser execution requires substantial additional infrastructure, publish bilingual
+content first. Offer only Playground modes validated against current v0.3, or explicitly
+state their unavailability and link to local examples. Do not present old syntax as v0.3.
+Record removed functionality and alternatives. Release notes must state deferred
+migration work and reasons rather than treating incomplete work as successful.
+
 ## Implementation stages and completion criteria
 
 | Stage | Work | Completion evidence |
@@ -139,6 +205,7 @@ still awaits successful CI.
 | 2: Foundation | Check document Morphion implementation against its contract and fix document/JS integration | Model contract, domain and acceptance/rejection tests, reproducible instructions |
 | Between 2 and 3: Distribution preparation | Specify public build/run contracts; bundle compiler Wasm and provide Core subpath, types, and CLI | Public exports, dependency separation from ordinary entry, supported ABIs, compiler versions/checksums and size, first-use and failure tests |
 | 3: Applied routes | Validate existing SVG, math, and editor features with representative examples; test distribution | Packed packages, rendered output, supported OS validation |
+| 3: Website | P0 bilingual entry and current-spec alignment; P1 representative generation, Playground prototype, and migration decision | Bilingual pages, executable examples, links/layout/language switching, browser measurements and cancellation tests, selected scope and deferral reasons |
 | 4: Release candidate | Freeze grammar, APIs and validation examples; verify v0.3 candidate | Pinned commit, versions/checksums, release notes, Stage 2/3 equality, successful CI |
 | 5: Release decision | Check required criteria and known limitations, then publish experimental v0.3 | Reproducibility from the pinned version, installation and acquisition instructions, implementation/specification agreement |
 | 6: After release | Correct setup instructions, documentation and bugs; patch release if needed | Change history and validation results |
@@ -158,7 +225,8 @@ label alone does not satisfy the criteria.
 - [x] Implement literate public APIs, types, and error contracts; run build→run→HTML without internal relative imports or checkout dependencies
 - [x] Document compiler provisioning, supported ABIs, and network/Rust requirements; verify uncached first use
 - [x] Pin instructions for compiler Wasm, checksums, source, and execution host
-- [x] Align official site, README and specifications on environments, dependencies and limitations
+- [ ] Provide general-audience Japanese/English website entry pages, examples, and setup links; recheck environments, dependencies, and limitations against README/specifications after this scope addition
+- [ ] Validate the Playground's current v0.3 scope in browsers and identify unavailable features and alternatives; decide full migration from the prototype and record selected scope or deferral reasons
 - [x] Do not describe standard JS modules, npm/Python integration or general `.jsonm` as implemented
 
 The existing [portable CI](https://github.com/matralang/matra/actions/runs/40418928782)

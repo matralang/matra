@@ -64,7 +64,7 @@ P2は動作を維持するが新しい完成条件を増やさない対象です
 | `@matra/command` | plan・明示認可・process実行、JSON/NDJSON、Node/Worker adapter | P1 | 現行文法から計画を作る正しいAPI例、必要な場合だけJSON入出力の単一コマンド | Python package統合、任意processの隔離保証、新しいworkflow system |
 | `@matra/kernel` | Jupyter protocolとHTML/SVG/AST表示、現在の評価は静的取得 | P2 | 既存テストを維持し、対応範囲を実際のJupyterで検証する | 持続するMatra session、完全なNotebook/Colab体験 |
 | `matra-vscode` | highlight、format、outline、簡易diagnostic | P1：現行文法 / P2：新機能 | 標準文法の検証サンプルをformatして壊さないことを確認 | LSP、完全な型推論、旧directive中心の新機能 |
-| `apps/website`と別repositoryの公式サイト | monorepoに旧siteが残り、READMEは公式siteの別管理を明記 | P1：利用者の入口 | 公式ドキュメントとv0.3の導入・実行手順を一致させる。別repositoryは別途監査する | 旧siteを根拠に公式siteの更新済みを宣言すること |
+| 別repositoryの公式website（`apps/website`は旧site） | 公式siteにも旧parser API・旧構文と隣接checkout依存が残る。下記は初期調査であり動作検証は未実施 | P0：日英の利用者入口と現行仕様への整合 / P1：新システムへの移行 | 一般向けの日英ページ、導入・作例・白書への導線、Playgroundのv0.3対応方針を整える。静的ページ生成とbrowser実行を分けて移行を検証する | Playground試作前の全面移行確約、Node.js向けliterate APIのbrowser対応、新しい汎用site generator |
 
 公開APIと配布条件は[literateの公開API契約](./literate-modules.ja.md#v03の公開api配布契約)で定めます。
 既存P0経路の正しさ・値境界・diagnostic・bootstrapを先に保ち、同梱compilerの生成・検証手順を
@@ -113,6 +113,63 @@ literateの配布検証では、Rustを参照できないPATHと存在しないb
 manifestにversion・SHA-256・ABIを記録し、build時にStage 2/3のbyte一致を確認します。
 この結果はローカルのものであり、対応する全OS/Nodeでの配布検証はCIの成功を待ちます。
 
+## 公式website：日英の入口と新システムへの移行
+
+2026年10月29日に追加したv0.3タスクです。実装先は
+[`matralang/website`](https://github.com/matralang/website)とし、monorepoの`apps/website`を
+公式siteとして作り直しません。[白書](./whitepaper-v0.3.ja.md)は技術的な根拠を担い、
+websiteは一般の読者が「何に使えるか」「何ができあがるか」から理解できる入口にします。
+この節は作業計画であり、siteの改修完了を示すものではありません。
+
+### P0：一般向けの日英コンテンツ
+
+- トップと「Matraとは」を日英で用意し、用途・完成例・現在の開発段階を伝える。
+  AST・Morphion・Wasmの説明を前提にせず、必要な読者を白書へ案内する。
+- 「書く文書」と「生成されるページ」を対にした短い作例を示し、
+  導入手順・実行できる作例・白書・仕様へ接続する。未実装機能は区別する。
+- 対応するページ間の言語切替、navigation、文書の言語情報を整え、
+  日英で手順・対応範囲が食い違わないようにする。
+- 既存URLとGitHub Pagesのbase pathを確認し、URLを変える場合は移行導線を用意する。
+  モバイル表示、keyboard操作、リンク、掲載コードと出力を検証する。
+
+### P1：新システムでのサイト生成
+
+「新システム」は現行v0.3の文書構築と、Node.js向けの
+`@matra/core/experimental/literate`によるbuild/run、`@matra/html`によるHTML出力を指します。
+まず日英の代表ページをMarkdownの説明・名前付きfence・明示入口で生成し、
+共通レイアウト・navigation・CSS・静的asset・base path・再現性を確認します。
+Node.jsはbuild時に使用し、生成した静的siteをGitHub Pagesへ配信します。
+任意のJavaScript module連携やbrowser向けliterate APIを新たな前提にしません。
+
+公式websiteの初期調査基準は
+[`42d663f`](https://github.com/matralang/website/commit/42d663f4a6557808e0a50adec073fc4f7ddd6505)です。
+`src/build.ts`は旧`parse()`の結果を直接rendererへ渡し、
+`src/client/core-browser.ts`とbrowser bundleは隣接するMatra checkoutの内部出力を参照します。
+依存定義にも`file:../matra/...`があるため、配布packageまたはCIで明示的に固定したsourceから
+再現できるbuildへ移行する必要があります。使用するversion・commit・compiler artifactを記録し、
+開発者のdirectory配置へ暗黙に依存しないことを確認します。
+
+### Playgroundを先に小さく検証する
+
+Playgroundの画面を新システムで生成することと、入力コードをbrowserで実行することは別タスクです。
+現行siteの`src/client/playground.ts`には旧parseオプションと、parse結果を文書ASTとして扱う経路、
+旧構文の作例があります。新しいNode.js向けliterate APIをそのままbrowserへ持ち込む案は採用しません。
+
+1. 既存のHTML・SVG・Math・JavaScriptモード、作例、preview、診断、copy/downloadを棚卸しし、
+   維持・移行・延期の範囲を明記する。
+2. 現行v0.3のparse→静的取得または明示評価→文書AST→出力をbrowserで試作する。
+   Mathは独自のdomain経路として検証する。Wasmが必要な場合だけcompiler・hostのbrowser適合性を別途確認する。
+3. 明示的な実行操作、実行中表示、Worker等による停止・再実行、期限超過・構文／実行エラーの表示、
+   previewの隔離を検証する。無限loopでUIが固まらないことを確認し、一般的なsandbox保証とは区別する。
+4. HTML・SVGの代表例と不正入力・停止操作を実browserで確認し、初回読込量・起動時間・実行応答を計測する。
+   計測結果と許容基準を記録してから全面移行の可否と範囲を決める。
+
+全面移行できる場合も、静的コンテンツの生成とPlaygroundのclient assetを分離して配信できます。
+browser実行に追加の大きな基盤改修が必要なら、日英コンテンツの公開を先行し、
+Playgroundは現行v0.3で検証できた限定モードだけを提供するか、未対応であることとローカル作例を明示します。
+旧文法を現行v0.3として見せる状態は残しません。機能を減らす場合は対象と代替導線を記録します。
+全面移行の延期理由・残作業はrelease noteへ記載し、未達を成功扱いにしません。
+
 ## 実装段階と完了条件
 
 | 段階 | 作業 | 完了の証拠 |
@@ -121,6 +178,7 @@ manifestにversion・SHA-256・ABIを記録し、build時にStage 2/3のbyte一�
 | 2：基盤整備 | 文書Morphion契約と実装の照合、文書・JavaScript連携の不具合修正 | モデルの契約、受理・拒否・定義域のtest、再現できる手順 |
 | 2から3への配布準備 | build/runの公開契約、compiler Wasm同梱、Coreのサブパス・型定義・CLIの整備 | 公開export、通常入口との依存分離、対応ABI、compilerのversion/checksumと容量、初回利用と失敗時のtest |
 | 3：応用経路 | SVG・数式・編集環境の既存機能を代表例で検証、配布物を試す | packageされた状態でのサンプル実行、実際の表示、対応OSの検証 |
+| 3：website | P0の日英入口と現行仕様への整合、P1の代表ページ生成・Playground試作と移行判断 | 日英ページ、掲載例の実行、リンク・表示・言語切替の確認、browser試作の計測・停止test、採用範囲と延期理由 |
 | 4：release候補 | 文法/APIと検証サンプルを固定、v0.3候補を検証 | 固定commit、version・checksum、release note、Stage 2/3一致、CI成功 |
 | 5：公開判定 | 下記の必須条件と既知の制限を照合し、実験版v0.3を公開 | 固定版での再現性、導入・取得手順、仕様と実装の一致 |
 | 6：公開後 | 導入手順・ドキュメント・不具合の修正、必要ならpatch release | 変更履歴と再検証の結果 |
@@ -139,7 +197,8 @@ P0が未達の場合は、「実験的」という名称だけで成功扱いに
 - [x] literateの公開API・型定義・error契約を実装し、内部相対importやcheckout依存なしでbuild→run→HTML生成できる
 - [x] compiler供給方式と対応ABI、ネットワーク・Rustの要否を明記し、キャッシュのない初回利用も検証する
 - [x] compiler Wasm・checksum・ソース・実行hostの取得手順を固定する
-- [x] 公式site・README・仕様書の対応環境、依存関係、制限が一致する
+- [ ] 公式websiteに一般向けの日英の入口・作例・導入導線を用意し、README・仕様書と対応環境・依存関係・制限を再照合する（今回のscope追加で再確認）
+- [ ] Playgroundの現行v0.3対応範囲をbrowserで確認し、非対応機能と代替導線を明示する。新システムへの全面移行は試作結果から判断し、採用範囲または延期理由を記録する
 - [x] 未実装の`.js` module・npm/Python連携と汎用`.jsonm`を実装済みとして説明していない
 
 既存の[portable CI](https://github.com/matralang/matra/actions/runs/40418928782)は調査基準commitで成功しています。
