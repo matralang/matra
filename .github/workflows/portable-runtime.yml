@@ -28,6 +28,10 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Verify public literate API
         run: pnpm --filter @matra/core run test
+      - name: Verify applied-route packages
+        run: pnpm run test:applied-routes
+      - name: Verify packed applied-route distributions
+        run: pnpm run test:applied-routes:package
       - name: Verify packed literate distribution
         run: pnpm test:literate:package
       - name: Verify host contracts and self-hosted sample
