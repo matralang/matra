@@ -266,6 +266,9 @@ importers:
       '@matra/core':
         specifier: workspace:^
         version: link:../core
+      '@matra/html':
+        specifier: workspace:^
+        version: link:../html
       '@matra/math-compute-engine':
         specifier: workspace:^
         version: link:../math-compute-engine

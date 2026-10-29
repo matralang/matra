@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@matra/core": "workspace:^",
+    "@matra/html": "workspace:^",
     "@matra/math-compute-engine": "workspace:^",
     "esbuild": "^0.28.2",
     "tsx": "^4.21.0",

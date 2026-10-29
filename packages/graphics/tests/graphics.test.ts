@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import test from "node:test"
 import { renderWith } from "@matra/core"
+import { toHTML } from "@matra/html"
 import { compile, svgNode, svgRenderer, toSVG } from "../src/index.ts"
 
 test("renders a Matra graphics AST as SVG", () => {
@@ -11,6 +12,24 @@ test("renders a Matra graphics AST as SVG", () => {
   assert.equal(
     toSVG(ast),
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80" width="100" height="80"><circle cx="50" cy="40" r="20" fill="tomato"></circle></svg>',
+  )
+})
+
+test("embeds the SVG AST as an inline figure in HTML", () => {
+  const artwork = svgNode(
+    "svg",
+    {
+      xmlns: "http://www.w3.org/2000/svg",
+      viewBox: "0 0 100 80",
+      width: 100,
+      height: 80,
+    },
+    [svgNode("circle", { cx: 50, cy: 40, r: 20, fill: "tomato" })],
+  )
+
+  assert.equal(
+    toHTML([{ tag: "figure", props: {}, children: [artwork] }]),
+    `<figure>${toSVG(artwork)}</figure>`,
   )
 })
 

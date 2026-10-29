@@ -38,6 +38,22 @@ const output = toSVG(artwork)
 `svgRenderer` implements the `MatraRenderer` contract from `@matra/core`, so
 it can also be used with `renderWith()`.
 
+The SVG AST can be embedded inline in HTML by passing it to `@matra/html`:
+
+```ts
+import { toHTML } from "@matra/html"
+import { svgNode } from "@matra/graphics"
+
+const icon = svgNode("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  viewBox: "0 0 24 24",
+  width: 24,
+  height: 24,
+}, [svgNode("circle", { cx: 12, cy: 12, r: 10, fill: "tomato" })])
+
+const page = toHTML([{ tag: "figure", props: {}, children: [icon] }])
+```
+
 The renderer supports shapes, text and `tspan`, images, reusable definitions,
 gradients, patterns, masks, markers, and the standard SVG filter primitives.
 JavaScript callers may use camel-case presentation attributes and a style
