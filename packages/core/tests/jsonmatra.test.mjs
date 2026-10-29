@@ -3,7 +3,7 @@ import { mkdtemp, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, it } from "node:test"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 
 import { loadMatra, matra, normalizeMatra } from "../dist/index.js"
 
@@ -50,20 +50,21 @@ describe("JSONMatra family", () => {
 
   it("loads default exports from trusted .matra.js modules", async () => {
     const dir = await mkdtemp(join(tmpdir(), "matra-js-"))
-    const corePath = fileURLToPath(new URL("../dist/index.js", import.meta.url))
+    const coreURL = JSON.stringify(
+      pathToFileURL(fileURLToPath(new URL("../dist/index.js", import.meta.url))).href,
+    )
 
     const astPath = join(dir, "ast.matra.js")
     await writeFile(
       astPath,
-      `import { matra } from ${JSON.stringify(corePath)};\n` +
+      `import { matra } from ${coreURL};\n` +
         `export default matra.ast({ tag: "tag", props: { a: 1 }, children: ["x"] });\n`,
     )
 
     const docPath = join(dir, "doc.matra.js")
     await writeFile(
       docPath,
-      `import { matra } from ${JSON.stringify(corePath)};\n` +
-        "export default matra.doc`tag { child }`;\n",
+      `import { matra } from ${coreURL};\n` + "export default matra.doc`tag { child }`;\n",
     )
 
     assert.deepEqual(await loadMatra(astPath), {
