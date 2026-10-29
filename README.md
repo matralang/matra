@@ -7,6 +7,8 @@ Matra is maintained as a pnpm workspace monorepo. Published packages keep the
 
 ## Specification
 
+- [Matra Language White Paper v0.3](spec/whitepaper-v0.3.md) — design, document model,
+  execution/output maturity, and changes from historical implementations.
 - [Matra Specification (source grammar v0.3)](spec/README.md)
 - [Matra Specification（日本語）](spec/README.ja.md)
 - [Proposed v0.3 scope and release criteria](spec/release-v0.3.md)

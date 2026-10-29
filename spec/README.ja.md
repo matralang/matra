@@ -25,6 +25,8 @@ Matraはルート付きツリーを記述する、ドメイン非依存の記法
 
 ## 設計方針とロードマップ
 
+- [Matra Language White Paper v0.3](./whitepaper-v0.3.ja.md) — 設計思想、文書Morphion、
+  JavaScript連携、自己ホスト、応用経路と制限をまとめた現行の非規範的な白書。旧資料との違いも説明。
 - [v0.3の完成範囲案とrelease条件](./release-v0.3.ja.md) — package優先度、
   実装段階、検証サンプルと公開前の検証条件。
 - [移植性方針と共通ランタイム](./portable-runtime.ja.md) — PC 3 OSで目指す保証範囲、

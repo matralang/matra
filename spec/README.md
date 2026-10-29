@@ -26,6 +26,9 @@ Historical proposal (not the current specification): [Matra Program for syntax](
 
 ## Design policy and roadmap
 
+- [Matra Language White Paper v0.3](./whitepaper-v0.3.md) — a current, non-normative overview
+  of design, document Morphion, JavaScript integration, self-hosting, application routes,
+  limitations, and differences from historical documents.
 - [Proposed v0.3 scope and release criteria](./release-v0.3.md) — package priorities,
   implementation stages, executable validation examples, and release criteria.
 - [Portability policy and common runtime](./portable-runtime.md) — intended guarantee across the three

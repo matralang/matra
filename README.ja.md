@@ -7,6 +7,8 @@ Matraはpnpm workspaceのmonorepoとして管理されています。公開パ�
 
 ## 仕様
 
+- [Matra Language White Paper v0.3（日本語）](spec/whitepaper-v0.3.ja.md) — 設計思想、
+  文書モデル、実行・出力の到達点と旧実装からの変更。
 - [Matra Specification（ソース文法v0.3）](spec/README.md)
 - [Matra Specification（日本語）](spec/README.ja.md)
 - [v0.3の完成範囲案とrelease条件](spec/release-v0.3.ja.md)
