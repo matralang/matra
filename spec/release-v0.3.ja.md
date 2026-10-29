@@ -134,7 +134,7 @@ P0が未達の場合は、「実験的」という名称だけで成功扱いに
 - [x] 検証サンプルのsource、実行command、出力例が固定commitに対応する
 - [x] `pnpm run build`、`pnpm test`、`pnpm run lint`、`pnpm test:web-page`が成功する
 - [x] `pnpm bootstrap:verify`でStage 2/3の生成Wasmがbyte単位で一致する
-- [ ] 検証サンプルをNode.js 22/24で確認し、Windows/macOS/Linuxで同じHTMLを得る
+- [x] 検証サンプルをNode.js 22/24で確認し、Windows/macOS/Linuxで同じHTMLを得る
 - [x] 公開対象のpackageをpackし、別の空のprojectから導入して検証サンプルが動く
 - [x] literateの公開API・型定義・error契約を実装し、内部相対importやcheckout依存なしでbuild→run→HTML生成できる
 - [x] compiler供給方式と対応ABI、ネットワーク・Rustの要否を明記し、キャッシュのない初回利用も検証する
