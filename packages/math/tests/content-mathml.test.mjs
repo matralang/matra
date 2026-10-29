@@ -93,6 +93,46 @@ describe("Content MathML bridge", () => {
     })
   })
 
+  it("round-trips supported MathJSON values through serialized Content MathML", () => {
+    const expressions = [
+      0,
+      -0,
+      1.25,
+      "x",
+      "Pi",
+      "ExponentialE",
+      "ImaginaryUnit",
+      "Infinity",
+      true,
+      false,
+      ["Rational", -3, 4],
+      ["Add", "x", 2],
+      ["Multiply", "x", 2],
+      ["Subtract", "x", 2],
+      ["Negate", "x"],
+      ["Divide", 1, 2],
+      ["Power", "x", 2],
+      ["Root", "x", 3],
+      ["Abs", -2],
+      ["Sin", "x"],
+      ["Cos", "x"],
+      ["Tan", "x"],
+      ["Exp", "x"],
+      ["Ln", "x"],
+      ["Equal", "x", 2],
+      ["NotEqual", "x", 2],
+      ["Less", "x", 2],
+      ["Greater", "x", 2],
+      ["LessEqual", "x", 2],
+      ["GreaterEqual", "x", 2],
+    ]
+
+    for (const expression of expressions) {
+      const xml = serializeContentMathML(mathJsonToContentMathML(expression))
+      assert.deepEqual(contentMathMLToMathJson(parseContentMathML(xml)), expression)
+    }
+  })
+
   it("rejects unsupported markup, malformed XML, invalid arity, and doctypes", () => {
     assert.throws(
       () => parseContentMathML(math("<apply><abs/><ci>x</ci><ci>y</ci></apply>")),
