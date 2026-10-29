@@ -107,7 +107,8 @@ READMEの静的文書・テンプレート・関数/loopの例も実行してHTM
 Core browser entrypointを含むportable runtime CIはcommit `6b78dd4`で成功し、
 Windows/macOS/Linux・Node.js 22/24の6構成すべてでCore testとpacked literate配布検証を通過しました
 （[GitHub Actions run 40969391013](https://github.com/matralang/matra/actions/runs/40969391013)）。
-このCIはGraphics/Math/editorの配布経路を検証しません。各OSでの応用経路の検証は引き続き必要です。
+応用経路のtestとpacked配布検証も、後続commit `1578bd1`の6構成で成功しました
+（[GitHub Actions run 40974296046](https://github.com/matralang/matra/actions/runs/40974296046)）。
 公式websiteの日英ページ、Playground、表示・操作確認は後述のwebsite完了記録に分けて記載します。
 
 literateの配布検証では、Rustを参照できないPATHと存在しないbootstrap cacheで初回利用を確認します。
@@ -280,9 +281,13 @@ Graphics、Math、Compute Engineを`pnpm pack`し、一時的なconsumerへ3つ�
 公開済み`@matra/core@0.3.0-alpha.1`を導入して実行した。SVGの生成、MathJSONのparse、
 Content MathMLのserialize/normalize、`evaluateMatra("Add(1, 2, 3)") === 6`を確認した。
 生成済み`basic.svg`はIntegrated Chromiumで表示を確認した。
-これはmacOS・Node.js 24でのローカル配布物検証であり、他OSでのGraphics/Math/editor検証ではない。
+さらにportable runtime CIにGraphics 16件、Math 24件、Compute Engine 15件、VS Code editor 8件のtestと、
+tarballを一時npm consumerへ導入する検証を追加し、Windows/macOS/Linux・Node.js 22/24の全6構成で成功した。
+consumerではSVG生成、MathJSON parse、Content MathMLのserialize/normalize、数式評価と、
+editor packageのmanifest・grammar配布を確認した（[run 40974296046](https://github.com/matralang/matra/actions/runs/40974296046)）。
+SVGの実際のbrowser表示確認はmacOS・Node.js 24のIntegrated Chromiumで行った。
 Content MathMLは意味表現の検証であり、browserによる数式の視覚表示を確認したとは扱わない。
-VS Code editorは既存testのみで、このconsumer導入検証には含めていない。
+editorはpackage内の資産と既存testを検証しており、VS Code hostを起動した統合操作検証ではない。
 
 ## 実装段階と完了条件
 
@@ -314,7 +319,7 @@ P0が未達の場合は、「実験的」という名称だけで成功扱いに
 - [x] 公式websiteに一般向けの日英の入口・作例・導入導線を用意し、README・仕様書と対応環境・依存関係・制限を再照合する。`matralang/website` commit `66970b3`・`aaab33a`、`npm ci`・`npm test`・`npm run build`、browser計測を記録
 - [x] Playgroundの現行v0.3対応範囲をbrowserで確認し、非対応機能と代替導線を明示する。HTML modeを採用し、SVG・Math・JavaScript module等の全面移行は延期。測定値と延期範囲を本節へ記録
 - [x] Graphics・Math・Compute Engineをpackし、一時consumerでSVG・MathJSON・Content MathML・評価の代表例を実行する。macOS・Node.js 24のローカル結果として記録
-- [ ] Graphics・Math・editorの配布物と代表例を対応OSで検証する（現在のportable runtime matrixはCore browser entrypointを検証し、これらの経路は含まない）
+- [x] Graphics・Math・Compute Engine・editorの既存testとpacked配布物の代表例をWindows/macOS/Linux・Node.js 22/24で検証する。commit `1578bd1`、[run 40974296046](https://github.com/matralang/matra/actions/runs/40974296046)の6構成が成功。SVGのbrowser表示はmacOSで確認し、Content MathMLの視覚表示とVS Code host操作は未検証として区別
 - [x] Core browser entrypointとpacked literate配布物をWindows/macOS/Linux・Node.js 22/24でremote CI検証する。commit `6b78dd4`、[run 40969391013](https://github.com/matralang/matra/actions/runs/40969391013)の6構成が成功
 - [x] 未実装の`.js` module・npm/Python連携と汎用`.jsonm`を実装済みとして説明していない
 

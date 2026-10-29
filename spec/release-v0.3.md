@@ -124,9 +124,11 @@ The portable-runtime CI, including the Core browser entrypoint, passed on commit
 `6b78dd4` across all six Windows/macOS/Linux and Node.js 22/24 combinations. Core tests
 and packed literate distribution tests passed in each job
 ([GitHub Actions run 40969391013](https://github.com/matralang/matra/actions/runs/40969391013)).
-This CI does not validate the Graphics/Math/editor distribution routes; their
-cross-OS validation remains outstanding. The official website's bilingual pages,
-Playground, and visual/interaction review are recorded separately below.
+The applied-route tests and packed distributions also passed in all six
+combinations on follow-up commit `1578bd1`
+([GitHub Actions run 40974296046](https://github.com/matralang/matra/actions/runs/40974296046)).
+The official website's bilingual pages, Playground, and visual/interaction review
+are recorded separately below.
 
 Literate distribution tests verify first use with a PATH that cannot locate Rust
 and a nonexistent bootstrap cache, and reject missing/corrupt compiler Wasm and
@@ -324,11 +326,16 @@ MathJSON, serialized/normalized Content MathML, and evaluated
 `evaluateMatra("Add(1, 2, 3)") === 6`. Integrated Chromium displayed the generated
 `basic.svg`.
 
-This validates packed distributions locally on macOS with Node.js 24; it does not
-validate Graphics/Math/editor distributions on other operating systems. Content
-MathML was validated as a semantic representation, not as browser-rendered visual
-math. The VS Code editor was covered by its existing tests, not by the temporary
-consumer installation.
+The portable-runtime matrix also ran the existing tests for Graphics (16), Math
+(24), Compute Engine (15), and the VS Code editor (8), and installed all four
+tarballs into an isolated npm consumer. Representative SVG generation, MathJSON
+parsing, Content MathML serialization/normalization, evaluation, and editor
+manifest/grammar distribution checks passed on Windows/macOS/Linux with Node.js
+22/24 in all six jobs ([run 40974296046](https://github.com/matralang/matra/actions/runs/40974296046)).
+The generated SVG was visually checked in Integrated Chromium on macOS with
+Node.js 24. Content MathML was validated semantically, not as browser-rendered
+visual math. The editor package assets and tests were checked; the VS Code host
+was not launched for interactive integration testing.
 
 ## Implementation stages and completion criteria
 
@@ -361,7 +368,7 @@ label alone does not satisfy the criteria.
 - [x] Provide general-audience Japanese/English website entry pages, examples, and setup links; recheck environments, dependencies, and limitations against README/specifications. Recorded in `matralang/website` commits `66970b3` and `aaab33a`, with `npm ci`, `npm test`, `npm run build`, and browser checks
 - [x] Validate the Playground's current v0.3 scope in browsers and identify unavailable features and alternatives. Adopt HTML mode; defer full migration of SVG, Math, and JavaScript modules; record measurements and scope above
 - [x] Pack Graphics, Math, and Compute Engine and run representative SVG, MathJSON, Content MathML, and evaluation examples from a temporary consumer; record the local macOS/Node.js 24 result
-- [ ] Verify Graphics, Math, and editor distributions and representative examples on supported operating systems (the current portable-runtime matrix covers the Core browser entrypoint, not these routes)
+- [x] Verify Graphics, Math, Compute Engine, and editor tests and packed representative examples on Windows/macOS/Linux with Node.js 22/24. All six jobs passed on commit `1578bd1` in [run 40974296046](https://github.com/matralang/matra/actions/runs/40974296046). SVG browser display was checked on macOS; Content MathML visual rendering and interactive VS Code host testing remain explicitly unverified
 - [x] Verify the Core browser entrypoint and packed literate distribution in remote CI across Windows/macOS/Linux and Node.js 22/24. All six jobs passed on commit `6b78dd4` in [run 40969391013](https://github.com/matralang/matra/actions/runs/40969391013)
 - [x] Do not describe standard JS modules, npm/Python integration or general `.jsonm` as implemented
 
