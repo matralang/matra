@@ -65,6 +65,17 @@ test("builds every existing artwork example as a complete SVG document", async (
     const svg = await readFile(new URL(file, outputDirectory), "utf8")
     assert.match(svg, /^<svg\b/)
     assert.match(svg, /<\/svg>\n$/)
+
+    if (file === "raiun-torus.svg") {
+      assert.match(svg, /viewBox="0 0 256 256"/)
+      assert.equal((svg.match(/<circle\b/g) ?? []).length, 88)
+      assert.equal((svg.match(/<g\b/g) ?? []).length, 84)
+      assert.equal((svg.match(/<text\b/g) ?? []).length, 84)
+      assert.match(svg, /stroke="green"/)
+      assert.match(svg, /stroke="red"/)
+      assert.match(svg, /stroke="yellow"/)
+      assert.match(svg, /stroke="blue"/)
+    }
   }
 })
 
