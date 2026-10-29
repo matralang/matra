@@ -104,14 +104,16 @@ Coreは追加6件を含む241件、HTMLは9件、Rust seedは28件、compiler/ho
 READMEの静的文書・テンプレート・関数/loopの例も実行してHTML出力を確認しました。
 
 追加したCoreと検証サンプルはNode.js 24.17.0で直接検証しています。
-新しいCIのremote実行と他OSでの検証サンプルは未完了です。公式websiteの日英ページ、
-Playground、表示・操作確認は後述のwebsite完了記録に分けて記載します。
-残る他OS検証を公開前の作業として扱い、ローカルtestだけでrelease完了とはしません。
+Core browser entrypointを含むportable runtime CIはcommit `6b78dd4`で成功し、
+Windows/macOS/Linux・Node.js 22/24の6構成すべてでCore testとpacked literate配布検証を通過しました
+（[GitHub Actions run 40969391013](https://github.com/matralang/matra/actions/runs/40969391013)）。
+このCIはGraphics/Math/editorの配布経路を検証しません。各OSでの応用経路の検証は引き続き必要です。
+公式websiteの日英ページ、Playground、表示・操作確認は後述のwebsite完了記録に分けて記載します。
 
 literateの配布検証では、Rustを参照できないPATHと存在しないbootstrap cacheで初回利用を確認します。
 同梱Wasmの欠落・破損、非対応bundleの拒否も検証します。compilerは111,064 bytesで、
 manifestにversion・SHA-256・ABIを記録し、build時にStage 2/3のbyte一致を確認します。
-この結果はローカルのものであり、対応する全OS/Nodeでの配布検証はCIの成功を待ちます。
+同じCI runでは対応する全OS/Nodeのpacked literate配布検証も成功しました。
 
 ## 公式website：日英の入口と新システムへの移行
 
@@ -270,6 +272,18 @@ network、device、全対応browserに対するperformance保証ではない。
 機能、診断、停止、timeout、iframe制約、日英導線、bundle量、応答時間を検証し、
 非対応範囲とNode.js代替導線を記録したため、下記release checklistのwebsiteとPlayground項目を完了とする。
 
+#### SVG・数式・編集の応用経路検証記録
+
+Node.js 24で`@matra/graphics`（16件）、`@matra/math`（24件）、
+`@matra/math-compute-engine`（15件）、VS Code editor（8件）の既存testが成功した。
+Graphics、Math、Compute Engineを`pnpm pack`し、一時的なconsumerへ3つのtarballと
+公開済み`@matra/core@0.3.0-alpha.1`を導入して実行した。SVGの生成、MathJSONのparse、
+Content MathMLのserialize/normalize、`evaluateMatra("Add(1, 2, 3)") === 6`を確認した。
+生成済み`basic.svg`はIntegrated Chromiumで表示を確認した。
+これはmacOS・Node.js 24でのローカル配布物検証であり、他OSでのGraphics/Math/editor検証ではない。
+Content MathMLは意味表現の検証であり、browserによる数式の視覚表示を確認したとは扱わない。
+VS Code editorは既存testのみで、このconsumer導入検証には含めていない。
+
 ## 実装段階と完了条件
 
 | 段階 | 作業 | 完了の証拠 |
@@ -299,6 +313,9 @@ P0が未達の場合は、「実験的」という名称だけで成功扱いに
 - [x] compiler Wasm・checksum・ソース・実行hostの取得手順を固定する
 - [x] 公式websiteに一般向けの日英の入口・作例・導入導線を用意し、README・仕様書と対応環境・依存関係・制限を再照合する。`matralang/website` commit `66970b3`・`aaab33a`、`npm ci`・`npm test`・`npm run build`、browser計測を記録
 - [x] Playgroundの現行v0.3対応範囲をbrowserで確認し、非対応機能と代替導線を明示する。HTML modeを採用し、SVG・Math・JavaScript module等の全面移行は延期。測定値と延期範囲を本節へ記録
+- [x] Graphics・Math・Compute Engineをpackし、一時consumerでSVG・MathJSON・Content MathML・評価の代表例を実行する。macOS・Node.js 24のローカル結果として記録
+- [ ] Graphics・Math・editorの配布物と代表例を対応OSで検証する（現在のportable runtime matrixはCore browser entrypointを検証し、これらの経路は含まない）
+- [x] Core browser entrypointとpacked literate配布物をWindows/macOS/Linux・Node.js 22/24でremote CI検証する。commit `6b78dd4`、[run 40969391013](https://github.com/matralang/matra/actions/runs/40969391013)の6構成が成功
 - [x] 未実装の`.js` module・npm/Python連携と汎用`.jsonm`を実装済みとして説明していない
 
 既存の[portable CI](https://github.com/matralang/matra/actions/runs/40418928782)は調査基準commitで成功しています。

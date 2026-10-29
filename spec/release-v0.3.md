@@ -120,17 +120,20 @@ package tests. Static document, template, and function/loop README examples were
 also executed and their HTML verified.
 
 The new Core API and validation example were directly tested with Node.js 24.17.0.
-The new remote CI and validation examples on other operating systems remain pending.
-The official website's bilingual pages, Playground, and visual/interaction review
-are recorded separately in the website completion record below. The remaining
-cross-OS validation is still required; local success alone does not complete release criteria.
+The portable-runtime CI, including the Core browser entrypoint, passed on commit
+`6b78dd4` across all six Windows/macOS/Linux and Node.js 22/24 combinations. Core tests
+and packed literate distribution tests passed in each job
+([GitHub Actions run 40969391013](https://github.com/matralang/matra/actions/runs/40969391013)).
+This CI does not validate the Graphics/Math/editor distribution routes; their
+cross-OS validation remains outstanding. The official website's bilingual pages,
+Playground, and visual/interaction review are recorded separately below.
 
 Literate distribution tests verify first use with a PATH that cannot locate Rust
 and a nonexistent bootstrap cache, and reject missing/corrupt compiler Wasm and
 unsupported bundles. The compiler is 111,064 bytes; a manifest records version,
-SHA-256, and ABI, and builds verify Stage 2/3 byte equality. These are local
-results; packed distribution validation across all supported OS/Node versions
-still awaits successful CI.
+SHA-256, and ABI, and builds verify Stage 2/3 byte equality. The same CI run
+also passed packed literate distribution validation across all supported OS/Node
+versions.
 
 ## Official website: bilingual entry and migration to the new system
 
@@ -310,6 +313,23 @@ behavior, iframe restrictions, bilingual instructions, bundle size, response tim
 unsupported scope, and local alternative have been documented. The website and
 Playground items in the release checklist are therefore complete.
 
+#### SVG, math, and editor applied-route validation
+
+On Node.js 24, the existing tests passed for `@matra/graphics` (16), `@matra/math`
+(24), `@matra/math-compute-engine` (15), and the VS Code editor (8). The Graphics,
+Math, and Compute Engine packages were packed with `pnpm pack`, then all three
+tarballs were installed into a temporary consumer alongside the published
+`@matra/core@0.3.0-alpha.1`. The consumer successfully generated SVG, parsed
+MathJSON, serialized/normalized Content MathML, and evaluated
+`evaluateMatra("Add(1, 2, 3)") === 6`. Integrated Chromium displayed the generated
+`basic.svg`.
+
+This validates packed distributions locally on macOS with Node.js 24; it does not
+validate Graphics/Math/editor distributions on other operating systems. Content
+MathML was validated as a semantic representation, not as browser-rendered visual
+math. The VS Code editor was covered by its existing tests, not by the temporary
+consumer installation.
+
 ## Implementation stages and completion criteria
 
 | Stage | Work | Completion evidence |
@@ -340,6 +360,9 @@ label alone does not satisfy the criteria.
 - [x] Pin instructions for compiler Wasm, checksums, source, and execution host
 - [x] Provide general-audience Japanese/English website entry pages, examples, and setup links; recheck environments, dependencies, and limitations against README/specifications. Recorded in `matralang/website` commits `66970b3` and `aaab33a`, with `npm ci`, `npm test`, `npm run build`, and browser checks
 - [x] Validate the Playground's current v0.3 scope in browsers and identify unavailable features and alternatives. Adopt HTML mode; defer full migration of SVG, Math, and JavaScript modules; record measurements and scope above
+- [x] Pack Graphics, Math, and Compute Engine and run representative SVG, MathJSON, Content MathML, and evaluation examples from a temporary consumer; record the local macOS/Node.js 24 result
+- [ ] Verify Graphics, Math, and editor distributions and representative examples on supported operating systems (the current portable-runtime matrix covers the Core browser entrypoint, not these routes)
+- [x] Verify the Core browser entrypoint and packed literate distribution in remote CI across Windows/macOS/Linux and Node.js 22/24. All six jobs passed on commit `6b78dd4` in [run 40969391013](https://github.com/matralang/matra/actions/runs/40969391013)
 - [x] Do not describe standard JS modules, npm/Python integration or general `.jsonm` as implemented
 
 The existing [portable CI](https://github.com/matralang/matra/actions/runs/40418928782)
