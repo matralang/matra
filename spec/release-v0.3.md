@@ -154,9 +154,9 @@ label alone does not satisfy the criteria.
 - [x] Pass `pnpm run build`, `pnpm test`, `pnpm run lint`, and `pnpm test:web-page`
 - [x] Verify Stage 2/3 byte equality with `pnpm bootstrap:verify`
 - [ ] Obtain the same validation HTML on Windows/macOS/Linux with Node.js 22/24
-- [ ] Pack release packages and run validation examples from a separate empty project
-- [ ] Implement literate public APIs, types, and error contracts; run build→run→HTML without internal relative imports or checkout dependencies
-- [ ] Document compiler provisioning, supported ABIs, and network/Rust requirements; verify uncached first use
+- [x] Pack release packages and run validation examples from a separate empty project
+- [x] Implement literate public APIs, types, and error contracts; run build→run→HTML without internal relative imports or checkout dependencies
+- [x] Document compiler provisioning, supported ABIs, and network/Rust requirements; verify uncached first use
 - [ ] Pin instructions for compiler Wasm, checksums, source, and execution host
 - [ ] Align official site, README and specifications on environments, dependencies and limitations
 - [ ] Do not describe standard JS modules, npm/Python integration or general `.jsonm` as implemented
