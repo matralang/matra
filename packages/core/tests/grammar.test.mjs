@@ -70,9 +70,10 @@ describe("Matra parser", () => {
       props: { title: "ok" },
       children: [],
     })
+  })
 
-    it("keeps node-header lookahead out of markup content", () => {
-      const module = parse(`fn identity(x) { x }
+  it("keeps node-header lookahead out of markup content", () => {
+    const module = parse(`fn identity(x) { x }
 [
     identity(<p>unbalanced ( and // text</p>),
     wrapper(
@@ -82,39 +83,38 @@ describe("Matra parser", () => {
     empty() {},
     if true { <hr /> }
 ]`)
-      assert.deepEqual(evaluate(module), [
-        { tag: "p", props: {}, children: ["unbalanced ( and // text"] },
-        {
-          tag: "wrapper",
-          props: { content: { tag: "p", props: {}, children: ['unbalanced ) and "text"'] } },
-          children: [],
-        },
-        { tag: "empty", props: {}, children: [] },
-        { tag: "hr", props: {}, children: [] },
-      ])
-    })
+    assert.deepEqual(evaluate(module), [
+      { tag: "p", props: {}, children: ["unbalanced ( and // text"] },
+      {
+        tag: "wrapper",
+        props: { content: { tag: "p", props: {}, children: ['unbalanced ) and "text"'] } },
+        children: [],
+      },
+      { tag: "empty", props: {}, children: [] },
+      { tag: "hr", props: {}, children: [] },
+    ])
+  })
 
-    it("preserves the executable document example after markup refinement", async () => {
-      const source = await readFile(
-        new URL("../../../crates/matra-seed/examples/document.matra", import.meta.url),
-        "utf8",
-      )
-      assert.deepEqual(evaluate(parse(source)), {
-        tag: "article",
-        props: { lang: "ja", class: "card" },
-        children: [
-          { tag: "h1", props: {}, children: ["Matra"] },
-          {
-            tag: "ul",
+  it("preserves the executable document example after markup refinement", async () => {
+    const source = await readFile(
+      new URL("../../../crates/matra-seed/examples/document.matra", import.meta.url),
+      "utf8",
+    )
+    assert.deepEqual(evaluate(parse(source)), {
+      tag: "article",
+      props: { lang: "ja", class: "card" },
+      children: [
+        { tag: "h1", props: {}, children: ["Matra"] },
+        {
+          tag: "ul",
+          props: {},
+          children: ["文書", "関数", "Wasm"].map(value => ({
+            tag: "li",
             props: {},
-            children: ["文書", "関数", "Wasm"].map(value => ({
-              tag: "li",
-              props: {},
-              children: [`${value}!`],
-            })),
-          },
-        ],
-      })
+            children: [`${value}!`],
+          })),
+        },
+      ],
     })
   })
   it("uses the standard grammar through the default parser", () => {

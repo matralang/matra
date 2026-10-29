@@ -24,7 +24,7 @@ try {
   invoke(core, "pack", "--out", join(root, "core.tgz"))
   invoke(html, "pack", "--out", join(root, "html.tgz"))
   await writeFile(join(root, "package.json"), '{"private":true,"type":"module"}\n')
-  invoke(root, "add", "--offline", "--ignore-scripts", "./core.tgz", "./html.tgz")
+  invoke(root, "add", "--ignore-scripts", "./core.tgz", "./html.tgz")
   const markdown = await readFile(
     new URL("../../html/examples/web-page.md", import.meta.url),
     "utf8",
