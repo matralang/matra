@@ -100,14 +100,17 @@ network、時刻、環境変数、外部CLIを提供するAPIは、このsubset�
 
 ```text
 pnpm test:portable
+pnpm example:web-page
+pnpm test:web-page
 pnpm bootstrap:verify
 ```
 
 `test:portable`はhost APIとerrorの回帰test、および同じサンプルのCLI build/runを実行する。
+`example:web-page`と`test:web-page`は検証文書からHTMLを生成し、出力とJavaScript連携を確認する。
 `bootstrap:verify`はStage 2/3のbyte equalityに加え、各Stageのcompilerが生成した
 サンプルWasmの読み込み・Matra処理・file書き込み・引数・標準出力を検証する。
 [CI](../.github/workflows/portable-runtime.yml)はWindows・macOS・LinuxとNode.js 22/24のmatrixで
-この2 commandを実行する。hostのセットアップ以外は共通である。
+これらのcommandを実行する。hostのセットアップ以外は共通である。
 CI定義の追加だけでは3 OSで検証済みとは扱わず、対象commitの全job成功をv0.3の完了条件とする。
 このCI対象は検証環境であり、OSの最低versionを含む正式サポート表ではない。
 

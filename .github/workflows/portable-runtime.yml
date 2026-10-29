@@ -34,3 +34,5 @@ jobs:
         run: pnpm test:portable
       - name: Verify compiler bootstrap
         run: pnpm bootstrap:verify
+      - name: Verify generated web page
+        run: pnpm example:web-page && pnpm test:web-page
