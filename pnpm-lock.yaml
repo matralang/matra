@@ -343,7 +343,11 @@ importers:
 
   packages/styles: {}
 
-  packages/vscode: {}
+  packages/vscode:
+    devDependencies:
+      '@matra/core':
+        specifier: workspace:^
+        version: link:../core
 
 packages:
 

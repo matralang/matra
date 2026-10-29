@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import { createRequire } from "node:module"
 import test from "node:test"
+import { parse } from "@matra/core"
 
 const require = createRequire(import.meta.url)
 const { analyze, format } = require("../src/analyzer.js")
@@ -79,4 +80,25 @@ test("formatter indents nested Matra structures", () => {
     format(source, { insertSpaces: true, tabSize: 2 }),
     'div {\n  p("Hello")\n  section {\n    span("Text")\n  }\n}',
   )
+})
+
+test("formatter preserves standard v0.3 program syntax", () => {
+  const source = `let (rows = for item in [1, 2] {
+if item > 1 {
+li(class="item") { item }
+}
+else_if (item == 1) {
+li { "one } brace" }
+}
+else {
+li { null }
+}
+})
+ul {
+...rows
+}`
+  const formatted = format(source, { insertSpaces: true, tabSize: 2 })
+
+  assert.notEqual(formatted, source)
+  assert.deepEqual(parse(formatted), parse(source))
 })
