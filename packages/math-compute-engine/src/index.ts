@@ -21,6 +21,8 @@ export type { MathCommandInfo } from "./standard-library.js"
 export type { MorphionForm }
 export { listStandardMathCommands, morphionize }
 
+const NON_FINITE_MATH_VALUES = new Set(["ComplexInfinity", "NaN", "NegativeInfinity"])
+
 /** Evaluate an already parsed MathJSON expression. */
 export function evaluate(expression: MathJson): unknown {
   return computeEvaluate(expression as never).toMathJson()
@@ -54,7 +56,11 @@ export function numericEvaluateMatra(source: string, scope: MathScope = {}): unk
 /** Evaluate supported Content MathML and return a CD-aware semantic expression. */
 export function evaluateContentMathML(source: string) {
   const expression = contentMathMLToMathJson(parseContentMathML(source))
-  return mathJsonToContentMathML(evaluate(expression) as MathJson)
+  const result = evaluate(expression) as MathJson
+  if (isNonFiniteMathValue(result)) {
+    throw new RangeError(`Content MathML evaluation produced a non-finite value: ${result}`)
+  }
+  return mathJsonToContentMathML(result)
 }
 
 /**
@@ -81,7 +87,9 @@ function bind(expression: MathJson, scope: MathScope): MathJson {
 }
 
 function requireMatraValue(value: unknown): MatraValue {
-  if (value === null || typeof value === "string" || typeof value === "boolean") return value
+  if (value === null || typeof value === "boolean") return value
+  if (isNonFiniteMathValue(value)) throw new TypeError("Computed prop value must be finite")
+  if (typeof value === "string") return value
   if (typeof value === "number") {
     if (!Number.isFinite(value)) throw new TypeError("Computed prop value must be finite")
     return value
@@ -93,6 +101,10 @@ function requireMatraValue(value: unknown): MatraValue {
     )
   }
   throw new TypeError("Computed prop value must be JSON-compatible")
+}
+
+function isNonFiniteMathValue(value: unknown): value is string {
+  return typeof value === "string" && NON_FINITE_MATH_VALUES.has(value)
 }
 
 function exactScalarNumber(value: unknown): number | undefined {

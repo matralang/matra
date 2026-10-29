@@ -116,6 +116,30 @@ describe("Cortex Compute Engine adapter", () => {
     )
   })
 
+  it("rejects non-finite results at numeric property and Content MathML boundaries", () => {
+    const division = (numerator, denominator) => call("Divide", numerator, denominator)
+    const mathMLDivision = (numerator, denominator) =>
+      `<math xmlns="http://www.w3.org/1998/Math/MathML"><apply><divide/><cn>${numerator}</cn><cn>${denominator}</cn></apply></math>`
+
+    for (const [numerator, denominator] of [
+      [1, 0],
+      [0, 0],
+    ]) {
+      assert.throws(
+        () =>
+          numericEvaluateProps({
+            tag: "circle",
+            props: { r: division(numerator, denominator) },
+            children: [],
+          }),
+        { name: "TypeError", message: "Computed prop value must be finite" },
+      )
+      assert.throws(() => evaluateContentMathML(mathMLDivision(numerator, denominator)), {
+        name: "RangeError",
+      })
+    }
+  })
+
   it("evaluates Matra syntax through @matra/math", () => {
     assert.equal(evaluateMatra("Multiply(4, Add(1, 2))"), 12)
     assert.equal(evaluateMatra("Abs(-7)"), 7)
