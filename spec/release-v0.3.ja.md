@@ -104,9 +104,9 @@ Coreは追加6件を含む241件、HTMLは9件、Rust seedは28件、compiler/ho
 READMEの静的文書・テンプレート・関数/loopの例も実行してHTML出力を確認しました。
 
 追加したCoreと検証サンプルはNode.js 24.17.0で直接検証しています。
-新しいCIのremote実行、他OSでの検証サンプル、公式siteの照合、
-生成ページの見た目の確認は未完了です。これらを公開前の残作業として扱い、
-ローカルtestの成功だけでrelease完了とはしません。
+新しいCIのremote実行と他OSでの検証サンプルは未完了です。公式websiteの日英ページ、
+Playground、表示・操作確認は後述のwebsite完了記録に分けて記載します。
+残る他OS検証を公開前の作業として扱い、ローカルtestだけでrelease完了とはしません。
 
 literateの配布検証では、Rustを参照できないPATHと存在しないbootstrap cacheで初回利用を確認します。
 同梱Wasmの欠落・破損、非対応bundleの拒否も検証します。compilerは111,064 bytesで、
@@ -170,18 +170,18 @@ compiler source SHA-256: 14bf69578be0b705a83942ddfdcf6ada34eb0dfd519702daad6051a
 Stage 2/3: byte-identical
 ```
 
-website側では次のように固定versionを導入する。Graphics・Math系の依存移行と、
-公式website・Playgroundの改修は別途必要である。
+website側ではCore `0.3.0-alpha.1`とHTML `0.3.0-alpha.0`を固定して導入する。
+Graphics・Math系の依存移行は別途必要である。
 
 ```sh
-npm install --save-exact @matra/core@0.3.0-alpha.0 @matra/html@0.3.0-alpha.0
+npm install --save-exact @matra/core@0.3.0-alpha.1 @matra/html@0.3.0-alpha.0
 ```
 
 2026年10月29日に追加したv0.3タスクです。実装先は
 [`matralang/website`](https://github.com/matralang/website)とし、monorepoの`apps/website`を
 公式siteとして作り直しません。[白書](./whitepaper-v0.3.ja.md)は技術的な根拠を担い、
 websiteは一般の読者が「何に使えるか」「何ができあがるか」から理解できる入口にします。
-この節は作業計画であり、siteの改修完了を示すものではありません。
+以下に作業計画を示し、完了実績は後段の記録へ分けて記載します。
 
 ### P0：一般向けの日英コンテンツ
 
@@ -232,6 +232,44 @@ Playgroundは現行v0.3で検証できた限定モードだけを提供するか
 旧文法を現行v0.3として見せる状態は残しません。機能を減らす場合は対象と代替導線を記録します。
 全面移行の延期理由・残作業はrelease noteへ記載し、未達を成功扱いにしません。
 
+#### alpha.1 browser entrypointの公開記録
+
+`@matra/core@0.3.0-alpha.1`を2026年10月30日（日本時間）にnpmの`next` tagへ公開した。
+公開versionは`npm view`で確認し、`latest`は`0.2.1`のまま、`next`は`0.3.0-alpha.1`である。
+公開時のregistry integrityは次のとおり。
+
+```text
+@matra/core@0.3.0-alpha.1
+integrity: sha512-KmSsuLfkwOeHaK9bLjrSN7r/MesBlhzrkiS8JPIzAnmAKQSDC4+t0Ifldh1oYZ7yNHWC8f8bSo4f01bAMr6iIA==
+exports: ., ./browser, ./experimental/literate
+```
+
+`./browser`はNode.js file loaderを含めず、parse・明示評価・文書AST変換を提供する。
+Coreの公開entrypoint追加（`83e2891`）、alpha.1 version準備（`1aa7540`）後に公開した。
+Core testとpacked-package検証は成功した。公開versionのpack済み実行をmacOS・Node.js 24で確認した。
+他OSのregistry導入検証やremote CI成功とは区別する。
+
+#### website / Playground試作の完了記録
+
+2026年10月30日に公式websiteを`matralang/website` commit `aaab33a`で更新した。
+日英のPlaygroundは現行Core browser APIとHTML rendererを使い、明示実行、Worker停止、
+10秒timeout、syntax/runtime error表示、空のsandbox属性を持つiframe previewを提供する。
+同期loopの手動停止とtimeout、再実行、構文・実行error、preview内scriptの不実行と
+CSPによる外部image requestの拒否をIntegrated Chromiumで確認した。
+SVG・Math・JavaScript module import・copy/downloadは延期し、Node.js作例を代替導線とする。
+Worker/iframeは一般的なsecurity sandboxではないことを日英で明示する。
+
+ローカル検証では`npm ci`、`npm test`、`npm run build`とbase path・内部link・
+再現性のtestが成功した。client bundleは3,374 bytes（gzip 1,464 bytes）、
+Worker bundleは17,588 bytes（gzip 5,722 bytes）。Playground合計の目標をgzip 32 KiB以下、
+代表的な短い文書のWorker開始から結果受信を100 ms未満とし、この環境では初回25 ms、
+続く4回16–18 msを観測した。これはlocalhostの単一browser環境における試作基準であり、
+network、device、全対応browserに対するperformance保証ではない。
+
+**Playground完了判定**：限定したHTML modeを採用し、SVG・Math等の全面移行は延期する。
+機能、診断、停止、timeout、iframe制約、日英導線、bundle量、応答時間を検証し、
+非対応範囲とNode.js代替導線を記録したため、下記release checklistのwebsiteとPlayground項目を完了とする。
+
 ## 実装段階と完了条件
 
 | 段階 | 作業 | 完了の証拠 |
@@ -259,8 +297,8 @@ P0が未達の場合は、「実験的」という名称だけで成功扱いに
 - [x] literateの公開API・型定義・error契約を実装し、内部相対importやcheckout依存なしでbuild→run→HTML生成できる
 - [x] compiler供給方式と対応ABI、ネットワーク・Rustの要否を明記し、キャッシュのない初回利用も検証する
 - [x] compiler Wasm・checksum・ソース・実行hostの取得手順を固定する
-- [ ] 公式websiteに一般向けの日英の入口・作例・導入導線を用意し、README・仕様書と対応環境・依存関係・制限を再照合する（今回のscope追加で再確認）
-- [ ] Playgroundの現行v0.3対応範囲をbrowserで確認し、非対応機能と代替導線を明示する。新システムへの全面移行は試作結果から判断し、採用範囲または延期理由を記録する
+- [x] 公式websiteに一般向けの日英の入口・作例・導入導線を用意し、README・仕様書と対応環境・依存関係・制限を再照合する。`matralang/website` commit `66970b3`・`aaab33a`、`npm ci`・`npm test`・`npm run build`、browser計測を記録
+- [x] Playgroundの現行v0.3対応範囲をbrowserで確認し、非対応機能と代替導線を明示する。HTML modeを採用し、SVG・Math・JavaScript module等の全面移行は延期。測定値と延期範囲を本節へ記録
 - [x] 未実装の`.js` module・npm/Python連携と汎用`.jsonm`を実装済みとして説明していない
 
 既存の[portable CI](https://github.com/matralang/matra/actions/runs/40418928782)は調査基準commitで成功しています。

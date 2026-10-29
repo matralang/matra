@@ -120,9 +120,10 @@ package tests. Static document, template, and function/loop README examples were
 also executed and their HTML verified.
 
 The new Core API and validation example were directly tested with Node.js 24.17.0.
-The new remote CI, validation examples on other OSes,
-official site alignment, and visual review of the generated page remain pending.
-Local success alone does not complete the release criteria.
+The new remote CI and validation examples on other operating systems remain pending.
+The official website's bilingual pages, Playground, and visual/interaction review
+are recorded separately in the website completion record below. The remaining
+cross-OS validation is still required; local success alone does not complete release criteria.
 
 Literate distribution tests verify first use with a PATH that cannot locate Rust
 and a nonexistent bootstrap cache, and reject missing/corrupt compiler Wasm and
@@ -192,11 +193,11 @@ compiler source SHA-256: 14bf69578be0b705a83942ddfdcf6ada34eb0dfd519702daad6051a
 Stage 2/3: byte-identical
 ```
 
-Install exact versions in the website as follows. Migrating Graphics/Math dependencies
-and updating the official website and Playground remain separate tasks.
+The website pins Core `0.3.0-alpha.1` and HTML `0.3.0-alpha.0`.
+Migrating Graphics/Math dependencies remains a separate task.
 
 ```sh
-npm install --save-exact @matra/core@0.3.0-alpha.0 @matra/html@0.3.0-alpha.0
+npm install --save-exact @matra/core@0.3.0-alpha.1 @matra/html@0.3.0-alpha.0
 ```
 
 These v0.3 tasks were added on October 29, 2026. Implement them in
@@ -204,7 +205,7 @@ These v0.3 tasks were added on October 29, 2026. Implement them in
 the monorepo's legacy `apps/website` as the official site.
 The [white paper](./whitepaper-v0.3.md) supplies technical grounding; the website
 should start with what readers can use Matra for and what they can create.
-This section is a work plan, not a record of completed website changes.
+The work plan below is followed by a separate record of completed changes.
 
 ### P0: general-audience Japanese and English content
 
@@ -263,6 +264,52 @@ state their unavailability and link to local examples. Do not present old syntax
 Record removed functionality and alternatives. Release notes must state deferred
 migration work and reasons rather than treating incomplete work as successful.
 
+#### alpha.1 browser entry point publication record
+
+`@matra/core@0.3.0-alpha.1` was published under npm's `next` tag on
+October 30, 2026 (Japan time). `npm view` confirmed the published version;
+`latest` remains `0.2.1`, while `next` is `0.3.0-alpha.1`. The registry integrity is:
+
+```text
+@matra/core@0.3.0-alpha.1
+integrity: sha512-KmSsuLfkwOeHaK9bLjrSN7r/MesBlhzrkiS8JPIzAnmAKQSDC4+t0Ifldh1oYZ7yNHWC8f8bSo4f01bAMr6iIA==
+exports: ., ./browser, ./experimental/literate
+```
+
+The `./browser` subpath provides parsing, explicit evaluation, and document AST
+conversion without the Node.js file loader. It was added in the Core public API
+commit `83e2891` and published after the alpha.1 version-preparation commit
+`1aa7540`. Core tests and packed-package verification passed. Registry-installed
+execution was checked on macOS with Node.js 24; this is not cross-OS registry
+installation verification or a claim that remote CI passed.
+
+#### Website / Playground prototype completion record
+
+The official site was updated on October 30, 2026 in
+`matralang/website` commit `aaab33a`.
+The Japanese and English Playground uses the current Core browser API and HTML renderer.
+It provides explicit execution, Worker termination, a 10-second timeout, syntax/runtime
+error display, and an iframe preview with an empty sandbox attribute. Integrated
+Chromium verified manual cancellation of a synchronous loop, timeout, reruns, syntax
+and runtime errors, blocked script execution in the preview, and CSP blocking an
+external image request. SVG, Math, JavaScript module imports, and copy/download remain
+deferred, with the Node.js examples linked as the alternative. Both languages state
+that the Worker/iframe combination is not a general-purpose security sandbox.
+
+Local `npm ci`, `npm test`, `npm run build`, base-path and internal-link checks, and
+reproducibility checks passed. The client bundle is 3,374 bytes (1,464 bytes gzip);
+the Worker bundle is 17,588 bytes (5,722 bytes gzip). The prototype target is at most
+32 KiB gzip for both assets and under 100 ms from Worker startup to response for a
+representative short document. In this environment the first run took 25 ms and the
+next four took 16–18 ms. These are localhost observations from one browser environment,
+not performance guarantees across networks, devices, or supported browsers.
+
+**Playground decision:** adopt the limited HTML mode and defer full migration of SVG,
+Math, and other features. The supported functionality, diagnostics, stop/timeout
+behavior, iframe restrictions, bilingual instructions, bundle size, response timing,
+unsupported scope, and local alternative have been documented. The website and
+Playground items in the release checklist are therefore complete.
+
 ## Implementation stages and completion criteria
 
 | Stage | Work | Completion evidence |
@@ -291,8 +338,8 @@ label alone does not satisfy the criteria.
 - [x] Implement literate public APIs, types, and error contracts; run build→run→HTML without internal relative imports or checkout dependencies
 - [x] Document compiler provisioning, supported ABIs, and network/Rust requirements; verify uncached first use
 - [x] Pin instructions for compiler Wasm, checksums, source, and execution host
-- [ ] Provide general-audience Japanese/English website entry pages, examples, and setup links; recheck environments, dependencies, and limitations against README/specifications after this scope addition
-- [ ] Validate the Playground's current v0.3 scope in browsers and identify unavailable features and alternatives; decide full migration from the prototype and record selected scope or deferral reasons
+- [x] Provide general-audience Japanese/English website entry pages, examples, and setup links; recheck environments, dependencies, and limitations against README/specifications. Recorded in `matralang/website` commits `66970b3` and `aaab33a`, with `npm ci`, `npm test`, `npm run build`, and browser checks
+- [x] Validate the Playground's current v0.3 scope in browsers and identify unavailable features and alternatives. Adopt HTML mode; defer full migration of SVG, Math, and JavaScript modules; record measurements and scope above
 - [x] Do not describe standard JS modules, npm/Python integration or general `.jsonm` as implemented
 
 The existing [portable CI](https://github.com/matralang/matra/actions/runs/40418928782)
