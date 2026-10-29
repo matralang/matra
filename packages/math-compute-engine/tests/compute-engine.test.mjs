@@ -54,6 +54,15 @@ describe("Cortex Compute Engine adapter", () => {
     })
   })
 
+  it("orders bases deterministically by their JSON representation", () => {
+    const expression = ["Add", "ä", "z", "a", "Z", "A"]
+    const reordered = ["Add", ...expression.slice(1).reverse()]
+    const result = morphionize(expression)
+
+    assert.deepEqual(result.attributes.bases, ["A", "Z", "a", "z", "ä"])
+    assert.deepEqual(morphionize(reordered), result)
+  })
+
   it("converts complex numbers into real and imaginary Morphion terms", () => {
     assert.deepEqual(morphionize(["Complex", 1, 2]), {
       head: "MorphionForm",

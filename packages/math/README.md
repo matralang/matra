@@ -62,7 +62,7 @@ basis atoms. `Add` and `Subtract` combine terms with the same exponent vector;
 vectors. Complex values split into real and imaginary parts, with
 `ImaginaryUnit` as the imaginary basis. Coefficient arithmetic and reduction
 are delegated to the Compute Engine. Basis ordering uses lexicographic order of
-the stable JSON representation; terms use a stable basis order.
+the stable JSON representation's UTF-16 code units; terms use a stable basis order.
 
 General expressions containing function applications remain representable by
 keeping each application as a basis atom. Non-integer powers and divisions by

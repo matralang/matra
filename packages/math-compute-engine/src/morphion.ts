@@ -25,7 +25,7 @@ export function morphionize(expression: MathJson): MorphionForm {
   for (const term of form.values()) {
     for (const [key, factor] of term.factors) factors.set(key, factor.base)
   }
-  const bases = [...factors.entries()].sort(([left], [right]) => left.localeCompare(right))
+  const bases = [...factors.entries()].sort(([left], [right]) => compareStrings(left, right))
   const terms = [...form.values()]
     .map(term => ({
       key: bases.map(([key]) => term.factors.get(key)?.exponent ?? 0),
@@ -263,9 +263,13 @@ function isOne(value: MathJson): boolean {
 function monomialKey(factors: Map<string, Factor>): string {
   return JSON.stringify(
     [...factors.entries()]
-      .sort(([left], [right]) => left.localeCompare(right))
+      .sort(([left], [right]) => compareStrings(left, right))
       .map(([key, factor]) => [key, factor.exponent]),
   )
+}
+
+function compareStrings(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0
 }
 
 function keyOf(expression: MathJson): string {
