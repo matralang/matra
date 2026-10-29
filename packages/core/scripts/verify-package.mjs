@@ -25,6 +25,17 @@ try {
   invoke(html, "pack", "--out", join(root, "html.tgz"))
   await writeFile(join(root, "package.json"), '{"private":true,"type":"module"}\n')
   invoke(root, "add", "--ignore-scripts", "./core.tgz", "./html.tgz")
+  const corePackage = JSON.parse(await readFile(join(core, "package.json"), "utf8"))
+  const htmlPackage = JSON.parse(await readFile(join(html, "package.json"), "utf8"))
+  const installedCore = JSON.parse(
+    await readFile(join(root, "node_modules/@matra/core/package.json"), "utf8"),
+  )
+  const installedHtml = JSON.parse(
+    await readFile(join(root, "node_modules/@matra/html/package.json"), "utf8"),
+  )
+  assert.equal(installedCore.version, corePackage.version)
+  assert.equal(installedHtml.version, htmlPackage.version)
+  assert.equal(installedHtml.peerDependencies["@matra/core"], `^${corePackage.version}`)
   const markdown = await readFile(
     new URL("../../html/examples/web-page.md", import.meta.url),
     "utf8",
@@ -93,6 +104,7 @@ assert.notEqual(process.env.EXPECT_COMPILER_ERROR, "1")
   assert.equal(execute(["verify.mjs"]), "")
   const manifestPath = join(root, "node_modules/@matra/core/dist/literate/compiler.json")
   const manifest = await readFile(manifestPath, "utf8")
+  assert.equal(JSON.parse(manifest).version, corePackage.version)
   await rm(manifestPath)
   await writeFile(manifestPath, JSON.stringify({ ...JSON.parse(manifest), abi: "unknown" }))
   execute(["verify.mjs"], { EXPECT_COMPILER_ERROR: "1" })

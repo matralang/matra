@@ -133,6 +133,33 @@ still awaits successful CI.
 
 ## Official website: bilingual entry and migration to the new system
 
+### Prerelease distribution for the website
+
+Prepare `@matra/core` and `@matra/html` at `0.3.0-alpha.0` for publication under
+the npm `next` tag. This prepares public APIs and distributions for website validation;
+it is not the final v0.3 release. Updating versions does not mean they are published.
+Leave the existing `latest` tags unchanged. Other packages are outside this publication.
+
+Before publication, run `pnpm run lint`, the Core/HTML tests, and
+`pnpm test:literate:package`. Distribution verification also checks package versions,
+HTML's Core peer dependency, and the bundled compiler manifest version.
+Record the corresponding commit and CI results, verify npm authentication and
+publication permissions, then publish Core followed by HTML.
+
+```sh
+pnpm --filter @matra/core publish --tag next --access public
+pnpm --filter @matra/html publish --tag next --access public
+npm view @matra/core@0.3.0-alpha.0 version dist.integrity
+npm view @matra/html@0.3.0-alpha.0 version dist.integrity peerDependencies
+npm view @matra/core dist-tags --json
+npm view @matra/html dist-tags --json
+```
+
+After publication, verify document-to-HTML generation with packages fetched from the
+registry and associate tarball integrity and the bundled compiler manifest with the
+release record. Pin both website dependencies to `0.3.0-alpha.0` and maintain the
+lockfile. Do not use the moving `next` tag for reproducible dependency specifications.
+
 These v0.3 tasks were added on October 29, 2026. Implement them in
 [`matralang/website`](https://github.com/matralang/website), not by rebuilding
 the monorepo's legacy `apps/website` as the official site.

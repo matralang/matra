@@ -115,6 +115,32 @@ manifestにversion・SHA-256・ABIを記録し、build時にStage 2/3のbyte一�
 
 ## 公式website：日英の入口と新システムへの移行
 
+### website向け先行配布
+
+`@matra/core`と`@matra/html`は`0.3.0-alpha.0`を先行配布用versionとし、
+npmの`next`タグで公開する。これは正式なv0.3公開ではなく、websiteで公開APIと配布物を
+検証するための準備である。versionの更新だけではnpm公開済みとは扱わない。
+既存の`latest`タグは変更しない。他のpackageは今回の公開対象に含めない。
+
+公開前に`pnpm run lint`、Core・HTMLのtest、`pnpm test:literate:package`を実行する。
+配布検証ではversion、HTMLのCore peer dependency、同梱compiler manifestのversionも確認する。
+release記録に対応するcommitとCI結果を残し、npm認証と公開権限を確認してから、
+Core、HTMLの順で公開する。
+
+```sh
+pnpm --filter @matra/core publish --tag next --access public
+pnpm --filter @matra/html publish --tag next --access public
+npm view @matra/core@0.3.0-alpha.0 version dist.integrity
+npm view @matra/html@0.3.0-alpha.0 version dist.integrity peerDependencies
+npm view @matra/core dist-tags --json
+npm view @matra/html dist-tags --json
+```
+
+公開後はregistryから取得したpackageでも文書→HTML生成を再検証し、tarball integrityと
+同梱compiler manifestをrelease記録へ対応づける。websiteは両packageを
+`0.3.0-alpha.0`へ固定してlockfileを管理する。`next`は移動するタグなので、
+再現性が必要な依存指定には使用しない。
+
 2026年10月29日に追加したv0.3タスクです。実装先は
 [`matralang/website`](https://github.com/matralang/website)とし、monorepoの`apps/website`を
 公式siteとして作り直しません。[白書](./whitepaper-v0.3.ja.md)は技術的な根拠を担い、
