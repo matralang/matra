@@ -6,7 +6,7 @@
 
 このchangelogは[Keep a Changelog](https://keepachangelog.com/en/1.0.0/)の形式を参考にし、projectは[Semantic Versioning](https://semver.org/spec/v2.0.0.html)に従います。
 
-## [Unreleased]
+## [0.3.0-alpha.1] - 2026-10-30
 
 ### Added
 
