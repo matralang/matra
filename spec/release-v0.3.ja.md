@@ -138,7 +138,7 @@ P0が未達の場合は、「実験的」という名称だけで成功扱いに
 - [x] 公開対象のpackageをpackし、別の空のprojectから導入して検証サンプルが動く
 - [x] literateの公開API・型定義・error契約を実装し、内部相対importやcheckout依存なしでbuild→run→HTML生成できる
 - [x] compiler供給方式と対応ABI、ネットワーク・Rustの要否を明記し、キャッシュのない初回利用も検証する
-- [ ] compiler Wasm・checksum・ソース・実行hostの取得手順を固定する
+- [x] compiler Wasm・checksum・ソース・実行hostの取得手順を固定する
 - [ ] 公式site・README・仕様書の対応環境、依存関係、制限が一致する
 - [ ] 未実装の`.js` module・npm/Python連携と汎用`.jsonm`を実装済みとして説明していない
 

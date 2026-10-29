@@ -169,6 +169,42 @@ internal relative imports. The CLI is a thin
 entry point over the same build/run implementation, without separate evaluation
 rules.
 
+### Compiler acquisition, regeneration, and provenance
+
+Users acquire an exact published version of `@matra/core`. The compiler Wasm
+and manifest are included in `dist/literate/`; they are not downloaded
+separately. Record the release Git tag and commit SHA, package version, bundled
+manifest, and npm registry tarball integrity for each release.
+
+To regenerate the compiler from a checkout, use a clean checkout of the release
+tag and its lockfile. The Rust toolchain is pinned by
+[`rust-toolchain.toml`](../rust-toolchain.toml).
+
+```text
+pnpm install --frozen-lockfile
+rustup toolchain install 1.97.1 --profile minimal
+pnpm --filter @matra/core run build
+pnpm test:literate:package
+```
+
+The compiler source is the `compiler.matra` fence in
+[`compiler.md`](../crates/matra-seed/examples/compiler.md).
+[`build-compiler.mjs`](../packages/core/scripts/build-compiler.mjs) generates
+Stage 2/3 with the Rust seed compiler, asserts byte equality, and writes
+`dist/literate/compiler.wasm` and `compiler.json`. The manifest's
+`sourceSha256` hashes the extracted fence as UTF-8; `sha256` hashes the Wasm
+bytes. It also records the package version, ABI, byte size, and Stage equality.
+The execution host and CLI source are pinned by the release commit under
+[`packages/core/src/literate/`](../packages/core/src/literate/);
+`compiler.mjs` verifies the Wasm checksum, ABI, and exports at load time.
+
+`pnpm test:literate:package` installs the packed contents in a temporary
+project outside the checkout. It verifies Rust/bootstrap-cache/compiler-download
+free execution and rejects missing, corrupt, and ABI-incompatible Wasm. Do not
+add the generated Wasm to Git. Record the manifest alongside the Git commit,
+package version, and npm tarball integrity so the acquired artifact, source,
+host, and checksum remain traceable.
+
 ### Failures, dependencies, and publication gates
 
 - Configuration, compilation, execution, and boundary failures reject the

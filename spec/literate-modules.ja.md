@@ -148,6 +148,36 @@ const html = toHTML(ast)
 別project向けの導入手順では、内部ファイルの相対importを使用しない。
 CLIは同じbuild/run実装を利用する薄い入口とし、別の評価規則を持たせない。
 
+### compilerの取得・再生成とprovenance
+
+利用者は公開された正確なversionの`@matra/core` packageを取得する。
+compiler Wasmとmanifestはpackageの`dist/literate/`に含まれ、別downloadはしない。
+release記録にはGit tagとcommit SHA、package version、同梱manifest、
+npm registryのtarball integrityを残す。
+
+compilerをcheckoutから再生成する場合は、release tagのclean checkoutとlockfileを使う。
+Rust toolchainは[`rust-toolchain.toml`](../rust-toolchain.toml)で固定する。
+
+```text
+pnpm install --frozen-lockfile
+rustup toolchain install 1.97.1 --profile minimal
+pnpm --filter @matra/core run build
+pnpm test:literate:package
+```
+
+Wasmのcompiler sourceは[`compiler.md`](../crates/matra-seed/examples/compiler.md)の
+`compiler.matra` fenceである。[`build-compiler.mjs`](../packages/core/scripts/build-compiler.mjs)は
+Rust seed compilerでStage 2/3を生成してbyte equalityを確認し、`dist/literate/compiler.wasm`
+と`compiler.json`を生成する。manifestの`sourceSha256`はfenceから抽出したUTF-8 source、
+`sha256`はWasm bytesのSHA-256である。`version`、ABI、byte size、Stage equalityも記録する。
+実行hostとCLIのsourceはrelease commitの[`packages/core/src/literate/`](../packages/core/src/literate/)
+で固定し、`compiler.mjs`は起動時にWasmのchecksum・ABI・exportを検証する。
+
+`pnpm test:literate:package`はpack内容をcheckout外のtemporary projectへ導入し、
+Rust・bootstrap cache・compiler downloadなしの実行と、Wasm欠落・破損・ABI不一致の拒否を検証する。
+Wasmは生成物なのでGitへ追加しない。manifestとGit commitをpackage versionおよびnpm tarball integrityに
+対応づけて記録することで、取得物・source・host・checksumの対応を追跡可能にする。
+
 ### 失敗・依存関係・公開条件
 
 - 設定・compile・実行・値境界の失敗はPromiseのrejectとして伝える。

@@ -186,6 +186,8 @@ pnpm exec matra-literate run . bundle.json
 
 Execute trusted documents/bundles only; there is no OS sandbox or timeout
 guarantee. See the [public API contract](../../spec/literate-modules.md#v03-public-api-and-distribution-contract).
+Compiler regeneration, checksums, and release provenance are documented in
+the [distribution procedure](../../spec/literate-modules.md#compiler-acquisition-regeneration-and-provenance).
 
 See [literate programming](../../spec/literate-modules.md) for execution with
 published values and functions. The [Web page validation example](../html/examples/web-page.md)

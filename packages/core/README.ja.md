@@ -176,6 +176,8 @@ pnpm exec matra-literate run . bundle.json
 
 信頼した文書・bundleだけを実行してください。OS sandboxやtimeoutは保証しません。
 詳細は[公開API契約](../../spec/literate-modules.ja.md#v03の公開api配布契約)を参照してください。
+compilerの再生成、checksum、release provenanceは
+[配布手順](../../spec/literate-modules.ja.md#compilerの取得再生成とprovenance)を参照してください。
 
 値と関数の公開を含めて実行する経路は[文芸的プログラミング](../../spec/literate-modules.ja.md)を
 参照してください。検証用の[Webページ作例](../html/examples/web-page.md)は、
