@@ -32,8 +32,9 @@ pnpm test:web-page
 ## Matraのビルドツール（開発版）
 
 `@matra/cli`の`matra init`で、設定ファイルや依存関係を手作業で組み立てずに
-最初のページを作れます。現段階はrepository内の開発版です。Node.js同梱の
-OS・CPU別フォルダー配布、起動コマンド、ZIP、ライセンス・バージョン情報の集約は後続です。
+最初のページを作れます。macOS / arm64向けにはNode.js同梱フォルダーとZIPを
+作成・検証する開発用スクリプトを用意しました。他のOS・CPU向けの同梱配布、
+署名・公証、releaseへのアップロードは後続です。
 
 Node.js 22/24、pnpm、repository指定のRust toolchainを用意し、repository rootで
 次を実行します（PATHの設定例はmacOS/Linux向けです）。
@@ -93,6 +94,46 @@ Ctrl+Cでサーバーと監視を停止します。
 `pnpm test:cli`で初期化・HTML/CSS生成・エラー処理を、
 `pnpm test:literate:package`でCLI・テンプレート・CSS・compilerをpackして
 checkout外・外部コマンドなしでinit/build/devが動くことを検証します。
+
+### Node.js同梱ZIPの作成（macOS / arm64）
+
+作成側にはNode.js 22/24、pnpm、repository指定のRust、`tar`・`zip`・`unzip`と
+ネットワーク接続が必要です。repository rootで依存を導入してから実行します。
+
+```sh
+pnpm install --frozen-lockfile
+pnpm distribution:build
+```
+
+公式Node.js `24.17.0`のアーカイブを取得し、
+[固定checksum](packages/cli/distribution/node.json)を検証してから展開します。
+Matraのpackageをpackし、実行時依存だけを自己完結したフォルダーへまとめます。
+compiler Wasmと対応manifest、テンプレート、CSS、各ライセンス、`versions.json`を含みます。
+npm・pnpm自体は同梱しません。
+
+出力は`dist/releases/matra-0.3.0-darwin-arm64/`、同名の`.zip`と`.zip.sha256`です。
+作成中のフォルダーとZIPの再展開先で、日本語・空白を含むパスへの移動、PATHが空の環境での
+起動・init/build/dev・変更監視・終了、compilerとライセンスの存在を検証します。
+既存の成果物は上書きしません。再作成は`pnpm distribution:build --output dist/another-release`
+のように別の出力先を指定してください。ZIPのbyte単位の再現性は保証しません。
+`versions.json`にはsource commitと作業ツリー変更の有無も記録します。
+
+利用者はZIPを展開し、**展開したフォルダー**をPATHへ追加するだけで利用できます。
+起動コマンドは同梱Node.jsを使うため、利用側のNode.js・pnpm・Rust・ネットワークは不要です。
+手順は[配布物の説明](packages/cli/distribution/README.ja.md)を参照してください。
+実体のフォルダーを指定し、起動コマンドだけを別の場所へ移動・symlinkしないでください。
+
+```sh
+export PATH="/absolute/path/to/matra-0.3.0-darwin-arm64:$PATH"
+matra init hello
+cd hello
+matra build
+matra dev
+```
+
+展開済みフォルダーは`pnpm distribution:verify dist/releases/matra-0.3.0-darwin-arm64`
+で再検証できます。macOSのdownload承認が必要になる場合があります。
+開発版のため署名・公証は行っていません。
 
 ## 移植性の方針
 

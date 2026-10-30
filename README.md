@@ -32,9 +32,9 @@ modules, npm and Python integration remain outside this route.
 ## Matra build tools (development)
 
 `@matra/cli` provides `matra init` to create a first page without manually assembling
-configuration or project dependencies. This is currently a repository development tool.
-OS/CPU-specific folder distributions with pinned Node.js, launchers, ZIP archives,
-and consolidated license/version information are follow-up work.
+configuration or project dependencies. Development scripts now build and verify a
+macOS / arm64 folder and ZIP with bundled Node.js. Other OS/CPU distributions,
+signing/notarization, and release uploads are follow-up work.
 
 With Node.js 22/24, pnpm, and the repository's Rust toolchain, run from the repository root
 (the PATH example is for macOS/Linux):
@@ -94,6 +94,49 @@ Press Ctrl+C to stop the server and file monitoring.
 Run `pnpm test:cli` for initialization, HTML/CSS generation, and error handling.
 `pnpm test:literate:package` packs the CLI, template, CSS, and compiler and verifies
 init/build/dev outside the checkout without external commands.
+
+### Building a Node.js-inclusive ZIP (macOS / arm64)
+
+The builder needs Node.js 22/24, pnpm, the repository's Rust toolchain, `tar`, `zip`,
+`unzip`, and a network connection. Run from the repository root:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm distribution:build
+```
+
+The script downloads official Node.js `24.17.0`, verifies its
+[pinned checksum](packages/cli/distribution/node.json), and then extracts it.
+It packs Matra packages and assembles their runtime dependencies in a self-contained
+folder with compiler Wasm/manifest, template, CSS, licenses, and `versions.json`.
+npm and pnpm are not included.
+
+Outputs are `dist/releases/matra-0.3.0-darwin-arm64/`, its `.zip`, and `.zip.sha256`.
+Both the staged folder and re-extracted ZIP are relocated to paths containing spaces
+and Japanese characters and tested with an empty PATH: launch, init/build/dev, rebuild,
+shutdown, compiler, and license checks. Existing artifacts are never overwritten.
+To rebuild, choose another destination, such as
+`pnpm distribution:build --output dist/another-release`.
+Bit-for-bit archive reproducibility is not guaranteed. `versions.json` records the source
+commit and dirty-tree flag.
+
+Users extract the ZIP and add the **extracted folder** to PATH. The launcher uses
+bundled Node.js; system Node.js, pnpm, Rust, and network access are not needed.
+See the [distribution guide](packages/cli/distribution/README.md).
+Use the real folder, not a relocated or symlinked launcher.
+
+```sh
+export PATH="/absolute/path/to/matra-0.3.0-darwin-arm64:$PATH"
+matra init hello
+cd hello
+matra build
+matra dev
+```
+
+Recheck an extracted folder with
+`pnpm distribution:verify dist/releases/matra-0.3.0-darwin-arm64`.
+macOS may require approval for downloaded software. This development distribution
+is not signed or notarized.
 
 ## Portability policy
 

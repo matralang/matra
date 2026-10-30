@@ -1,0 +1,6 @@
+{
+  "version": "24.17.0",
+  "target": "darwin-arm64",
+  "archive": "node-v24.17.0-darwin-arm64.tar.gz",
+  "sha256": "4fc3266a3702eebc39cc37661cf4eeceeade307e242ab64e4d7ce7949197e11f"
+}

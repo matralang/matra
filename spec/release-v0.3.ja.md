@@ -19,7 +19,12 @@ v0.3は、モーフィオンに基づく文書モデル、既存言語との明�
 最初の配布は、固定versionのNode.js、Matra起動コマンド、CLIと依存ライブラリ、
 compiler Wasmと対応manifest、テンプレートとCSS、ライセンス・バージョン情報を
 OS・CPU別のフォルダー（ZIPなど）へまとめる方針です。
-このフォルダー配布自体は未実装です。
+macOS / arm64向けの開発用フォルダー・ZIP作成と展開検証を追加しました。
+公式Node.js `24.17.0`のchecksumを固定し、実行時依存、起動コマンド、
+compiler、テンプレート、CSS、ライセンス、version情報を同梱します。
+利用側のNode.js・pnpm・Rustなしでinit/build/devが動くことを、空のPATHで検証します。
+他のOS・CPU向け同梱配布、署名・公証、releaseへのアップロードは未実施です。
+ZIPのbyte再現性は保証せず、source commit・dirty状態・lockfile checksumを記録します。
 
 先行して`@matra/cli`の`matra init DIRECTORY`と最小の`matra build`を追加しました。
 新規ディレクトリへ`index.md`、編集可能な`matra.css`、CSSライセンス、`.gitignore`を生成し、
