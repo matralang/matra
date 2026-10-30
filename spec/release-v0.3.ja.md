@@ -31,6 +31,11 @@ Windows arm64の連続保存後に保留中のbuildを誤計数するtestは、�
 Windowsでは`.cmd`起動コマンドと標準.NET ZIP機能を使います。
 Linuxはglibc環境向けで、Alpine / muslは対象外です。署名・公証、release公開は未実施です。
 ZIPのbyte再現性は保証せず、source commit・dirty状態・lockfile checksumを記録します。
+次の試験配布候補はCLI / 配布版`0.3.1-alpha.1`、タグは`build-tools-v0.3.1-alpha.1`です。
+Core・HTMLの`0.3.0`とcompiler ABIは維持します。
+手動CIで6対象の成功・checksum・出典を検証してDraft Pre-releaseを作成できる準備を追加しました。
+タグ作成・手動CI実行・Draft作成・一般公開はまだ行っていません。
+承認段階と実機確認は[試験配布手順](./build-tools-release.ja.md)に記載します。
 
 先行して`@matra/cli`の`matra init DIRECTORY`と最小の`matra build`を追加しました。
 新規ディレクトリへ`index.md`、編集可能な`matra.css`、CSSライセンス、`.gitignore`を生成し、

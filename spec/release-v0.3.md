@@ -36,6 +36,11 @@ input rebuilds was fixed by independently testing output-only changes.
 Windows uses a `.cmd` launcher and standard .NET ZIP APIs; Linux targets glibc, excluding Alpine/musl.
 Signing/notarization and release uploads remain unimplemented.
 ZIP byte reproducibility is not guaranteed; source commit, dirty state, and lockfile checksum are recorded.
+The next candidate is CLI/distribution `0.3.1-alpha.1`, tagged `build-tools-v0.3.1-alpha.1`.
+Core/HTML stay `0.3.0` and compiler ABI is unchanged.
+Manual CI can prepare a Draft Pre-release after all six targets, hashes, and provenance pass.
+No tag, manual run, Draft, or public publication has been created for this candidate.
+See the [prerelease procedure](./build-tools-release.md) for approval gates and manual checks.
 
 As the first step, `@matra/cli` adds `matra init DIRECTORY` and a minimal `matra build`.
 Initialization creates `index.md`, editable `matra.css`, its license, and `.gitignore`

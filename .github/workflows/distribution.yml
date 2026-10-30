@@ -4,12 +4,30 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      create_draft:
+        description: Create a Draft Pre-release for the existing build-tools tag (never publish)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.17.0
+      - name: Verify release tag and clean source
+        if: github.event_name == 'workflow_dispatch' && inputs.create_draft
+        run: node packages/cli/scripts/verify-release.mjs --check-tag
   distribution:
+    needs: preflight
     strategy:
       fail-fast: false
       matrix:
@@ -57,3 +75,40 @@ jobs:
             dist/releases/*.zip.sha256
           if-no-files-found: error
           retention-days: 7
+  draft:
+    if: github.event_name == 'workflow_dispatch' && inputs.create_draft
+    needs: distribution
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: build-tools-draft-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.17.0
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: matra-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/release-assets
+      - name: Verify all checksums, versions, and source commits
+        env:
+          MATRA_SOURCE_COMMIT: ${{ github.sha }}
+          MATRA_RELEASE_ASSETS: ${{ runner.temp }}/release-assets
+        run: node packages/cli/scripts/verify-release.mjs "$MATRA_RELEASE_ASSETS" "$MATRA_SOURCE_COMMIT"
+      - name: Create Draft Pre-release without publishing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MATRA_RELEASE_ASSETS: ${{ runner.temp }}/release-assets
+        shell: bash
+        run: |
+          version=$(node -p "require('./packages/cli/package.json').version")
+          gh release create "build-tools-v$version" "$MATRA_RELEASE_ASSETS"/*.zip "$MATRA_RELEASE_ASSETS"/*.sha256 \
+            --verify-tag --draft --prerelease --latest=false \
+            --title "Matra build tools $version" \
+            --notes-file packages/cli/distribution/RELEASE-NOTES.md

@@ -117,7 +117,7 @@ npm・pnpm自体は同梱しません。
 実行しているOS・CPU向けに作成します。cross buildは行いません。
 対象は`darwin-arm64`、`darwin-x64`、`linux-arm64`、`linux-x64`、`win32-arm64`、`win32-x64`です。
 Linuxは公式Node.jsが対応するglibc環境向けで、Alpine / muslは対象外です。
-出力は`dist/releases/matra-0.3.0-TARGET/`、同名の`.zip`と`.zip.sha256`です。
+出力は`dist/releases/matra-0.3.1-alpha.1-TARGET/`、同名の`.zip`と`.zip.sha256`です。
 作成中のフォルダーとZIPの再展開先で、日本語・空白を含むパスへの移動、PATHが空の環境での
 起動・init/build/dev・変更監視・終了、compilerとライセンスの存在を検証します。
 Windowsは`matra.cmd`によるinit/buildと同梱Node.jsによるdevを検証し、
@@ -132,7 +132,7 @@ Windowsは`matra.cmd`によるinit/buildと同梱Node.jsによるdevを検証し
 実体のフォルダーを指定し、起動コマンドだけを別の場所へ移動・symlinkしないでください。
 
 ```sh
-export PATH="/absolute/path/to/matra-0.3.0-darwin-arm64:$PATH"
+export PATH="/absolute/path/to/matra-0.3.1-alpha.1-darwin-arm64:$PATH"
 matra init hello
 cd hello
 matra build
@@ -142,18 +142,21 @@ matra dev
 Windows PowerShellでは、展開したフォルダーを次のようにPATHへ追加します。
 
 ```powershell
-$env:Path = "C:\path\to\matra-0.3.0-win32-x64;$env:Path"
+$env:Path = "C:\path\to\matra-0.3.1-alpha.1-win32-x64;$env:Path"
 matra init hello
 cd hello
 matra build
 matra dev
 ```
 
-展開済みフォルダーは`pnpm distribution:verify dist/releases/matra-0.3.0-darwin-arm64`
+展開済みフォルダーは`pnpm distribution:verify dist/releases/matra-0.3.1-alpha.1-darwin-arm64`
 で再検証できます。macOSのdownload承認が必要になる場合があります。
 開発版のため署名・公証は行っていません。
 [配布CI](.github/workflows/distribution.yml)は6つのnative runnerでCLI test・ZIP作成・再展開を行い、
 成功したZIPとchecksumを7日間のActions artifactとして保存します。GitHub Releaseへは公開しません。
+配布版のversionはCLIに合わせ、Core・HTML・compiler ABIとは区別します。
+手動実行でDraft Pre-releaseを作成する準備は[試験配布手順](spec/build-tools-release.ja.md)を参照してください。
+通常CIはDraftを作成せず、手動CIも一般公開は行いません。
 
 ## 移植性の方針
 
