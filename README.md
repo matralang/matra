@@ -29,6 +29,142 @@ Open `packages/html/examples/dist/index.html` in a browser. The generated page w
 offline. This example uses the implemented `.js.part` subset; standard JavaScript
 modules, npm and Python integration remain outside this route.
 
+## Matra build tools (development)
+
+`@matra/cli` provides `matra init` to create a first page without manually assembling
+configuration or project dependencies. Development scripts now build and verify
+native folders and ZIPs with bundled Node.js for macOS, Linux, and Windows on x64/arm64,
+with a six-target CI workflow. All six targets passed CLI tests, ZIP creation,
+and re-extraction on commit `2056aee` in
+[run 41005130597](https://github.com/matralang/matra/actions/runs/41005130597).
+Local execution is also verified on macOS / arm64.
+Signing/notarization and release uploads are follow-up work.
+
+With Node.js 22/24, pnpm, and the repository's Rust toolchain, run from the repository root
+(the PATH example is for macOS/Linux):
+
+```sh
+pnpm install --frozen-lockfile
+pnpm --filter @matra/core run build
+pnpm --filter @matra/html run build
+export PATH="$PWD/node_modules/.bin:$PATH"
+matra init hello
+cd hello
+matra build
+```
+
+On Windows, add the repository's `node_modules/.bin` to PATH and use the same `matra`
+commands. The destination must **not already exist**, even as an empty directory.
+Its parent directory must exist. The generated project contains:
+
+```text
+hello/
+  index.md           # FrontMatter, Matra structure, and JavaScript data
+  matra.css          # Editable CSS from @matra/styles
+  matra.css.LICENSE  # CSS license
+  .gitignore         # Excludes /dist/
+```
+
+The entry document (`index.md`), stylesheet (`matra.css`), and output directory (`dist/`)
+are fixed conventions, requiring no configuration file. Run `matra build` in the project
+directory to compile and execute the document and generate/update `dist/index.html`,
+`dist/matra.css`, and `dist/matra.css.LICENSE`. Open the HTML directly in a browser;
+viewing needs no network. Unknown output files are not deleted, and symlink output paths
+are rejected. Only build trusted documents: their JavaScript executes during the build.
+The existing literate API, `matra-literate` CLI, and language grammar are unchanged.
+Execution uses the bundled compiler Wasm and manifest without Rust, pnpm, or a network;
+preparing and packing the development tools still requires Rust and pnpm.
+
+### Local preview
+
+Run inside the generated project:
+
+```sh
+matra dev
+```
+
+After the initial build, open `http://127.0.0.1:3000/`. Changes to `index.md`,
+`matra.css`, and `matra.css.LICENSE` automatically rebuild the project.
+Refresh the browser manually; live reload and automatic browser launch are not implemented.
+An occupied port fails explicitly; use `matra dev --port 3001` to choose another.
+The server binds only to `127.0.0.1`, not external network interfaces.
+It serves only generated HTML, CSS, and the CSS license, never source documents or other files.
+
+An initial build failure prevents startup. Later build failures are reported in the terminal
+and return HTTP 503 with a plain-text diagnostic for generated asset requests.
+Previous output files remain on disk; serving resumes after a successful rebuild.
+Press Ctrl+C to stop the server and file monitoring.
+
+Run `pnpm test:cli` for initialization, HTML/CSS generation, and error handling.
+`pnpm test:literate:package` packs the CLI, template, CSS, and compiler and verifies
+init/build/dev outside the checkout without external commands.
+
+### Building a Node.js-inclusive ZIP
+
+The builder needs Node.js 22/24, pnpm, the repository's Rust toolchain, `tar`, `zip`,
+`unzip`, and a network connection. Windows instead uses `tar` and standard Windows
+PowerShell/.NET ZIP APIs, with no `zip`/`unzip` commands required.
+Run from the repository root:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm distribution:build
+```
+
+The script downloads official Node.js `24.17.0`, verifies its
+[pinned checksum](packages/cli/distribution/node.json), and then extracts it.
+It packs Matra packages and assembles their runtime dependencies in a self-contained
+folder with compiler Wasm/manifest, template, CSS, licenses, and `versions.json`.
+npm and pnpm are not included.
+
+The builder targets its native OS/CPU, never cross-compiling. Targets are
+`darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`, `win32-arm64`, and `win32-x64`.
+Linux requires a glibc environment supported by official Node.js; Alpine/musl is excluded.
+Outputs are `dist/releases/matra-0.3.1-alpha.1-TARGET/`, its `.zip`, and `.zip.sha256`.
+Both the staged folder and re-extracted ZIP are relocated to paths containing spaces
+and Japanese characters and tested with an empty PATH: launch, init/build/dev, rebuild,
+shutdown, compiler, and license checks. Existing artifacts are never overwritten.
+Windows verifies init/build through `matra.cmd` and dev through bundled Node.js,
+terminating the dev process after tests; interactive Ctrl+C is not automatically verified.
+To rebuild, choose another destination, such as
+`pnpm distribution:build --output dist/another-release`.
+Bit-for-bit archive reproducibility is not guaranteed. `versions.json` records the source
+commit and dirty-tree flag.
+
+Users extract the ZIP and add the **extracted folder** to PATH. The launcher uses
+bundled Node.js; system Node.js, pnpm, Rust, and network access are not needed.
+See the [distribution guide](packages/cli/distribution/README.md).
+Use the real folder, not a relocated or symlinked launcher.
+
+```sh
+export PATH="/absolute/path/to/matra-0.3.1-alpha.1-darwin-arm64:$PATH"
+matra init hello
+cd hello
+matra build
+matra dev
+```
+
+On Windows PowerShell, add the extracted folder to PATH:
+
+```powershell
+$env:Path = "C:\path\to\matra-0.3.1-alpha.1-win32-x64;$env:Path"
+matra init hello
+cd hello
+matra build
+matra dev
+```
+
+Recheck an extracted folder with
+`pnpm distribution:verify dist/releases/matra-0.3.1-alpha.1-darwin-arm64`.
+macOS may require approval for downloaded software. This development distribution
+is not signed or notarized.
+The [distribution CI](.github/workflows/distribution.yml) runs CLI tests, ZIP creation,
+and re-extraction on six native runners. Successful ZIPs/checksums are stored as
+Actions artifacts for seven days, not published to GitHub Releases.
+The distribution version follows the CLI, separately from Core/HTML and compiler ABI.
+See the [prerelease procedure](spec/build-tools-release.md) for manually creating a Draft.
+Normal CI never creates Drafts, and the manual workflow never publishes publicly.
+
 ## Portability policy
 
 Matra's central goal is to resolve dependencies, start, build, and run the same project
@@ -67,6 +203,7 @@ and [literate module contract](spec/literate-modules.md).
 ## Packages
 
 - [`@matra/core`](packages/core)
+- [`@matra/cli`](packages/cli)
 - [`@matra/command`](packages/command)
 - [`@matra/graphics`](packages/graphics)
 - [`@matra/html`](packages/html)

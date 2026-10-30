@@ -1,0 +1,132 @@
+name: Verify bundled distributions
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      create_draft:
+        description: Create a Draft Pre-release for the existing build-tools tag (never publish)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.17.0
+      - name: Verify release tag and clean source
+        if: github.event_name == 'workflow_dispatch' && inputs.create_draft
+        run: node packages/cli/scripts/verify-release.mjs --check-tag
+  distribution:
+    needs: preflight
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            target: darwin-arm64
+          - os: macos-15-intel
+            target: darwin-x64
+          - os: ubuntu-24.04
+            target: linux-x64
+          - os: ubuntu-24.04-arm
+            target: linux-arm64
+          - os: windows-2025
+            target: win32-x64
+          - os: windows-11-arm
+            target: win32-arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.17.0
+      - name: Verify native target
+        env:
+          MATRA_EXPECTED_TARGET: ${{ matrix.target }}
+        run: node -e "require('node:assert/strict').equal(process.platform + '-' + process.arch, process.env.MATRA_EXPECTED_TARGET)"
+      - name: Install Rust toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build compiler and HTML renderer
+        run: pnpm --filter @matra/core run build && pnpm --filter @matra/html run build
+      - name: Verify CLI contracts
+        run: pnpm --filter @matra/cli run test
+      - name: Build and verify native folder and extracted ZIP
+        run: pnpm distribution:build
+      - name: Upload verified development archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: matra-${{ matrix.target }}
+          path: |
+            dist/releases/*.zip
+            dist/releases/*.zip.sha256
+          if-no-files-found: error
+          retention-days: 7
+  verify-assets:
+    needs: distribution
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.17.0
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: matra-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/release-assets
+      - name: Verify six archives together on Linux
+        env:
+          MATRA_SOURCE_COMMIT: ${{ github.sha }}
+          MATRA_RELEASE_ASSETS: ${{ runner.temp }}/release-assets
+        run: node packages/cli/scripts/verify-release.mjs --check-assets "$MATRA_RELEASE_ASSETS" "$MATRA_SOURCE_COMMIT"
+  draft:
+    if: github.event_name == 'workflow_dispatch' && inputs.create_draft
+    needs: verify-assets
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: build-tools-draft-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.17.0
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: matra-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/release-assets
+      - name: Verify all checksums, versions, and source commits
+        env:
+          MATRA_SOURCE_COMMIT: ${{ github.sha }}
+          MATRA_RELEASE_ASSETS: ${{ runner.temp }}/release-assets
+        run: node packages/cli/scripts/verify-release.mjs "$MATRA_RELEASE_ASSETS" "$MATRA_SOURCE_COMMIT"
+      - name: Create Draft Pre-release without publishing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MATRA_RELEASE_ASSETS: ${{ runner.temp }}/release-assets
+        shell: bash
+        run: |
+          version=$(node -p "require('./packages/cli/package.json').version")
+          gh release create "build-tools-v$version" "$MATRA_RELEASE_ASSETS"/*.zip "$MATRA_RELEASE_ASSETS"/*.sha256 \
+            --verify-tag --draft --prerelease --latest=false \
+            --title "Matra build tools $version" \
+            --notes-file packages/cli/distribution/RELEASE-NOTES.md

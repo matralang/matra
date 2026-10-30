@@ -14,6 +14,40 @@ v0.3は、モーフィオンに基づく文書モデル、既存言語との明�
 仕様v0.3、各npm packageのversion、compilerのABIは別管理です。
 全packageを一律に完成扱いにせず、対応する経路と検証環境をrelease noteに明示します。
 
+## ビルドツールの初期導入経路
+
+最初の配布は、固定versionのNode.js、Matra起動コマンド、CLIと依存ライブラリ、
+compiler Wasmと対応manifest、テンプレートとCSS、ライセンス・バージョン情報を
+OS・CPU別のフォルダー（ZIPなど）へまとめる方針です。
+macOS・Linux・Windowsのx64 / arm64向けにnativeな開発用フォルダー・ZIP作成と展開検証を追加しました。
+公式Node.js `24.17.0`のchecksumを固定し、実行時依存、起動コマンド、
+compiler、テンプレート、CSS、ライセンス、version情報を同梱します。
+利用側のNode.js・pnpm・Rustなしでinit/build/devが動くことを、空のPATHで検証します。
+commit `2056aee`の[run 41005130597](https://github.com/matralang/matra/actions/runs/41005130597)で、
+6対象すべてのCLI test・フォルダー作成・ZIP再展開・init/build/dev検証が成功しました。
+各対象のZIPとchecksumを7日間のActions artifactとして保存しています。ローカルでもmacOS / arm64を検証しました。
+初回CIで判明したWindowsのshebang CRLFによるpack失敗は、CLI sourceのLF固定とcheckout変換testで修正しました。
+Windows arm64の連続保存後に保留中のbuildを誤計数するtestは、出力ファイル変更の検証を独立させて修正しました。
+Windowsでは`.cmd`起動コマンドと標準.NET ZIP機能を使います。
+Linuxはglibc環境向けで、Alpine / muslは対象外です。署名・公証、release公開は未実施です。
+ZIPのbyte再現性は保証せず、source commit・dirty状態・lockfile checksumを記録します。
+次の試験配布候補はCLI / 配布版`0.3.1-alpha.1`、タグは`build-tools-v0.3.1-alpha.1`です。
+Core・HTMLの`0.3.0`とcompiler ABIは維持します。
+手動CIで6対象の成功・checksum・出典を検証してDraft Pre-releaseを作成できる準備を追加しました。
+タグ作成・手動CI実行・Draft作成・一般公開はまだ行っていません。
+承認段階と実機確認は[試験配布手順](./build-tools-release.ja.md)に記載します。
+
+先行して`@matra/cli`の`matra init DIRECTORY`と最小の`matra build`を追加しました。
+新規ディレクトリへ`index.md`、編集可能な`matra.css`、CSSライセンス、`.gitignore`を生成し、
+設定ファイルやプロジェクト内のnpm依存を要求しません。
+`matra dev`はlocalhost限定のHTTPサーバーと入力3ファイルの変更監視・再buildを提供します。
+初回build失敗は起動を中止し、起動後の失敗はdiagnosticとHTTP 503で通知して修正を待ちます。
+ブラウザ再読み込みは手動で、Ctrl+Cで停止します。自動リロードは含めません。
+buildは現在のディレクトリの文書を既存literate APIでcompile・実行し、
+`dist/index.html`とCSS・ライセンスを出力します。信頼する文書のみを対象とします。
+Matra Program・compiler sourceの文法、compiler ABIは変更しません。
+開発版の利用手順と検証コマンドは[README](../README.ja.md#matraのビルドツール開発版)に記載します。
+
 ## 思想と完成の判断基準
 
 | 思想 | v0.3で確認すること |
