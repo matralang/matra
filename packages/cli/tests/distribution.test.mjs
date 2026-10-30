@@ -126,6 +126,25 @@ test("Node.js pins cover the six native CI targets with SHA-256 digests", async 
   }
 })
 
+test("CLI shebangs stay LF with Windows checkout conversion enabled", () => {
+  const root = fileURLToPath(new URL("../../../", import.meta.url))
+  const paths = ["packages/cli/src/cli.mjs", "packages/core/src/literate/cli.mjs"]
+  const attributes = execFileSync(
+    "git",
+    ["-c", "core.autocrlf=true", "check-attr", "eol", "--", ...paths],
+    { cwd: root, encoding: "utf8" },
+  )
+  for (const path of paths) {
+    assert.ok(attributes.includes(`${path}: eol: lf`), attributes)
+    const content = execFileSync(
+      "git",
+      ["-c", "core.autocrlf=true", "cat-file", "--filters", `HEAD:${path}`],
+      { cwd: root },
+    )
+    assert.ok(content.subarray(0, content.indexOf(10)).equals(Buffer.from("#!/usr/bin/env node")))
+  }
+})
+
 test("distribution verification refuses symlinks instead of depending on the checkout", {
   skip: process.platform === "win32",
 }, async t => {
