@@ -75,9 +75,27 @@ jobs:
             dist/releases/*.zip.sha256
           if-no-files-found: error
           retention-days: 7
+  verify-assets:
+    needs: distribution
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.17.0
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: matra-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/release-assets
+      - name: Verify six archives together on Linux
+        env:
+          MATRA_SOURCE_COMMIT: ${{ github.sha }}
+          MATRA_RELEASE_ASSETS: ${{ runner.temp }}/release-assets
+        run: node packages/cli/scripts/verify-release.mjs --check-assets "$MATRA_RELEASE_ASSETS" "$MATRA_SOURCE_COMMIT"
   draft:
     if: github.event_name == 'workflow_dispatch' && inputs.create_draft
-    needs: distribution
+    needs: verify-assets
     runs-on: ubuntu-24.04
     permissions:
       contents: write

@@ -41,6 +41,8 @@ gh workflow run distribution.yml \
 ```
 
 通常のpush・PR・入力なしの手動実行ではDraftを作りません。
+通常CIでも6対象のZIPをLinuxへ集約し、checksum・出典・compilerの一致と展開互換性を検証します。
+WindowsのZIP entryも`/`区切りで保存し、他OSで警告なく展開できることを確認します。
 手動の`create_draft=true`だけが、次のすべてを満たした後にDraftを作成します。
 
 1. 既存タグのcommitとcheckoutしたHEADが一致し、sourceがcleanである

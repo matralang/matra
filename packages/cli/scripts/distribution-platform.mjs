@@ -37,7 +37,12 @@ export function extractZip(archive, destination) {
 export function createZip(archive, folder, parent, name) {
   if (windows) {
     powershell(
-      "[IO.Compression.ZipFile]::CreateFromDirectory($env:MATRA_FOLDER, $env:MATRA_ARCHIVE, [IO.Compression.CompressionLevel]::Optimal, $true)",
+      "$root = Get-Item -LiteralPath $env:MATRA_FOLDER; " +
+        "$zip = [IO.Compression.ZipFile]::Open($env:MATRA_ARCHIVE, [IO.Compression.ZipArchiveMode]::Create); " +
+        "try { Get-ChildItem -LiteralPath $root.FullName -Recurse -File -Force | ForEach-Object { " +
+        "$name = $root.Name + '/' + $_.FullName.Substring($root.FullName.Length + 1).Replace('\\', '/'); " +
+        "[IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $name, [IO.Compression.CompressionLevel]::Optimal) | Out-Null " +
+        "} } finally { $zip.Dispose() }",
       { MATRA_FOLDER: folder, MATRA_ARCHIVE: archive },
     )
   } else {

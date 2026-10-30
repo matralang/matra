@@ -102,8 +102,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   if (args.length === 1 && args[0] === "--check-tag") {
     verifyReleaseTag()
     console.log(`Verified release tag: ${releaseTag}`)
-  } else if (args.length === 2) {
-    verifyReleaseTag()
+  } else if (args.length === 2 || (args.length === 3 && args[0] === "--check-assets")) {
+    if (args[0] === "--check-assets") args.shift()
+    else verifyReleaseTag()
     assert.equal(
       args[1],
       execFileSync("git", ["rev-parse", "HEAD"], {
@@ -115,6 +116,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     await verifyReleaseAssets(resolve(args[0]), args[1])
     console.log(`Verified all six release archives: ${releaseTag}`)
   } else {
-    throw new Error("Usage: verify-release.mjs --check-tag | DIRECTORY COMMIT")
+    throw new Error("Usage: verify-release.mjs --check-tag | [--check-assets] DIRECTORY COMMIT")
   }
 }

@@ -75,6 +75,17 @@ test("ZIP round trips preserve dotfiles, Unicode paths, and executable files", a
   await writeFile(join(folder, "executable"), "#!/bin/sh\nexit 0\n", { mode: 0o755 })
   const archive = join(root, "test.zip")
   createZip(archive, folder, root, name)
+  const zip = await readFile(archive)
+  const end = zip.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]))
+  assert.ok(end >= 0, "Expected ZIP end-of-central-directory record")
+  let offset = zip.readUInt32LE(end + 16)
+  for (let entry = 0; entry < zip.readUInt16LE(end + 10); entry++) {
+    assert.equal(zip.readUInt32LE(offset), 0x02014b50)
+    const length = zip.readUInt16LE(offset + 28)
+    const filename = zip.subarray(offset + 46, offset + 46 + length).toString("utf8")
+    assert.ok(!filename.includes("\\"), `ZIP entry must use forward slashes: ${filename}`)
+    offset += 46 + length + zip.readUInt16LE(offset + 30) + zip.readUInt16LE(offset + 32)
+  }
   const destination = join(root, "extracted")
   await mkdir(destination)
   extractZip(archive, destination)
