@@ -29,6 +29,53 @@ Open `packages/html/examples/dist/index.html` in a browser. The generated page w
 offline. This example uses the implemented `.js.part` subset; standard JavaScript
 modules, npm and Python integration remain outside this route.
 
+## Matra build tools (development)
+
+`@matra/cli` provides `matra init` to create a first page without manually assembling
+configuration or project dependencies. This is currently a repository development tool.
+OS/CPU-specific folder distributions with pinned Node.js, launchers, ZIP archives,
+and consolidated license/version information are follow-up work. `matra dev` is not
+implemented yet.
+
+With Node.js 22/24, pnpm, and the repository's Rust toolchain, run from the repository root
+(the PATH example is for macOS/Linux):
+
+```sh
+pnpm install --frozen-lockfile
+pnpm --filter @matra/core run build
+pnpm --filter @matra/html run build
+export PATH="$PWD/node_modules/.bin:$PATH"
+matra init hello
+cd hello
+matra build
+```
+
+On Windows, add the repository's `node_modules/.bin` to PATH and use the same `matra`
+commands. The destination must **not already exist**, even as an empty directory.
+Its parent directory must exist. The generated project contains:
+
+```text
+hello/
+  index.md           # FrontMatter, Matra structure, and JavaScript data
+  matra.css          # Editable CSS from @matra/styles
+  matra.css.LICENSE  # CSS license
+  .gitignore         # Excludes /dist/
+```
+
+The entry document (`index.md`), stylesheet (`matra.css`), and output directory (`dist/`)
+are fixed conventions, requiring no configuration file. Run `matra build` in the project
+directory to compile and execute the document and generate/update `dist/index.html`,
+`dist/matra.css`, and `dist/matra.css.LICENSE`. Open the HTML directly in a browser;
+viewing needs no network. Unknown output files are not deleted, and symlink output paths
+are rejected. Only build trusted documents: their JavaScript executes during the build.
+The existing literate API, `matra-literate` CLI, and language grammar are unchanged.
+Execution uses the bundled compiler Wasm and manifest without Rust, pnpm, or a network;
+preparing and packing the development tools still requires Rust and pnpm.
+
+Run `pnpm test:cli` for initialization, HTML/CSS generation, and error handling.
+`pnpm test:literate:package` packs the CLI, template, CSS, and compiler and verifies
+execution outside the checkout without external commands.
+
 ## Portability policy
 
 Matra's central goal is to resolve dependencies, start, build, and run the same project
@@ -67,6 +114,7 @@ and [literate module contract](spec/literate-modules.md).
 ## Packages
 
 - [`@matra/core`](packages/core)
+- [`@matra/cli`](packages/cli)
 - [`@matra/command`](packages/command)
 - [`@matra/graphics`](packages/graphics)
 - [`@matra/html`](packages/html)

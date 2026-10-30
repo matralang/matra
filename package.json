@@ -3,6 +3,8 @@
   "private": true,
   "packageManager": "pnpm@12.15.0",
   "scripts": {
+    "matra": "node packages/cli/src/cli.mjs",
+    "test:cli": "pnpm --filter @matra/core run build && pnpm --filter @matra/html run build && pnpm --filter @matra/cli run test",
     "build": "pnpm --filter @matra/core run build && pnpm --filter @matra/command run build && pnpm --filter @matra/math run build && pnpm --filter @matra/math-compute-engine run build && pnpm --filter @matra/graphics run build && pnpm --filter @matra/html run build && pnpm --filter @matra/styles run build && pnpm --filter @matra/kernel run build && pnpm --filter @matra/website run build && cargo build --manifest-path crates/matra-seed/Cargo.toml",
     "bootstrap:compile": "node crates/matra-seed/host/bootstrap.mjs",
     "bootstrap:artifact": "node crates/matra-seed/host/materialize.mjs",
@@ -25,6 +27,7 @@
     "typecheck": "pnpm -r --if-present run check"
   },
   "devDependencies": {
+    "@matra/cli": "workspace:^",
     "@biomejs/biome": "^2.6.2",
     "markdownlint-cli2": "^0.23.2"
   }

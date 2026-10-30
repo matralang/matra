@@ -29,6 +29,52 @@ pnpm test:web-page
 閲覧できます。実装済みの`.js.part`を使う作例で、標準JavaScript module・npm・Python連携は
 この経路に含みません。
 
+## Matraのビルドツール（開発版）
+
+`@matra/cli`の`matra init`で、設定ファイルや依存関係を手作業で組み立てずに
+最初のページを作れます。現段階はrepository内の開発版です。Node.js同梱の
+OS・CPU別フォルダー配布、起動コマンド、ZIP、ライセンス・バージョン情報の集約は後続であり、
+`matra dev`もまだ実装していません。
+
+Node.js 22/24、pnpm、repository指定のRust toolchainを用意し、repository rootで
+次を実行します（PATHの設定例はmacOS/Linux向けです）。
+
+```sh
+pnpm install --frozen-lockfile
+pnpm --filter @matra/core run build
+pnpm --filter @matra/html run build
+export PATH="$PWD/node_modules/.bin:$PATH"
+matra init hello
+cd hello
+matra build
+```
+
+Windowsではrepositoryの`node_modules/.bin`をPATHに追加し、同じ`matra`コマンドを使います。
+生成先は**まだ存在しないディレクトリ**を指定します。空のディレクトリも上書きしません。
+親ディレクトリは事前に存在する必要があります。生成するファイルは次のとおりです。
+
+```text
+hello/
+  index.md           # FrontMatter・Matra・JavaScriptデータを含む文書
+  matra.css          # @matra/stylesのCSS。自由に編集可能
+  matra.css.LICENSE  # CSSのライセンス
+  .gitignore         # /dist/を除外
+```
+
+入口は`index.md`、CSSは`matra.css`、出力先は`dist/`に固定しています。
+`matra build`は現在のディレクトリで文書をコンパイル・実行し、`dist/index.html`、
+`dist/matra.css`、`dist/matra.css.LICENSE`を生成・更新します。
+`dist/index.html`はブラウザで直接開け、閲覧にネットワーク接続は不要です。
+未知の出力ファイルは削除せず、出力先のsymlinkは拒否します。
+build時には文書内のJavaScriptが実行されるため、信頼する文書のみをbuildしてください。
+通常のliterate API・`matra-literate` CLI・文法は変更していません。
+利用時には同梱compiler Wasmとmanifestを使い、Rust・pnpm・ネットワークは不要です。
+現在の開発版の準備とpack検証ではRust・pnpmが必要です。
+
+`pnpm test:cli`で初期化・HTML/CSS生成・エラー処理を、
+`pnpm test:literate:package`でCLI・テンプレート・CSS・compilerをpackして
+checkout外・外部コマンドなしで動くことを検証します。
+
 ## 移植性の方針
 
 Matraの中心目標は、共通APIと対応パッケージで作った同じプロジェクトを、
@@ -64,6 +110,7 @@ OS sandboxやtimeoutは保証しません。compiler Wasmを同梱するため�
 ## パッケージ
 
 - [`@matra/core`](packages/core)
+- [`@matra/cli`](packages/cli)
 - [`@matra/command`](packages/command)
 - [`@matra/graphics`](packages/graphics)
 - [`@matra/html`](packages/html)
