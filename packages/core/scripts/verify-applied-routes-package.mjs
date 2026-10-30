@@ -17,12 +17,14 @@ if (!npmCli) throw new Error("Could not locate npm bundled with the active Node.
 const root = await mkdtemp(join(tmpdir(), "matra-applied-routes-"))
 const packagesDirectory = join(root, "packages")
 const packageDirectories = [
+  fileURLToPath(new URL("../", import.meta.url)),
   fileURLToPath(new URL("../../graphics/", import.meta.url)),
   fileURLToPath(new URL("../../math/", import.meta.url)),
   fileURLToPath(new URL("../../math-compute-engine/", import.meta.url)),
   fileURLToPath(new URL("../../vscode/", import.meta.url)),
 ]
 const packageNames = [
+  "@matra/core",
   "@matra/graphics",
   "@matra/math",
   "@matra/math-compute-engine",
@@ -58,7 +60,6 @@ try {
       "--no-save",
       "--ignore-scripts",
       ...archives,
-      "@matra/core@0.3.0-alpha.1",
     ],
     { cwd: root, stdio: "inherit" },
   )
