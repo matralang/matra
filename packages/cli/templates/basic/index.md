@@ -9,6 +9,8 @@ matra:
 
 Edit this document, then run `matra build`.
 Open `dist/index.html` in a browser. No network connection is needed to view it.
+For a local preview, run `matra dev` and open the URL printed in the terminal.
+Changes rebuild automatically; refresh the browser to see them. Press Ctrl+C to stop.
 
 ## Page structure
 

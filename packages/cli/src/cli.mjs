@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises"
+import { startDev } from "./dev.mjs"
 import { buildProject, initProject } from "./project.mjs"
 
 const usage = `Usage: matra init DIRECTORY
        matra build
+       matra dev [--port PORT]
        matra --version
 
 init   Create a new project directory.
 build  Build index.md and matra.css into dist/ in the current directory.
+dev    Serve on 127.0.0.1:3000 and rebuild on changes. Refresh the browser to view changes.
 
-Only build trusted documents: JavaScript in the document is executed.
-dev is not implemented yet.`
+Only build trusted documents: JavaScript in the document is executed.`
 
 const args = process.argv.slice(2)
 if (args[0] === "--") args.shift()
@@ -29,6 +31,28 @@ try {
   } else if (args[0] === "build" && args.length === 1) {
     const output = await buildProject(process.cwd())
     console.log(`Generated: ${output}`)
+  } else if (
+    args[0] === "dev" &&
+    (args.length === 1 || (args.length === 3 && args[1] === "--port" && /^[0-9]+$/.test(args[2])))
+  ) {
+    const port = args.length === 1 ? 3000 : Number(args[2])
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      throw new Error("Port must be an integer between 1 and 65535")
+    }
+    const dev = await startDev(process.cwd(), { port })
+    console.log(`Serving: ${dev.url}\nWatching for changes. Refresh the browser. Ctrl+C to stop.`)
+    let stop
+    try {
+      await new Promise(resolve => {
+        stop = resolve
+        process.once("SIGINT", stop)
+        process.once("SIGTERM", stop)
+      })
+    } finally {
+      process.removeListener("SIGINT", stop)
+      process.removeListener("SIGTERM", stop)
+      await dev.close()
+    }
   } else {
     throw new Error(usage)
   }

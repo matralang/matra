@@ -19,11 +19,14 @@ v0.3は、モーフィオンに基づく文書モデル、既存言語との明�
 最初の配布は、固定versionのNode.js、Matra起動コマンド、CLIと依存ライブラリ、
 compiler Wasmと対応manifest、テンプレートとCSS、ライセンス・バージョン情報を
 OS・CPU別のフォルダー（ZIPなど）へまとめる方針です。
-このフォルダー配布自体と`matra dev`は未実装です。
+このフォルダー配布自体は未実装です。
 
 先行して`@matra/cli`の`matra init DIRECTORY`と最小の`matra build`を追加しました。
 新規ディレクトリへ`index.md`、編集可能な`matra.css`、CSSライセンス、`.gitignore`を生成し、
 設定ファイルやプロジェクト内のnpm依存を要求しません。
+`matra dev`はlocalhost限定のHTTPサーバーと入力3ファイルの変更監視・再buildを提供します。
+初回build失敗は起動を中止し、起動後の失敗はdiagnosticとHTTP 503で通知して修正を待ちます。
+ブラウザ再読み込みは手動で、Ctrl+Cで停止します。自動リロードは含めません。
 buildは現在のディレクトリの文書を既存literate APIでcompile・実行し、
 `dist/index.html`とCSS・ライセンスを出力します。信頼する文書のみを対象とします。
 Matra Program・compiler sourceの文法、compiler ABIは変更しません。

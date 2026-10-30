@@ -34,8 +34,7 @@ modules, npm and Python integration remain outside this route.
 `@matra/cli` provides `matra init` to create a first page without manually assembling
 configuration or project dependencies. This is currently a repository development tool.
 OS/CPU-specific folder distributions with pinned Node.js, launchers, ZIP archives,
-and consolidated license/version information are follow-up work. `matra dev` is not
-implemented yet.
+and consolidated license/version information are follow-up work.
 
 With Node.js 22/24, pnpm, and the repository's Rust toolchain, run from the repository root
 (the PATH example is for macOS/Linux):
@@ -72,9 +71,29 @@ The existing literate API, `matra-literate` CLI, and language grammar are unchan
 Execution uses the bundled compiler Wasm and manifest without Rust, pnpm, or a network;
 preparing and packing the development tools still requires Rust and pnpm.
 
+### Local preview
+
+Run inside the generated project:
+
+```sh
+matra dev
+```
+
+After the initial build, open `http://127.0.0.1:3000/`. Changes to `index.md`,
+`matra.css`, and `matra.css.LICENSE` automatically rebuild the project.
+Refresh the browser manually; live reload and automatic browser launch are not implemented.
+An occupied port fails explicitly; use `matra dev --port 3001` to choose another.
+The server binds only to `127.0.0.1`, not external network interfaces.
+It serves only generated HTML, CSS, and the CSS license, never source documents or other files.
+
+An initial build failure prevents startup. Later build failures are reported in the terminal
+and return HTTP 503 with a plain-text diagnostic for generated asset requests.
+Previous output files remain on disk; serving resumes after a successful rebuild.
+Press Ctrl+C to stop the server and file monitoring.
+
 Run `pnpm test:cli` for initialization, HTML/CSS generation, and error handling.
 `pnpm test:literate:package` packs the CLI, template, CSS, and compiler and verifies
-execution outside the checkout without external commands.
+init/build/dev outside the checkout without external commands.
 
 ## Portability policy
 

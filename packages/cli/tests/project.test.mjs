@@ -99,7 +99,9 @@ test("CLI reports invalid usage, help, and version without creating files", asyn
     ["init"],
     ["init", "hello", "extra"],
     ["build", "extra"],
-    ["dev"],
+    ["dev", "extra"],
+    ["dev", "--port"],
+    ["dev", "--port", "nope"],
     ["unknown"],
   ]) {
     const result = invoke(root, ...args)
@@ -107,6 +109,11 @@ test("CLI reports invalid usage, help, and version without creating files", asyn
     assert.match(result.stderr, /Usage: matra/)
   }
   assert.equal(invoke(root, "--help").status, 0)
+  for (const port of ["0", "65536", "99999999999999999999"]) {
+    const result = invoke(root, "dev", "--port", port)
+    assert.equal(result.status, 1)
+    assert.match(result.stderr, /Port must be/)
+  }
   const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"))
   assert.equal(invoke(root, "--version").stdout.trim(), pkg.version)
   assert.deepEqual(await readdir(root), [])

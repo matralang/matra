@@ -21,11 +21,15 @@ verified environments without treating every package as equally complete.
 The first distribution is planned as an OS/CPU-specific folder (ZIP or similar),
 containing pinned Node.js, Matra launchers, the CLI and dependencies, compiler Wasm
 and its matching manifest, templates and CSS, and license/version information.
-This folder distribution itself and `matra dev` are not implemented yet.
+This folder distribution itself is not implemented yet.
 
 As the first step, `@matra/cli` adds `matra init DIRECTORY` and a minimal `matra build`.
 Initialization creates `index.md`, editable `matra.css`, its license, and `.gitignore`
 in a new directory without requiring configuration files or project npm dependencies.
+`matra dev` adds a localhost-only HTTP server, watching the three input files and
+rebuilding on changes. Initial build failure aborts startup; later failures produce
+diagnostics and HTTP 503 until fixed. Refresh the browser manually and stop with Ctrl+C;
+live reload is not included.
 Build compiles and executes the current directory's document using the existing literate
 API and writes `dist/index.html`, CSS, and its license. Only trusted documents may be built.
 Neither Matra Program/compiler-source grammar nor compiler ABI changes.

@@ -114,6 +114,41 @@ assert.notEqual(process.env.EXPECT_COMPILER_ERROR, "1")
     await readFile(join(project, "dist/matra.css.LICENSE"), "utf8"),
     await readFile(join(root, "node_modules/@matra/styles/LICENSE"), "utf8"),
   )
+  execute([
+    "--input-type=module",
+    "-e",
+    `
+import assert from "node:assert/strict"
+import { writeFile } from "node:fs/promises"
+import { setTimeout as delay } from "node:timers/promises"
+import { startDev } from "./node_modules/@matra/cli/src/dev.mjs"
+const errors = []
+const dev = await startDev("hello", {
+  port: 0,
+  onBuild: () => {},
+  onError: message => errors.push(message),
+})
+try {
+  const page = await fetch(dev.url)
+  assert.equal(page.status, 200)
+  assert.match(await page.text(), /Hello, Matra!/)
+  await writeFile("hello/matra.css", "body { color: red; }")
+  const deadline = Date.now() + 10000
+  let updated = false
+  while (Date.now() < deadline) {
+    if (await (await fetch(dev.url + "matra.css")).text() === "body { color: red; }") {
+      updated = true
+      break
+    }
+    await delay(50)
+  }
+  assert.ok(updated, "Packed dev server must rebuild after a CSS change")
+  assert.deepEqual(errors, [])
+} finally {
+  await dev.close()
+}
+`,
+  ])
   const cli = join(root, "node_modules/@matra/core/dist/literate/cli.mjs")
   assert.equal(execute([cli, "build", root, "web-page.md", "bundle.json"]), "")
   assert.equal(
@@ -180,7 +215,7 @@ if (browserValue !== undefined) void staticValueToAST(browserValue)
     { cwd: root, encoding: "utf8" },
   )
   console.log(
-    "Packed Core/HTML/CLI/Styles: APIs, types, init/build, missing/corrupt compiler, and Rust-free execution passed.",
+    "Packed Core/HTML/CLI/Styles: APIs, types, init/build/dev, missing/corrupt compiler, and Rust-free execution passed.",
   )
 } finally {
   await rm(root, { recursive: true, force: true })

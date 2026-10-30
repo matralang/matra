@@ -33,8 +33,7 @@ pnpm test:web-page
 
 `@matra/cli`の`matra init`で、設定ファイルや依存関係を手作業で組み立てずに
 最初のページを作れます。現段階はrepository内の開発版です。Node.js同梱の
-OS・CPU別フォルダー配布、起動コマンド、ZIP、ライセンス・バージョン情報の集約は後続であり、
-`matra dev`もまだ実装していません。
+OS・CPU別フォルダー配布、起動コマンド、ZIP、ライセンス・バージョン情報の集約は後続です。
 
 Node.js 22/24、pnpm、repository指定のRust toolchainを用意し、repository rootで
 次を実行します（PATHの設定例はmacOS/Linux向けです）。
@@ -71,9 +70,29 @@ build時には文書内のJavaScriptが実行されるため、信頼する文�
 利用時には同梱compiler Wasmとmanifestを使い、Rust・pnpm・ネットワークは不要です。
 現在の開発版の準備とpack検証ではRust・pnpmが必要です。
 
+### ローカルプレビュー
+
+作成したプロジェクト内で実行します。
+
+```sh
+matra dev
+```
+
+初回build後、`http://127.0.0.1:3000/`をブラウザで開きます。
+`index.md`、`matra.css`、`matra.css.LICENSE`の変更を監視して自動で再buildします。
+ブラウザの再読み込みは手動です。自動リロードやブラウザの自動起動は行いません。
+ポートが使用中ならエラーで終了します。`matra dev --port 3001`で変更できます。
+外部公開せず、`127.0.0.1`だけで待ち受けます。
+配信対象は生成HTML・CSS・CSSライセンスだけで、文書sourceやその他のファイルは配信しません。
+
+初回buildの失敗は起動エラーとして終了します。起動後のbuild失敗はターミナルに表示し、
+配信対象への応答をHTTP 503（plain textのdiagnostic）にします。
+前回のファイル出力は残し、修正後の再build成功で配信を再開します。
+Ctrl+Cでサーバーと監視を停止します。
+
 `pnpm test:cli`で初期化・HTML/CSS生成・エラー処理を、
 `pnpm test:literate:package`でCLI・テンプレート・CSS・compilerをpackして
-checkout外・外部コマンドなしで動くことを検証します。
+checkout外・外部コマンドなしでinit/build/devが動くことを検証します。
 
 ## 移植性の方針
 
