@@ -16,6 +16,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
+import { createZip, extractZip, runLauncher } from "../scripts/distribution-platform.mjs"
 import { verifyDistribution } from "../scripts/verify-distribution.mjs"
 
 async function temporary(t) {
@@ -64,6 +65,67 @@ test("distribution verification refuses the wrong host before running binaries",
   await assert.rejects(verifyDistribution(root), /Cannot execute unsupported-platform/)
 })
 
+test("ZIP round trips preserve dotfiles, Unicode paths, and executable files", async t => {
+  const root = await temporary(t)
+  const name = "test archive"
+  const folder = join(root, name)
+  await mkdir(join(folder, "日本語"), { recursive: true })
+  await writeFile(join(folder, ".gitignore"), "/dist/\n")
+  await writeFile(join(folder, "日本語", "text.txt"), "preserved\n")
+  await writeFile(join(folder, "executable"), "#!/bin/sh\nexit 0\n", { mode: 0o755 })
+  const archive = join(root, "test.zip")
+  createZip(archive, folder, root, name)
+  const destination = join(root, "extracted")
+  await mkdir(destination)
+  extractZip(archive, destination)
+  assert.equal(await readFile(join(destination, name, ".gitignore"), "utf8"), "/dist/\n")
+  assert.equal(await readFile(join(destination, name, "日本語/text.txt"), "utf8"), "preserved\n")
+  if (process.platform !== "win32") {
+    assert.equal(execFileSync(join(destination, name, "executable")).length, 0)
+  }
+})
+
+test("Windows launcher uses bundled Node.js, preserves cwd and arguments, and propagates errors", {
+  skip: process.platform !== "win32",
+}, async t => {
+  const root = await temporary(t)
+  const home = join(root, "日本語 with spaces")
+  await mkdir(join(home, "runtime"), { recursive: true })
+  await mkdir(join(home, "app/node_modules/@matra/cli/src"), { recursive: true })
+  await copyFile(process.execPath, join(home, "runtime/node.exe"))
+  await copyFile(new URL("../distribution/matra.cmd", import.meta.url), join(home, "matra.cmd"))
+  await writeFile(
+    join(home, "app/node_modules/@matra/cli/src/cli.mjs"),
+    "console.log(JSON.stringify({ cwd: process.cwd(), args: process.argv.slice(2) })); process.exitCode = Number(process.argv[2])\n",
+  )
+  const args = ["0", "hello world", "日本語"]
+  const options = { cwd: root, env: { ...process.env, PATH: "" }, encoding: "utf8" }
+  const result = JSON.parse(runLauncher(home, args, options))
+  assert.equal(result.cwd, root)
+  assert.deepEqual(result.args, args)
+  assert.throws(() => runLauncher(home, ["7"], options), { status: 7 })
+})
+
+test("Node.js pins cover the six native CI targets with SHA-256 digests", async () => {
+  const config = JSON.parse(await readFile(new URL("../distribution/node.json", import.meta.url)))
+  assert.deepEqual(Object.keys(config.targets).sort(), [
+    "darwin-arm64",
+    "darwin-x64",
+    "linux-arm64",
+    "linux-x64",
+    "win32-arm64",
+    "win32-x64",
+  ])
+  for (const [target, entry] of Object.entries(config.targets)) {
+    assert.match(entry.sha256, /^[a-f0-9]{64}$/)
+    const nodeTarget = target.replace("win32-", "win-")
+    assert.equal(
+      entry.archive,
+      `node-v${config.version}-${nodeTarget}.${target.startsWith("win32") ? "zip" : "tar.gz"}`,
+    )
+  }
+})
+
 test("distribution verification refuses symlinks instead of depending on the checkout", {
   skip: process.platform === "win32",
 }, async t => {
@@ -85,13 +147,14 @@ test("distribution verification refuses symlinks instead of depending on the che
 
 test("distribution build refuses existing artifacts without overwriting them", async t => {
   const config = JSON.parse(await readFile(new URL("../distribution/node.json", import.meta.url)))
-  if (`${process.platform}-${process.arch}` !== config.target) {
-    t.skip(`Native builder currently supports ${config.target} only`)
+  const target = `${process.platform}-${process.arch}`
+  if (!Object.hasOwn(config.targets, target)) {
+    t.skip(`Unsupported native target: ${target}`)
     return
   }
   const root = await temporary(t)
   const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url)))
-  const filename = `matra-${pkg.version}-${config.target}.zip`
+  const filename = `matra-${pkg.version}-${target}.zip`
   await writeFile(join(root, filename), "keep")
   const result = spawnSync(
     process.execPath,

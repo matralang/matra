@@ -16,12 +16,21 @@ import {
 import { createRequire } from "node:module"
 import { basename, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+import {
+  createZip,
+  extractZip,
+  launcherName,
+  runtimeBinary,
+  windows,
+} from "./distribution-platform.mjs"
 import { verifyDistribution } from "./verify-distribution.mjs"
 
 const root = fileURLToPath(new URL("../../../", import.meta.url))
-const config = JSON.parse(await readFile(new URL("../distribution/node.json", import.meta.url)))
+const nodeConfig = JSON.parse(await readFile(new URL("../distribution/node.json", import.meta.url)))
 const target = `${process.platform}-${process.arch}`
-if (target !== config.target) throw new Error(`Only ${config.target} is supported, not ${target}`)
+if (!Object.hasOwn(nodeConfig.targets, target))
+  throw new Error(`Unsupported distribution target: ${target}`)
+const config = { version: nodeConfig.version, target, ...nodeConfig.targets[target] }
 const args = process.argv.slice(2)
 if (args[0] === "--") args.shift()
 if (args.length !== 0 && (args.length !== 2 || args[0] !== "--output")) {
@@ -71,18 +80,26 @@ try {
   await writeFile(nodeArchive, bytes)
   const runtime = join(stage, "runtime")
   await mkdir(runtime)
-  invoke("tar", [
-    "-xzf",
-    nodeArchive,
-    "-C",
-    runtime,
-    "--strip-components=1",
-    `node-v${config.version}-${target}/bin/node`,
-    `node-v${config.version}-${target}/LICENSE`,
-  ])
+  if (windows) {
+    const unpacked = join(work, "node")
+    await mkdir(unpacked)
+    extractZip(nodeArchive, unpacked)
+    const source = join(unpacked, `node-v${config.version}-win-${process.arch}`)
+    await copyFile(join(source, "node.exe"), join(runtime, "node.exe"))
+    await copyFile(join(source, "LICENSE"), join(runtime, "LICENSE"))
+  } else
+    invoke("tar", [
+      "-xzf",
+      nodeArchive,
+      "-C",
+      runtime,
+      "--strip-components=1",
+      `node-v${config.version}-${target}/bin/node`,
+      `node-v${config.version}-${target}/LICENSE`,
+    ])
   await copyFile(join(runtime, "LICENSE"), join(licenses, "Node.js.LICENSE"))
-  await chmod(join(runtime, "bin/node"), 0o755)
-  if (invoke(join(runtime, "bin/node"), ["--version"]).trim() !== `v${config.version}`) {
+  if (!windows) await chmod(join(stage, runtimeBinary), 0o755)
+  if (invoke(join(stage, runtimeBinary), ["--version"]).trim() !== `v${config.version}`) {
     throw new Error("Bundled Node.js version mismatch")
   }
 
@@ -152,8 +169,11 @@ try {
     }
   }
   await include(sources.get("@matra/cli"))
-  await copyFile(new URL("../distribution/matra", import.meta.url), join(stage, "matra"))
-  await chmod(join(stage, "matra"), 0o755)
+  await copyFile(
+    new URL(`../distribution/${launcherName}`, import.meta.url),
+    join(stage, launcherName),
+  )
+  if (!windows) await chmod(join(stage, launcherName), 0o755)
   await copyFile(join(root, "LICENSE"), join(stage, "LICENSE"))
   const compiler = JSON.parse(
     await readFile(join(modules, "@matra/core/dist/literate/compiler.json")),
@@ -178,11 +198,11 @@ try {
   console.log("Verifying staged distribution...")
   await verifyDistribution(stage)
   const zip = join(work, `${name}.zip`)
-  invoke("zip", ["-q", "-r", zip, name], work)
+  createZip(zip, stage, work, name)
   console.log("Verifying extracted ZIP...")
   const extracted = join(work, "unpacked")
   await mkdir(extracted)
-  invoke("unzip", ["-q", zip, "-d", extracted])
+  extractZip(zip, extracted)
   await verifyDistribution(join(extracted, name))
   await cp(stage, folder, { recursive: true, errorOnExist: true, force: false })
   await copyFile(zip, archive)

@@ -21,11 +21,14 @@ verified environments without treating every package as equally complete.
 The first distribution is planned as an OS/CPU-specific folder (ZIP or similar),
 containing pinned Node.js, Matra launchers, the CLI and dependencies, compiler Wasm
 and its matching manifest, templates and CSS, and license/version information.
-Development scripts now build a macOS / arm64 folder and ZIP and verify re-extraction.
+Development scripts now build native macOS/Linux/Windows x64/arm64 folders and ZIPs and verify re-extraction.
 They pin the official Node.js `24.17.0` checksum and include runtime dependencies,
 launcher, compiler, template, CSS, licenses, and version information.
 init/build/dev are checked with an empty PATH, without system Node.js, pnpm, or Rust.
-Other OS/CPU distributions, signing/notarization, and release uploads remain unimplemented.
+A six-target CI workflow is defined. Local macOS / arm64 execution is verified;
+remote CI results for the other five targets are not yet confirmed.
+Windows uses a `.cmd` launcher and standard .NET ZIP APIs; Linux targets glibc, excluding Alpine/musl.
+Signing/notarization and release uploads remain unimplemented.
 ZIP byte reproducibility is not guaranteed; source commit, dirty state, and lockfile checksum are recorded.
 
 As the first step, `@matra/cli` adds `matra init DIRECTORY` and a minimal `matra build`.

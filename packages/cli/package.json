@@ -12,7 +12,7 @@
     "templates"
   ],
   "scripts": {
-    "build": "node --check src/cli.mjs && node --check src/project.mjs && node --check src/dev.mjs && node --check scripts/build-distribution.mjs && node --check scripts/verify-distribution.mjs",
+    "build": "node --check src/cli.mjs && node --check src/project.mjs && node --check src/dev.mjs && node --check scripts/build-distribution.mjs && node --check scripts/verify-distribution.mjs && node --check scripts/distribution-platform.mjs",
     "check": "pnpm run build",
     "test": "node --test tests/*.test.mjs"
   },

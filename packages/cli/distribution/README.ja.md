@@ -4,7 +4,9 @@
 
 Node.js同梱の実験的なフォルダー配布です。内部ファイルは個別に移動しないでください。
 利用時にシステムのNode.js・npm・pnpm・Rust・ネットワーク接続は不要です。
-初版はApple SiliconのmacOS向けです。他のOS・CPU向けの配布はまだ提供しません。
+macOS・Linux・Windowsのx64 / arm64向けに、対象環境上で配布物を作成します。
+自分のOS・CPUと一致するZIPを選んでください。Linuxは公式Node.jsが対応するglibc環境向けで、
+Alpine / muslは対象外です。CI検証と正式releaseの公開は区別します。
 
 ## 始め方
 
@@ -12,15 +14,29 @@ ZIPを展開し、展開したフォルダーをターミナルのPATHへ追加�
 下記のパスを実際の展開先へ置き換えてください。グローバルインストールは行いません。
 起動コマンドへのsymlinkではなく、実体のフォルダーを指定してください。
 
+macOS / Linuxの場合：
+
 ```sh
 export PATH="/absolute/path/to/extracted-matra-folder:$PATH"
 matra --version
 matra init hello
 cd hello
 matra build
-open dist/index.html
 ```
 
+Windows PowerShellの場合：
+
+```powershell
+$env:Path = "C:\path\to\extracted-matra-folder;$env:Path"
+matra --version
+matra init hello
+cd hello
+matra build
+```
+
+`dist/index.html`をブラウザで開いてください（macOSでは`open dist/index.html`）。
+Windowsの起動コマンドは`matra.cmd`、macOS / Linuxは`matra`です。
+ダブルクリックではなく、ターミナルから実行してください。
 `hello`はまだ存在しないディレクトリを指定します。`index.md`と`matra.css`を編集し、
 再buildしてください。ローカルサーバーで確認する場合は次を実行します。
 
@@ -40,8 +56,8 @@ buildエラーはターミナルに表示し、修正されるまでHTTP 503を�
 
 ## 内容と出典
 
-- `matra`：フォルダー内のNode.jsを使う起動コマンド
-- `runtime/bin/node`：version固定の公式Node.jsバイナリ
+- `matra`（macOS / Linux）・`matra.cmd`（Windows）：同梱Node.jsを使う起動コマンド
+- `runtime/bin/node`（macOS / Linux）・`runtime/node.exe`（Windows）：固定versionの公式Node.js
 - `app/node_modules/`：CLI・ライブラリ・compiler Wasmとmanifest・テンプレート
 - `LICENSE`・`licenses/`：Matraと依存ライブラリ、Node.js内の依存を含むライセンス情報
 - `versions.json`：各version、Node.js取得先とchecksum、compiler manifest、

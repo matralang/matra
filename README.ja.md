@@ -32,8 +32,9 @@ pnpm test:web-page
 ## Matraのビルドツール（開発版）
 
 `@matra/cli`の`matra init`で、設定ファイルや依存関係を手作業で組み立てずに
-最初のページを作れます。macOS / arm64向けにはNode.js同梱フォルダーとZIPを
-作成・検証する開発用スクリプトを用意しました。他のOS・CPU向けの同梱配布、
+最初のページを作れます。macOS・Linux・Windowsのx64 / arm64向けにNode.js同梱フォルダーと
+ZIPを各対象環境で作成・検証する開発用スクリプトと6構成のCIを用意しました。
+ローカル実動確認はmacOS / arm64で行っています。他の5構成のremote CI結果はまだ未確認で、
 署名・公証、releaseへのアップロードは後続です。
 
 Node.js 22/24、pnpm、repository指定のRust toolchainを用意し、repository rootで
@@ -95,10 +96,11 @@ Ctrl+Cでサーバーと監視を停止します。
 `pnpm test:literate:package`でCLI・テンプレート・CSS・compilerをpackして
 checkout外・外部コマンドなしでinit/build/devが動くことを検証します。
 
-### Node.js同梱ZIPの作成（macOS / arm64）
+### Node.js同梱ZIPの作成
 
 作成側にはNode.js 22/24、pnpm、repository指定のRust、`tar`・`zip`・`unzip`と
-ネットワーク接続が必要です。repository rootで依存を導入してから実行します。
+ネットワーク接続が必要です。Windowsでは`tar`と標準Windows PowerShell / .NETのZIP機能を使い、
+`zip`・`unzip`コマンドは不要です。repository rootで依存を導入してから実行します。
 
 ```sh
 pnpm install --frozen-lockfile
@@ -111,9 +113,14 @@ Matraのpackageをpackし、実行時依存だけを自己完結したフォル�
 compiler Wasmと対応manifest、テンプレート、CSS、各ライセンス、`versions.json`を含みます。
 npm・pnpm自体は同梱しません。
 
-出力は`dist/releases/matra-0.3.0-darwin-arm64/`、同名の`.zip`と`.zip.sha256`です。
+実行しているOS・CPU向けに作成します。cross buildは行いません。
+対象は`darwin-arm64`、`darwin-x64`、`linux-arm64`、`linux-x64`、`win32-arm64`、`win32-x64`です。
+Linuxは公式Node.jsが対応するglibc環境向けで、Alpine / muslは対象外です。
+出力は`dist/releases/matra-0.3.0-TARGET/`、同名の`.zip`と`.zip.sha256`です。
 作成中のフォルダーとZIPの再展開先で、日本語・空白を含むパスへの移動、PATHが空の環境での
 起動・init/build/dev・変更監視・終了、compilerとライセンスの存在を検証します。
+Windowsは`matra.cmd`によるinit/buildと同梱Node.jsによるdevを検証し、
+テスト終了時はdevプロセスを終了します（Ctrl+Cの対話操作は自動検証していません）。
 既存の成果物は上書きしません。再作成は`pnpm distribution:build --output dist/another-release`
 のように別の出力先を指定してください。ZIPのbyte単位の再現性は保証しません。
 `versions.json`にはsource commitと作業ツリー変更の有無も記録します。
@@ -131,9 +138,21 @@ matra build
 matra dev
 ```
 
+Windows PowerShellでは、展開したフォルダーを次のようにPATHへ追加します。
+
+```powershell
+$env:Path = "C:\path\to\matra-0.3.0-win32-x64;$env:Path"
+matra init hello
+cd hello
+matra build
+matra dev
+```
+
 展開済みフォルダーは`pnpm distribution:verify dist/releases/matra-0.3.0-darwin-arm64`
 で再検証できます。macOSのdownload承認が必要になる場合があります。
 開発版のため署名・公証は行っていません。
+[配布CI](.github/workflows/distribution.yml)は6つのnative runnerでCLI test・ZIP作成・再展開を行い、
+成功したZIPとchecksumを7日間のActions artifactとして保存します。GitHub Releaseへは公開しません。
 
 ## 移植性の方針
 

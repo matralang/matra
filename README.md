@@ -33,8 +33,10 @@ modules, npm and Python integration remain outside this route.
 
 `@matra/cli` provides `matra init` to create a first page without manually assembling
 configuration or project dependencies. Development scripts now build and verify a
-macOS / arm64 folder and ZIP with bundled Node.js. Other OS/CPU distributions,
-signing/notarization, and release uploads are follow-up work.
+native folders and ZIPs with bundled Node.js for macOS, Linux, and Windows on x64/arm64,
+with a six-target CI workflow. Local execution is verified on macOS / arm64;
+remote CI results for the other five targets are not yet confirmed.
+Signing/notarization and release uploads are follow-up work.
 
 With Node.js 22/24, pnpm, and the repository's Rust toolchain, run from the repository root
 (the PATH example is for macOS/Linux):
@@ -95,10 +97,12 @@ Run `pnpm test:cli` for initialization, HTML/CSS generation, and error handling.
 `pnpm test:literate:package` packs the CLI, template, CSS, and compiler and verifies
 init/build/dev outside the checkout without external commands.
 
-### Building a Node.js-inclusive ZIP (macOS / arm64)
+### Building a Node.js-inclusive ZIP
 
 The builder needs Node.js 22/24, pnpm, the repository's Rust toolchain, `tar`, `zip`,
-`unzip`, and a network connection. Run from the repository root:
+`unzip`, and a network connection. Windows instead uses `tar` and standard Windows
+PowerShell/.NET ZIP APIs, with no `zip`/`unzip` commands required.
+Run from the repository root:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -111,10 +115,15 @@ It packs Matra packages and assembles their runtime dependencies in a self-conta
 folder with compiler Wasm/manifest, template, CSS, licenses, and `versions.json`.
 npm and pnpm are not included.
 
-Outputs are `dist/releases/matra-0.3.0-darwin-arm64/`, its `.zip`, and `.zip.sha256`.
+The builder targets its native OS/CPU, never cross-compiling. Targets are
+`darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`, `win32-arm64`, and `win32-x64`.
+Linux requires a glibc environment supported by official Node.js; Alpine/musl is excluded.
+Outputs are `dist/releases/matra-0.3.0-TARGET/`, its `.zip`, and `.zip.sha256`.
 Both the staged folder and re-extracted ZIP are relocated to paths containing spaces
 and Japanese characters and tested with an empty PATH: launch, init/build/dev, rebuild,
 shutdown, compiler, and license checks. Existing artifacts are never overwritten.
+Windows verifies init/build through `matra.cmd` and dev through bundled Node.js,
+terminating the dev process after tests; interactive Ctrl+C is not automatically verified.
 To rebuild, choose another destination, such as
 `pnpm distribution:build --output dist/another-release`.
 Bit-for-bit archive reproducibility is not guaranteed. `versions.json` records the source
@@ -133,10 +142,23 @@ matra build
 matra dev
 ```
 
+On Windows PowerShell, add the extracted folder to PATH:
+
+```powershell
+$env:Path = "C:\path\to\matra-0.3.0-win32-x64;$env:Path"
+matra init hello
+cd hello
+matra build
+matra dev
+```
+
 Recheck an extracted folder with
 `pnpm distribution:verify dist/releases/matra-0.3.0-darwin-arm64`.
 macOS may require approval for downloaded software. This development distribution
 is not signed or notarized.
+The [distribution CI](.github/workflows/distribution.yml) runs CLI tests, ZIP creation,
+and re-extraction on six native runners. Successful ZIPs/checksums are stored as
+Actions artifacts for seven days, not published to GitHub Releases.
 
 ## Portability policy
 

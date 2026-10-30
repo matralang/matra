@@ -8,6 +8,7 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { setTimeout as delay } from "node:timers/promises"
 import { fileURLToPath } from "node:url"
+import { launcherName, runLauncher, runtimeBinary, windows } from "./distribution-platform.mjs"
 
 export async function verifyDistribution(directory) {
   const original = resolve(directory)
@@ -34,13 +35,20 @@ export async function verifyDistribution(directory) {
       NODE_PATH: "",
       MATRA_BOOTSTRAP_CACHE_DIR: join(root, "absent"),
     }
-    const node = join(home, "runtime/bin/node")
-    const launcher = join(home, "matra")
+    const node = join(home, runtimeBinary)
+    const launcher = join(home, launcherName)
     const run = (command, args, cwd = root) =>
       execFileSync(command, args, { cwd, env, encoding: "utf8", timeout: 30000 })
     assert.equal(run(node, ["--version"]).trim(), `v${metadata.node.version}`)
-    assert.equal(run(launcher, ["--version"]).trim(), metadata.version)
-    assert.match(run(launcher, ["--help"]), /matra dev/)
+    const launch = (args, cwd = root) =>
+      runLauncher(home, args, {
+        cwd,
+        env,
+        encoding: "utf8",
+        timeout: 30000,
+      })
+    assert.equal(launch(["--version"]).trim(), metadata.version)
+    assert.match(launch(["--help"]), /matra dev/)
     for (const path of ["LICENSE", "README.md", "README.ja.md", metadata.node.licenseFile]) {
       assert.ok((await readFile(join(home, path))).length > 0)
     }
@@ -66,9 +74,9 @@ export async function verifyDistribution(directory) {
         .digest("hex"),
       compiler.sha256,
     )
-    run(launcher, ["init", "hello world"])
+    launch(["init", "hello world"])
     const project = join(root, "hello world")
-    run(launcher, ["build"], project)
+    launch(["build"], project)
     assert.match(await readFile(join(project, "dist/index.html"), "utf8"), /Hello, Matra!/)
     assert.deepEqual(
       await readFile(join(project, "dist/matra.css")),
@@ -78,13 +86,22 @@ export async function verifyDistribution(directory) {
       await readFile(join(project, "dist/matra.css.LICENSE")),
       await readFile(join(home, "app/node_modules/@matra/styles/LICENSE")),
     )
+    assert.equal(await readFile(join(project, ".gitignore"), "utf8"), "/dist/\n")
 
     const reservation = createServer()
     reservation.listen(0, "127.0.0.1")
     await once(reservation, "listening")
     const port = reservation.address().port
     await new Promise(resolve => reservation.close(resolve))
-    const dev = spawn(launcher, ["dev", "--port", String(port)], {
+    // Windowsのcmdラッパーの子を残さないよう、検証済みの同梱Node.jsを直接起動する。
+    const command = windows ? node : launcher
+    const args = [
+      ...(windows ? [join(home, "app/node_modules/@matra/cli/src/cli.mjs")] : []),
+      "dev",
+      "--port",
+      String(port),
+    ]
+    const dev = spawn(command, args, {
       cwd: project,
       env,
       stdio: ["ignore", "pipe", "pipe"],
@@ -122,8 +139,12 @@ export async function verifyDistribution(directory) {
       const timer = setTimeout(() => dev.kill("SIGKILL"), 5000)
       try {
         const [code, signal] = await exited
-        assert.equal(code, 0, stderr)
-        assert.equal(signal, null)
+        if (windows) {
+          assert.equal(signal, "SIGTERM")
+        } else {
+          assert.equal(code, 0, stderr)
+          assert.equal(signal, null)
+        }
       } finally {
         clearTimeout(timer)
       }
