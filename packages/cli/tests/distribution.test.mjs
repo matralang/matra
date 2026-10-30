@@ -156,6 +156,24 @@ test("CLI shebangs stay LF with Windows checkout conversion enabled", () => {
   }
 })
 
+test("release build inputs stay byte-identical with Windows checkout conversion enabled", () => {
+  const root = fileURLToPath(new URL("../../../", import.meta.url))
+  for (const path of [
+    "pnpm-lock.yaml",
+    "packages/core/src/parser/grammar.pegjs",
+    "packages/core/src/parser/generated.mjs",
+  ]) {
+    const options = { cwd: root }
+    const content = execFileSync(
+      "git",
+      ["-c", "core.autocrlf=true", "cat-file", "--filters", `HEAD:${path}`],
+      options,
+    )
+    assert.deepEqual(content, execFileSync("git", ["show", `HEAD:${path}`], options), path)
+    assert.ok(!content.includes(13), `Expected LF checkout: ${path}`)
+  }
+})
+
 test("distribution verification refuses symlinks instead of depending on the checkout", {
   skip: process.platform === "win32",
 }, async t => {

@@ -42,7 +42,10 @@ gh workflow run distribution.yml \
 Push, PR, and ordinary manual runs do not create Drafts.
 Normal CI also aggregates all six ZIPs on Linux to check extraction compatibility,
 checksums, provenance, and matching compilers. Windows ZIP entry names use `/` separators,
-so other platforms can extract them without warnings. Only manual `create_draft=true`
+so other platforms can extract them without warnings.
+The lockfile and Core parser input/output are checked out with LF to prevent Windows
+line-ending conversion from changing checksums or marking regenerated parser source dirty.
+Only manual `create_draft=true`
 creates one after all these checks:
 
 1. An existing tag resolves to the checked-out HEAD; source is clean.
