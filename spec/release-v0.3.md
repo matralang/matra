@@ -16,6 +16,39 @@ connections between layers. Language specification, npm package versions, and
 compiler ABI are separate. Release notes must identify supported routes and
 verified environments without treating every package as equally complete.
 
+## Initial build-tool onboarding
+
+The first distribution is planned as an OS/CPU-specific folder (ZIP or similar),
+containing pinned Node.js, Matra launchers, the CLI and dependencies, compiler Wasm
+and its matching manifest, templates and CSS, and license/version information.
+Development scripts now build native macOS/Linux/Windows x64/arm64 folders and ZIPs and verify re-extraction.
+They pin the official Node.js `24.17.0` checksum and include runtime dependencies,
+launcher, compiler, template, CSS, licenses, and version information.
+init/build/dev are checked with an empty PATH, without system Node.js, pnpm, or Rust.
+All six targets passed CLI tests, folder creation, ZIP re-extraction, and init/build/dev
+verification on commit `2056aee` in
+[run 41005130597](https://github.com/matralang/matra/actions/runs/41005130597).
+Each target's ZIP and checksum are retained as Actions artifacts for seven days.
+Local macOS / arm64 execution is also verified.
+Initial Windows pack failures caused by CRLF shebangs were fixed by pinning CLI source
+to LF and testing Windows checkout conversion. A Windows arm64 test race counting pending
+input rebuilds was fixed by independently testing output-only changes.
+Windows uses a `.cmd` launcher and standard .NET ZIP APIs; Linux targets glibc, excluding Alpine/musl.
+Signing/notarization and release uploads remain unimplemented.
+ZIP byte reproducibility is not guaranteed; source commit, dirty state, and lockfile checksum are recorded.
+
+As the first step, `@matra/cli` adds `matra init DIRECTORY` and a minimal `matra build`.
+Initialization creates `index.md`, editable `matra.css`, its license, and `.gitignore`
+in a new directory without requiring configuration files or project npm dependencies.
+`matra dev` adds a localhost-only HTTP server, watching the three input files and
+rebuilding on changes. Initial build failure aborts startup; later failures produce
+diagnostics and HTTP 503 until fixed. Refresh the browser manually and stop with Ctrl+C;
+live reload is not included.
+Build compiles and executes the current directory's document using the existing literate
+API and writes `dist/index.html`, CSS, and its license. Only trusted documents may be built.
+Neither Matra Program/compiler-source grammar nor compiler ABI changes.
+See the [README](../README.md#matra-build-tools-development) for development usage and verification.
+
 ## Philosophy and completion criteria
 
 | Principle | Evidence for v0.3 |

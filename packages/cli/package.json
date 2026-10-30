@@ -1,0 +1,25 @@
+{
+  "name": "@matra/cli",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Matra project initialization and HTML build tools",
+  "type": "module",
+  "bin": {
+    "matra": "src/cli.mjs"
+  },
+  "files": [
+    "src",
+    "templates"
+  ],
+  "scripts": {
+    "build": "node --check src/cli.mjs && node --check src/project.mjs && node --check src/dev.mjs && node --check scripts/build-distribution.mjs && node --check scripts/verify-distribution.mjs && node --check scripts/distribution-platform.mjs",
+    "check": "pnpm run build",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@matra/core": "workspace:^",
+    "@matra/html": "workspace:^",
+    "@matra/styles": "workspace:^"
+  },
+  "license": "MIT"
+}

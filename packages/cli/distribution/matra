@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+MATRA_HOME=$(CDPATH= cd -- "${0%/*}" && pwd)
+exec "$MATRA_HOME/runtime/bin/node" "$MATRA_HOME/app/node_modules/@matra/cli/src/cli.mjs" "$@"

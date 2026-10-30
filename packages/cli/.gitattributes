@@ -1,0 +1,4 @@
+distribution/matra text eol=lf
+distribution/matra.cmd text eol=crlf
+templates/basic/gitignore text eol=lf
+src/cli.mjs text eol=lf
