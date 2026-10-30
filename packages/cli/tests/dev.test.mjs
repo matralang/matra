@@ -124,15 +124,22 @@ test("dev watches content, atomic saves, CSS, and license, and recovers after de
     await writeFile(join(root, "index.md"), source.replaceAll("Hello, Matra!", `Title ${index}`))
   }
   await waitFor(async () => (await (await fetch(dev.url)).text()).includes("Title 11"))
-  const builds = dev.builds.length
-  await writeFile(join(root, "dist/ignored.txt"), "not an input")
-  await delay(600)
-  assert.equal(dev.builds.length, builds)
   await dev.close()
+  const builds = dev.builds.length
   await writeFile(join(root, "index.md"), source)
   await delay(400)
   assert.equal(dev.builds.length, builds)
   await assert.rejects(fetch(dev.url))
+})
+
+test("dev does not rebuild when only output files change", async t => {
+  const root = await project(t)
+  const dev = await preview(t, root)
+  const builds = dev.builds.length
+  await writeFile(join(root, "dist/ignored.txt"), "not an input")
+  await delay(600)
+  assert.equal(dev.builds.length, builds)
+  assert.deepEqual(dev.errors, [])
 })
 
 test("startup reports missing inputs and an occupied port and releases resources", async t => {
