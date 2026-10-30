@@ -46,6 +46,7 @@ WindowsのZIP entryも`/`区切りで保存し、他OSで警告なく展開で�
 lockfileとCoreのparser生成元・生成先はLFでcheckoutし、Windowsの改行変換による
 checksumの差異やparser再生成後のdirty sourceを防ぎます。
 CoreのTypeScript出力もLFで固定し、Windowsの既定改行による追跡済み生成物の差分を防ぎます。
+追跡済みの生成JS・型定義もLFでcheckoutし、再生成前後でGitの改行属性を一致させます。
 手動の`create_draft=true`だけが、次のすべてを満たした後にDraftを作成します。
 
 1. 既存タグのcommitとcheckoutしたHEADが一致し、sourceがcleanである

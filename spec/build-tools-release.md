@@ -46,6 +46,8 @@ so other platforms can extract them without warnings.
 The lockfile and Core parser input/output are checked out with LF to prevent Windows
 line-ending conversion from changing checksums or marking regenerated parser source dirty.
 Core TypeScript output also uses LF explicitly so Windows defaults do not modify tracked build output.
+Tracked generated JavaScript and declarations are checked out with LF as well, keeping Git
+line-ending attributes consistent before and after regeneration.
 Only manual `create_draft=true`
 creates one after all these checks:
 

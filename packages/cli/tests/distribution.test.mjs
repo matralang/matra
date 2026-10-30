@@ -162,6 +162,9 @@ test("release build inputs stay byte-identical with Windows checkout conversion 
     "pnpm-lock.yaml",
     "packages/core/src/parser/grammar.pegjs",
     "packages/core/src/parser/generated.mjs",
+    ...execFileSync("git", ["ls-files", "packages/core/dist"], { cwd: root, encoding: "utf8" })
+      .trim()
+      .split("\n"),
   ]) {
     const options = { cwd: root }
     const content = execFileSync(
