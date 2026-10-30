@@ -406,10 +406,39 @@ label alone does not satisfy the criteria.
 - [x] Verify the Core browser entrypoint and packed literate distribution in remote CI across Windows/macOS/Linux and Node.js 22/24. All six jobs passed on commit `6b78dd4` in [run 40969391013](https://github.com/matralang/matra/actions/runs/40969391013)
 - [x] Record the release-candidate source baseline, website/npm dependency integrity, compiler checksum/ABI, and CI evidence. Core `c664341`, website `e51f2cd`; this is not a public RC tag or npm release
 - [x] Do not describe standard JS modules, npm/Python integration or general `.jsonm` as implemented
-- [ ] Publish Core + HTML `0.3.0`; verify npm `latest`, registry integrity, and generation from an empty consumer. Styles and P1/P2 packages are out of scope
+- [x] Publish Core + HTML `0.3.0`; verify npm `latest`, registry integrity, and generation from an empty consumer. Styles and P1/P2 packages are out of scope
 
 The existing [portable CI](https://github.com/matralang/matra/actions/runs/40418928782)
 passed at the baseline commit. This does not validate the example HTML, all
 packages, or published artifacts. The added web-page CI covers dependency
 installation, HTML generation and verification on three OSes with Node.js 22/24.
 Adding CI configuration is separate from observing its successful remote run.
+
+## v0.3.0 publication record
+
+Core and HTML `0.3.0` were published on October 30, 2026 (Japan time), and npm
+`latest` now points to `0.3.0` for both. The `v0.3.0` tag points to release
+source commit
+[`ca58218`](https://github.com/matralang/matra/commit/ca5821880c84e4ed0eefb6b27a4882e2ed319b79).
+Its [portable CI](https://github.com/matralang/matra/actions/runs/40977745555)
+passed all six Windows/macOS/Linux × Node.js 22/24 configurations.
+
+```text
+@matra/core@0.3.0
+integrity: sha512-01WmTtplQny66tWI7CPrpWlKYVhzJ1AaAgE/gQA86ccx1/09Vjo+J8BM4Bkm1a2rgDJHMxnFeeLZlaYLvQDfuQ==
+@matra/html@0.3.0
+integrity: sha512-dceZgfOFMYOmvWIUVCeo7/V6NWfeWGNYdE6FLcxM/g5LWpQcmZFwGc/8sxmsbITju40wQCpSlLOGDKNcFwGPxg==
+HTML Core peer dependency: ^0.3.0
+Core compiler: 0.3.0, ABI matra-value-1, 111064 bytes
+compiler SHA-256: c9778e9e641bf82031b7fb5c0658dce2167d833c31487409cbdcac09fbad2efd
+npm latest: Core 0.3.0, HTML 0.3.0
+npm next: Core 0.3.0-alpha.1, HTML 0.3.0-alpha.0
+```
+
+Local `pnpm run lint`, 250 Core tests, 9 HTML tests, the literate package check,
+the applied-route packed consumer, and the web-page test passed. Both exact
+versions were also installed from npm into an empty temporary consumer; document
+to HTML generation and literate build/run passed on Node.js 24.17.0.
+The formal publication scope is Core + HTML; Styles and P1/P2 packages were not
+published. The website remains pinned to the alpha versions used during
+verification, and no website deployment was performed.

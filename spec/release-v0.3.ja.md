@@ -354,9 +354,35 @@ P0が未達の場合は、「実験的」という名称だけで成功扱いに
 - [x] Core browser entrypointとpacked literate配布物をWindows/macOS/Linux・Node.js 22/24でremote CI検証する。commit `6b78dd4`、[run 40969391013](https://github.com/matralang/matra/actions/runs/40969391013)の6構成が成功
 - [x] release candidateのsource baseline、website/npm dependency integrity、compiler checksum/ABI、CI結果を記録する。Core `c664341`、website `e51f2cd`。これは公開RC tagやnpm releaseではない
 - [x] 未実装の`.js` module・npm/Python連携と汎用`.jsonm`を実装済みとして説明していない
-- [ ] Core + HTML `0.3.0`を公開し、npm `latest` tag、registry integrity、空のconsumerでの生成経路を確認する。StylesおよびP1/P2 packageは対象外
+- [x] Core + HTML `0.3.0`を公開し、npm `latest` tag、registry integrity、空のconsumerでの生成経路を確認する。StylesおよびP1/P2 packageは対象外
 
 既存の[portable CI](https://github.com/matralang/matra/actions/runs/40418928782)は調査基準commitで成功しています。
 これは検証用HTML・全package・公開済み配布物の検証完了とは別です。
 追加したweb-page CIはJavaScript依存の導入からHTML生成・検証までを3 OS×Node.js 22/24で行います。
 CIの設定を追加したことと、そのCIがremoteで成功したことも区別して記録します。
+
+## v0.3.0公開記録
+
+2026年10月30日（日本時間）、CoreとHTMLの`0.3.0`を公開し、npm `latest`を両方とも
+`0.3.0`へ更新しました。tag `v0.3.0`はrelease source commit
+[`ca58218`](https://github.com/matralang/matra/commit/ca5821880c84e4ed0eefb6b27a4882e2ed319b79)
+を指し、同commitの[portable CI](https://github.com/matralang/matra/actions/runs/40977745555)は
+Windows/macOS/Linux × Node.js 22/24の6構成すべてで成功しました。
+
+```text
+@matra/core@0.3.0
+integrity: sha512-01WmTtplQny66tWI7CPrpWlKYVhzJ1AaAgE/gQA86ccx1/09Vjo+J8BM4Bkm1a2rgDJHMxnFeeLZlaYLvQDfuQ==
+@matra/html@0.3.0
+integrity: sha512-dceZgfOFMYOmvWIUVCeo7/V6NWfeWGNYdE6FLcxM/g5LWpQcmZFwGc/8sxmsbITju40wQCpSlLOGDKNcFwGPxg==
+HTML Core peer dependency: ^0.3.0
+Core compiler: 0.3.0, ABI matra-value-1, 111064 bytes
+compiler SHA-256: c9778e9e641bf82031b7fb5c0658dce2167d833c31487409cbdcac09fbad2efd
+npm latest: Core 0.3.0, HTML 0.3.0
+npm next: Core 0.3.0-alpha.1, HTML 0.3.0-alpha.0
+```
+
+ローカルでは`pnpm run lint`、Core 250件、HTML 9件、literate package、
+applied-route packed consumer、web-page testが成功しました。さらに空の一時consumerへregistryから
+両packageをexact versionで導入し、Node.js 24.17.0でdocument→HTMLとliterate build/runを確認しました。
+正式公開範囲はCore + HTMLです。StylesとP1/P2 packageは公開していません。
+websiteの依存versionは検証時のalpha pinのままで、website deployも行っていません。
