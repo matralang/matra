@@ -174,6 +174,11 @@ test("release build inputs stay byte-identical with Windows checkout conversion 
   }
 })
 
+test("Core emits LF instead of platform-dependent TypeScript line endings", async () => {
+  const config = JSON.parse(await readFile(new URL("../../core/tsconfig.json", import.meta.url)))
+  assert.equal(config.compilerOptions.newLine, "lf")
+})
+
 test("distribution verification refuses symlinks instead of depending on the checkout", {
   skip: process.platform === "win32",
 }, async t => {

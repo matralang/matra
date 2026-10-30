@@ -45,6 +45,7 @@ checksums, provenance, and matching compilers. Windows ZIP entry names use `/` s
 so other platforms can extract them without warnings.
 The lockfile and Core parser input/output are checked out with LF to prevent Windows
 line-ending conversion from changing checksums or marking regenerated parser source dirty.
+Core TypeScript output also uses LF explicitly so Windows defaults do not modify tracked build output.
 Only manual `create_draft=true`
 creates one after all these checks:
 
