@@ -23,7 +23,11 @@ macOS・Linux・Windowsのx64 / arm64向けにnativeな開発用フォルダー�
 公式Node.js `24.17.0`のchecksumを固定し、実行時依存、起動コマンド、
 compiler、テンプレート、CSS、ライセンス、version情報を同梱します。
 利用側のNode.js・pnpm・Rustなしでinit/build/devが動くことを、空のPATHで検証します。
-6対象のCIを定義しました。実動確認済みはローカルのmacOS / arm64で、他の5対象のremote CI結果は未確認です。
+commit `2056aee`の[run 41005130597](https://github.com/matralang/matra/actions/runs/41005130597)で、
+6対象すべてのCLI test・フォルダー作成・ZIP再展開・init/build/dev検証が成功しました。
+各対象のZIPとchecksumを7日間のActions artifactとして保存しています。ローカルでもmacOS / arm64を検証しました。
+初回CIで判明したWindowsのshebang CRLFによるpack失敗は、CLI sourceのLF固定とcheckout変換testで修正しました。
+Windows arm64の連続保存後に保留中のbuildを誤計数するtestは、出力ファイル変更の検証を独立させて修正しました。
 Windowsでは`.cmd`起動コマンドと標準.NET ZIP機能を使います。
 Linuxはglibc環境向けで、Alpine / muslは対象外です。署名・公証、release公開は未実施です。
 ZIPのbyte再現性は保証せず、source commit・dirty状態・lockfile checksumを記録します。

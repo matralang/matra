@@ -25,8 +25,14 @@ Development scripts now build native macOS/Linux/Windows x64/arm64 folders and Z
 They pin the official Node.js `24.17.0` checksum and include runtime dependencies,
 launcher, compiler, template, CSS, licenses, and version information.
 init/build/dev are checked with an empty PATH, without system Node.js, pnpm, or Rust.
-A six-target CI workflow is defined. Local macOS / arm64 execution is verified;
-remote CI results for the other five targets are not yet confirmed.
+All six targets passed CLI tests, folder creation, ZIP re-extraction, and init/build/dev
+verification on commit `2056aee` in
+[run 41005130597](https://github.com/matralang/matra/actions/runs/41005130597).
+Each target's ZIP and checksum are retained as Actions artifacts for seven days.
+Local macOS / arm64 execution is also verified.
+Initial Windows pack failures caused by CRLF shebangs were fixed by pinning CLI source
+to LF and testing Windows checkout conversion. A Windows arm64 test race counting pending
+input rebuilds was fixed by independently testing output-only changes.
 Windows uses a `.cmd` launcher and standard .NET ZIP APIs; Linux targets glibc, excluding Alpine/musl.
 Signing/notarization and release uploads remain unimplemented.
 ZIP byte reproducibility is not guaranteed; source commit, dirty state, and lockfile checksum are recorded.

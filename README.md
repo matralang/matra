@@ -32,10 +32,12 @@ modules, npm and Python integration remain outside this route.
 ## Matra build tools (development)
 
 `@matra/cli` provides `matra init` to create a first page without manually assembling
-configuration or project dependencies. Development scripts now build and verify a
+configuration or project dependencies. Development scripts now build and verify
 native folders and ZIPs with bundled Node.js for macOS, Linux, and Windows on x64/arm64,
-with a six-target CI workflow. Local execution is verified on macOS / arm64;
-remote CI results for the other five targets are not yet confirmed.
+with a six-target CI workflow. All six targets passed CLI tests, ZIP creation,
+and re-extraction on commit `2056aee` in
+[run 41005130597](https://github.com/matralang/matra/actions/runs/41005130597).
+Local execution is also verified on macOS / arm64.
 Signing/notarization and release uploads are follow-up work.
 
 With Node.js 22/24, pnpm, and the repository's Rust toolchain, run from the repository root

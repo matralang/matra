@@ -34,8 +34,9 @@ pnpm test:web-page
 `@matra/cli`の`matra init`で、設定ファイルや依存関係を手作業で組み立てずに
 最初のページを作れます。macOS・Linux・Windowsのx64 / arm64向けにNode.js同梱フォルダーと
 ZIPを各対象環境で作成・検証する開発用スクリプトと6構成のCIを用意しました。
-ローカル実動確認はmacOS / arm64で行っています。他の5構成のremote CI結果はまだ未確認で、
-署名・公証、releaseへのアップロードは後続です。
+commit `2056aee`の[配布CI run 41005130597](https://github.com/matralang/matra/actions/runs/41005130597)で
+6構成すべてのCLI test・ZIP作成・再展開検証が成功しました。
+ローカル実動確認はmacOS / arm64でも行っています。署名・公証、releaseへのアップロードは後続です。
 
 Node.js 22/24、pnpm、repository指定のRust toolchainを用意し、repository rootで
 次を実行します（PATHの設定例はmacOS/Linux向けです）。
