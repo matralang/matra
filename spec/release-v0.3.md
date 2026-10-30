@@ -67,7 +67,7 @@ that order, respecting dependencies. The table is based on source inspection.
 | `@matra/core` | v0.3 parser, static retrieval, explicit evaluation, document AST, traversal, JSONMatra helpers; document Morphion conversions added here | P0 | Document Morphion round trips and exponent validation, Module/document distinction, document construction and loops, current API documentation, diagnostic limitations | General `.jsonm`, unified source maps, strict type system |
 | `@matra/html` | Escaping, void elements, pretty output, base paths | P0 | Complete document, escaping and repetition from JS data in the validation example | Full Web framework, hydration, general site generator |
 | literate host / `matra-seed` | Rust seed, Matra-written Wasm compiler, explicit entry and `.js.part`, JSON bundle, portable file APIs | P0 | Build→execute→HTML, original-document diagnostics, preserve Stage 2/3 byte equality | Standard JS modules, npm/Python import, standalone runtime or package manager |
-| `@matra/core/experimental/literate` | Public subpath and types, build/run, bundled compiler, `matra-literate` CLI, and packed distribution tests implemented; npm publication and remote validation pending | P0 user-facing delivery | Experimental Node.js APIs, FrontMatter configuration, bundled compiler Wasm, dependency separation from ordinary Core entry, CLI over the same API, installation example outside the checkout | Browser support, a separate evaluator, general sandbox guarantees, extraction into a separate npm package |
+| `@matra/core/experimental/literate` | Public subpath/types, build/run, bundled compiler, and `matra-literate` CLI implemented; Core `0.3.0-alpha.1` published under npm `next`; packed tests and six-cell remote CI passed | P0 user-facing delivery | Experimental Node.js APIs, FrontMatter configuration, bundled compiler Wasm, dependency separation from ordinary Core entry, CLI over the same API, installation example outside the checkout | Browser support, a separate evaluator, general sandbox guarantees, extraction into a separate npm package |
 | `@matra/math` | MathJSON bridge, object form, Content MathML MVP, Morphion types | P1 | Distinguish document Morphion, describe semantic boundaries, round-trip representative supported expressions | Full MathML, MathML 4, general equivalence testing |
 | `@matra/math-compute-engine` | Evaluation, simplification, numeric approximation, Morphion conversion, property evaluation | P1 | Test finite sums, like terms, function atoms, negative integer powers, 256-term limit; inspect domains including division by zero and reproducible ordering | Complete engine-independent computation, general equivalence testing |
 | `@matra/styles` | No-class CSS and a few helpers | P0 validation route | Bundle CSS with generated pages for offline reading | New design system or themes |
@@ -337,6 +337,40 @@ Node.js 24. Content MathML was validated semantically, not as browser-rendered
 visual math. The editor package assets and tests were checked; the VS Code host
 was not launched for interactive integration testing.
 
+#### Release-candidate verification baseline (pre-publication)
+
+As of 2026-10-30, the candidate source is pinned to these commits:
+
+- Core: `c66434132f7d6cf02e919f1e5fb5fd181c61ffc1`
+- Official website: `e51f2cd88377838e74ca895dc5edc9e6d9d26410`
+
+The website's `npm run lint`, `npm test`, and `npm run build` passed on its pinned
+commit. Core's portable-runtime CI passed on its pinned commit, covering Core and
+applied-route package tests, packed consumers, portable runtime, Stage 2/3
+bootstrap, and HTML generation on Windows/macOS/Linux with Node.js 22/24
+([run 40975233046](https://github.com/matralang/matra/actions/runs/40975233046)).
+
+The website pins the published dependencies `@matra/core@0.3.0-alpha.1`
+(npm integrity `sha512-KmSsuLfkwOeHaK9bLjrSN7r/MesBlhzrkiS8JPIzAnmAKQSDC4+t0Ifldh1oYZ7yNHWC8f8bSo4f01bAMr6iIA==`)
+and `@matra/html@0.3.0-alpha.0`
+(npm integrity `sha512-CtxcF6t8o/6HBvZhuMb4eyetHQNDMCNAIGBjCyn7++Wlxlk/CSrE/9cf3757RxyxTnQt15cuPRVAPYrb0Tpo/w==`).
+The Core compiler is version `0.3.0-alpha.1`, ABI `matra-value-1`, 111,064 bytes,
+and SHA-256 `c9778e9e641bf82031b7fb5c0658dce2167d833c31487409cbdcac09fbad2efd`;
+its manifest records Stage 2/3 byte equality.
+
+The publication scope is Core + HTML, with formal versions `0.3.0` for both
+packages. `@matra/styles@0.1.0` is listed as P0 and exists in the workspace, but
+the npm registry returned E404 on 2026-10-30. The website carries its own
+stylesheet and builds without downloading CSS externally, so the Styles package
+is excluded from this npm publication. P1/P2 packages are also out of scope.
+Publish and move the `latest` tags only after revalidating the release source and
+confirming a traceable Git release record.
+
+This is a verified source/distribution baseline, not a public v0.3 RC tag or npm
+release. Core/HTML `0.3.0` are candidate versions and remain unpublished. The
+website still pins the alpha versions used during verification, and no website
+deployment was performed.
+
 ## Implementation stages and completion criteria
 
 | Stage | Work | Completion evidence |
@@ -347,7 +381,7 @@ was not launched for interactive integration testing.
 | 3: Applied routes | Validate existing SVG, math, and editor features with representative examples; test distribution | Packed packages, rendered output, supported OS validation |
 | 3: Website | P0 bilingual entry and current-spec alignment; P1 representative generation, Playground prototype, and migration decision | Bilingual pages, executable examples, links/layout/language switching, browser measurements and cancellation tests, selected scope and deferral reasons |
 | 4: Release candidate | Freeze grammar, APIs and validation examples; verify v0.3 candidate | Pinned commit, versions/checksums, release notes, Stage 2/3 equality, successful CI |
-| 5: Release decision | Check required criteria and known limitations, then publish experimental v0.3 | Reproducibility from the pinned version, installation and acquisition instructions, implementation/specification agreement |
+| 5: Release decision | Check required criteria and known limitations, then publish experimental v0.3 | Verify Core/HTML `0.3.0` registry artifacts and tags, reproducibility from the pinned version, installation instructions, and implementation/specification agreement |
 | 6: After release | Correct setup instructions, documentation and bugs; patch release if needed | Change history and validation results |
 
 Release notes describe completed P1/P2 scope. Unfinished extensions do not become
@@ -370,7 +404,9 @@ label alone does not satisfy the criteria.
 - [x] Pack Graphics, Math, and Compute Engine and run representative SVG, MathJSON, Content MathML, and evaluation examples from a temporary consumer; record the local macOS/Node.js 24 result
 - [x] Verify Graphics, Math, Compute Engine, and editor tests and packed representative examples on Windows/macOS/Linux with Node.js 22/24. All six jobs passed on commit `1578bd1` in [run 40974296046](https://github.com/matralang/matra/actions/runs/40974296046). SVG browser display was checked on macOS; Content MathML visual rendering and interactive VS Code host testing remain explicitly unverified
 - [x] Verify the Core browser entrypoint and packed literate distribution in remote CI across Windows/macOS/Linux and Node.js 22/24. All six jobs passed on commit `6b78dd4` in [run 40969391013](https://github.com/matralang/matra/actions/runs/40969391013)
+- [x] Record the release-candidate source baseline, website/npm dependency integrity, compiler checksum/ABI, and CI evidence. Core `c664341`, website `e51f2cd`; this is not a public RC tag or npm release
 - [x] Do not describe standard JS modules, npm/Python integration or general `.jsonm` as implemented
+- [ ] Publish Core + HTML `0.3.0`; verify npm `latest`, registry integrity, and generation from an empty consumer. Styles and P1/P2 packages are out of scope
 
 The existing [portable CI](https://github.com/matralang/matra/actions/runs/40418928782)
 passed at the baseline commit. This does not validate the example HTML, all

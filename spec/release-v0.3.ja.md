@@ -56,7 +56,7 @@ P2は動作を維持するが新しい完成条件を増やさない対象です
 | `@matra/core` | v0.3 parser、静的取得・明示評価、文書AST、変換・走査、JSONMatra補助API。今回、文書Morphion相互変換を追加 | P0 | 文書Morphionの往復・指数検証、Moduleと文書ASTの区別、文書構築・loop・JS接続経路、現行APIで動くREADME、診断の制限を明記 | 汎用`.jsonm`、全APIで統一したsource map、厳密な型システム |
 | `@matra/html` | escaping、void element、pretty出力、base path | P0 | 完全なHTML文書、本文・属性・値のescape、JSデータからの繰り返しを検証サンプルで検証 | Web framework全体、hydration、汎用site generator |
 | literate host / `matra-seed` | Rust seed、Matra製Wasm compiler、明示入口と`.js.part`、JSON bundle、portable file API | P0 | 検証文書のbuild→実行→HTML出力、元文書の診断、bootstrapのStage 2/3 byte equalityを維持 | 標準`.js` module/npm/Pythonの直接import、standalone runtime・package manager |
-| `@matra/core/experimental/literate` | 公開サブパス・型定義、build/run、同梱compiler、`matra-literate` CLI、pack検証を実装。npm公開とremote検証は未完了 | P0：利用者への提供経路 | Node.js向け実験的API、FrontMatter設定、compiler Wasm同梱、通常のCore入口との依存分離、同じAPIを使うCLI、checkout外で動く導入作例 | ブラウザ対応、独自の評価系、一般的なsandbox保証、独立npm packageへの分離 |
+| `@matra/core/experimental/literate` | 公開サブパス・型定義、build/run、同梱compiler、`matra-literate` CLIを実装。Core `0.3.0-alpha.1`をnpm `next`で公開済み。pack検証と6構成remote CIが成功 | P0：利用者への提供経路 | Node.js向け実験的API、FrontMatter設定、compiler Wasm同梱、通常のCore入口との依存分離、同じAPIを使うCLI、checkout外で動く導入作例 | ブラウザ対応、独自の評価系、一般的なsandbox保証、独立npm packageへの分離 |
 | `@matra/math` | MathJSON変換、object形式、Content MathML MVP、Morphion型 | P1 | 文書Morphionとの役割の区別、表現境界・保持する意味・制限を説明し、対応する数式を代表例で往復検証 | MathML全体、MathML 4、全数学的同値性の判定 |
 | `@matra/math-compute-engine` | 評価・簡約・数値化、Morphion化、property評価 | P1 | 有限和・同類項・関数原子・負の整数冪・256項制限の検証。ゼロ除算などの定義域と順序の再現性を確認 | engine非依存の完全な数式処理、一般式の同値判定 |
 | `@matra/styles` | no-class CSSと少数の補助class | P0：検証経路に必要な範囲 | 生成ページとCSSを同梱し、ネットワーク不要で読める出力を確認 | 新しいdesign system、theme拡充 |
@@ -289,6 +289,37 @@ SVGの実際のbrowser表示確認はmacOS・Node.js 24のIntegrated Chromiumで
 Content MathMLは意味表現の検証であり、browserによる数式の視覚表示を確認したとは扱わない。
 editorはpackage内の資産と既存testを検証しており、VS Code hostを起動した統合操作検証ではない。
 
+#### Release candidate検証baseline（公開前）
+
+2026-10-30時点の候補sourceを次のcommitへ固定する。
+
+- Core: `c66434132f7d6cf02e919f1e5fb5fd181c61ffc1`
+- Official website: `e51f2cd88377838e74ca895dc5edc9e6d9d26410`
+
+websiteの`npm run lint`、`npm test`、`npm run build`はwebsite commitで成功した。
+Coreのportable runtime CIはCore commitで成功し、Core・applied-route package test、
+packed consumer、portable runtime、Stage 2/3 bootstrap、HTML生成をWindows/macOS/Linux・
+Node.js 22/24で検証した（[run 40975233046](https://github.com/matralang/matra/actions/runs/40975233046)）。
+
+websiteが利用する公開依存は`@matra/core@0.3.0-alpha.1`
+（npm integrity `sha512-KmSsuLfkwOeHaK9bLjrSN7r/MesBlhzrkiS8JPIzAnmAKQSDC4+t0Ifldh1oYZ7yNHWC8f8bSo4f01bAMr6iIA==`）
+と`@matra/html@0.3.0-alpha.0`
+（npm integrity `sha512-CtxcF6t8o/6HBvZhuMb4eyetHQNDMCNAIGBjCyn7++Wlxlk/CSrE/9cf3757RxyxTnQt15cuPRVAPYrb0Tpo/w==`）で固定している。
+Core compilerは`0.3.0-alpha.1`、ABI `matra-value-1`、111,064 bytes、
+SHA-256 `c9778e9e641bf82031b7fb5c0658dce2167d833c31487409cbdcac09fbad2efd`で、
+manifestはStage 2/3 byte equalityを記録する。
+
+公開対象はCore + HTMLとし、両packageの正式versionを`0.3.0`とする。
+`@matra/styles@0.1.0`はP0表にあるが、workspace内に存在する一方、2026-10-30のnpm照会では
+packageが見つからなかった（E404）。websiteはCSSを同repository内に持ち、外部stylesheet downloadなしでbuildするため、
+Styles package自体は今回のnpm公開対象から除外する。P1/P2 packageも今回の公開対象に含めない。
+正式公開と`latest` tag更新は、release sourceの再検証と追跡可能なGit release記録を確認後に行う。
+
+これは検証済みsource・配布物の候補baselineであり、公開用のv0.3 RC tagやnpm releaseではない。
+npmの`next`/`latest` tagとwebsiteの公開deployは変更していない。
+ここに記録したCore/HTML `0.3.0`は公開候補versionであり、registryには未公開である。
+websiteの依存は検証時点のalpha versionのままであり、website deployも行っていない。
+
 ## 実装段階と完了条件
 
 | 段階 | 作業 | 完了の証拠 |
@@ -299,7 +330,7 @@ editorはpackage内の資産と既存testを検証しており、VS Code hostを
 | 3：応用経路 | SVG・数式・編集環境の既存機能を代表例で検証、配布物を試す | packageされた状態でのサンプル実行、実際の表示、対応OSの検証 |
 | 3：website | P0の日英入口と現行仕様への整合、P1の代表ページ生成・Playground試作と移行判断 | 日英ページ、掲載例の実行、リンク・表示・言語切替の確認、browser試作の計測・停止test、採用範囲と延期理由 |
 | 4：release候補 | 文法/APIと検証サンプルを固定、v0.3候補を検証 | 固定commit、version・checksum、release note、Stage 2/3一致、CI成功 |
-| 5：公開判定 | 下記の必須条件と既知の制限を照合し、実験版v0.3を公開 | 固定版での再現性、導入・取得手順、仕様と実装の一致 |
+| 5：公開判定 | 下記の必須条件と既知の制限を照合し、実験版v0.3を公開 | Core/HTML `0.3.0`のregistry配布物・tagを検証し、固定版での再現性、導入・取得手順、仕様と実装の一致を確認 |
 | 6：公開後 | 導入手順・ドキュメント・不具合の修正、必要ならpatch release | 変更履歴と再検証の結果 |
 
 P1/P2は完成した範囲をrelease noteへ記載し、未完成の拡張をP0の公開条件に追加しません。
@@ -321,7 +352,9 @@ P0が未達の場合は、「実験的」という名称だけで成功扱いに
 - [x] Graphics・Math・Compute Engineをpackし、一時consumerでSVG・MathJSON・Content MathML・評価の代表例を実行する。macOS・Node.js 24のローカル結果として記録
 - [x] Graphics・Math・Compute Engine・editorの既存testとpacked配布物の代表例をWindows/macOS/Linux・Node.js 22/24で検証する。commit `1578bd1`、[run 40974296046](https://github.com/matralang/matra/actions/runs/40974296046)の6構成が成功。SVGのbrowser表示はmacOSで確認し、Content MathMLの視覚表示とVS Code host操作は未検証として区別
 - [x] Core browser entrypointとpacked literate配布物をWindows/macOS/Linux・Node.js 22/24でremote CI検証する。commit `6b78dd4`、[run 40969391013](https://github.com/matralang/matra/actions/runs/40969391013)の6構成が成功
+- [x] release candidateのsource baseline、website/npm dependency integrity、compiler checksum/ABI、CI結果を記録する。Core `c664341`、website `e51f2cd`。これは公開RC tagやnpm releaseではない
 - [x] 未実装の`.js` module・npm/Python連携と汎用`.jsonm`を実装済みとして説明していない
+- [ ] Core + HTML `0.3.0`を公開し、npm `latest` tag、registry integrity、空のconsumerでの生成経路を確認する。StylesおよびP1/P2 packageは対象外
 
 既存の[portable CI](https://github.com/matralang/matra/actions/runs/40418928782)は調査基準commitで成功しています。
 これは検証用HTML・全package・公開済み配布物の検証完了とは別です。
