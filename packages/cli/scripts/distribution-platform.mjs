@@ -13,7 +13,7 @@ function powershell(script, variables) {
       "-NoProfile",
       "-NonInteractive",
       "-Command",
-      `$ErrorActionPreference = 'Stop'; Add-Type -AssemblyName System.IO.Compression.FileSystem; ${script}`,
+      `$ErrorActionPreference = 'Stop'; Add-Type -AssemblyName System.IO.Compression; Add-Type -AssemblyName System.IO.Compression.FileSystem; ${script}`,
     ],
     {
       env: { ...process.env, ...variables },
