@@ -114,7 +114,7 @@ export async function verifyDistribution(directory) {
     dev.stderr.on("data", bytes => {
       stderr += bytes
     })
-    const exited = once(dev, "exit")
+    const exited = once(dev, "close")
     async function waitFor(check) {
       const deadline = Date.now() + 10000
       while (Date.now() < deadline) {
@@ -154,7 +154,8 @@ export async function verifyDistribution(directory) {
       "Distribution verified: relocated paths, licenses, compiler, init/build/dev, empty PATH.",
     )
   } finally {
-    await rm(root, { recursive: true, force: true })
+    // Windowsでは終了直後の実行ファイルのロック解除が遅れることがある。
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
   }
 }
 

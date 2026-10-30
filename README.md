@@ -120,7 +120,7 @@ npm and pnpm are not included.
 The builder targets its native OS/CPU, never cross-compiling. Targets are
 `darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`, `win32-arm64`, and `win32-x64`.
 Linux requires a glibc environment supported by official Node.js; Alpine/musl is excluded.
-Outputs are `dist/releases/matra-0.3.0-TARGET/`, its `.zip`, and `.zip.sha256`.
+Outputs are `dist/releases/matra-0.3.1-alpha.1-TARGET/`, its `.zip`, and `.zip.sha256`.
 Both the staged folder and re-extracted ZIP are relocated to paths containing spaces
 and Japanese characters and tested with an empty PATH: launch, init/build/dev, rebuild,
 shutdown, compiler, and license checks. Existing artifacts are never overwritten.
@@ -137,7 +137,7 @@ See the [distribution guide](packages/cli/distribution/README.md).
 Use the real folder, not a relocated or symlinked launcher.
 
 ```sh
-export PATH="/absolute/path/to/matra-0.3.0-darwin-arm64:$PATH"
+export PATH="/absolute/path/to/matra-0.3.1-alpha.1-darwin-arm64:$PATH"
 matra init hello
 cd hello
 matra build
@@ -147,7 +147,7 @@ matra dev
 On Windows PowerShell, add the extracted folder to PATH:
 
 ```powershell
-$env:Path = "C:\path\to\matra-0.3.0-win32-x64;$env:Path"
+$env:Path = "C:\path\to\matra-0.3.1-alpha.1-win32-x64;$env:Path"
 matra init hello
 cd hello
 matra build
@@ -155,12 +155,15 @@ matra dev
 ```
 
 Recheck an extracted folder with
-`pnpm distribution:verify dist/releases/matra-0.3.0-darwin-arm64`.
+`pnpm distribution:verify dist/releases/matra-0.3.1-alpha.1-darwin-arm64`.
 macOS may require approval for downloaded software. This development distribution
 is not signed or notarized.
 The [distribution CI](.github/workflows/distribution.yml) runs CLI tests, ZIP creation,
 and re-extraction on six native runners. Successful ZIPs/checksums are stored as
 Actions artifacts for seven days, not published to GitHub Releases.
+The distribution version follows the CLI, separately from Core/HTML and compiler ABI.
+See the [prerelease procedure](spec/build-tools-release.md) for manually creating a Draft.
+Normal CI never creates Drafts, and the manual workflow never publishes publicly.
 
 ## Portability policy
 

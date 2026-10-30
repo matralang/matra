@@ -178,12 +178,14 @@ try {
   const compiler = JSON.parse(
     await readFile(join(modules, "@matra/core/dist/literate/compiler.json")),
   )
+  const sourceStatus = invoke("git", ["status", "--porcelain"]).trim()
+  if (sourceStatus) console.warn(`Distribution source is dirty:\n${sourceStatus}`)
   const metadata = {
     name,
     version: cli.version,
     target,
     sourceCommit: invoke("git", ["rev-parse", "HEAD"]).trim(),
-    sourceDirty: invoke("git", ["status", "--porcelain"]).trim() !== "",
+    sourceDirty: sourceStatus !== "",
     lockfileSha256: digest(await readFile(join(root, "pnpm-lock.yaml"))),
     node: { ...config, url: nodeURL, licenseFile: "licenses/Node.js.LICENSE" },
     compiler,

@@ -1,1 +1,5 @@
 src/literate/cli.mjs text eol=lf
+src/parser/grammar.pegjs text eol=lf
+src/parser/generated.mjs text eol=lf
+dist/*.js text eol=lf
+dist/*.d.ts text eol=lf

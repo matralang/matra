@@ -75,6 +75,17 @@ test("ZIP round trips preserve dotfiles, Unicode paths, and executable files", a
   await writeFile(join(folder, "executable"), "#!/bin/sh\nexit 0\n", { mode: 0o755 })
   const archive = join(root, "test.zip")
   createZip(archive, folder, root, name)
+  const zip = await readFile(archive)
+  const end = zip.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]))
+  assert.ok(end >= 0, "Expected ZIP end-of-central-directory record")
+  let offset = zip.readUInt32LE(end + 16)
+  for (let entry = 0; entry < zip.readUInt16LE(end + 10); entry++) {
+    assert.equal(zip.readUInt32LE(offset), 0x02014b50)
+    const length = zip.readUInt16LE(offset + 28)
+    const filename = zip.subarray(offset + 46, offset + 46 + length).toString("utf8")
+    assert.ok(!filename.includes("\\"), `ZIP entry must use forward slashes: ${filename}`)
+    offset += 46 + length + zip.readUInt16LE(offset + 30) + zip.readUInt16LE(offset + 32)
+  }
   const destination = join(root, "extracted")
   await mkdir(destination)
   extractZip(archive, destination)
@@ -143,6 +154,32 @@ test("CLI shebangs stay LF with Windows checkout conversion enabled", () => {
     )
     assert.ok(content.subarray(0, content.indexOf(10)).equals(Buffer.from("#!/usr/bin/env node")))
   }
+})
+
+test("release build inputs stay byte-identical with Windows checkout conversion enabled", () => {
+  const root = fileURLToPath(new URL("../../../", import.meta.url))
+  for (const path of [
+    "pnpm-lock.yaml",
+    "packages/core/src/parser/grammar.pegjs",
+    "packages/core/src/parser/generated.mjs",
+    ...execFileSync("git", ["ls-files", "packages/core/dist"], { cwd: root, encoding: "utf8" })
+      .trim()
+      .split("\n"),
+  ]) {
+    const options = { cwd: root }
+    const content = execFileSync(
+      "git",
+      ["-c", "core.autocrlf=true", "cat-file", "--filters", `HEAD:${path}`],
+      options,
+    )
+    assert.deepEqual(content, execFileSync("git", ["show", `HEAD:${path}`], options), path)
+    assert.ok(!content.includes(13), `Expected LF checkout: ${path}`)
+  }
+})
+
+test("Core emits LF instead of platform-dependent TypeScript line endings", async () => {
+  const config = JSON.parse(await readFile(new URL("../../core/tsconfig.json", import.meta.url)))
+  assert.equal(config.compilerOptions.newLine, "lf")
 })
 
 test("distribution verification refuses symlinks instead of depending on the checkout", {
