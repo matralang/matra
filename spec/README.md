@@ -34,6 +34,8 @@ Historical proposal (not the current specification): [Matra Program for syntax](
 - [Portability policy and common runtime](./portable-runtime.md) — intended guarantee across the three
   PC OSes, v0.3 minimal host API and execution procedure, and package/task/validation roadmap;
   not a declaration of formal support.
+- [Initial proposal for a shared build engine and desktop app](./desktop-app.md) — build engine shared
+  by the CLI and an Electron authoring app, project format, process layout, and development order; an unimplemented plan, deprioritized for v0.3.
 - [Multilingual literate programming in Markdown](./literate-modules.md) — proposal for virtual files
   in named fences connecting JavaScript public values (functions and data) to Matra.
   Includes the initial explicit-entry/`.js.part` contract and execution procedure, with later shorthand/module proposals.
