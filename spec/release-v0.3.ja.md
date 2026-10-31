@@ -29,12 +29,22 @@ commit `2056aee`の[run 41005130597](https://github.com/matralang/matra/actions/
 初回CIで判明したWindowsのshebang CRLFによるpack失敗は、CLI sourceのLF固定とcheckout変換testで修正しました。
 Windows arm64の連続保存後に保留中のbuildを誤計数するtestは、出力ファイル変更の検証を独立させて修正しました。
 Windowsでは`.cmd`起動コマンドと標準.NET ZIP機能を使います。
-Linuxはglibc環境向けで、Alpine / muslは対象外です。署名・公証、release公開は未実施です。
+Linuxはglibc環境向けで、Alpine / muslは対象外です。署名・公証は未実施です。
 ZIPのbyte再現性は保証せず、source commit・dirty状態・lockfile checksumを記録します。
-次の試験配布候補はCLI / 配布版`0.3.1-alpha.1`、タグは`build-tools-v0.3.1-alpha.1`です。
+実験的配布はCLI / 配布版`0.3.1-alpha.1`、タグは`build-tools-v0.3.1-alpha.1`です。
 Core・HTMLの`0.3.0`とcompiler ABIは維持します。
 手動CIで6対象の成功・checksum・出典を検証してDraft Pre-releaseを作成できる準備を追加しました。
-タグ作成・手動CI実行・Draft作成・一般公開はまだ行っていません。
+source commit `164b168f8e0d38501db934ff7f79141c4c04cf3b`をタグで固定し、
+[手動CI run 41039927410](https://github.com/matralang/matra/actions/runs/41039927410)で6対象と集約検証が成功しました。
+Draftから全12添付物の取得・checksum・出典を検証し、macOS arm64の実ZIPでinit/build/devを確認しました。
+[Pre-release](https://github.com/matralang/matra/releases/tag/build-tools-v0.3.1-alpha.1)を
+2026-10-31に興味のある開発者向けに公開しました。
+安定版・正式サポートの宣言ではなく、npm公開・website deployは含みません。
+Releaseの添付物はActionsの7日間の保存期限とは独立です。既存ZIP・タグは変更しません。
+Windows Chromeの標準保護で「危険なダウンロードがブロックされました」との報告があります。
+原因・対象CPUは未特定で、誤検知とは確認できていません。警告時は取得・実行を止め、
+保護機能の無効化や警告の無視は案内しません。checksum・CI成功は安全性の保証ではありません。
+Windowsの対話的なinit/build/dev・Ctrl+C、macOSのbrowser download承認は未確認です。
 承認段階と実機確認は[試験配布手順](./build-tools-release.ja.md)に記載します。
 
 先行して`@matra/cli`の`matra init DIRECTORY`と最小の`matra build`を追加しました。

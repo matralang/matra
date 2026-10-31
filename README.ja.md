@@ -36,7 +36,20 @@ pnpm test:web-page
 ZIPを各対象環境で作成・検証する開発用スクリプトと6構成のCIを用意しました。
 commit `2056aee`の[配布CI run 41005130597](https://github.com/matralang/matra/actions/runs/41005130597)で
 6構成すべてのCLI test・ZIP作成・再展開検証が成功しました。
-ローカル実動確認はmacOS / arm64でも行っています。署名・公証、releaseへのアップロードは後続です。
+ローカル実動確認はmacOS / arm64でも行っています。署名・公証は行っていません。
+
+### 実験的配布を試す
+
+[0.3.1-alpha.1 Pre-release](https://github.com/matralang/matra/releases/tag/build-tools-v0.3.1-alpha.1)から、
+OS・CPUに合うZIPとchecksumを取得できます。興味のある開発者向けで、安定版ではありません。
+取得・checksum確認・展開・PATH設定の案内と検証範囲はreleaseページを参照してください。
+利用側のNode.js・pnpm・Rustは不要です。専用インストーラーやnpmによるCLI導入は未提供です。
+
+**WindowsのChromeで「危険なダウンロードがブロックされました」と表示される報告があります。**
+原因は未特定で、誤検知とは確認できていません。警告時は取得・実行を中止してください。
+保護機能の無効化や警告の無視は推奨しません。checksumは安全性を保証するものではありません。
+
+### repositoryから試す
 
 Node.js 22/24、pnpm、repository指定のRust toolchainを用意し、repository rootで
 次を実行します（PATHの設定例はmacOS/Linux向けです）。
@@ -153,7 +166,8 @@ matra dev
 で再検証できます。macOSのdownload承認が必要になる場合があります。
 開発版のため署名・公証は行っていません。
 [配布CI](.github/workflows/distribution.yml)は6つのnative runnerでCLI test・ZIP作成・再展開を行い、
-成功したZIPとchecksumを7日間のActions artifactとして保存します。GitHub Releaseへは公開しません。
+成功したZIPとchecksumを7日間のActions artifactとして保存します。
+実験的Releaseの添付物は別に保存され、Actionsの期限では削除されません。
 配布版のversionはCLIに合わせ、Core・HTML・compiler ABIとは区別します。
 手動実行でDraft Pre-releaseを作成する準備は[試験配布手順](spec/build-tools-release.ja.md)を参照してください。
 通常CIはDraftを作成せず、手動CIも一般公開は行いません。

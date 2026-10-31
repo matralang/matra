@@ -38,7 +38,22 @@ with a six-target CI workflow. All six targets passed CLI tests, ZIP creation,
 and re-extraction on commit `2056aee` in
 [run 41005130597](https://github.com/matralang/matra/actions/runs/41005130597).
 Local execution is also verified on macOS / arm64.
-Signing/notarization and release uploads are follow-up work.
+The distribution is not signed or notarized.
+
+### Try the experimental distribution
+
+Download the ZIP and checksum for your OS/CPU from the
+[0.3.1-alpha.1 Pre-release](https://github.com/matralang/matra/releases/tag/build-tools-v0.3.1-alpha.1).
+This is for interested developers, not a stable release. See the release page for download,
+checksum, extraction, PATH instructions, and verification scope.
+System Node.js, pnpm, and Rust are not needed. A dedicated installer and npm CLI installation
+are not yet provided.
+
+**Chrome on Windows has been reported to block the download as dangerous.**
+The cause is unknown; a false positive has not been established. Stop downloading or running
+the files if warned. Do not disable protection or ignore warnings. Checksums do not guarantee safety.
+
+### Try from the repository
 
 With Node.js 22/24, pnpm, and the repository's Rust toolchain, run from the repository root
 (the PATH example is for macOS/Linux):
@@ -160,7 +175,8 @@ macOS may require approval for downloaded software. This development distributio
 is not signed or notarized.
 The [distribution CI](.github/workflows/distribution.yml) runs CLI tests, ZIP creation,
 and re-extraction on six native runners. Successful ZIPs/checksums are stored as
-Actions artifacts for seven days, not published to GitHub Releases.
+Actions artifacts for seven days. Experimental Release attachments are stored separately
+and do not expire with Actions artifacts.
 The distribution version follows the CLI, separately from Core/HTML and compiler ABI.
 See the [prerelease procedure](spec/build-tools-release.md) for manually creating a Draft.
 Normal CI never creates Drafts, and the manual workflow never publishes publicly.

@@ -34,12 +34,24 @@ Initial Windows pack failures caused by CRLF shebangs were fixed by pinning CLI 
 to LF and testing Windows checkout conversion. A Windows arm64 test race counting pending
 input rebuilds was fixed by independently testing output-only changes.
 Windows uses a `.cmd` launcher and standard .NET ZIP APIs; Linux targets glibc, excluding Alpine/musl.
-Signing/notarization and release uploads remain unimplemented.
+Signing/notarization remain unimplemented.
 ZIP byte reproducibility is not guaranteed; source commit, dirty state, and lockfile checksum are recorded.
-The next candidate is CLI/distribution `0.3.1-alpha.1`, tagged `build-tools-v0.3.1-alpha.1`.
+The experimental distribution is CLI/distribution `0.3.1-alpha.1`, tagged `build-tools-v0.3.1-alpha.1`.
 Core/HTML stay `0.3.0` and compiler ABI is unchanged.
 Manual CI can prepare a Draft Pre-release after all six targets, hashes, and provenance pass.
-No tag, manual run, Draft, or public publication has been created for this candidate.
+Source commit `164b168f8e0d38501db934ff7f79141c4c04cf3b` is tagged;
+[manual CI run 41039927410](https://github.com/matralang/matra/actions/runs/41039927410)
+passed all six targets and aggregate checks. All twelve Draft attachments were downloaded
+and verified for checksums/provenance; the macOS arm64 ZIP passed init/build/dev checks.
+The [Pre-release](https://github.com/matralang/matra/releases/tag/build-tools-v0.3.1-alpha.1)
+is published for interested developers, not as a stable release or official support guarantee.
+No npm publication or website deployment is included. Release attachments are independent of
+the seven-day Actions retention. Existing ZIPs and the tag are unchanged.
+Chrome Standard protection on Windows has been reported to block the download as dangerous.
+The cause and affected CPU target are unknown; a false positive has not been established.
+Stop downloading or running if warned; do not disable protection or ignore warnings.
+Checksums and CI results do not guarantee safety. Interactive Windows init/build/dev and Ctrl+C,
+and macOS browser-download approval remain unverified.
 See the [prerelease procedure](./build-tools-release.md) for approval gates and manual checks.
 
 As the first step, `@matra/cli` adds `matra init DIRECTORY` and a minimal `matra build`.

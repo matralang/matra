@@ -84,4 +84,20 @@ Share Draft contents and manual test results, then obtain explicit publication a
 gh release edit build-tools-v0.3.1-alpha.1 --draft=false --prerelease --latest=false
 ```
 
-Publication is outside the current preparation scope. Keep the release marked as a prerelease.
+Keep the release marked as a prerelease, never latest/stable.
+
+## Initial experimental publication
+
+Publication of the six existing `0.3.1-alpha.1` ZIPs for interested developers was explicitly approved.
+Published on 2026-10-31 as a
+[Pre-release](https://github.com/matralang/matra/releases/tag/build-tools-v0.3.1-alpha.1).
+Source: `164b168f8e0d38501db934ff7f79141c4c04cf3b`.
+All jobs in the [creation CI](https://github.com/matralang/matra/actions/runs/41039927410) passed.
+All twelve Draft attachments were downloaded and verified; the macOS arm64 ZIP passed runtime checks.
+Document Chrome's unresolved dangerous-download block on Windows, unverified interactive Windows
+operations, and macOS download approval on the release page and README. Do not assert a false positive
+or safety; instruct users to stop downloading/running if warned.
+This records the initial publication decision, not a blanket exception for failures in future candidates.
+Only release text is updated; existing ZIPs, checksums, and the tag remain unchanged.
+The bundled README predates the reported Chrome issue; read the latest release page before downloading.
+No npm publication or website deployment is performed.

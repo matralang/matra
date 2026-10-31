@@ -81,4 +81,18 @@ Draftの内容と実機確認結果を共有し、別途公開承認を得てか
 gh release edit build-tools-v0.3.1-alpha.1 --draft=false --prerelease --latest=false
 ```
 
-この操作は今回の準備範囲に含みません。公開後もPre-release扱いを維持します。
+公開後もPre-release扱いを維持し、latestや安定版にはしません。
+
+## 初回の実験的公開
+
+`0.3.1-alpha.1`は興味のある開発者向けの試験配布として6対象の既存ZIPを公開する承認を得ました。
+2026-10-31に[Pre-release](https://github.com/matralang/matra/releases/tag/build-tools-v0.3.1-alpha.1)として公開しました。
+sourceは`164b168f8e0d38501db934ff7f79141c4c04cf3b`、
+[作成CI](https://github.com/matralang/matra/actions/runs/41039927410)は全job成功です。
+Draftの全12添付物の取得と出典検証、macOS arm64の実ZIP検証を完了しました。
+Windows Chromeの危険ブロックは原因未特定、Windowsの対話操作とmacOSのdownload承認は未確認として、
+releaseページとREADMEへ明記します。誤検知や安全性を断定せず、警告時は取得・実行を止める案内とします。
+これは初回の公開判断の記録で、将来の候補の失敗を自動的に許容する規則ではありません。
+release本文だけを更新し、既存ZIP・checksum・タグは変更しません。
+同梱READMEには後から報告されたChromeの問題がないため、取得前にreleaseページの最新案内を確認してください。
+npm公開・website deployは行いません。
