@@ -58,7 +58,10 @@ try {
   )
   assert.equal(installedCore.version, corePackage.version)
   assert.equal(installedHtml.version, htmlPackage.version)
-  assert.equal(installedHtml.peerDependencies["@matra/core"], `^${corePackage.version}`)
+  assert.equal(
+    installedHtml.peerDependencies["@matra/core"],
+    htmlPackage.peerDependencies["@matra/core"],
+  )
   assert.equal(installedCore.exports["./browser"].import, "./dist/browser.js")
   assert.equal(installedCore.exports["./browser"].types, "./dist/browser.d.ts")
   const markdown = await readFile(

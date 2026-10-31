@@ -4,6 +4,10 @@
 
 HTML semantics for the domain-neutral Matra AST.
 
+The `0.3.1-site.0` trial release accepts Core `^0.3.0 || ^0.3.1-site.0` as an optional peer.
+The prerelease range is explicit because `^0.3.0` alone excludes prereleases.
+This changes package compatibility metadata, not HTML rendering.
+
 ```ts
 import { evaluateStatic, parse, staticValueToAST } from "@matra/core"
 import { toHTML } from "@matra/html"

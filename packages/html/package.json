@@ -1,7 +1,7 @@
 {
   "name": "@matra/html",
   "description": "HTML renderer for Matra AST",
-  "version": "0.3.0",
+  "version": "0.3.1-site.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -35,7 +35,7 @@
     "registry": "https://registry.npmjs.org"
   },
   "peerDependencies": {
-    "@matra/core": "workspace:^"
+    "@matra/core": "^0.3.0 || ^0.3.1-site.0"
   },
   "peerDependenciesMeta": {
     "@matra/core": {
