@@ -89,6 +89,10 @@ The current project takes `index.md`, `matra.css`, and `matra.css.LICENSE` as in
 There is no configuration file yet. If one is added, the engine reads it and the CLI and app use the same values.
 Per-user app state such as window position or recent projects is stored outside the project.
 
+Ordinary Markdown as document data, page data, shared layouts, route output, and external data extensions are recorded separately in the
+[additional site-generation proposal](./site-generation.md).
+They are later engine features, not prerequisites for relocating the existing CLI or the first Desktop version.
+
 ## Matra Desktop
 
 ### Platform

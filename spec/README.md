@@ -36,6 +36,9 @@ Historical proposal (not the current specification): [Matra Program for syntax](
   not a declaration of formal support.
 - [Initial proposal for a shared build engine and desktop app](./desktop-app.md) — build engine shared
   by the CLI and an Electron authoring app, project format, process layout, and development order; an unimplemented plan, deprioritized for v0.3.
+- [Declarative site generation using Matra](./site-generation.md) — an unimplemented additional proposal
+  for ordinary Markdown as document data, page data, shared layouts, route output, and external data extensions in the shared engine;
+  not a language grammar change or a v0.3 release criterion.
 - [Multilingual literate programming in Markdown](./literate-modules.md) — proposal for virtual files
   in named fences connecting JavaScript public values (functions and data) to Matra.
   Includes the initial explicit-entry/`.js.part` contract and execution procedure, with later shorthand/module proposals.

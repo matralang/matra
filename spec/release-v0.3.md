@@ -66,6 +66,15 @@ API and writes `dist/index.html`, CSS, and its license. Only trusted documents m
 Neither Matra Program/compiler-source grammar nor compiler ABI changes.
 See the [README](../README.md#matra-build-tools-development) for development usage and verification.
 
+### Later site generation (outside release criteria)
+
+Ordinary Markdown as document data, page data, shared layouts, route-based HTML output, and external data extensions are recorded in the
+[additional site-generation proposal](./site-generation.md).
+Consider them features of the [shared build engine](./desktop-app.md), not the language itself,
+to reduce site-specific build JavaScript and custom placeholders.
+They are unimplemented and unscheduled, neither v0.3 release criteria nor prerequisites for the first Desktop version.
+Preserve the configuration-free single-page CLI, Matra grammar, compiler ABI, and existing Core/HTML public APIs.
+
 ## Philosophy and completion criteria
 
 | Principle | Evidence for v0.3 |

@@ -58,6 +58,15 @@ buildは現在のディレクトリの文書を既存literate APIでcompile・�
 Matra Program・compiler sourceの文法、compiler ABIは変更しません。
 開発版の利用手順と検証コマンドは[README](../README.ja.md#matraのビルドツール開発版)に記載します。
 
+### 後続のサイト生成機能（release条件外）
+
+通常のMarkdownの文書データ化、ページデータ、共通レイアウト、ルートに応じたHTML出力、外部データ拡張を
+[宣言的サイト生成の追加設計案](./site-generation.ja.md)に記録します。
+言語本体ではなく[共通ビルドエンジン](./desktop-app.ja.md)の機能として検討し、
+サイトごとのビルド用JavaScriptや独自プレースホルダーを減らします。
+未実装で着手時期は未定です。v0.3のrelease条件・Desktop初版の前提には含めず、
+既存の設定なし単一ページCLI、Matra文法、compiler ABI、Core・HTML公開APIは維持します。
+
 ## 思想と完成の判断基準
 
 | 思想 | v0.3で確認すること |

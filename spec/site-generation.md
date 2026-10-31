@@ -1,0 +1,311 @@
+# Declarative site generation using Matra (additional design proposal)
+
+[English](./site-generation.md) | [日本語](./site-generation.ja.md) | [Index](./README.md)
+
+## Status and scope
+
+This non-normative additional proposal supplements the
+[shared build engine proposal](./desktop-app.md).
+It is unimplemented; configuration fields, public names, and package names remain provisional.
+Examples illustrate future usage and cannot run with the current CLI.
+It is not a v0.3 release criterion, has no scheduled start, and is not a prerequisite for the first Desktop version.
+
+The target is site generation using Matra, not changes to Matra Program or compiler source grammar.
+The parser, AST/data model, compiler ABI, and existing Core/HTML public APIs remain unchanged.
+A host API for injecting external runtime data needs a separate contract before implementation.
+This proposal does not override the [grammar](./grammar.md) or
+[initial literate contract](./literate-modules.md).
+
+## Purpose
+
+Generate ordinary sites from declarations, with code extensions only for use-specific external processing.
+In addition to HTML templates, provide per-page data, shared layouts, and route-based HTML output,
+reducing site-specific build JavaScript and custom placeholders.
+Adding filesystem operations or CMS integration to the language itself is not a goal.
+Treat ordinary Markdown as document data living in folders with ordinary filenames,
+like Nuxt Content's `.md` documents, without requiring program settings or code for every article.
+
+## Responsibilities and existing implementation
+
+| Layer | Responsibility |
+| --- | --- |
+| Matra language | Construct values, functions, and document nodes |
+| HTML output | Render document ASTs with HTML escaping |
+| Shared build engine | Collect documents/pages, convert standard Markdown to document data, validate settings, pass data, apply layouts, determine routes and outputs, handle assets, diagnostics, and watching |
+| External extensions | Use-specific processing such as CMS retrieval, additional Markdown syntax/conversions, and image processing |
+| CLI/Desktop | Call the shared engine and present operations, progress, and results |
+
+The current CLI's [`buildProject`](../packages/cli/src/project.mjs) compiles and runs a single
+`index.md` via the literate API, then writes HTML, CSS, and its license.
+The [official website build](../apps/website/src/build.ts) collects pages, interprets metadata,
+determines output paths, and inserts shared elements, providing concrete examples of site-specific boilerplate.
+Website-specific advertising, analytics, and redirects do not become engine defaults.
+
+## Markdown documents as data
+
+### Separate documents from programs
+
+Ordinary `.md` files collected for site generation are non-executable document data by default.
+Accept them without FrontMatter, `matra.entry`, `matra.values`, `site`, or Matra fences.
+Code-example fences are displayed content, not automatically executed even when named `.matra` or `.js.part`.
+Do not infer program classification from body or fence contents.
+
+Place explicit identification requirements on executable programs and templates.
+Candidates include registered program directories, a program-specific FrontMatter field,
+or a compound extension such as `.matra.md`; settle exact syntax and precedence before implementation.
+If existing `matra.entry` is used for identification, document it as a reserved site-generation field.
+Files explicitly classified as documents do not interpret literate-like settings as execution instructions.
+Conflicting explicit classifications and invalid program settings produce diagnostics, not a fallback to document mode.
+
+This classification is an input contract for the new site-generation feature.
+It does not change the existing CLI's `index.md` behavior or the FrontMatter requirement when explicitly calling `buildLiterate()`.
+Nuxt Content is a usability reference, not a claim of compatibility with its APIs or extended syntax.
+
+### Collection and references by folder and filename
+
+For example, adding an article should require only files like these:
+
+```text
+content/
+  about.md
+  blog/
+    first-post.md
+```
+
+`content/blog/first-post.md` is ordinary Markdown without program settings:
+
+```markdown
+# First article
+
+Read this document as data and display it with a Matra template.
+```
+
+Use the path relative to the document root, such as `blog/first-post.md`, as the document ID.
+Allow declarative selection and references to a single file or a sequence of documents under a folder in that root.
+Do not require listing article bodies in configuration or writing a JavaScript import for each article.
+Collect folders in stable document-ID order; missing references and case-only ID collisions produce diagnostics.
+Selection/reference syntax and the public Matra API remain undecided.
+
+Represent document data as records containing document IDs, relative paths, optional FrontMatter metadata,
+body node sequences, and source locations; absent FrontMatter means empty metadata.
+Keep metadata separate from engine identity fields so arbitrary fields such as `title` cannot overwrite document IDs.
+Validate metadata as plain data and retain body-node source locations separately as diagnostic information.
+Settle the exact record schema and defaults, such as whether headings supply titles, before implementation.
+
+### From document data to pages
+
+Separate collecting documents from publishing HTML pages. Reference-only Markdown is not automatically published.
+A project-level declaration of a published document folder and shared template/layout should generate pages
+with routes derived from file placement, without per-document programs or FrontMatter.
+Also support passing a single document as page data and building article indexes from document sequences.
+Optional FrontMatter supplies metadata but is not a prerequisite for page generation.
+
+Site generation provides standard Markdown-to-document-node conversion.
+Pass bodies to Matra templates/layouts through the same composition path as program-generated bodies.
+Do not require HTML-string placeholders or a custom parser for each article.
+Do not pass raw HTML through as executable HTML by default;
+settle its handling and the supported Markdown dialect before implementation.
+Additional syntax/conversions use explicit extensions, without making ordinary code examples executable.
+
+Resolve relative document links and images against the source file's directory.
+Map links to published documents through the route table and images through the asset output plan.
+References outside the root and missing local references produce diagnostics.
+Watch document additions, changes, and deletions, regenerating dependent pages and indexes.
+
+## Declarative pages and layouts
+
+### Project and page settings
+
+Project settings specify document/program inputs and classification, published documents and shared templates,
+a page input directory, documents for named layouts, shared site data,
+assets, output style, and deployment base path and origin.
+Use ordinary folders and documents, with the CLI and Desktop reading the same settings.
+The configuration filename, schema, and versioning remain open before implementation.
+
+For pages explicitly classified as programs, the engine interprets a `site` field in FrontMatter,
+separately from literate `matra` settings.
+The following program-page example is not required for Markdown document data.
+Read YAML consistently with the existing loader, not with custom line splitting or string replacement.
+The first site-generation version diagnoses unknown `site` fields, invalid types, and unknown layouts.
+
+```yaml
+---
+matra:
+  entry: main.matra
+site:
+  route: /about/
+  layout: default
+  data:
+    title: About this site
+    description: A site built with Matra
+---
+```
+
+When omitted, `route` is derived from file placement and `layout` uses the project default.
+Pages returning a complete HTML document can explicitly opt out of layouts;
+the syntax for opting out remains undecided.
+Omitted `data` means an empty object; missing required data is not replaced with empty strings.
+
+### Runtime data
+
+Proposed public values supplied by the engine:
+
+| Public value | Contents |
+| --- | --- |
+| `site.data` | Shared project data |
+| `page.data` | Page-specific data |
+| `page.route` | Logical route without the deployment base path |
+| `page.content` | Page body document-node sequence, supplied only during layout execution |
+
+Shared and page data have separate names, without implicit deep merging or overwriting.
+Extension-generated pages use the same page description format;
+duplicate definitions from FrontMatter and extensions are collisions.
+Validate and copy values according to literate's plain-data subset, without sharing mutable execution
+state between pages or between body and layout runs.
+Collisions between public root names and document bindings or selected values produce diagnostics.
+
+Current `runLiterate()` has no public contract for this external data injection.
+Design an explicit host API, rather than generating `.js.part` source from data or manipulating private runtime internals.
+Preserve the meanings of existing `matra.entry` and `matra.values`.
+
+### Compose document nodes
+
+A program page's `main.matra` returns only its body.
+For document-derived pages, Markdown conversion and a shared template perform this body-generation stage.
+
+```matra
+article {
+  h1 { page.data.title }
+  p { page.data.description }
+}
+```
+
+A separate literate document corresponding to the named layout `default` also has an explicit entry.
+Its Matra entry receives the body as a node sequence.
+
+```matra
+html(lang="en") {
+  head {
+    title { page.data.title }
+    meta(name="description" content=page.data.description) {}
+  }
+  body {
+    header { a(href="/") { "My site" } }
+    main { ...page.content }
+    footer { "Built with Matra" }
+  }
+}
+```
+
+Execution order is: generate page body, validate its document-node sequence, execute layout,
+validate the complete document, then render HTML.
+The first version supports one layout level, without inheritance or arbitrary hook chains.
+Do not turn the body into HTML and reparse it or insert it as raw HTML or a placeholder.
+Escape ordinary strings during HTML rendering, performed only once after composition.
+The result after layout application (or without a layout) is a complete document with a single
+`html` and its `head` and `body`; the engine adds the doctype.
+Returning a complete HTML document as a body and wrapping it again produces a diagnostic.
+
+## Proposed route and output contract
+
+Manage logical routes, output files, and public URLs as separate values.
+For published documents under `pages/`, the default directory style maps as follows.
+
+| Input | Logical route | Output |
+| --- | --- | --- |
+| `pages/index.md` | `/` | `dist/index.html` |
+| `pages/about.md` | `/about/` | `dist/about/index.html` |
+| `pages/blog/entry.md` | `/blog/entry/` | `dist/blog/entry/index.html` |
+
+An explicit `route` overrides only route derivation.
+If a compound program extension is adopted, remove its suffix before applying the same route rules.
+Register document-derived and program pages in one route table and diagnose collisions between them.
+Also allow migration to preserve the official site's current flat style (`/about` with `about.html`).
+Choose the style per project, without implicitly mixing styles.
+Do not automatically change existing URLs; verify trailing-slash redirects and hosting URL resolution during migration.
+
+- Routes are logical paths starting with `/`. Reject queries, fragments, backslashes,
+  `.`/`..`, and empty components except the root. Define percent-encoding and Unicode normalization before implementation.
+- Normalize trailing slashes according to output style. Detect duplicate normalized routes,
+  duplicate outputs, case-only collisions, and file/directory conflicts, including assets.
+- Verify that converting a route to an output path stays inside the output directory.
+  Reject symlinks and unexpected file types at the output and its ancestors, without weakening current CLI checks.
+- Derive internal links and canonical URLs from the same route table.
+  Apply the deployment base path exactly once, preserving external URLs, queries, and fragments.
+  Generate canonical URLs when an origin is configured; define their exposure to layouts during API design.
+
+## External extensions
+
+The first extension point only prepares page lists and data.
+Retrieve records from a CMS or similar source and return descriptions containing routes,
+page templates, data, dependency inputs, and source locations.
+The engine owns compilation, layouts, HTML rendering, and output.
+Automatic npm resolution and general hooks that modify engine internals are outside the first version.
+
+Complete asynchronous work in the engine before passing resolved plain data to Matra.
+Do not add Promises, passing Matra functions to JavaScript, or filesystem/network capabilities to the language.
+Extensions are explicitly registered trusted code running in the build process, not an OS sandbox.
+
+Include reported dependency files in watching.
+The first version incorporates external service updates on explicit rebuild, without requiring automatic polling.
+Retrieval failures, invalid data, and duplicate pages produce diagnostics associated with the original extension and input;
+do not silently fall back to empty page lists or old data.
+Verify identical output for identical resolved inputs and settings.
+Reproducibility across changing service responses requires separately captured inputs, such as snapshots, and is otherwise not guaranteed.
+
+## Builds, diagnostics, and compatibility
+
+1. Read project settings, classify and collect documents/programs, and validate references and publication selection.
+2. Run extensions to resolve data and finalize the page list, route table, and output plan.
+3. Validate collisions and output paths before converting Markdown to document data and compiling/executing required programs, templates, and layouts.
+4. Publish HTML and assets only after generation succeeds for every page.
+
+Process identical inputs in a stable order, also stabilizing diagnostics and output lists.
+Do not report generation failures as success or publish partial new output as a complete site.
+Define safe staging/publication and handling of outputs from deleted pages before implementation;
+do not bulk-delete user files or arbitrary directories.
+Associate diagnostics with files, Markdown body locations, FrontMatter fields or fence locations, routes, and processing stages,
+returning the same information to the CLI and Desktop.
+Cancellation and re-runs follow the shared engine proposal.
+
+Preserve the existing configuration-free, single-page CLI and explicitly opt into site generation.
+Do not change grammar, compiler ABI, or HTML escaping, require `site` fields in existing documents,
+or implicitly migrate old projects lacking layout and route declarations.
+
+## Development order and validation
+
+| Stage | Work | Completion evidence |
+| --- | --- | --- |
+| 1 | Extract the shared engine from the existing CLI | Existing CLI tests and identical HTML, CSS, and license output |
+| 2 | Markdown document data, document/program classification, page data, multiple pages, one shared layout level, route output | Acceptance/rejection/boundary tests below, generated HTML and URL verification |
+| 3 | Explicit external data extensions | Generation using the same page contract, failure diagnostics, rebuilds after dependency changes |
+| 4 | Apply to the official website | Compare build JavaScript reduction; regression checks for existing HTML, URLs, base paths, and serving behavior |
+
+Implementation validation includes at least:
+
+- Collection of `.md` without FrontMatter or Matra code, single-file/folder references, bodies, and optional metadata.
+- No execution of program-named fences in documents; rejection of conflicting classifications and invalid program settings.
+- Pages/article indexes generated from document folders, no publication of reference-only documents, and document/program route collisions.
+- Markdown body locations, relative links/images, raw HTML handling, and regeneration after document additions/changes/deletions.
+- Two pages sharing a layout without data leaking between them.
+- Shared data, empty bodies, multiple body nodes, complete documents without layouts, and special-character escaping.
+- Both directory and flat styles, explicit routes, root and nested routes, base paths, and canonical URLs.
+- Diagnostics for unknown settings/layouts, missing data, invalid document results, and public-name collisions.
+- Rejection of route/asset/case/file-directory collisions, output escapes, and symlinks.
+- Successful and failed asynchronous retrieval, invalid extension results, watching, cancellation, and re-runs after consecutive saves.
+- No partial-site publication on failure, output after page deletion, and byte-identical output for identical inputs.
+- Identical CLI/Desktop artifacts and diagnostics, with the existing single-page path unchanged.
+
+Documentation-only changes do not need bootstrap verification.
+If implementation affects the compiler or ABI, treat that as a separate specification change
+and apply existing verification requirements, including Stage 2/3 byte equality.
+
+## Decisions before implementation
+
+- Engine package name and public scope, configuration schema, and explicit opt-in.
+- Document/program identification fields, extensions, and precedence; declarative APIs for document collection, references, and publication.
+- Document/metadata schemas, supported Markdown dialect, and raw HTML, relative-link, and image conversion contracts.
+- External value injection API, public names, layout opt-out, and body node-sequence validation.
+- Route character set and normalization, internal-link resolution, and canonical URL exposure.
+- Extension APIs for registration, results, source locations, and dependency inputs.
+- Safe artifact publication, obsolete-output removal, and detailed diagnostic locations.
