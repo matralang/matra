@@ -4,15 +4,64 @@
 
 ## 状態と対象
 
-本書は、[共通ビルドエンジンの初期案](./desktop-app.ja.md)を補足する非規範的な追加設計案です。
-未実装であり、設定項目・公開名・package名は未確定です。コード例は将来の利用イメージで、
-現在のCLIで実行できる設定ではありません。v0.3のrelease条件には含めず、着手時期も定めません。
+本書は、[共通ビルドエンジンの初期案](./desktop-app.ja.md)を補足します。
+段階1〜2のMVPは実装済みです。外部データ拡張、変更監視、公式サイトへの適用は将来案です。
+MVPの入力契約と設定例は本書の「MVPの実装契約」に従います。
 Desktopの初版を成立させる前提条件にはしません。
 
 対象はMatraを使うサイト生成機能であり、Matra Program・compiler sourceの文法変更ではありません。
-parser、AST/data model、compiler ABI、既存のCore・HTML公開APIは維持します。
-外部データを実行時に渡すためのhost APIは、実装前に別途契約を定めます。
+parser、AST/data model、compiler ABI、既存のCore・HTML APIの既存動作は維持します。
+`runLiterate()`には、plain dataを複製して渡す追加の`globals` optionを設けます。
 [文法仕様](./grammar.ja.md)と[literateの初版契約](./literate-modules.ja.md)を上書きしません。
+
+## MVPの実装契約
+
+サイト生成は既存の単一ページ`matra build`とは別に、明示的な`matra site build`で有効にします。
+共通エンジンのpackageは`@matra/site-generation`です。設定ファイルは次のいずれか1つだけを置きます。
+
+- `matra.site.yaml`: YAML
+- `matra.site.json`: JSON
+- `matra.site.matra`: Matraの静的なobject expression（例: `({ version: 1, site: { pages: "pages" } })`）
+
+形式に関係なく、設定は同じversioned schemaを使います。未知の設定、Matra設定の動的評価、
+project root外の入出力パスは拒否します。
+
+```yaml
+version: 1
+site:
+  pages: pages
+  documents: content
+  layouts: layouts
+  defaultLayout: default
+  output: dist
+  format: directory
+  assets: public
+  basePath: /preview
+  data:
+    title: My site
+```
+
+`site.pages`以下の通常の`.md`はFrontMatterなしでも公開するMarkdownページです。
+実行するページとレイアウトは`.matra.md`に限定し、literate FrontMatterの`matra.entry`で入口を指定します。
+`site.documents`は追加の文書root（パスまたはパス配列）で、収集した文書は自動公開しません。
+ページ・レイアウトのFrontMatterにある`site`は`route`、`layout`、`data`だけを受け付けます。
+`site.data`を指定した場合、同じFrontMatterの通常項目との併用は拒否します。
+
+レイアウト入口には`site.data`、`site.documents`、`page.data`、`page.route`、`page.content`を渡します。
+`page.content`はHTML文字列ではなく文書ノード列です。値はliterate runtimeでplain dataとして検証・複製され、
+選択済み`.js.part`の公開名との衝突は診断になります。
+Markdown変換はmarkdown-itの標準設定（HTML無効、linkify/typographer無効）を使います。
+テーブルと取り消し線を含み、raw HTMLはノードとして実行せず文字列としてHTML escapeします。
+
+directory形式では`pages/index.md`が`/`、`pages/about.md`が`/about/`、
+`pages/blog/post.md`が`/blog/post/`になります。`flat`形式では末尾slashを除き、
+それぞれ`index.html`、`about.html`、`blog/post.html`へ出力します。
+`site.assets`のregular fileは出力の`assets/`以下へコピーし、入力symlink、衝突、欠落したローカル参照を拒否します。
+`basePath`はHTML出力時のroot-relative `href`・`src`に適用します。
+
+全ページを生成・検証してから、既存出力を一時directoryへ複製して新しいファイルを重ね、
+directoryをswapして公開します。既存の無関係なファイルは保持し、削除されたページの旧出力もMVPでは自動削除しません。
+外部拡張、watch、canonical URL生成、Desktop統合、公式サイト移行は含みません。
 
 ## 目的
 
@@ -290,12 +339,9 @@ CLI・Desktopで同じ内容を返します。停止・再実行は共通エン�
 文書変更だけではbootstrap検証は不要です。実装でcompilerやABIへ影響が及ぶ場合は
 別の仕様変更として扱い、Stage 2/3のbyte equalityを含む既存の検証条件を適用します。
 
-## 実装前に確定する事項
+## 将来段階で確定する事項
 
-- エンジンのpackage名・公開範囲、設定schemaと明示的な有効化方法。
-- 文書/プログラムの識別項目・拡張子・優先順位、文書収集・参照・公開の宣言API。
-- 文書recordとメタデータのschema、対応Markdown dialect、raw HTML・相対リンク・画像の変換契約。
-- 外部値注入API、公開名、レイアウトなしの指定、本文ノード列の検証方法。
-- ルートの文字種・正規化、内部リンク解決とcanonical URLの公開方法。
+- 公開APIとしての文書選択・参照、recordの元位置、画像処理拡張。
+- canonical URLとorigin、base pathを含むURL公開方法。
 - 拡張の登録・戻り値・元位置・依存入力のAPI。
-- 安全な成果物公開、旧成果物の除去、診断の詳細な位置情報。
+- watch・cancel、Desktop統合、旧出力の追跡と削除方針。

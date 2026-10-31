@@ -282,8 +282,20 @@ function validateBundle(bundle) {
   })
 }
 
-export async function runLiterate(bundle) {
+export async function runLiterate(bundle, options = {}) {
   validateBundle(bundle)
+  if (
+    options === null ||
+    typeof options !== "object" ||
+    Array.isArray(options) ||
+    Object.keys(options).some(key => key !== "globals") ||
+    (options.globals !== undefined &&
+      (options.globals === null ||
+        typeof options.globals !== "object" ||
+        Array.isArray(options.globals)))
+  ) {
+    fail("INVALID_OPTIONS", bundle.entry, "Expected globals to be a plain object")
+  }
   let module
   try {
     module = await WebAssembly.compile(Buffer.from(bundle.wasm, "base64"))
@@ -348,6 +360,21 @@ export async function runLiterate(bundle) {
       target = target[part]
     }
     target[parts.at(-1)] = copyValue(value, { block, prototypes, functions: true })
+  }
+  const hostGlobals = options.globals ?? {}
+  const copiedHostGlobals = copyValue(hostGlobals, {
+    block: { document: bundle.entry.document, path: "<globals>", line: 1 },
+    prototypes,
+    functions: false,
+  })
+  for (const [name, value] of Object.entries(copiedHostGlobals)) {
+    if (!/^[A-Za-z_$][\w$]*$/.test(name)) {
+      fail("INVALID_GLOBALS", bundle.entry, `Invalid global name: ${name}`)
+    }
+    if (Object.hasOwn(globals, name)) {
+      fail("GLOBAL_COLLISION", bundle.entry, `Host global conflicts with a value module: ${name}`)
+    }
+    globals[name] = value
   }
   try {
     const program = await instantiateMatra(module, { globals })

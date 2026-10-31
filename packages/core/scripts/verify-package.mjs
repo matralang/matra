@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -14,6 +14,7 @@ const [managerCommand, ...managerArgs] = /\.(?:c|m)?js$/i.test(manager)
 const core = fileURLToPath(new URL("..", import.meta.url))
 const html = fileURLToPath(new URL("../../html/", import.meta.url))
 const cliPackage = fileURLToPath(new URL("../../cli/", import.meta.url))
+const siteGeneration = fileURLToPath(new URL("../../site-generation/", import.meta.url))
 const styles = fileURLToPath(new URL("../../styles/", import.meta.url))
 const invoke = (cwd, ...args) =>
   execFileSync(managerCommand, [...managerArgs, ...args], {
@@ -26,6 +27,7 @@ try {
   invoke(core, "pack", "--out", join(root, "core.tgz"))
   invoke(html, "pack", "--out", join(root, "html.tgz"))
   invoke(cliPackage, "pack", "--out", join(root, "cli.tgz"))
+  invoke(siteGeneration, "pack", "--out", join(root, "site-generation.tgz"))
   invoke(styles, "pack", "--out", join(root, "styles.tgz"))
   await writeFile(join(root, "package.json"), '{"private":true,"type":"module"}\n')
   await writeFile(
@@ -33,9 +35,19 @@ try {
     "overrides:\n" +
       "  '@matra/core': file:./core.tgz\n" +
       "  '@matra/html': file:./html.tgz\n" +
+      "  '@matra/site-generation': file:./site-generation.tgz\n" +
       "  '@matra/styles': file:./styles.tgz\n",
   )
-  invoke(root, "add", "--ignore-scripts", "./core.tgz", "./html.tgz", "./cli.tgz", "./styles.tgz")
+  invoke(
+    root,
+    "add",
+    "--ignore-scripts",
+    "./core.tgz",
+    "./html.tgz",
+    "./cli.tgz",
+    "./site-generation.tgz",
+    "./styles.tgz",
+  )
   const corePackage = JSON.parse(await readFile(join(core, "package.json"), "utf8"))
   const htmlPackage = JSON.parse(await readFile(join(html, "package.json"), "utf8"))
   const installedCore = JSON.parse(
@@ -114,6 +126,37 @@ assert.notEqual(process.env.EXPECT_COMPILER_ERROR, "1")
     await readFile(join(project, "dist/matra.css.LICENSE"), "utf8"),
     await readFile(join(root, "node_modules/@matra/styles/LICENSE"), "utf8"),
   )
+  const siteProject = join(root, "site")
+  await mkdir(join(siteProject, "pages"), { recursive: true })
+  await mkdir(join(siteProject, "layouts"))
+  await writeFile(
+    join(siteProject, "matra.site.json"),
+    JSON.stringify({
+      version: 1,
+      site: { pages: "pages", layouts: "layouts", defaultLayout: "default" },
+    }),
+  )
+  await writeFile(
+    join(siteProject, "layouts/default.matra.md"),
+    `---
+matra:
+  entry: main.matra
+---
+\`\`\`main.matra
+html { head {}; body { ...page.content } }
+\`\`\`
+`,
+  )
+  await writeFile(join(siteProject, "pages/index.md"), "# Packed site")
+  execFileSync(process.execPath, [projectCLI, "site", "build"], {
+    cwd: siteProject,
+    encoding: "utf8",
+    env: { ...process.env, PATH: "", MATRA_BOOTSTRAP_CACHE_DIR: join(root, "absent") },
+  })
+  assert.match(
+    await readFile(join(siteProject, "dist/index.html"), "utf8"),
+    /<h1>Packed site<\/h1>/,
+  )
   execute([
     "--input-type=module",
     "-e",
@@ -188,11 +231,13 @@ try {
     join(root, "types.mts"),
     `
 import { buildLiterate, runLiterate, LiterateError } from "@matra/core/experimental/literate"
-import type { LiterateBundle, LiterateBuildOptions } from "@matra/core/experimental/literate"
+import type { LiterateBundle, LiterateBuildOptions, LiterateRunOptions } from "@matra/core/experimental/literate"
 import { evaluate, parse, staticValueToAST } from "@matra/core/browser"
 const options: LiterateBuildOptions = { document: "example.md" }
 const bundle: LiterateBundle = await buildLiterate("", options)
 await runLiterate(bundle)
+const runOptions: LiterateRunOptions = { globals: { page: { title: "Host data" } } }
+await runLiterate(bundle, runOptions)
 const inspect = (error: LiterateError): string => error.code + error.document + error.path + error.line
 void inspect
 const browserValue = evaluate(parse('p { "Browser" }'))
@@ -215,7 +260,7 @@ if (browserValue !== undefined) void staticValueToAST(browserValue)
     { cwd: root, encoding: "utf8" },
   )
   console.log(
-    "Packed Core/HTML/CLI/Styles: APIs, types, init/build/dev, missing/corrupt compiler, and Rust-free execution passed.",
+    "Packed Core/HTML/CLI/Site/Styles: APIs, types, init/build/site/dev, missing/corrupt compiler, and Rust-free execution passed.",
   )
 } finally {
   await rm(root, { recursive: true, force: true })

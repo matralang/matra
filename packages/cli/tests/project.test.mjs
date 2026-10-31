@@ -136,6 +136,38 @@ test("build reports missing inputs and configuration errors without success outp
   await assert.rejects(buildProject(project), /ENOENT.*matra\.css/)
 })
 
+test("site build is an explicit CLI command and does not replace single-page build", async t => {
+  const root = await temporary(t)
+  await mkdir(join(root, "pages"))
+  await mkdir(join(root, "layouts"))
+  await writeFile(
+    join(root, "matra.site.json"),
+    JSON.stringify({
+      version: 1,
+      site: { pages: "pages", layouts: "layouts", defaultLayout: "default" },
+    }),
+  )
+  await writeFile(
+    join(root, "layouts", "default.matra.md"),
+    `---
+matra:
+  entry: main.matra
+---
+\`\`\`main.matra
+html { head {}; body { ...page.content } }
+\`\`\`
+`,
+  )
+  await writeFile(join(root, "pages", "index.md"), "# Multi-page")
+
+  const result = invoke(root, "site", "build")
+
+  assert.equal(result.status, 0, result.stderr)
+  assert.match(result.stdout, /Generated 1 site file/)
+  assert.match(await readFile(join(root, "dist", "index.html"), "utf8"), /<h1>Multi-page<\/h1>/)
+  assert.match(invoke(root, "build").stderr, /index\.md/)
+})
+
 test("failed compilation or execution preserves previous output and unrelated files", async t => {
   const root = await temporary(t)
   const project = await initProject(join(root, "project"))

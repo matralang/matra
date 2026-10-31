@@ -1,8 +1,7 @@
 import { copyFile, lstat, mkdir, readFile, writeFile } from "node:fs/promises"
 import { join, resolve } from "node:path"
-import { staticValueToAST } from "@matra/core"
-import { buildLiterate, runLiterate } from "@matra/core/experimental/literate"
 import { toHTML } from "@matra/html"
+import { renderLiterateDocument } from "@matra/site-generation"
 
 const template = new URL("../templates/basic/", import.meta.url)
 const stylesheet = new URL(import.meta.resolve("@matra/styles/matra.css"))
@@ -44,8 +43,10 @@ export async function buildProject(directory) {
   await regularFile(source)
   await regularFile(css)
   await regularFile(license)
-  const bundle = await buildLiterate(await readFile(source, "utf8"), { document: "index.md" })
-  const html = `<!doctype html>\n${toHTML(staticValueToAST(await runLiterate(bundle)))}\n`
+  const ast = await renderLiterateDocument(await readFile(source, "utf8"), {
+    document: "index.md",
+  })
+  const html = `<!doctype html>\n${toHTML(ast)}\n`
   const output = join(root, "dist")
   try {
     await mkdir(output)

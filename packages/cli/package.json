@@ -19,6 +19,7 @@
   "dependencies": {
     "@matra/core": "workspace:^",
     "@matra/html": "workspace:^",
+    "@matra/site-generation": "workspace:^",
     "@matra/styles": "workspace:^"
   },
   "license": "MIT"

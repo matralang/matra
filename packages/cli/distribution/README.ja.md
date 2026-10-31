@@ -48,11 +48,27 @@ matra dev
 変更すると自動で再buildします。ブラウザは手動で再読み込みしてください。
 Ctrl+Cで停止します。ポートが使用中なら`matra dev --port 3001`で変更できます。
 
-文書内のJavaScriptを実行するため、信頼する文書だけをbuildしてください。
-OS sandbox・timeoutは保証しません。サーバーは生成HTML・CSS・CSSライセンスだけを配信します。
+`matra build`は`index.md`で選択されたJavaScriptを実行し、`matra site build`は明示した
+`.matra.md`ページとlayoutだけを実行します。サイトの通常のMarkdownは文書データです。
+信頼するプログラムだけをbuildしてください。OS sandbox・timeoutは保証しません。
+サーバーは生成HTML・CSS・CSSライセンスだけを配信します。
 buildエラーはターミナルに表示し、修正されるまでHTTP 503を返します。
 インターネットから取得したソフトウェアはmacOSで実行承認が必要になる場合があります。
 この開発版は署名・公証を行っていません。組織のセキュリティポリシーに従ってください。
+
+## 宣言的なサイト
+
+複数ページサイトでは、project rootに`matra.site.yaml`、`matra.site.json`、
+`matra.site.matra`のいずれか1つを置き、次を実行します。
+
+```sh
+matra site build
+```
+
+設定したpages directory以下の通常の`.md`はMarkdownページです。
+実行するページとlayoutだけを`.matra.md`にします。routeに対応するHTMLを
+設定した出力directoryへ生成します。詳細は
+[サイト生成の実装契約](https://github.com/matralang/matra/blob/main/spec/site-generation.ja.md)を参照してください。
 
 ## 内容と出典
 

@@ -1,0 +1,24 @@
+{
+  "name": "@matra/site-generation",
+  "version": "0.1.0",
+  "description": "Declarative static site generation for Matra",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "build": "node --check src/index.mjs && node --check src/site.mjs && node --check src/markdown.mjs",
+    "check": "pnpm run build",
+    "test": "pnpm run build && node --test"
+  },
+  "dependencies": {
+    "@matra/core": "workspace:^",
+    "@matra/html": "workspace:^",
+    "js-yaml": "^5.2.2",
+    "markdown-it": "^14.3.0"
+  },
+  "license": "MIT"
+}

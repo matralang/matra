@@ -1,18 +1,23 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises"
+import { buildSite } from "@matra/site-generation"
 import { startDev } from "./dev.mjs"
 import { buildProject, initProject } from "./project.mjs"
 
 const usage = `Usage: matra init DIRECTORY
        matra build
+       matra site build
        matra dev [--port PORT]
        matra --version
 
 init   Create a new project directory.
 build  Build index.md and matra.css into dist/ in the current directory.
+site   Build the configured multi-page site into dist/.
 dev    Serve on 127.0.0.1:3000 and rebuild on changes. Refresh the browser to view changes.
 
-Only build trusted documents: JavaScript in the document is executed.`
+matra build executes selected JavaScript in index.md.
+matra site build executes only explicitly named .matra.md pages and layouts.
+Only build trusted programs; execution has no OS sandbox or timeout.`
 
 const args = process.argv.slice(2)
 if (args[0] === "--") args.shift()
@@ -31,6 +36,9 @@ try {
   } else if (args[0] === "build" && args.length === 1) {
     const output = await buildProject(process.cwd())
     console.log(`Generated: ${output}`)
+  } else if (args[0] === "site" && args[1] === "build" && args.length === 2) {
+    const outputs = await buildSite(process.cwd())
+    console.log(`Generated ${outputs.length} site file(s)`)
   } else if (
     args[0] === "dev" &&
     (args.length === 1 || (args.length === 3 && args[1] === "--port" && /^[0-9]+$/.test(args[2])))

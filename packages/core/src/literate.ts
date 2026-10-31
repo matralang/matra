@@ -22,6 +22,10 @@ export interface LiterateBundle {
   wasm: string
 }
 
+export interface LiterateRunOptions {
+  globals?: Record<string, StaticValue>
+}
+
 export async function buildLiterate(
   markdown: string,
   options: LiterateBuildOptions = {},
@@ -29,6 +33,9 @@ export async function buildLiterate(
   return build(markdown, options)
 }
 
-export async function runLiterate(bundle: LiterateBundle): Promise<StaticValue> {
-  return run(bundle)
+export async function runLiterate(
+  bundle: LiterateBundle,
+  options: LiterateRunOptions = {},
+): Promise<StaticValue> {
+  return run(bundle, options)
 }

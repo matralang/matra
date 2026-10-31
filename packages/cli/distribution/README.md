@@ -47,11 +47,28 @@ Open the printed URL (`http://127.0.0.1:3000/` by default).
 Changes rebuild automatically; refresh the browser manually. Ctrl+C stops the server.
 Use `matra dev --port 3001` if the default port is occupied.
 
-Only build trusted documents: their JavaScript is executed without an OS sandbox or timeout.
+`matra build` executes selected JavaScript in `index.md`; `matra site build` executes only
+explicit `.matra.md` pages and layouts. Ordinary site Markdown is rendered as content.
+Build only trusted programs: execution has no OS sandbox or timeout.
 The development server serves only generated HTML, CSS, and the CSS license.
 Build errors appear in the terminal and return HTTP 503 until fixed.
 macOS may require approval for software downloaded from the Internet. This development
 distribution is not signed or notarized; follow your organization's security policy.
+
+## Declarative sites
+
+For multi-page sites, add exactly one of `matra.site.yaml`, `matra.site.json`, or
+`matra.site.matra` to the project root and run:
+
+```sh
+matra site build
+```
+
+Ordinary `.md` files under the configured pages directory are Markdown pages.
+Use `.matra.md` only for executable page programs and layouts.
+The command writes route-based HTML into the configured output directory.
+See the [site-generation contract](https://github.com/matralang/matra/blob/main/spec/site-generation.md)
+for configuration and supported behavior.
 
 ## Contents and provenance
 

@@ -4,17 +4,68 @@
 
 ## Status and scope
 
-This non-normative additional proposal supplements the
+This additional proposal supplements the
 [shared build engine proposal](./desktop-app.md).
-It is unimplemented; configuration fields, public names, and package names remain provisional.
-Examples illustrate future usage and cannot run with the current CLI.
-It is not a v0.3 release criterion, has no scheduled start, and is not a prerequisite for the first Desktop version.
+The Stage 1–2 MVP is implemented. External data extensions, watching, and migration of the official website
+remain future work. The MVP input contract and configuration examples in this document are implemented.
+It is not a prerequisite for the first Desktop version.
 
 The target is site generation using Matra, not changes to Matra Program or compiler source grammar.
-The parser, AST/data model, compiler ABI, and existing Core/HTML public APIs remain unchanged.
-A host API for injecting external runtime data needs a separate contract before implementation.
+The parser, AST/data model, compiler ABI, and existing Core/HTML behavior remain unchanged.
+`runLiterate()` provides an additive `globals` option that clones and validates plain data.
 This proposal does not override the [grammar](./grammar.md) or
 [initial literate contract](./literate-modules.md).
+
+## MVP implementation contract
+
+Site generation is explicitly enabled by `matra site build`, separate from the existing single-page `matra build`.
+The shared engine package is `@matra/site-generation`. Place exactly one of these configuration files in the project root:
+
+- `matra.site.yaml`: YAML
+- `matra.site.json`: JSON
+- `matra.site.matra`: a static Matra object expression (for example, `({ version: 1, site: { pages: "pages" } })`)
+
+All formats use the same versioned schema. Unknown settings, dynamic Matra configuration, and input/output paths outside
+the project root are rejected.
+
+```yaml
+version: 1
+site:
+  pages: pages
+  documents: content
+  layouts: layouts
+  defaultLayout: default
+  output: dist
+  format: directory
+  assets: public
+  basePath: /preview
+  data:
+    title: My site
+```
+
+Ordinary `.md` files under `site.pages` are published Markdown pages and do not require FrontMatter.
+Executable pages and layouts use the `.matra.md` extension and a literate `matra.entry`.
+`site.documents` is an additional document root (one path or a list); collected documents are not published automatically.
+The `site` FrontMatter object on pages/layouts accepts only `route`, `layout`, and `data`.
+When `site.data` is present, combining it with ordinary FrontMatter fields is rejected.
+
+Layouts receive `site.data`, `site.documents`, `page.data`, `page.route`, and `page.content`.
+`page.content` is a document-node sequence, not an HTML string.
+The literate runtime validates and clones injected values as plain data and reports collisions with selected `.js.part`
+public names.
+Markdown conversion uses markdown-it's default settings with HTML, linkification, and typography disabled.
+Tables and strikethrough are supported; raw HTML is not executed as nodes and is escaped as text.
+
+With directory output, `pages/index.md` maps to `/`, `pages/about.md` to `/about/`,
+and `pages/blog/post.md` to `/blog/post/`. With `flat` output, trailing slashes are removed and these pages
+are written as `index.html`, `about.html`, and `blog/post.html`.
+Regular files under `site.assets` are copied under output `assets/`; input symlinks, collisions, and missing local
+references are rejected. `basePath` prefixes root-relative `href` and `src` values during HTML rendering.
+
+The engine renders and validates every page before publication, copies the previous output to a staging directory,
+applies generated files, then swaps directories. Unrelated existing files are preserved; stale output for deleted pages
+is also retained in the MVP. External extensions, watching, canonical URL generation, Desktop integration,
+and migration of the official website are not included.
 
 ## Purpose
 
@@ -300,12 +351,10 @@ Documentation-only changes do not need bootstrap verification.
 If implementation affects the compiler or ABI, treat that as a separate specification change
 and apply existing verification requirements, including Stage 2/3 byte equality.
 
-## Decisions before implementation
+## Decisions for future stages
 
-- Engine package name and public scope, configuration schema, and explicit opt-in.
-- Document/program identification fields, extensions, and precedence; declarative APIs for document collection, references, and publication.
-- Document/metadata schemas, supported Markdown dialect, and raw HTML, relative-link, and image conversion contracts.
-- External value injection API, public names, layout opt-out, and body node-sequence validation.
-- Route character set and normalization, internal-link resolution, and canonical URL exposure.
+- Public APIs for document selection/references, source locations in document records, and image processing extensions.
+- Canonical URLs, origin, and URL exposure including the base path.
 - Extension APIs for registration, results, source locations, and dependency inputs.
+- Watching/cancellation, Desktop integration, and tracking/removal of stale output.
 - Safe artifact publication, obsolete-output removal, and detailed diagnostic locations.

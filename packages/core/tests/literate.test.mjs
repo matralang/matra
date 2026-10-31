@@ -30,6 +30,33 @@ test("public literate API preserves bundles and creates fresh contexts", async (
   assert.deepEqual(await runLiterate(bundle), expected)
 })
 
+test("runLiterate injects copied plain-data globals without colliding with value modules", async () => {
+  const source = `---
+matra:
+  entry: main.matra
+---
+\`\`\`main.matra
+p { page.title }
+\`\`\`
+`
+  const bundle = await buildLiterate(source)
+  assert.deepEqual(await runLiterate(bundle, { globals: { page: { title: "From host" } } }), {
+    tag: "p",
+    props: {},
+    children: ["From host"],
+  })
+  await assert.rejects(runLiterate(bundle, { globals: { "invalid-name": true } }), {
+    code: "INVALID_GLOBALS",
+  })
+  const withValue = await buildLiterate(
+    source.replace("entry: main.matra", "entry: main.matra\n  values: [page.js.part]") +
+      "```page.js.part\n({ title: 'value module' })\n```\n",
+  )
+  await assert.rejects(runLiterate(withValue, { globals: { page: { title: "host" } } }), {
+    code: "GLOBAL_COLLISION",
+  })
+})
+
 test("YAML metadata is not scanned as executable code fences", async () => {
   const metadata = `---
 description: |

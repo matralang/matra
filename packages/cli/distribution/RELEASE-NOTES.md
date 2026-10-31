@@ -26,7 +26,8 @@ checksumを確認して展開してください。展開したフォルダーを
 - 署名・公証なし。macOSの実行承認が必要になる場合があります
 - 文書内のJavaScriptを実行します。信頼する文書のみをbuildしてください。sandbox・timeout保証なし
 - `dev`はlocalhostのみ。自動再buildに対応し、ブラウザ再読み込みは手動
-- 既存ディレクトリへの`init`、汎用site generator、npm・Pythonの直接importは対象外
+- 既存ディレクトリへの`init`、外部拡張、npm・Pythonの直接importは対象外
+- 宣言的な複数ページサイトは`matra site build`で利用可能。詳細は同梱READMEを参照
 - ZIPのbyte再現性は保証しません。checksumは破損検出用で、電子署名ではありません
 
 ## English
@@ -57,7 +58,8 @@ and `versions.json` for exact versions and the source commit.
 - Unsigned and not notarized; macOS may require approval to run downloaded software
 - Builds execute document JavaScript; only build trusted documents. No sandbox/timeout guarantee
 - Localhost-only dev server with automatic rebuild; browser refresh is manual
-- No init into existing directories, general site generator, or direct npm/Python imports
+- No init into existing directories, external extensions, or direct npm/Python imports
+- Declarative multi-page sites are available with `matra site build`; see the bundled README
 - ZIP byte reproducibility is not guaranteed; checksums detect corruption, not signed authenticity
 
 ## 導入例 / Getting started

@@ -86,9 +86,19 @@ directory to compile and execute the document and generate/update `dist/index.ht
 `dist/matra.css`, and `dist/matra.css.LICENSE`. Open the HTML directly in a browser;
 viewing needs no network. Unknown output files are not deleted, and symlink output paths
 are rejected. Only build trusted documents: their JavaScript executes during the build.
-The existing literate API, `matra-literate` CLI, and language grammar are unchanged.
+The existing literate API behavior, `matra-literate` CLI, and language grammar are unchanged.
+`runLiterate()` also accepts an additive `globals` option for validated host data.
 Execution uses the bundled compiler Wasm and manifest without Rust, pnpm, or a network;
 preparing and packing the development tools still requires Rust and pnpm.
+
+### Declarative multi-page sites
+
+The CLI also supports a separate site-generation workflow. Create `matra.site.yaml`,
+`matra.site.json`, or a static Matra configuration file named `matra.site.matra`.
+Ordinary Markdown under `pages/` is content; executable pages and shared layouts use `.matra.md`.
+Run `matra site build` to generate routes under `dist/`. See the
+[site-generation contract](./spec/site-generation.md) for the configuration schema and limits.
+This command does not change the existing single-page `matra build` workflow.
 
 ### Local preview
 
@@ -110,9 +120,9 @@ and return HTTP 503 with a plain-text diagnostic for generated asset requests.
 Previous output files remain on disk; serving resumes after a successful rebuild.
 Press Ctrl+C to stop the server and file monitoring.
 
-Run `pnpm test:cli` for initialization, HTML/CSS generation, and error handling.
+Run `pnpm test:cli` for initialization, single-page and site generation, and error handling.
 `pnpm test:literate:package` packs the CLI, template, CSS, and compiler and verifies
-init/build/dev outside the checkout without external commands.
+init/build/site/dev outside the checkout without external commands.
 
 ### Building a Node.js-inclusive ZIP
 

@@ -83,8 +83,18 @@ hello/
 未知の出力ファイルは削除せず、出力先のsymlinkは拒否します。
 build時には文書内のJavaScriptが実行されるため、信頼する文書のみをbuildしてください。
 通常のliterate API・`matra-literate` CLI・文法は変更していません。
+`runLiterate()`には、検証済みhost dataを渡す追加の`globals` optionがあります。
 利用時には同梱compiler Wasmとmanifestを使い、Rust・pnpm・ネットワークは不要です。
 現在の開発版の準備とpack検証ではRust・pnpmが必要です。
+
+### 宣言的な複数ページサイト
+
+別経路として、`matra.site.yaml`、`matra.site.json`、静的Matra設定の`matra.site.matra`を
+使うサイト生成機能があります。`pages/`以下の通常のMarkdownは文書データとして扱い、
+実行するページと共通layoutだけを`.matra.md`にします。`matra site build`で
+`dist/`以下へroute形式のHTMLを生成します。schemaと制約は
+[サイト生成の実装契約](./spec/site-generation.ja.md)を参照してください。
+従来の単一ページ`matra build`とは独立しています。
 
 ### ローカルプレビュー
 
@@ -106,9 +116,9 @@ matra dev
 前回のファイル出力は残し、修正後の再build成功で配信を再開します。
 Ctrl+Cでサーバーと監視を停止します。
 
-`pnpm test:cli`で初期化・HTML/CSS生成・エラー処理を、
-`pnpm test:literate:package`でCLI・テンプレート・CSS・compilerをpackして
-checkout外・外部コマンドなしでinit/build/devが動くことを検証します。
+`pnpm test:cli`で初期化・単一ページ/サイト生成・エラー処理を、
+`pnpm test:literate:package`でCLI・サイトエンジン・テンプレート・CSS・compilerをpackして
+checkout外・外部コマンドなしでinit/build/site/devが動くことを検証します。
 
 ### Node.js同梱ZIPの作成
 
