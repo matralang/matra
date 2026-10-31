@@ -60,7 +60,16 @@ directory形式では`pages/index.md`が`/`、`pages/about.md`が`/about/`、
 `basePath`はHTML出力時のroot-relative `href`・`src`に適用します。
 
 全ページを生成・検証してから、既存出力を一時directoryへ複製して新しいファイルを重ね、
-directoryをswapして公開します。既存の無関係なファイルは保持し、削除されたページの旧出力もMVPでは自動削除しません。
+directoryをswapして公開します。出力内の予約ファイル`.matra-site-manifest.json`に
+`{ "version": 1, "files": [...] }`として生成HTML・assetの相対パス一覧を保存します。
+一覧のパスは`/`区切りで安定順序とし、一覧自体は`buildSite()`の戻り値へ含めません。
+次回の成功buildでは、前回一覧にあり今回生成しないファイルだけをステージ内で削除します。
+ページ・assetの削除、route変更、directory/flat切り替えに適用し、空になった祖先directoryだけを除去します。
+一覧にない既存ファイルは保持します。生成物はエンジン所有とし、手動編集しても保護対象にはしません。
+一覧がない旧版出力は所有権を推測せず保持するため、初回移行時の古い出力は利用者が確認・整理してください。
+予約ファイルは手動編集せず、routeの出力先にも使用できません。不正JSON・非対応version・重複パス・
+出力外へ逸脱するパス・symlink・想定外のファイル種別は診断にし、黙って一覧を捨てません。
+生成・検証・公開に失敗した場合は旧出力と一覧を維持します。
 外部拡張、watch、canonical URL生成、Desktop統合、公式サイト移行は含みません。
 
 ## 目的
@@ -344,4 +353,4 @@ CLI・Desktopで同じ内容を返します。停止・再実行は共通エン�
 - 公開APIとしての文書選択・参照、recordの元位置、画像処理拡張。
 - canonical URLとorigin、base pathを含むURL公開方法。
 - 拡張の登録・戻り値・元位置・依存入力のAPI。
-- watch・cancel、Desktop統合、旧出力の追跡と削除方針。
+- watch・cancel、Desktop統合、一覧のない旧版出力の移行支援。

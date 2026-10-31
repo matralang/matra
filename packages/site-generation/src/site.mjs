@@ -8,6 +8,7 @@ import {
   readFile,
   rename,
   rm,
+  rmdir,
   writeFile,
 } from "node:fs/promises"
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path"
@@ -19,6 +20,7 @@ import { markdownToNodes } from "./markdown.mjs"
 
 const CONFIG_NAMES = ["matra.site.yaml", "matra.site.json", "matra.site.matra"]
 const SITE_KEYS = new Set(["route", "layout", "data"])
+const OUTPUT_MANIFEST = ".matra-site-manifest.json"
 
 export async function renderLiterateDocument(markdown, options = {}) {
   const bundle = await buildLiterate(markdown, { document: options.document })
@@ -59,7 +61,7 @@ export async function buildSite(directory) {
   settings.routesByRoute = new Set(pages.map(page => page.route))
   settings.assetFiles = new Set(assets.map(asset => resolve(asset.source)))
   settings.assetOutputs = new Set(assets.map(asset => `/${asset.output.split(sep).join("/")}`))
-  await validateOutput(root, settings.outputDirectory, outputPlan)
+  await validateOutput(root, settings.outputDirectory, { files: [] })
   settings.documents = documents.map(document => ({
     id: document.id,
     path: document.id,
@@ -574,6 +576,9 @@ function planOutput(pages, assets, settings) {
   const seen = new Map()
   for (const output of outputs) {
     const normalized = output.split(sep).join("/").toLocaleLowerCase("en-US")
+    if (normalized === OUTPUT_MANIFEST || normalized.startsWith(`${OUTPUT_MANIFEST}/`)) {
+      throw new Error(`Reserved site output path: ${output}`)
+    }
     if (seen.has(normalized))
       throw new Error(`Output collision: ${output} and ${seen.get(normalized)}`)
     seen.set(normalized, output)
@@ -634,7 +639,7 @@ async function validateOutputFile(output, relativePath) {
 async function publish(root, outputDirectory, rendered) {
   const parent = dirname(outputDirectory)
   await ensureDirectoryPath(root, parent)
-  await validateOutput(root, outputDirectory, { files: rendered.map(file => file.path) })
+  await validateOutput(root, outputDirectory, { files: [] })
   const stage = await mkdtemp(join(parent, `.${basename(outputDirectory)}-stage-`))
   const backup = join(parent, `.${basename(outputDirectory)}-backup-${randomUUID()}`)
   try {
@@ -650,11 +655,22 @@ async function publish(root, outputDirectory, rendered) {
       await validateTree(outputDirectory)
       await cp(outputDirectory, stage, { recursive: true, force: true })
     }
+    const previousFiles = await readOutputManifest(stage)
+    const files = rendered.map(file => file.path.split(sep).join("/")).sort()
+    const currentFiles = new Set(files)
+    for (const file of previousFiles) {
+      if (!currentFiles.has(file)) await removeGeneratedFile(stage, file)
+    }
+    await validateOutput(root, stage, { files: rendered.map(file => file.path) })
     for (const file of rendered) {
       const stagedPath = join(stage, file.path)
       await mkdir(dirname(stagedPath), { recursive: true })
       await writeFile(stagedPath, file.content)
     }
+    await writeFile(
+      join(stage, OUTPUT_MANIFEST),
+      `${JSON.stringify({ version: 1, files }, null, 2)}\n`,
+    )
     let hadOutput = false
     try {
       await rename(outputDirectory, backup)
@@ -671,6 +687,64 @@ async function publish(root, outputDirectory, rendered) {
     if (hadOutput) await rm(backup, { recursive: true, force: true })
   } finally {
     await rm(stage, { recursive: true, force: true })
+  }
+}
+
+async function readOutputManifest(output) {
+  const path = join(output, OUTPUT_MANIFEST)
+  let source
+  try {
+    source = await readFile(path, "utf8")
+  } catch (error) {
+    if (error.code === "ENOENT") return []
+    throw error
+  }
+  let manifest
+  try {
+    manifest = JSON.parse(source)
+  } catch (error) {
+    throw new SyntaxError(`Invalid site output manifest: ${path}`, { cause: error })
+  }
+  if (
+    !isRecord(manifest) ||
+    manifest.version !== 1 ||
+    Object.keys(manifest).some(key => !["version", "files"].includes(key)) ||
+    !Array.isArray(manifest.files)
+  ) {
+    throw new TypeError(`Invalid site output manifest: ${path}`)
+  }
+  const seen = new Set()
+  for (const file of manifest.files) {
+    if (
+      typeof file !== "string" ||
+      file.includes("\\") ||
+      file.split("/").some(part => !isSafeSegment(part)) ||
+      file.toLocaleLowerCase("en-US") === OUTPUT_MANIFEST ||
+      file.toLocaleLowerCase("en-US").startsWith(`${OUTPUT_MANIFEST}/`)
+    ) {
+      throw new TypeError(`Invalid generated file path in site output manifest: ${path}`)
+    }
+    const key = file.toLocaleLowerCase("en-US")
+    if (seen.has(key))
+      throw new TypeError(`Duplicate generated file in site output manifest: ${path}`)
+    seen.add(key)
+    await validateOutputFile(output, file.split("/").join(sep))
+  }
+  return manifest.files
+}
+
+async function removeGeneratedFile(output, file) {
+  const path = join(output, ...file.split("/"))
+  await rm(path, { force: true })
+  let directory = dirname(path)
+  while (directory !== output) {
+    try {
+      await rmdir(directory)
+    } catch (error) {
+      if (error.code === "ENOTEMPTY" || error.code === "EEXIST") break
+      if (error.code !== "ENOENT") throw error
+    }
+    directory = dirname(directory)
   }
 }
 

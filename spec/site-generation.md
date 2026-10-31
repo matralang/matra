@@ -63,8 +63,17 @@ Regular files under `site.assets` are copied under output `assets/`; input symli
 references are rejected. `basePath` prefixes root-relative `href` and `src` values during HTML rendering.
 
 The engine renders and validates every page before publication, copies the previous output to a staging directory,
-applies generated files, then swaps directories. Unrelated existing files are preserved; stale output for deleted pages
-is also retained in the MVP. External extensions, watching, canonical URL generation, Desktop integration,
+applies generated files, then swaps directories. The reserved output file `.matra-site-manifest.json`
+records generated HTML and assets as `{ "version": 1, "files": [...] }`, using sorted relative paths with `/` separators.
+The manifest itself is not included in the return value of `buildSite()`.
+On the next successful build, only previously listed files absent from the new output are removed in staging.
+This covers page/asset deletion, route changes, and directory/flat transitions; only empty ancestor directories are removed.
+Unlisted existing files are preserved. Generated files belong to the engine; manual edits do not make them protected.
+Legacy output without a manifest is preserved without guessing ownership; inspect and clean legacy files when first migrating.
+Do not manually edit the reserved manifest or use its path for route output.
+Invalid JSON, unsupported versions, duplicate or escaping paths, symlinks, and unexpected file types are diagnosed,
+not ignored by silently discarding the manifest. Generation, validation, or publication failure preserves the previous
+output and manifest. External extensions, watching, canonical URL generation, Desktop integration,
 and migration of the official website are not included.
 
 ## Purpose
@@ -356,5 +365,5 @@ and apply existing verification requirements, including Stage 2/3 byte equality.
 - Public APIs for document selection/references, source locations in document records, and image processing extensions.
 - Canonical URLs, origin, and URL exposure including the base path.
 - Extension APIs for registration, results, source locations, and dependency inputs.
-- Watching/cancellation, Desktop integration, and tracking/removal of stale output.
-- Safe artifact publication, obsolete-output removal, and detailed diagnostic locations.
+- Watching/cancellation, Desktop integration, and migration assistance for legacy output without a manifest.
+- Detailed diagnostic locations.
