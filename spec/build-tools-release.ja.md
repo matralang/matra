@@ -99,13 +99,13 @@ npm公開・website deployは行いません。
 
 ## npm導入経路の公開準備
 
-技術書典向けに、Node.js 22/24とnpmを利用する別経路を準備します。
-CLI `0.3.2-alpha.0`とStyles `0.1.0`はまだnpm未公開です。
+技術書典向けに、Node.js 22/24とnpmを利用する別経路を用意しました。
+CLI `0.3.2-alpha.0`とStyles `0.1.0`はnpm公開済みの実験版です。
 キャンペーンの案内・サポート期間を限定することと、配布物の利用期限は別です。
 期間やサポート内容は未決定で、公開したpackageを期間終了時に削除しません。
-既存のZIP、タグおよび公開済みpackageの`latest`は変更しません。
+既存のZIPとGitタグは変更していません。
 
-公開後の利用コマンドは次の予定です。**公開前は実行できません。**
+利用コマンドは次のとおりです。
 
 ```sh
 npm install --global @matra/cli@0.3.2-alpha.0
@@ -143,3 +143,22 @@ pnpm --filter @matra/cli publish --tag preview --access public
 npm view @matra/styles@0.1.0 dist.integrity
 npm view @matra/cli@0.3.2-alpha.0 dist.integrity dependencies
 ```
+
+### 2026年11月7日の公開記録
+
+承認に基づき、source commit `e378ed600a267b75cf70cafd08b7bf31246f2212`から
+Styles `0.1.0`、CLI `0.3.2-alpha.0`の順にnpm公開しました。専用branchからの公開に
+`--no-git-checks`を使用し、事前にcleanなcheckoutとremoteのcommit一致を確認しました。
+[npm CLI CI](https://github.com/matralang/matra/actions/runs/42368119700)の4構成、
+[ZIP配布CI](https://github.com/matralang/matra/actions/runs/42368119652)と
+[portable CI](https://github.com/matralang/matra/actions/runs/42368119621)の6構成が成功しました。
+Windows 11 x64 / Node.js 24.19.0で利用者がtarballを実機導入し、init/build、
+ブラウザ表示とCtrl+Cを確認しました。macOS arm64 / Node.js 24.17.0では
+registryからCLIのみを隔離prefixに導入し、init/build/devとブラウザ表示を確認しました。
+両packageのregistry integrityは候補commitのpackと一致しました。
+
+- CLI integrity: `sha512-1SBVjZgfLn2ammi+8K7j3EeYnL4CNZVRiN+UAw+ZsZQCzHurca4Qj5xx0EVBBp49L1dM/dVHwQBD9xlAqpQQeQ==`
+- Styles integrity: `sha512-wwaL93dZ83xir5ygumYpcD/2DHwyuS9XxJ/Y2ar4oINthOWOlyb1Y+s+dD+SZnKolHRifDfgFF7HvzoBLiHzLw==`
+- 両packageに`preview`と`latest`が付いています。CLIの`latest`は公開前の`0.0.0-stage`から
+  実験版`0.3.2-alpha.0`へ変化しました。復元せず進める利用者の判断を記録します。
+- 既存ZIPやGitタグは変更していません。Windows実機でのregistryからの再導入は未確認です。

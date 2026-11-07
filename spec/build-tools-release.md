@@ -104,13 +104,13 @@ No npm publication or website deployment is performed.
 
 ## npm installation release preparation
 
-For the event, a separate installation path using Node.js 22/24 and npm is being prepared.
-CLI `0.3.2-alpha.0` and Styles `0.1.0` are not yet published on npm.
+For the event, a separate installation path using Node.js 22/24 and npm is available.
+CLI `0.3.2-alpha.0` and Styles `0.1.0` are published on npm as experimental packages.
 The campaign's announcement and support period are separate from the lifetime of the tools.
 Dates and support scope are undecided; published packages will not be removed at the end.
-Existing ZIPs, tags, and published packages' `latest` tags remain unchanged.
+Existing ZIPs and Git tags remain unchanged.
 
-The planned commands below **cannot be used until publication**:
+Use these commands:
 
 ```sh
 npm install --global @matra/cli@0.3.2-alpha.0
@@ -148,3 +148,23 @@ pnpm --filter @matra/cli publish --tag preview --access public
 npm view @matra/styles@0.1.0 dist.integrity
 npm view @matra/cli@0.3.2-alpha.0 dist.integrity dependencies
 ```
+
+### Publication record: November 7, 2026
+
+Following approval, Styles `0.1.0` and then CLI `0.3.2-alpha.0` were published from
+source commit `e378ed600a267b75cf70cafd08b7bf31246f2212`. Publishing from the
+dedicated branch used `--no-git-checks` after verifying a clean checkout and matching remote commit.
+All four [npm CLI CI](https://github.com/matralang/matra/actions/runs/42368119700) configurations,
+and all six configurations of [ZIP CI](https://github.com/matralang/matra/actions/runs/42368119652)
+and [portable CI](https://github.com/matralang/matra/actions/runs/42368119621), passed.
+On Windows 11 x64 / Node.js 24.19.0, the user installed tarballs and confirmed init/build,
+browser display, and Ctrl+C. On macOS arm64 / Node.js 24.17.0, CLI alone was installed
+from the registry into an isolated prefix; init/build/dev and browser display were verified.
+Both registry integrity values matched packs from the candidate commit.
+
+- CLI integrity: `sha512-1SBVjZgfLn2ammi+8K7j3EeYnL4CNZVRiN+UAw+ZsZQCzHurca4Qj5xx0EVBBp49L1dM/dVHwQBD9xlAqpQQeQ==`
+- Styles integrity: `sha512-wwaL93dZ83xir5ygumYpcD/2DHwyuS9XxJ/Y2ar4oINthOWOlyb1Y+s+dD+SZnKolHRifDfgFF7HvzoBLiHzLw==`
+- Both packages have `preview` and `latest` tags. CLI `latest` changed from `0.0.0-stage`
+  to experimental `0.3.2-alpha.0`; the user chose to proceed without restoring it.
+- Existing ZIPs and Git tags are unchanged. Registry installation on an actual Windows machine
+  has not yet been verified.

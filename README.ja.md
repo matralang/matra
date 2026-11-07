@@ -43,11 +43,19 @@ commit `2056aee`の[配布CI run 41005130597](https://github.com/matralang/matra
 [0.3.1-alpha.1 Pre-release](https://github.com/matralang/matra/releases/tag/build-tools-v0.3.1-alpha.1)から、
 OS・CPUに合うZIPとchecksumを取得できます。興味のある開発者向けで、安定版ではありません。
 取得・checksum確認・展開・PATH設定の案内と検証範囲はreleaseページを参照してください。
-利用側のNode.js・pnpm・Rustは不要です。専用インストーラーやnpmによるCLI導入は未提供です。
+利用側のNode.js・pnpm・Rustは不要です。専用インストーラーは未提供です。
 
-Node.js 22/24とnpmを使うCLI導入経路は準備中です。CLIとStylesはnpm未公開のため、
-現時点でnpmからインストールすることはできません。公開前の検証・承認条件は
-[npm配布の準備](spec/build-tools-release.ja.md#npm導入経路の公開準備)を参照してください。
+Node.js 22/24とnpmを使う別の導入経路もあります。実験版をversion固定で導入します。
+
+```sh
+npm install --global @matra/cli@0.3.2-alpha.0
+matra init hello
+cd hello
+matra build
+matra dev
+```
+
+詳細と公開記録は[npm導入経路](spec/build-tools-release.ja.md#npm導入経路の公開準備)を参照してください。
 
 **WindowsのChromeで「危険なダウンロードがブロックされました」と表示される報告があります。**
 原因は未特定で、誤検知とは確認できていません。警告時は取得・実行を中止してください。

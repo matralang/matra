@@ -47,6 +47,11 @@ Windows Chromeの標準保護で「危険なダウンロードがブロックさ
 Windowsの対話的なinit/build/dev・Ctrl+C、macOSのbrowser download承認は未確認です。
 承認段階と実機確認は[試験配布手順](./build-tools-release.ja.md)に記載します。
 
+別経路として、2026-11-07にNode.js 22/24とnpmを使うCLI `0.3.2-alpha.0`と
+Styles `0.1.0`を実験版として公開しました。導入手順・検証範囲・npm tagの実際の状態は
+[npm公開記録](./build-tools-release.ja.md#2026年11月7日の公開記録)を参照してください。
+キャンペーンの案内・サポート期間は未定で、公開したpackageの利用期限とは別です。
+
 先行して`@matra/cli`の`matra init DIRECTORY`と最小の`matra build`を追加しました。
 新規ディレクトリへ`index.md`、編集可能な`matra.css`、CSSライセンス、`.gitignore`を生成し、
 設定ファイルやプロジェクト内のnpm依存を要求しません。

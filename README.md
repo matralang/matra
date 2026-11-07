@@ -46,13 +46,20 @@ Download the ZIP and checksum for your OS/CPU from the
 [0.3.1-alpha.1 Pre-release](https://github.com/matralang/matra/releases/tag/build-tools-v0.3.1-alpha.1).
 This is for interested developers, not a stable release. See the release page for download,
 checksum, extraction, PATH instructions, and verification scope.
-System Node.js, pnpm, and Rust are not needed. A dedicated installer and npm CLI installation
-are not yet provided.
+System Node.js, pnpm, and Rust are not needed. A dedicated installer is not yet provided.
 
-An npm CLI installation path using Node.js 22/24 is being prepared. The CLI and Styles are
-not yet published on npm, so the installation command is not available. See the
-[npm release preparation](spec/build-tools-release.md#npm-installation-release-preparation)
-for verification and approval gates.
+An alternative npm installation path requires Node.js 22/24. Install the experimental CLI
+at a pinned version:
+
+```sh
+npm install --global @matra/cli@0.3.2-alpha.0
+matra init hello
+cd hello
+matra build
+matra dev
+```
+
+See the [npm installation record](spec/build-tools-release.md#npm-installation-release-preparation).
 
 **Chrome on Windows has been reported to block the download as dangerous.**
 The cause is unknown; a false positive has not been established. Stop downloading or running

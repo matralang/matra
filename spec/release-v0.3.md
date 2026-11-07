@@ -54,6 +54,12 @@ Checksums and CI results do not guarantee safety. Interactive Windows init/build
 and macOS browser-download approval remain unverified.
 See the [prerelease procedure](./build-tools-release.md) for approval gates and manual checks.
 
+As a separate path, CLI `0.3.2-alpha.0` and Styles `0.1.0` were published experimentally
+on 2026-11-07 for installation with Node.js 22/24 and npm. See the
+[npm publication record](./build-tools-release.md#publication-record-november-7-2026)
+for usage, validation, and actual npm tags. The campaign announcement and support period
+remain undecided and are separate from the lifetime of the published packages.
+
 As the first step, `@matra/cli` adds `matra init DIRECTORY` and a minimal `matra build`.
 Initialization creates `index.md`, editable `matra.css`, its license, and `.gitignore`
 in a new directory without requiring configuration files or project npm dependencies.
