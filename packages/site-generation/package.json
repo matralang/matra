@@ -1,6 +1,6 @@
 {
   "name": "@matra/site-generation",
-  "version": "0.1.0-site.1",
+  "version": "0.1.0-site.2",
   "description": "Declarative static site generation for Matra",
   "type": "module",
   "exports": {

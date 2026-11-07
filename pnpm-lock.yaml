@@ -238,16 +238,16 @@ importers:
   packages/cli:
     dependencies:
       '@matra/core':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../core
       '@matra/html':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../html
       '@matra/site-generation':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../site-generation
       '@matra/styles':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../styles
 
   packages/command:

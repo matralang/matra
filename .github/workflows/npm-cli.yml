@@ -1,0 +1,33 @@
+name: Verify npm CLI packages
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  npm-cli:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+        node: [22, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+      - run: pnpm install --frozen-lockfile
+      - name: Pack CLI and Styles
+        shell: bash
+        run: |
+          pnpm --filter @matra/styles pack --out "$RUNNER_TEMP/styles.tgz"
+          pnpm --filter @matra/cli pack --out "$RUNNER_TEMP/cli.tgz"
+      - name: Verify isolated npm global installation
+        shell: bash
+        run: npm run verify:npm-cli -- "$RUNNER_TEMP/cli.tgz" "$RUNNER_TEMP/styles.tgz"

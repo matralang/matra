@@ -1,7 +1,6 @@
 {
   "name": "@matra/cli",
-  "version": "0.3.1-alpha.1",
-  "private": true,
+  "version": "0.3.2-alpha.0",
   "description": "Matra project initialization and HTML build tools",
   "type": "module",
   "bin": {
@@ -17,10 +16,22 @@
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "@matra/core": "workspace:^",
-    "@matra/html": "workspace:^",
-    "@matra/site-generation": "workspace:^",
-    "@matra/styles": "workspace:^"
+    "@matra/core": "workspace:*",
+    "@matra/html": "workspace:*",
+    "@matra/site-generation": "workspace:*",
+    "@matra/styles": "workspace:*"
+  },
+  "engines": {
+    "node": "^22.0.0 || ^24.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matralang/matra.git",
+    "directory": "packages/cli"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   },
   "license": "MIT"
 }

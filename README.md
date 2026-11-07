@@ -49,6 +49,11 @@ checksum, extraction, PATH instructions, and verification scope.
 System Node.js, pnpm, and Rust are not needed. A dedicated installer and npm CLI installation
 are not yet provided.
 
+An npm CLI installation path using Node.js 22/24 is being prepared. The CLI and Styles are
+not yet published on npm, so the installation command is not available. See the
+[npm release preparation](spec/build-tools-release.md#npm-installation-release-preparation)
+for verification and approval gates.
+
 **Chrome on Windows has been reported to block the download as dangerous.**
 The cause is unknown; a false positive has not been established. Stop downloading or running
 the files if warned. Do not disable protection or ignore warnings. Checksums do not guarantee safety.

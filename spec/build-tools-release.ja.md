@@ -96,3 +96,50 @@ releaseページとREADMEへ明記します。誤検知や安全性を断定せ�
 release本文だけを更新し、既存ZIP・checksum・タグは変更しません。
 同梱READMEには後から報告されたChromeの問題がないため、取得前にreleaseページの最新案内を確認してください。
 npm公開・website deployは行いません。
+
+## npm導入経路の公開準備
+
+技術書典向けに、Node.js 22/24とnpmを利用する別経路を準備します。
+CLI `0.3.2-alpha.0`とStyles `0.1.0`はまだnpm未公開です。
+キャンペーンの案内・サポート期間を限定することと、配布物の利用期限は別です。
+期間やサポート内容は未決定で、公開したpackageを期間終了時に削除しません。
+既存のZIP、タグおよび公開済みpackageの`latest`は変更しません。
+
+公開後の利用コマンドは次の予定です。**公開前は実行できません。**
+
+```sh
+npm install --global @matra/cli@0.3.2-alpha.0
+matra --version
+matra init hello
+cd hello
+matra build
+matra dev
+```
+
+`hello`は存在しないディレクトリとし、`dist/index.html`または表示されたlocalhostのURLで
+結果を確認します。ブラウザの再読み込みは手動、終了はCtrl+Cです。WindowsではPowerShellでも
+同じコマンドを使います。グローバルコマンドが見つからない場合はnpm prefixとPATHを確認します。
+PowerShellのスクリプト実行制限により失敗する場合は`npm.cmd`と`matra.cmd`を使います。
+buildは文書中のJavaScriptを実行するため、信頼する文書だけを使ってください。
+OS sandboxとtimeoutは保証しません。npm導入はNode.jsが必要で、同梱ZIPとは別経路です。
+
+公開前に、cleanな候補commitを固定し、CLIが依存するCore・HTML・site-generationの
+指定versionとnpm上の実物・integrityを照合します。CLIとStylesをpackし、
+Windows/macOS × Node.js 22/24の[専用CI](../.github/workflows/npm-cli.yml)で
+隔離prefixへのnpm global install、`--version`、init/build/devを確認します。
+この検証は未公開StylesのtarballをCLIと同時にインストールするため、
+registry上のCLI単独インストールを保証するものではありません。
+実機でPATH設定、ブラウザ表示とCtrl+Cも確認します。候補の修正後は再検証します。
+
+公開は別途承認を得た後に行います。npm上のversionが未使用であることと公開権限を確認し、
+Stylesを先に、CLIを後に`preview`タグで公開します。公開後、空の環境で
+CLIのみを上記コマンドでregistryから取得し、init/build/devとintegrityを再確認します。
+失敗時はwebsiteを公開せず原因を調査し、必要なら新versionを準備します。
+websiteの準備中表示を外すのはregistry検証と公開承認の後です。
+
+```sh
+pnpm --filter @matra/styles publish --tag preview --access public
+pnpm --filter @matra/cli publish --tag preview --access public
+npm view @matra/styles@0.1.0 dist.integrity
+npm view @matra/cli@0.3.2-alpha.0 dist.integrity dependencies
+```

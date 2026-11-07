@@ -20,6 +20,10 @@ test("release version and tag are distinct from Core", async () => {
   assert.equal(releaseTag, `build-tools-v${cli.version}`)
   assert.notEqual(cli.version, core.version)
   assert.match(cli.version, /^\d+\.\d+\.\d+-[0-9A-Za-z.-]+$/)
+  const notes = await readFile(new URL("../distribution/RELEASE-NOTES.md", import.meta.url), "utf8")
+  assert.ok(notes.includes(`matra-${cli.version}-darwin-arm64.zip.sha256`))
+  assert.ok(notes.includes(`matra-${cli.version}-linux-x64.zip.sha256`))
+  assert.ok(notes.includes(`matra-${cli.version}-win32-x64.zip`))
 })
 
 test("release requires six exact archives, correct hashes, clean and matching provenance", async t => {

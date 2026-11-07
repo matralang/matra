@@ -101,3 +101,50 @@ This records the initial publication decision, not a blanket exception for failu
 Only release text is updated; existing ZIPs, checksums, and the tag remain unchanged.
 The bundled README predates the reported Chrome issue; read the latest release page before downloading.
 No npm publication or website deployment is performed.
+
+## npm installation release preparation
+
+For the event, a separate installation path using Node.js 22/24 and npm is being prepared.
+CLI `0.3.2-alpha.0` and Styles `0.1.0` are not yet published on npm.
+The campaign's announcement and support period are separate from the lifetime of the tools.
+Dates and support scope are undecided; published packages will not be removed at the end.
+Existing ZIPs, tags, and published packages' `latest` tags remain unchanged.
+
+The planned commands below **cannot be used until publication**:
+
+```sh
+npm install --global @matra/cli@0.3.2-alpha.0
+matra --version
+matra init hello
+cd hello
+matra build
+matra dev
+```
+
+Choose a directory that does not exist for `hello`. Open `dist/index.html` or the displayed
+localhost URL, refresh the browser manually, and stop with Ctrl+C. The same commands work
+in Windows PowerShell. If the global command is not found, check npm's prefix and PATH.
+If PowerShell blocks scripts, use `npm.cmd` and `matra.cmd` instead.
+Builds execute document JavaScript; only use trusted documents. No OS sandbox or timeout
+is guaranteed. Unlike the bundled ZIP, this path requires Node.js.
+
+Before publication, fix a clean candidate commit and check the specified Core, HTML, and
+site-generation versions against the actual npm packages and their integrity. Pack CLI and
+Styles and use the [dedicated CI](../.github/workflows/npm-cli.yml) on Windows/macOS and
+Node.js 22/24 to check npm global installation into an isolated prefix, `--version`, init,
+build, and dev. The test installs the unpublished Styles tarball alongside CLI; it does not
+prove that CLI alone can be installed from the registry. Check PATH, browser display, and
+Ctrl+C on actual devices as well. Reverify after any candidate changes.
+
+Publish only after separate approval. Check version availability and npm permissions;
+publish Styles first, then CLI using the `preview` tag. After publication, install CLI alone
+from the registry in a clean environment and recheck init/build/dev and integrity. If this
+fails, do not deploy the website; investigate and prepare a new version if needed. Remove
+the website's preparation notice only after registry verification and deployment approval.
+
+```sh
+pnpm --filter @matra/styles publish --tag preview --access public
+pnpm --filter @matra/cli publish --tag preview --access public
+npm view @matra/styles@0.1.0 dist.integrity
+npm view @matra/cli@0.3.2-alpha.0 dist.integrity dependencies
+```
