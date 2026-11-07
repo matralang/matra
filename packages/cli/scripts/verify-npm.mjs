@@ -5,6 +5,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
+import { runLauncher } from "./distribution-platform.mjs"
 
 const [cliArchive, stylesArchive] = process.argv.slice(2).map(path => resolve(path))
 if (!cliArchive || !stylesArchive || !process.env.npm_execpath) {
@@ -22,15 +23,8 @@ function run(command, args, cwd = work) {
 }
 
 function launch(args, cwd = work) {
-  const launcher = join(prefix, process.platform === "win32" ? "matra.cmd" : "bin/matra")
-  if (process.platform === "win32") {
-    return {
-      command: process.env.ComSpec || "cmd.exe",
-      args: ["/d", "/s", "/c", `""${launcher}" ${args.join(" ")}"`],
-      cwd,
-    }
-  }
-  return { command: launcher, args, cwd }
+  const home = process.platform === "win32" ? prefix : join(prefix, "bin")
+  return runLauncher(home, args, { cwd, env: process.env, encoding: "utf8" })
 }
 
 try {
@@ -46,13 +40,10 @@ try {
     stylesArchive,
   ])
   const cli = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"))
-  const version = launch(["--version"])
-  assert.equal(run(version.command, version.args, version.cwd).trim(), cli.version)
-  const init = launch(["init", "hello"])
-  run(init.command, init.args, init.cwd)
+  assert.equal(launch(["--version"]).trim(), cli.version)
+  launch(["init", "hello"])
   const project = join(work, "hello")
-  const build = launch(["build"], project)
-  run(build.command, build.args, build.cwd)
+  launch(["build"], project)
   assert.match(await readFile(join(project, "dist/index.html"), "utf8"), /Hello, Matra!/)
   assert.ok((await readFile(join(project, "dist/matra.css"))).length > 0)
   assert.ok((await readFile(join(project, "dist/matra.css.LICENSE"))).length > 0)
