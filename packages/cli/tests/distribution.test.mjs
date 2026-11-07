@@ -16,7 +16,12 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
-import { createZip, extractZip, runLauncher } from "../scripts/distribution-platform.mjs"
+import {
+  createZip,
+  extractZip,
+  licenseFilename,
+  runLauncher,
+} from "../scripts/distribution-platform.mjs"
 import { verifyDistribution } from "../scripts/verify-distribution.mjs"
 
 async function temporary(t) {
@@ -24,6 +29,17 @@ async function temporary(t) {
   t.after(() => rm(root, { recursive: true, force: true }))
   return root
 }
+
+test("distribution accepts common license filenames and rejects missing or ambiguous licenses", () => {
+  assert.equal(licenseFilename(["package.json", "LICENSE-MIT.txt"], "fixture"), "LICENSE-MIT.txt")
+  assert.equal(licenseFilename(["LICENSE"], "fixture"), "LICENSE")
+  assert.equal(licenseFilename(["licence.md"], "fixture"), "licence.md")
+  assert.throws(() => licenseFilename(["LICENSED"], "fixture"), /Expected one license/)
+  assert.throws(
+    () => licenseFilename(["LICENSE", "LICENSE-MIT.txt"], "fixture"),
+    /Expected one license/,
+  )
+})
 
 test("POSIX launcher uses its own runtime, preserves arguments and working directory", {
   skip: process.platform === "win32",

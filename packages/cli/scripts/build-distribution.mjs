@@ -20,6 +20,7 @@ import {
   createZip,
   extractZip,
   launcherName,
+  licenseFilename,
   runtimeBinary,
   windows,
 } from "./distribution-platform.mjs"
@@ -139,9 +140,8 @@ try {
     if (sources.has(manifest.name)) {
       await copyFile(join(root, "LICENSE"), join(licenses, licenseName))
     } else {
-      const candidates = (await readdir(source)).filter(name => /^licen[cs]e(?:\.|$)/i.test(name))
-      if (candidates.length !== 1) throw new Error(`Expected one license file for ${manifest.name}`)
-      await copyFile(join(source, candidates[0]), join(licenses, licenseName))
+      const license = licenseFilename(await readdir(source), manifest.name)
+      await copyFile(join(source, license), join(licenses, licenseName))
     }
     packages.set(manifest.name, {
       name: manifest.name,

@@ -5,6 +5,12 @@ export const windows = process.platform === "win32"
 export const runtimeBinary = windows ? "runtime/node.exe" : "runtime/bin/node"
 export const launcherName = windows ? "matra.cmd" : "matra"
 
+export function licenseFilename(entries, name) {
+  const candidates = entries.filter(entry => /^licen[cs]e(?:[.-]|$)/i.test(entry))
+  if (candidates.length !== 1) throw new Error(`Expected one license file for ${name}`)
+  return candidates[0]
+}
+
 function powershell(script, variables) {
   const executable = join(process.env.SystemRoot, "System32/WindowsPowerShell/v1.0/powershell.exe")
   return execFileSync(
