@@ -7398,15 +7398,24 @@ fn document_primary(source: bytes, state: [i32], nodes: [i32]) -> i32 {
   let checkpoint = array_get(state, 2)
   let classes = 0
   let tail = 0
-  while (document_take(source, state, 46) == 1) {
-    let item = document_property_name(source, state, nodes)
-    if (classes == 0) {
-      classes = item
+  let id = 0
+  while (array_get(state, 9) == 0) {
+    if (document_take(source, state, 46) == 1) {
+      let item = document_property_name(source, state, nodes)
+      if (classes == 0) {
+        classes = item
+      }
+      else {
+        array_set(nodes, tail * 8 + 5, item)
+      }
+      tail = item
+    }
+    else_if (document_take(source, state, 35) == 1) {
+      id = document_property_name(source, state, nodes)
     }
     else {
-      array_set(nodes, tail * 8 + 5, item)
+      break
     }
-    tail = item
   }
   let attributes_start = array_get(state, 2)
   let document = 0
@@ -7434,7 +7443,9 @@ fn document_primary(source: bytes, state: [i32], nodes: [i32]) -> i32 {
       attributes = document_list(source, state, nodes, 41, 3)
     }
     let body_4 = document_body(source, state, nodes, 1)
-    return document_node(state, nodes, 9, name_2, classes, attributes, body_4)
+    let node = document_node(state, nodes, 9, name_2, classes, attributes, body_4)
+    array_set(nodes, node * 8 + 7, id)
+    return node
   }
   array_set(state, 0, checkpoint)
   ignored = document_next(source, state)
@@ -8057,6 +8068,33 @@ fn document_emit_list(source: bytes, data: bytes, code: bytes, state: [i32], nod
   return 0
 }
 
+fn document_emit_node_props(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], id: i32, attributes: i32) -> i32 {
+  let ignored = document_ins(code, state, 16, 7)
+  if (id != 0) {
+    let begin = array_get(state, 20)
+    byte_set(data, begin, 34)
+    byte_set(data, begin + 1, 105)
+    byte_set(data, begin + 2, 100)
+    byte_set(data, begin + 3, 34)
+    array_set(state, 20, begin + 4)
+    ignored = document_ins(code, state, 65, begin)
+    ignored = document_ins(code, state, 65, 4)
+    ignored = document_ins(code, state, 16, 0)
+    ignored = document_emit_name(source, data, code, state, nodes, id)
+    ignored = document_ins(code, state, 16, 8)
+  }
+  let current = attributes
+  while (current != 0) {
+    let key = document_get(nodes, current, 1)
+    ignored = document_emit_name(source, data, code, state, nodes, key)
+    let value = document_get(nodes, current, 2)
+    ignored = document_emit_expression(source, data, code, state, nodes, value)
+    ignored = document_ins(code, state, 16, 8)
+    current = document_get(nodes, current, 5)
+  }
+  return 0
+}
+
 fn document_emit_scoped(source: bytes, data: bytes, code: bytes, state: [i32], nodes: [i32], body: i32, children: i32) -> i32 {
   let outer = array_get(state, 15)
   let local = document_local(state)
@@ -8269,7 +8307,8 @@ fn document_emit_expression(source: bytes, data: bytes, code: bytes, state: [i32
     ignored = document_ins(code, state, 32, argument_40)
     ignored = document_ins(code, state, 33, saved)
     let props = document_local(state)
-    ignored = document_emit_list(source, data, code, state, nodes, c, 1)
+    let id = document_get(nodes, node, 7)
+    ignored = document_emit_node_props(source, data, code, state, nodes, id, c)
     if (b != 0) {
       ignored = document_ins(code, state, 65, 4)
       ignored = document_ins(code, state, 65, 7)

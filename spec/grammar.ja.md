@@ -7,7 +7,7 @@
 一般の `.matra` と compiler source の両方を対象とする正式な v0.3 文法仕様である。
 本書の規則と共通テストを適合性の基準とする。旧 source の互換性は保証しない。
 文法の正式化は、パッケージのリリースや Wasm ABI の安定化を意味しない。
-v0.x の破壊的変更として、旧 Core v0.2 の関数ノード構文、selector の `#id`、
+v0.x の破壊的変更として、旧 Core v0.2 の関数ノード構文、
 backtick／tilde text、`$root`、`= expr`、if/for の暗黙 child 展開を廃止する。
 旧 `.matra.program` の入口は削除し、native compiler module も `*.matra` fence に統一する。
 `module` 宣言が native profile を選択する。compiler source は `compiler.matra` fence を使う。
@@ -58,6 +58,7 @@ for = "for", ( "(", iteration, ")" | bare-iteration ), block ;
 iteration = identifier, "in", expression ;
 do-until = "do", block, "until", "(", expression, ")" ;
 call = expression, "(", [ expression, { ",", expression } ], ")" ;
+node = identifier, { ( "." | "#" ), identifier }, [ "(", node-attributes, ")" ], block ;
 node-item = statement | "...", expression ;
 ```
 
@@ -67,7 +68,9 @@ node-item = statement | "...", expression ;
 ## 式とノード
 
 任意の関数・constructor は `name(args)` で任意の値を返せる。名前による特例は設けない。
-node 構築は body を持つ `tag.classes(attributes) { node-items }` とする。
+node 構築は body を持つ `tag.classes#id(attributes) { node-items }` とする。`#id` は node の `id` 属性を設定し、
+selector は任意の順序で並べられる。ID selector が複数ある場合は最後のものを使う。
+明示的な `id` 属性は shorthand の後に適用するため、shorthand より優先する。
 `=` は属性、`:` は object entry を区切る。class は最初の出現順を保って重複を除去する。
 属性名・object key・member 名・class 名では予約語も使用できる（例: `label(for="x") {}`）。
 変数・関数・parameter 名では予約語を拒否する。

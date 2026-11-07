@@ -21,6 +21,24 @@
   ],
   "accept": [
     {
+      "name": "node ID shorthand accepts interleaved class selectors and keeps the last ID",
+      "source": "article#old.card#intro {}",
+      "value": {
+        "tag": "article",
+        "props": { "id": "intro", "class": "card" },
+        "children": []
+      }
+    },
+    {
+      "name": "explicit node ID attribute overrides ID shorthand",
+      "source": "article.card#intro(id=\"explicit\") {}",
+      "value": {
+        "tag": "article",
+        "props": { "id": "explicit", "class": "card" },
+        "children": []
+      }
+    },
+    {
       "name": "node attributes use HTML-like whitespace separators",
       "source": "img(src=\"image.png\" alt=\"画像\" width=640 enabled=true missing=null) {}",
       "value": {
@@ -563,6 +581,7 @@
     "module branch\nexport fn answer(n: i32) -> i32 {\nif (n == 0) {} else_if (n == 1) { let else_if = 1 }\nreturn 1\n}"
   ],
   "reject": [
+    "p# {}",
     "p(a=\"x\"b=\"y\") {}",
     "p(a=1b=2) {}",
     "p(a=[1]b=2) {}",

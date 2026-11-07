@@ -547,7 +547,12 @@ class ProgramParser {
     const name = this.word("Expected an expression")
     const checkpoint = this.index
     const classes: string[] = []
-    while (this.consume(".")) classes.push(this.word("Expected a class name", true))
+    let id: string | undefined
+    while (true) {
+      if (this.consume(".")) classes.push(this.word("Expected a class name", true))
+      else if (this.consume("#")) id = this.word("Expected an id name", true)
+      else break
+    }
     if (this.startsNode()) {
       const attributes = this.consume("(")
         ? this.list(
@@ -561,6 +566,7 @@ class ProgramParser {
             true,
           )
         : []
+      if (id !== undefined) attributes.unshift({ key: "id", value: { kind: "literal", value: id } })
       return {
         kind: "node",
         tag: name,
@@ -722,7 +728,7 @@ function* tokenize(source: string, index = 0): Generator<Token> {
       yield { kind: "symbol", value: operator[0], offset }
       continue
     }
-    if ("{}[](),.:=;!+-*/<>".includes(char)) {
+    if ("{}[](),.:=;!+-*/<>#".includes(char)) {
       index++
       yield { kind: "symbol", value: char, offset }
       continue

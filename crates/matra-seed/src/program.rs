@@ -217,7 +217,7 @@ fn next_token(source: &str, position: &mut usize) -> Result<Token, CompileError>
             {
                 text = (*op).into();
                 offset += op.len();
-            } else if b"{}[](),.:=;!+-*/<>".contains(&b) {
+            } else if b"{}[](),.:=;!+-*/<>#".contains(&b) {
                 text = (b as char).to_string();
                 offset += 1;
             } else {
@@ -729,10 +729,17 @@ impl Parser<'_> {
         let name = self.word()?;
         let checkpoint = self.index;
         let mut classes = Vec::new();
-        while self.take(".") {
-            let class = self.property_word()?;
-            if !classes.contains(&class) {
-                classes.push(class);
+        let mut id = None;
+        loop {
+            if self.take(".") {
+                let class = self.property_word()?;
+                if !classes.contains(&class) {
+                    classes.push(class);
+                }
+            } else if self.take("#") {
+                id = Some(self.property_word()?);
+            } else {
+                break;
             }
         }
         let mut attribute_start = self.index + 1;
@@ -756,7 +763,7 @@ impl Parser<'_> {
                     || (self.token_at(attribute_start).text == ")"
                         && self.token_at(attribute_start + 1).text == "{")));
         if !self.bare_header && node_body {
-            let attributes = if self.take("(") {
+            let mut attributes = if self.take("(") {
                 self.separated_list(")", true, |p| {
                     let key = p.property_word()?;
                     p.trivia();
@@ -766,6 +773,9 @@ impl Parser<'_> {
             } else {
                 vec![]
             };
+            if let Some(id) = id {
+                attributes.insert(0, ("id".into(), Expr::Literal(Value::String(id))));
+            }
             return Ok(Expr::Node {
                 tag: name,
                 classes,
@@ -1279,7 +1289,6 @@ mod tests {
     #[test]
     fn rejects_legacy_syntax_missing_delimiters_and_missing_separators() {
         for source in [
-            "p#main {}",
             "p`text`",
             "p~text~",
             "$root {}",

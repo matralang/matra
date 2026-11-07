@@ -7,7 +7,7 @@
 This is the finalized v0.3 grammar specification for both general `.matra` programs and compiler source.
 Its rules and shared tests define conformance. Compatibility with old source is not guaranteed.
 Finalizing the grammar does not constitute a package release or stabilize the Wasm ABI.
-As a breaking v0.x change, it removes Core v0.2 function nodes, selector `#id`, backtick/tilde text,
+As a breaking v0.x change, it removes Core v0.2 function nodes, backtick/tilde text,
 `$root`, `= expr`, and implicit child expansion by if/for.
 The `.matra.program` legacy entry point is removed; native compiler modules also use `*.matra` fences.
 The `module` declaration selects the native profile. Compiler source uses the `compiler.matra` fence.
@@ -58,6 +58,7 @@ for = "for", ( "(", iteration, ")" | bare-iteration ), block ;
 iteration = identifier, "in", expression ;
 do-until = "do", block, "until", "(", expression, ")" ;
 call = expression, "(", [ expression, { ",", expression } ], ")" ;
+node = identifier, { ( "." | "#" ), identifier }, [ "(", node-attributes, ")" ], block ;
 node-item = statement | "...", expression ;
 ```
 
@@ -67,7 +68,9 @@ above. Node items are allowed only directly in a node body.
 ## Expressions and nodes
 
 Any function or constructor can return any value through `name(args)`. Names receive no special treatment.
-Node construction requires a body: `tag.classes(attributes) { node-items }`.
+Node construction requires a body: `tag.classes#id(attributes) { node-items }`; `#id` sets the node's `id`
+property, and selectors may appear in any order. When multiple ID selectors occur, the last one supplies the
+shorthand ID. Explicit `id` attributes are applied afterward and therefore override the shorthand.
 `=` separates attributes; `:` separates object entries. Classes are deduplicated in first-occurrence order.
 Attribute names, object keys, member names, and class names may use reserved words, e.g. `label(for="x") {}`.
 Variable, function, and parameter names reject reserved words.
