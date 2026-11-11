@@ -457,6 +457,91 @@ The contract must also cover exceptions, asynchronous execution, timeouts, cance
 module initialization, and cyclic dependencies.
 Do not assume that current synchronous host calls automatically await JavaScript Promises.
 
+### Initial common interface proposal (semantic contract)
+
+This is an initial design proposal for future standard JavaScript module and Python integration, not an
+implemented contract. Define language-specific module loaders separately from the meaning of cross-language
+values and calls. The initial transport is a direct connection within a Node.js host, with Matra continuing
+to execute through its existing Wasm approach. JavaScript and Python themselves need not be compiled to Wasm.
+Separate processes, WASI, and the Component Model are out of scope for this first proposal.
+
+#### Public names and module lifecycle
+
+- Explicitly select modules and exports visible to Matra. Do not add loader-specific import syntax or implicit
+  publication of every module to Matra grammar. The host profile defines module/export-to-Matra name mapping
+  and rejects collisions.
+- Module dependencies are explicit. Resolve and initialize only dependencies reachable from the selected entry,
+  initializing each dependency before its dependent. Reject dependency cycles in the initial version.
+- The host determines the order of independent modules using a reproducible rule. Initialize each module at
+  most once in a run. Retry after a failed run, module caching, and side effects/state across runs must be
+  stated separately in the loader contract.
+- Build/name registration does not execute user code. Initialize modules at run time, and do not treat import,
+  export, or initialization failures as success. Preserve the visibility and failure-propagation rules when
+  using the JavaScript ESM loader or Python import system.
+
+#### Common values and calls
+
+- Initial common data values are null, booleans, finite IEEE 754 binary64 numbers, Unicode strings, dense arrays,
+  and objects with string keys. Accept Python integers only in the range `-(2^53-1)` through `2^53-1`;
+  report out-of-range integers as conversion errors rather than silently rounding. Reject numbers that cannot
+  be converted to finite binary64 on either side.
+- Recursively copy arrays and objects at every boundary. Do not guarantee shared identity or propagate host-side
+  mutations. Reject values that cannot be losslessly represented in the common form, including cycles, sparse
+  arrays, non-string map keys, accessors, and custom class instances. Do not preserve aliases; copy each occurrence
+  independently.
+- When exchanging Matra nodes and JavaScript/Python data values as JSON, represent a Matra node as an ordinary
+  MatraJSON tuple and a foreign data value as a one-element array `[value]`. A MatraJSON node has three elements
+  (`[tag, props, children]`), while a data-value envelope always has one, so they are distinguishable at the
+  top level. Examples:
+
+  ```text
+  ["foo", {"bar": "5"}, ["hoge", "piyo"]]
+  ["5"]
+  [5]
+  [true]
+  [null]
+  [[8]]
+  [{"a": 3}]
+  [["foo", {"bar": "5"}, ["hoge", "piyo"]]]
+  ```
+
+  The last example is a JavaScript array with the same shape as a MatraJSON node; the contents of the one-element
+  envelope are not recursively interpreted as MatraJSON. This avoids inferring whether ordinary JSON arrays or
+  objects are Matra nodes from their shape. Foreign data values use the JSON-compatible subset (null, booleans,
+  finite numbers, strings, arrays, and string-keyed objects); reject cycles, non-finite numbers, duplicate object
+  keys, and host values that cannot be represented. Matra nodes follow the existing MatraJSON rules.
+- On the JavaScript/Python side, receive a Matra node as a JSON-equivalent MatraJSON tuple and parse it as needed.
+  To return a Matra node, use an explicit node constructor/API that produces the tuple. To return an ordinary
+  JavaScript/Python value, use the host-value envelope even if its array has the same shape as a node.
+  Thus a tag acts as a Matra-node constructor, while JSON primitives map directly to Matra values.
+- This encoding defines an exchange profile for the cross-language API; it does not change the existing
+  MatraJSON data model. Identify the profile version in the API/bundle contract rather than repeating it in
+  each node or value.
+- Expose a foreign function as an opaque callable associated with a run session and a selected export; Matra may
+  call it synchronously. Arguments and results are limited to common data values. The initial version does not
+  support functions embedded in data objects or passing Matra functions as foreign callbacks.
+  A callable is not a JSON-serializable data value; represent it only through an opaque handle and call operation
+  valid within its session.
+- Asynchronous module initialization, asynchronous calls such as Promise/await, timeouts, and cancellation are
+  not part of the initial common contract. If a Promise, awaitable, or other asynchronous value is returned at
+  a data boundary or from a synchronous call, report an explicit unsupported/conversion error.
+- This value/call contract does not automatically grant filesystem, network, process, or other host capabilities.
+  Each host/runtime documents actual permissions and safety separately. An in-process Node.js connection does
+  not provide an OS sandbox.
+
+#### Errors and compatibility
+
+Failures distinguish at least `MODULE_RESOLUTION`, `MODULE_INITIALIZATION`, `FOREIGN_CALL`,
+`VALUE_CONVERSION`, and `UNSUPPORTED_FEATURE`. An error record has a code and message, and includes module/export
+names and source location when available. Keep the foreign exception/cause accessible to the host; do not
+implicitly return it to Matra as a common data value. Message text and host-specific stack formats are not shared.
+
+This is an initial semantic proposal. The dependency declaration format, deterministic ordering for independent
+modules, module cache/state across runs, resource limits, and package resolution for JavaScript and Python remain
+to be decided. Treating Matra nodes as first-class runtime values in Matra programs also requires a separate
+grammar/runtime contract; this wire encoding alone does not implement that behavior. It does not change the
+existing `.js.part` contract, `matra-value-1` ABI, or current host APIs.
+
 ## Compilation and evaluation semantics
 
 Compilation and interpretation must not change evaluation order or side-effect semantics for the same program.

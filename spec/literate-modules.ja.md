@@ -416,6 +416,79 @@ Pythonは将来の拡張であり、実行環境やパッケージ連携の方�
 例外、非同期処理、timeout・cancel、モジュール初期化、循環依存も契約に含める。
 現在の同期host callがJavaScriptのPromiseを自動的に待つとは扱わない。
 
+### 共通インターフェース初版案（意味契約）
+
+これは将来の標準JavaScript module・Python連携に向けた初版の設計案であり、実装済み契約ではない。
+言語固有のmodule loaderと、言語間で共通にする値・呼び出しの意味を分ける。
+以下ではtransportをNode.js host内の直接接続とし、Matraの実行には既存のWasm方式を使う。
+JavaScript/Python自体をWasmへcompileすることは要求しない。別process、WASI、Component Modelは初版の対象外とする。
+
+#### 公開名とmodule lifecycle
+
+- Matraから参照できるmoduleとexportは明示する。loader固有のimport構文や全moduleの暗黙公開を
+  Matra文法へ導入しない。module/exportからMatra名への対応と、名前衝突の拒否規則はhost profileで定める。
+- module依存は明示された依存関係とする。選択した入口から到達できる依存だけを解決・初期化し、
+ 依存先を依存元より先に初期化する。依存関係の循環は初版ではエラーとする。
+- 互いに依存しないmoduleの順序は、hostが再現可能な規則で決める。同一run内で各moduleを高々一度初期化する。
+ 失敗したrunの再試行、module cache、runをまたぐ副作用・状態の扱いはloader契約で別途明示する。
+- build/name registrationはuser codeを実行しない。module初期化はrun時に行い、import/exportの解決・初期化失敗を
+  成功扱いにしない。JavaScriptのESM loaderやPythonのimport systemを使う場合も、上記の公開範囲と失敗伝播を保つ。
+
+#### 共通値と呼び出し
+
+- 初版の共通data valueはnull、boolean、IEEE 754 binary64の有限数、Unicode文字列、
+  密な配列、文字列keyのobjectとする。Python整数は`-(2^53-1)`から`2^53-1`までを受理し、
+  範囲外は暗黙に丸めずconversion errorにする。JS/Python双方で有限binary64へ変換できない数も拒否する。
+- 配列・objectは境界ごとに再帰copyする。hostとのidentity共有や変更の反映は保証しない。
+  循環、疎配列、文字列以外のmap key、accessorや独自class instanceなど、共通形へ損失なく変換できない値は拒否する。
+  alias参照は保持せず各出現を独立にcopyする。
+- Matra nodeとJavaScript/Pythonのdata valueをJSONで交換するときは、Matra nodeを通常のMatraJSON tuple、
+  foreign data valueを要素一つの配列`[value]`で表す。MatraJSON nodeは`[tag, props, children]`なので
+  3要素、data value envelopeは必ず1要素となり、top-levelで区別できる。例:
+
+  ```text
+  ["foo", {"bar": "5"}, ["hoge", "piyo"]]
+  ["5"]
+  [5]
+  [true]
+  [null]
+  [[8]]
+  [{"a": 3}]
+  [["foo", {"bar": "5"}, ["hoge", "piyo"]]]
+  ```
+
+  最後の例はMatraJSON nodeと同じ形のJavaScript配列を表し、1要素envelopeの中身は再帰的に
+  MatraJSONとして解釈しない。この規則により、通常のJSON array/objectとMatra nodeをshape推測で混同しない。
+  foreign data valueはJSON互換subset（null、boolean、有限number、string、array、string-key object）とし、
+  循環、非有限数、重複object key、表現不能なhost値は拒否する。Matra node内部は既存MatraJSON規則に従う。
+- JavaScript/Python側でMatra nodeを利用するときは、このMatraJSON tupleをJSON相当の値として受け取り、
+  必要に応じてparseし、Matra nodeとして返すときは明示的なnode constructor/APIからtupleへ変換する。
+  通常のJS/Python値を返す場合は、nodeと同じ形の配列であってもhost value envelopeを使う。
+  したがってtagはMatra nodeのconstructorとして働き、JSON primitiveはMatra側の値へ直接対応する。
+- このencodingは既存MatraJSON data modelそのものを変更せず、言語間APIの交換profileとして定義する。
+  profile versionはAPI/bundle契約で識別し、個々のnodeやvalueへ重ねて埋め込まない。
+- foreign functionはrun sessionに属するopaqueなcallableとしてexport単位で公開し、Matraから同期呼び出しできる。
+  引数・戻り値は共通data valueに限る。foreign functionやMatra functionをdata object内に埋め込むこと、
+  Matra functionをforeign callbackとして渡すことは初版ではサポートしない。
+  callable自体はJSON化可能なdata valueではなく、session内だけで有効なopaque handleとcall操作で扱う。
+- 非同期module初期化、Promise/await等の非同期call、timeout・cancelは初版共通契約に含めない。
+  Promise、awaitableその他の非同期値がdata境界または同期callから返った場合は明示的なunsupported/conversion errorにする。
+- hostのfilesystem、network、process等の権限はこの値・呼び出し契約から自動付与しない。
+  実際の権限と安全性は各host/runtimeが別途説明する。Node.js内の接続もOS sandboxを保証しない。
+
+#### Errorと互換性
+
+失敗は少なくとも`MODULE_RESOLUTION`、`MODULE_INITIALIZATION`、`FOREIGN_CALL`、
+`VALUE_CONVERSION`、`UNSUPPORTED_FEATURE`の段階を識別する。error recordはcodeとmessageを持ち、
+取得可能ならmodule/export名とsource locationを含む。元言語のexception/causeはhost側で参照可能にし、
+共通data valueとしてMatraへ暗黙に返さない。文字列messageやhost固有stackの形式は共通化しない。
+
+これは初版の意味契約案であり、依存の記述形式、独立module間の決定的な順序規則、
+run間のmodule cache/state、resource limit、JS/Pythonそれぞれのpackage解決は別途決める。
+Matra nodeをMatra Programの第一級実行時値として扱う文法・runtime契約も別途必要であり、
+このwire encodingだけではその機能を実装しない。既存の`.js.part`契約・`matra-value-1` ABI・
+現在のhost APIを変更するものではない。
+
 ## コンパイルと評価の意味
 
 コンパイル方式とインタプリタ方式で、同じプログラムの評価順や副作用の意味を変えない。
