@@ -80,9 +80,32 @@ the total `60`. Run regressions with `node --test crates/matra-seed/tests/litera
   A public root colliding with a Matra binding uses the existing duplicate-binding diagnostic.
 - A `.py` fence may import other `.py` fences in the same document and Python's standard library.
   Resolve fenced modules using Python import names (path `/` becomes `.`) and include reachable
-  dependencies in the bundle. The initial version does not use wheels beyond Pyodide's standard
-  library, PyPI, or `micropip`. Each selected module must declare `__all__` as a literal list/tuple of
-  string export names. Reject missing/invalid exports, cycles, and dynamic imports.
+  dependencies in the bundle. Third-party packages require exact `name==version` pins in
+  `matra.python.packages` and matching entries in `matra.python.lock.json` under build/run's
+  `moduleRoot`. The lock format is `matra-python-wheels-1` and binds the package set to the exact
+  bundled Pyodide version. Entries contain the canonical package name, version, project-relative
+  wheel path, and SHA-256. Only `py3-none-any` wheels are accepted; wheel contents are limited to
+  purelib files, and every declared dependency must also be locked. Build validates hashes and
+  metadata without executing package code. The bundle stores wheel references and hashes, not wheel
+  bytes; run rechecks hashes and installs into its fresh runtime without network access. No PyPI
+  resolution or `micropip` is performed. Each selected module must declare `__all__` as a literal
+  list/tuple of string export names. Reject missing/invalid exports, cycles, and dynamic imports.
+  For example, the front matter may contain `python: { packages: ["idna==3.10"] }`. Its lock file
+  has this shape:
+
+  ```json
+  {
+    "format": "matra-python-wheels-1",
+    "pyodide": "314.0.7",
+    "packages": [{
+      "name": "idna",
+      "version": "3.10",
+      "file": "wheels/idna-3.10-py3-none-any.whl",
+      "sha256": "<64 lowercase hex characters>"
+    }]
+  }
+  ```
+
 - Python exports are limited to common data values and synchronous functions. Copy `None`, booleans,
   safe-range integers, finite floats, strings, dense lists, and string-key dictionaries at each
   boundary. Reject class instances, tuples, sets, bytes, cycles, awaitables, and async functions.
@@ -101,7 +124,9 @@ Bare packages resolve from `node_modules` under `runLiterate`'s `moduleRoot` (de
 The CLI passes its `ROOT`. Resolve packages and their transitive dependencies with Node.js's standard
 loader; build does not install or execute them.
 Selected Python modules execute in a fresh Pyodide runtime on each run. Include Pyodide and its standard
-library in the npm distribution so execution does not download the interpreter. Python imports and
+library in the npm distribution so execution does not download the interpreter. Build reads local wheels
+under `moduleRoot` (default: `process.cwd()`); pass the same root to `runLiterate`, or use the CLI's
+`ROOT`. Execution never contacts PyPI. Python imports and
 module top-level code run at runtime; function bodies run only when called. Python and JavaScript module
 state is not shared across runs. Pyodide is not a sandbox and Python can access host capabilities;
 execute trusted documents only.
@@ -164,16 +189,18 @@ approach, not to ordinary Core APIs.
 
 | API | Input | Successful result | Does not perform |
 | --- | --- | --- | --- |
-| `buildLiterate(markdown, options?)` | Markdown string and optional `options.document` name | Promise of an executable bundle | Execution of document JavaScript expressions/functions or Matra programs; HTML generation |
-| `runLiterate(bundle, options?)` | Executable bundle with a supported format and ABI; optional `globals` and `moduleRoot` | Promise of a value in the document data subset | Recompilation, package installation, HTML generation, or file output |
+| `buildLiterate(markdown, options?)` | Markdown string; optional `options.document` name and `moduleRoot` | Promise of an executable bundle | Execution of document JavaScript/Python code or Matra programs; network package resolution; HTML generation |
+| `runLiterate(bundle, options?)` | Executable bundle with a supported format and ABI; optional `globals` and `moduleRoot` | Promise of a value in the document data subset | Recompilation; network access; HTML generation or file output |
 
 `options.document` is a diagnostic name, defaulting to `<markdown>`, not an
 instruction to read a file. FrontMatter is the source of truth for entry and
 values; caller overrides are rejected. Bundle the matching compiler Wasm so
 ordinary use does not require compiler path or acquisition configuration.
 `moduleRoot` is the project directory used to resolve npm dependencies and
-defaults to `process.cwd()`. Install required packages in advance; documents and
-bundles do not install or embed dependencies.
+Python wheel references; it defaults to `process.cwd()`. Install npm packages
+and place Python wheels there in advance. Builds and runs do not download or
+modify project dependencies; Python wheels are installed only into the fresh
+in-memory Pyodide runtime. Bundles store wheel paths and hashes, not wheel bytes.
 
 Build returns a versioned bundle that can be saved and restored as JSON.
 It contains Wasm, selected JavaScript sources, and source locations; it does not
@@ -485,8 +512,9 @@ but the existing ABI is not thereby guaranteed as a stable common protocol.
 Decide on WASI and the Component Model separately.
 
 JavaScript blocks can use preinstalled npm packages through standard imports. Python blocks use
-Pyodide's standard library. PyPI/wheel dependency management, arbitrary npm packages and native
-addons, identical behavior on three OSes, and Web operation are not guaranteed.
+Pyodide's standard library and explicitly hash-locked `py3-none-any` wheels. PyPI resolution, native
+Python wheels, arbitrary npm packages and native addons, identical behavior on three OSes, and Web
+operation are not guaranteed.
 
 Define argument and result support for numbers, strings, arrays, objects, document nodes, mathematical
 expressions, large integers, binary data, and function references, including copy versus sharing semantics.
@@ -636,5 +664,5 @@ Primary regression checks:
 
 Completion, type checking, formatting, debugging, and detailed source mapping to
 the original document remain future work. Dedicated Matra-node wire conversion,
-async interoperation, PyPI/wheel support, and browser execution are also outside
+async interoperation, PyPI resolution, native Python wheels, and browser execution are also outside
 the initial scope.

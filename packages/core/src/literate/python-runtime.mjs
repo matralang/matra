@@ -1,10 +1,13 @@
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
+import { readFileSync } from "node:fs"
+import { readFile, realpath } from "node:fs/promises"
 import { createRequire } from "node:module"
-import { dirname, join } from "node:path"
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
 import { loadPyodide } from "pyodide"
 
 const require = createRequire(import.meta.url)
 const indexURL = dirname(require.resolve("pyodide"))
+const pyodideVersion = JSON.parse(readFileSync(join(indexURL, "package.json"), "utf8")).version
 let parserRuntime
 
 const helpers = `
@@ -13,7 +16,12 @@ import importlib
 import inspect
 import json
 import math
+import os
+import re
 import sys
+import zipfile
+from email.parser import BytesParser
+from email.policy import default
 
 def _matra_analyze(source, filename):
     try:
@@ -77,6 +85,81 @@ def _matra_analyze(source, filename):
         "validExports": valid_exports,
         "stdlib": sorted(sys.stdlib_module_names),
     })
+
+def _matra_wheel_info(path):
+    with zipfile.ZipFile(path) as archive:
+        names = archive.namelist()
+        metadata_paths = [
+            name for name in names
+            if name.count("/") == 1 and name.endswith(".dist-info/METADATA")
+        ]
+        if len(metadata_paths) != 1:
+            raise ValueError("Wheel must contain one dist-info/METADATA file")
+        metadata_path = metadata_paths[0]
+        wheel_path = metadata_path[:-len("METADATA")] + "WHEEL"
+        if wheel_path not in names:
+            raise ValueError("Wheel is missing its WHEEL metadata")
+        message = BytesParser(policy=default).parsebytes(archive.read(metadata_path))
+        wheel = BytesParser(policy=default).parsebytes(archive.read(wheel_path))
+        if wheel.get_all("Tag", []) != ["py3-none-any"]:
+            raise ValueError("Only py3-none-any wheels are supported")
+        data_prefix = metadata_path[:-len(".dist-info/METADATA")] + ".data/"
+        for name in names:
+            if "\\\\" in name or name.startswith("/"):
+                raise ValueError("Wheel contains an unsafe archive path")
+            parts = name.rstrip("/").split("/")
+            if any(part in ("", ".", "..") for part in parts):
+                raise ValueError("Wheel contains an unsafe archive path")
+            if name.startswith(data_prefix):
+                remainder = name[len(data_prefix):]
+                category, separator, _ = remainder.partition("/")
+                if not separator or category != "purelib":
+                    raise ValueError("Wheel may contain only purelib .data files")
+        imports_path = metadata_path[:-len("METADATA")] + "top_level.txt"
+        if imports_path in names:
+            imports = [
+                line.strip() for line in archive.read(imports_path).decode().splitlines()
+                if line.strip()
+            ]
+        else:
+            imports = sorted({
+                name.split("/")[0].removesuffix(".py")
+                for name in names
+                if (
+                    "/" not in name and name.endswith(".py")
+                    or name.count("/") == 1 and name.endswith("/__init__.py")
+                )
+            })
+        requirements = []
+        for requirement in message.get_all("Requires-Dist", []):
+            match = re.match(r"\\s*([A-Za-z0-9_.-]+)", requirement)
+            if match:
+                requirements.append(re.sub(r"[-_.]+", "-", match.group(1)).lower())
+        return json.dumps({
+            "name": re.sub(r"[-_.]+", "-", message["Name"]).lower(),
+            "version": message["Version"],
+            "imports": imports,
+            "requires": requirements,
+            "dataPrefix": data_prefix,
+        })
+
+def _matra_install_wheels(paths, site_packages):
+    os.makedirs(site_packages, exist_ok=True)
+    for path in paths:
+        with zipfile.ZipFile(path) as archive:
+            info = json.loads(_matra_wheel_info(path))
+            for name in archive.namelist():
+                if name.endswith("/"):
+                    continue
+                member = name
+                if name.startswith(info["dataPrefix"]):
+                    remainder = name[len(info["dataPrefix"]):]
+                    _, _, member = remainder.partition("/")
+                target = os.path.join(site_packages, *member.split("/"))
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                with open(target, "wb") as output:
+                    output.write(archive.read(name))
+    sys.path.insert(0, site_packages)
 
 def _matra_validate(value, active=None):
     value_type = type(value)
@@ -171,7 +254,111 @@ function moduleError(code, block, message, cause, line = 1) {
   return error
 }
 
-function importDependencies(block, info, modules) {
+function packageError(block, message, cause) {
+  return moduleError("PY_PACKAGE_LOCK", block, message, cause)
+}
+
+function packageNameKey(name) {
+  return name.replaceAll(/[-_.]+/g, "-").toLowerCase()
+}
+
+function validWheelPath(path) {
+  return (
+    typeof path === "string" &&
+    path.endsWith(".whl") &&
+    !isAbsolute(path) &&
+    !path.includes("\\") &&
+    path.split("/").every(part => part && part !== "." && part !== "..")
+  )
+}
+
+function inside(root, target) {
+  const path = relative(root, target)
+  return path !== "" && path !== ".." && !path.startsWith(`..${sep}`) && !isAbsolute(path)
+}
+
+async function readVerifiedWheel(root, entry, block) {
+  if (
+    !entry ||
+    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(entry.name) ||
+    typeof entry.version !== "string" ||
+    !/^[A-Za-z0-9][A-Za-z0-9.+!_-]*$/.test(entry.version) ||
+    !validWheelPath(entry.file) ||
+    !/^[a-f0-9]{64}$/.test(entry.sha256)
+  ) {
+    throw packageError(block, "Invalid package entry in matra.python.lock.json")
+  }
+  const rootPath = await realpath(root)
+  const path = resolve(rootPath, ...entry.file.split("/"))
+  const resolvedPath = await realpath(path).catch(error => {
+    throw packageError(block, `Python wheel not found: ${entry.file}`, error)
+  })
+  if (!inside(rootPath, resolvedPath)) {
+    throw packageError(block, `Python wheel escapes moduleRoot: ${entry.file}`)
+  }
+  const bytes = await readFile(resolvedPath)
+  const sha256 = createHash("sha256").update(bytes).digest("hex")
+  if (sha256 !== entry.sha256) {
+    throw packageError(block, `Python wheel hash mismatch: ${entry.file}`)
+  }
+  const filename = entry.file.split("/").at(-1)
+  if (!filename.endsWith("-py3-none-any.whl")) {
+    throw packageError(block, `Only py3-none-any wheels are supported: ${filename}`)
+  }
+  const wheelNameVersion = filename.slice(0, -"-py3-none-any.whl".length)
+  const versionSeparator = wheelNameVersion.lastIndexOf("-")
+  if (
+    versionSeparator < 1 ||
+    packageNameKey(wheelNameVersion.slice(0, versionSeparator)) !== entry.name ||
+    wheelNameVersion.slice(versionSeparator + 1) !== entry.version
+  ) {
+    throw packageError(block, `Wheel filename does not match lock entry: ${filename}`)
+  }
+  return { ...entry, bytes }
+}
+
+export async function resolvePythonPackages(moduleRoot, requirements, block) {
+  if (requirements.length === 0) return []
+  let lock
+  try {
+    lock = JSON.parse(await readFile(join(moduleRoot, "matra.python.lock.json"), "utf8"))
+  } catch (error) {
+    throw packageError(block, "Cannot read matra.python.lock.json", error)
+  }
+  if (
+    lock?.format !== "matra-python-wheels-1" ||
+    lock.pyodide !== pyodideVersion ||
+    !Array.isArray(lock.packages)
+  ) {
+    throw packageError(block, `Expected a matra-python-wheels-1 lock for Pyodide ${pyodideVersion}`)
+  }
+  const packages = new Map()
+  const files = new Set()
+  for (const entry of lock.packages) {
+    const packageKey = packageNameKey(entry?.name ?? "")
+    if (!packageKey || packages.has(packageKey) || files.has(entry.file)) {
+      throw packageError(block, "Duplicate Python package or wheel in lock file")
+    }
+    files.add(entry.file)
+    const wheel = await readVerifiedWheel(moduleRoot, entry, block)
+    packages.set(packageKey, wheel)
+  }
+  for (const requirement of requirements) {
+    const match =
+      typeof requirement === "string" &&
+      /^([A-Za-z0-9][A-Za-z0-9._-]*)==([A-Za-z0-9][A-Za-z0-9.+!_-]*)$/.exec(requirement)
+    const wheel = match && packages.get(packageNameKey(match[1]))
+    if (!wheel || wheel.version !== match[2]) {
+      throw packageError(
+        block,
+        `Requirement is not pinned in matra.python.lock.json: ${requirement}`,
+      )
+    }
+  }
+  return [...packages.values()]
+}
+
+function importDependencies(block, info, modules, packageImports) {
   const currentPackage = packageName(block)
   const dependencies = new Set()
   const resolveName = (name, line) => {
@@ -179,7 +366,7 @@ function importDependencies(block, info, modules) {
       dependencies.add(modules.get(name))
       return true
     }
-    if (info.stdlib.has(name.split(".")[0])) return true
+    if (info.stdlib.has(name.split(".")[0]) || packageImports.has(name.split(".")[0])) return true
     throw moduleError(
       "PY_IMPORT",
       block,
@@ -227,7 +414,7 @@ function importDependencies(block, info, modules) {
         const target = `${base}.${name}`
         if (modules.has(target)) dependencies.add(modules.get(target))
       }
-    } else if (!info.stdlib.has(base.split(".")[0])) {
+    } else if (!info.stdlib.has(base.split(".")[0]) && !packageImports.has(base.split(".")[0])) {
       const nested = imported.names.map(name => `${base}.${name}`).filter(name => modules.has(name))
       if (nested.length === 0) {
         throw moduleError(
@@ -244,7 +431,7 @@ function importDependencies(block, info, modules) {
   return [...dependencies]
 }
 
-function analyzeWithRuntime(pyodide, roots, candidates) {
+function analyzeWithRuntime(pyodide, roots, candidates, packages = []) {
   const modules = new Map()
   for (const block of candidates) {
     const name = moduleName(block)
@@ -264,6 +451,48 @@ function analyzeWithRuntime(pyodide, roots, candidates) {
   } finally {
     stdlibProxy.destroy()
   }
+  const packageImports = new Set()
+  const lockedPackages = new Set(packages.map(item => packageNameKey(item.name)))
+  const wheelDirectory = `/tmp/matra-wheel-check-${randomUUID()}`
+  pyodide.FS.mkdirTree(wheelDirectory)
+  try {
+    for (const [index, packageInfo] of packages.entries()) {
+      const path = `${wheelDirectory}/${index}.whl`
+      pyodide.FS.writeFile(path, packageInfo.bytes)
+      pyodide.globals.set("_matra_wheel_path", path)
+      let raw
+      try {
+        raw = pyodide.runPython("_matra_wheel_info(_matra_wheel_path)")
+      } finally {
+        pyodide.globals.set("_matra_wheel_path", null)
+      }
+      const info = JSON.parse(raw)
+      if (info.name !== packageNameKey(packageInfo.name) || info.version !== packageInfo.version) {
+        throw packageError(
+          roots[0],
+          `Wheel metadata does not match lock entry: ${packageInfo.file}`,
+        )
+      }
+      if (
+        info.imports.some(name => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) ||
+        info.requires.some(name => !lockedPackages.has(name))
+      ) {
+        throw packageError(
+          roots[0],
+          `Wheel has invalid imports or an unlocked dependency: ${packageInfo.file}`,
+        )
+      }
+      for (const name of info.imports) packageImports.add(name)
+    }
+  } catch (error) {
+    if (error.code) throw error
+    throw packageError(roots[0], "Cannot inspect a locked Python wheel", error)
+  } finally {
+    for (const name of pyodide.FS.readdir(wheelDirectory)) {
+      if (name.endsWith(".whl")) pyodide.FS.unlink(`${wheelDirectory}/${name}`)
+    }
+    pyodide.FS.rmdir(wheelDirectory)
+  }
   const dependencies = new Map()
   const parseBlock = block => {
     if (infos.has(block.path)) return infos.get(block.path)
@@ -282,7 +511,7 @@ function analyzeWithRuntime(pyodide, roots, candidates) {
     }
     const parsed = { ...info, stdlib }
     infos.set(block.path, parsed)
-    dependencies.set(block.path, importDependencies(block, parsed, modules))
+    dependencies.set(block.path, importDependencies(block, parsed, modules, packageImports))
     return parsed
   }
   const complete = new Set()
@@ -327,22 +556,25 @@ function analyzeWithRuntime(pyodide, roots, candidates) {
   }
 }
 
-export async function analyzePythonModules(roots, candidates) {
+export async function analyzePythonModules(roots, candidates, packages = []) {
   if (roots.length === 0) return { modules: [], exports: new Map() }
   parserRuntime ??= createRuntime().catch(error => {
     parserRuntime = undefined
     throw error
   })
-  return analyzeWithRuntime(await parserRuntime, roots, candidates)
+  return analyzeWithRuntime(await parserRuntime, roots, candidates, packages)
 }
 
-export async function loadPythonModules(roots, dependencies) {
+export async function loadPythonModules(roots, dependencies, packages, moduleRoot) {
   if (roots.length === 0) return { exports: new Map(), cleanup: async () => {} }
+  const wheelFiles = await Promise.all(
+    packages.map(packageInfo => readVerifiedWheel(moduleRoot, packageInfo, roots[0])),
+  )
   const pyodide = await createRuntime()
   const proxies = []
   let directory
   try {
-    const analysis = analyzeWithRuntime(pyodide, roots, [...roots, ...dependencies])
+    const analysis = analyzeWithRuntime(pyodide, roots, [...roots, ...dependencies], wheelFiles)
     const expected = analysis.modules.map(block => block.path).sort()
     const actual = dependencies.map(block => block.path).sort()
     if (
@@ -363,6 +595,19 @@ export async function loadPythonModules(roots, dependencies) {
       pyodide.FS.mkdirTree(parent)
       pyodide.FS.writeFile(path, block.source, { encoding: "utf8" })
     }
+    const wheelDirectory = `${directory}/wheels`
+    pyodide.FS.mkdirTree(wheelDirectory)
+    const wheelPaths = []
+    for (const [index, packageInfo] of wheelFiles.entries()) {
+      const path = `${wheelDirectory}/${index}.whl`
+      pyodide.FS.writeFile(path, packageInfo.bytes)
+      wheelPaths.push(path)
+    }
+    pyodide.globals.set("_matra_wheel_paths", pyodide.toPy(wheelPaths))
+    pyodide.globals.set("_matra_site_packages", `${directory}/site-packages`)
+    pyodide.runPython("_matra_install_wheels(_matra_wheel_paths, _matra_site_packages)")
+    pyodide.globals.set("_matra_wheel_paths", null)
+    pyodide.globals.set("_matra_site_packages", null)
     pyodide.globals.set("_matra_python_path", directory)
     pyodide.runPython("sys.path.insert(0, _matra_python_path)")
     const getExports = pyodide.globals.get("_matra_get_exports")

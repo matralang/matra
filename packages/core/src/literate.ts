@@ -5,6 +5,7 @@ export { LiterateError } from "./literate/runtime.mjs"
 
 export interface LiterateBuildOptions {
   document?: string
+  moduleRoot?: string
 }
 
 export interface LiterateBlock {
@@ -21,6 +22,12 @@ export interface LiterateBundle {
   values: LiterateBlock[]
   modules?: LiterateBlock[]
   pythonModules?: LiterateBlock[]
+  pythonPackages?: Array<{
+    name: string
+    version: string
+    file: string
+    sha256: string
+  }>
   wasm: string
 }
 

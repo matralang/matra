@@ -9,7 +9,11 @@ import { parse as parseJavaScript } from "acorn"
 import { load as loadYaml } from "js-yaml"
 import { LITERATE_ABI, loadCompiler } from "./compiler.mjs"
 import { formatCompilerDiagnostic, reserveCompilerWorkspace } from "./compiler-host.mjs"
-import { analyzePythonModules, loadPythonModules } from "./python-runtime.mjs"
+import {
+  analyzePythonModules,
+  loadPythonModules,
+  resolvePythonPackages,
+} from "./python-runtime.mjs"
 import { instantiateMatra } from "./value-host.mjs"
 
 export class LiterateError extends Error {
@@ -320,9 +324,21 @@ function frontMatterConfig(markdown, document) {
   if (!Array.isArray(values) || values.some(value => typeof value !== "string")) {
     fail("INVALID_FRONTMATTER", location, "matra.values must be a list of paths")
   }
+  const python = config.python === undefined ? {} : config.python
+  if (!python || typeof python !== "object" || Array.isArray(python)) {
+    fail("INVALID_FRONTMATTER", location, "matra.python must be a mapping")
+  }
+  const pythonPackages = python.packages === undefined ? [] : python.packages
+  if (!Array.isArray(pythonPackages) || pythonPackages.some(value => typeof value !== "string")) {
+    fail(
+      "INVALID_FRONTMATTER",
+      location,
+      "matra.python.packages must be a list of pinned requirements",
+    )
+  }
   const bodyOffset = opening[0].length + closing.index + closing[0].length
   const bodyLine = markdown.slice(0, bodyOffset).split("\n").length - 1
-  return { entry: config.entry, values, bodyLine }
+  return { entry: config.entry, values, pythonPackages, bodyLine }
 }
 
 export function registerLiterate(markdown, options = {}) {
@@ -334,7 +350,7 @@ export function registerLiterate(markdown, options = {}) {
       "Configure entry and values in YAML front matter",
     )
   }
-  const { entry, values, bodyLine } = frontMatterConfig(markdown, document)
+  const { entry, values, pythonPackages, bodyLine } = frontMatterConfig(markdown, document)
   const collected = []
   const lines = markdown.replaceAll("\r\n", "\n").split("\n")
   for (let index = bodyLine; index < lines.length; index++) {
@@ -351,10 +367,10 @@ export function registerLiterate(markdown, options = {}) {
     block.source = lines.slice(start, index).join("\n")
     collected.push(block)
   }
-  return selectBlocks(collected, { document, entry, values })
+  return selectBlocks(collected, { document, entry, values, pythonPackages })
 }
 
-function selectBlocks(collected, { document, entry, values }) {
+function selectBlocks(collected, { document, entry, values, pythonPackages }) {
   const blocks = new Map()
   const valueNames = []
   const valueBlocks = new Map()
@@ -433,6 +449,7 @@ function selectBlocks(collected, { document, entry, values }) {
     entry: main,
     values: selected,
     modules,
+    pythonPackages,
     pythonBlocks: [...blocks.values()].filter(block => block.path.endsWith(".py")),
   }
 }
@@ -440,11 +457,29 @@ function selectBlocks(collected, { document, entry, values }) {
 /** @returns {Promise<import("../literate.js").LiterateBundle>} */
 export async function buildLiterate(markdown, options = {}) {
   const registration = registerLiterate(markdown, options)
-  const { entry, values, pythonBlocks, ...bundleRegistration } = registration
+  const { entry, values, pythonBlocks, pythonPackages, ...bundleRegistration } = registration
   const pythonRoots = values.filter(block => block.path.endsWith(".py"))
+  if (pythonPackages.length && pythonRoots.length === 0) {
+    fail("PY_PACKAGE_LOCK", entry, "Python packages require at least one selected .py module")
+  }
+  const moduleRoot = options.moduleRoot ?? process.cwd()
+  if (typeof moduleRoot !== "string" || moduleRoot.length === 0) {
+    fail("INVALID_OPTIONS", entry, "moduleRoot must be a non-empty path")
+  }
+  let lockedPackages
+  try {
+    lockedPackages = await resolvePythonPackages(
+      moduleRoot,
+      pythonPackages,
+      pythonRoots[0] ?? entry,
+    )
+  } catch (error) {
+    if (error instanceof LiterateError) throw error
+    fail("PY_PACKAGE_LOCK", pythonRoots[0] ?? entry, error?.message ?? String(error), error)
+  }
   let python
   try {
-    python = await analyzePythonModules(pythonRoots, pythonBlocks)
+    python = await analyzePythonModules(pythonRoots, pythonBlocks, lockedPackages)
   } catch (error) {
     if (error instanceof LiterateError) throw error
     const block = error.block ?? pythonRoots[0] ?? entry
@@ -487,6 +522,16 @@ export async function buildLiterate(markdown, options = {}) {
     entry,
     values,
     ...(pythonRoots.length ? { pythonModules: python.modules } : {}),
+    ...(lockedPackages.length
+      ? {
+          pythonPackages: lockedPackages.map(({ name, version, file, sha256 }) => ({
+            name,
+            version,
+            file,
+            sha256,
+          })),
+        }
+      : {}),
     wasm,
   }
 }
@@ -803,7 +848,12 @@ export async function runLiterate(bundle, options = {}) {
     const pythonRoots = blocks.filter(block => block.path.endsWith(".py"))
     if (pythonRoots.length) {
       try {
-        pythonRuntime = await loadPythonModules(pythonRoots, bundle.pythonModules ?? [])
+        pythonRuntime = await loadPythonModules(
+          pythonRoots,
+          bundle.pythonModules ?? [],
+          bundle.pythonPackages ?? [],
+          options.moduleRoot ?? process.cwd(),
+        )
       } catch (error) {
         if (error instanceof LiterateError) throw error
         const block = error.block ?? pythonRoots[0]

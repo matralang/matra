@@ -74,7 +74,28 @@ JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結�
   Matraのbindingと同名の公開rootは既存のduplicate-binding診断で拒否する。
 - `.py` fenceは同一文書内の他の`.py` fenceとPython標準ライブラリをimportできる。
   文書内moduleはPythonのimport名（pathの`/`を`.`へ変換）で解決し、build時に依存をbundleへ含める。
-  Pyodide付属の標準ライブラリ以外のwheel、PyPI、`micropip`は初版では使わない。
+  外部packageは`matra.python.packages`に`name==version`で厳密pinし、build/runの`moduleRoot`にある
+  `matra.python.lock.json`にも対応entryを置く。lock formatは`matra-python-wheels-1`で、
+  同梱Pyodideの厳密なversionに固定する。entryにはcanonical package名、version、project相対wheel path、
+  SHA-256を記録する。`py3-none-any` wheelだけを受理し、内容はpurelib fileに限定する。
+  wheelが宣言する依存packageもすべてlockに含める。buildはpackage codeを実行せずhashとmetadataを検証する。
+  bundleにはwheel bytesではなくpathとhashを記録し、run時にhashを再検証してfresh runtimeへinstallする。
+  実行時network access、PyPI解決、`micropip`は使わない。
+  例えばfront matterは`python: { packages: ["idna==3.10"] }`とする。lock fileの形式例:
+
+  ```json
+  {
+    "format": "matra-python-wheels-1",
+    "pyodide": "314.0.7",
+    "packages": [{
+      "name": "idna",
+      "version": "3.10",
+      "file": "wheels/idna-3.10-py3-none-any.whl",
+      "sha256": "<64 lowercase hex characters>"
+    }]
+  }
+  ```
+
   選択した各moduleは`__all__`を文字列のliteral list/tupleとして宣言し、各exportをmoduleの公開名に対応させる。
   `__all__`未指定や不正なexport、循環依存はdiagnosticにする。動的importは未対応とする。
 - `.py`の公開値は共通data valueまたは同期関数に限る。Python整数は安全なbinary64整数範囲に制限し、
@@ -95,6 +116,8 @@ bare packageの解決起点は`runLiterate`の`moduleRoot`（省略時は`proces
 CLIは指定された`ROOT`を渡す。依存packageとその推移依存はNode.js標準loaderで解決し、build時にinstall・実行しない。
 選択されたPython moduleはrunごとに初期化したPyodide runtimeで実行する。
 Pyodide runtimeとPython標準ライブラリはnpm配布物へ同梱し、実行時のPython downloadはしない。
+build時のwheel参照解決には`buildLiterate`の`moduleRoot`（省略時は`process.cwd()`）を使い、
+`runLiterate`にも同じrootを渡す。CLIは`ROOT`を両方に使う。Python packageの実行時network accessはない。
 Python moduleのimportとtop-level codeはrun時に評価し、関数本体は呼び出し時に実行する。
 PythonとJavaScriptのmodule状態はrun間で共有しない。Python側からNode.js等のhost機能へアクセス可能なため、
 Pyodideもsandboxではなく、信頼した文書だけを実行する。
@@ -143,20 +166,21 @@ Node.js固有moduleへの新しい依存を持たせない。HTML rendererにも
 CLIは`matra-literate build ROOT DOCUMENT.md OUTPUT.json`と`matra-literate run ROOT OUTPUT.json`を提供する。
 Markdown内の標準JavaScript ESM fence、同文書内の相対import、事前install済みnpm packageのbare import、
 およびPyodideによる`.py` moduleを実験的にサポートする。Pythonは標準ライブラリに限定する。
-ブラウザ実行とnpm/Python packageの自動installはこの公開APIの範囲外とする。
+ブラウザ実行、npm packageの自動install、Python packageのnetwork解決はこの公開APIの範囲外とする。
 
 ### 関数と値の契約
 
 | API | 入力 | 成功時の結果 | 実行しないこと |
 | --- | --- | --- | --- |
-| `buildLiterate(markdown, options?)` | Markdown文字列、省略可能な文書名`options.document` | 実行用bundleを返すPromise | 文書中のJavaScript/Python codeとMatra programの実行、HTML生成 |
-| `runLiterate(bundle, options?)` | 対応する形式・ABIのbundle、省略可能な`globals`と`moduleRoot` | 文書data subsetの値を返すPromise | 再コンパイル、packageのinstall、HTML生成、ファイルへの出力 |
+| `buildLiterate(markdown, options?)` | Markdown文字列、省略可能な`options.document`と`moduleRoot` | 実行用bundleを返すPromise | 文書中のJavaScript/Python codeとMatra programの実行、networkでのpackage解決、HTML生成 |
+| `runLiterate(bundle, options?)` | 対応する形式・ABIのbundle、省略可能な`globals`と`moduleRoot` | 文書data subsetの値を返すPromise | 再コンパイル、network access、HTML生成、ファイルへの出力 |
 
 `options.document`は診断用の名前で、省略時は`<markdown>`とする。ファイルを自動で読み込む指定ではない。
 entryとvaluesはFrontMatterを正本とし、呼び出し側からの上書きは拒否する。
 対応するcompiler Wasmを同梱するため、通常の利用でcompilerのpath指定や取得設定は要求しない。
-`moduleRoot`はnpm依存を解決するproject directoryであり、省略時は`process.cwd()`を使う。
-必要なpackageは事前にprojectへinstallする。文書やbundleが依存をinstall・同梱することはない。
+`moduleRoot`はnpm依存とPython wheel参照を解決するproject directoryであり、省略時は`process.cwd()`を使う。
+npm packageは事前にinstallし、Python wheelも事前に配置する。build/runはproject依存をdownload・変更しない。
+Python wheelはfreshなPyodide runtime内だけへinstallし、bundleはwheel pathとhashを保持してbytesを同梱しない。
 
 buildの戻り値はJSONとして保存・復元できるversion付きbundleとする。Wasmに加えて選択した
 JavaScriptソースと元位置を含み、ソース秘匿や任意version間の互換性は保証しない。
@@ -444,8 +468,9 @@ Markdown
 既存ABIをそのまま安定した共通プロトコルとして保証しない。
 WASIやComponent Modelの採否も別途判断する。
 
-JavaScript blockは事前install済みnpm packageを標準importで使える。Python blockはPyodideの標準ライブラリを使う。
-PyPI/wheel依存の管理、任意のnpm packageやnative addonの互換性、3 OSでの同一動作、Webでの動作は保証しない。
+JavaScript blockは事前install済みnpm packageを標準importで使える。Python blockはPyodide標準ライブラリと
+hash lock済みの`py3-none-any` wheelを使える。PyPIの解決、native Python wheel、任意のnpm packageやnative addonの互換性、
+3 OSでの同一動作、Webでの動作は保証しない。
 
 引数・戻り値について、数値、文字列、配列、オブジェクト、文書ノード、数式、
 巨大整数、バイナリ、関数参照の対応範囲とcopy/共有の意味を定義する。
@@ -579,4 +604,4 @@ Python buildはASTとimport依存を解析するだけで文書コードを実�
 - `pnpm test:literate:package`でpack済みCoreのPyodide同梱とcheckout外の実行を検証する。
 
 補完、型チェック、整形、デバッグと元文書の詳細なsource mappingは後続課題とする。
-Matra nodeの専用wire conversion、非同期interop、PyPI/wheel、browser実行も初版の範囲外である。
+Matra nodeの専用wire conversion、非同期interop、PyPI解決、native Python wheel、browser実行も初版の範囲外である。

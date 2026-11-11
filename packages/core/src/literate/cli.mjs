@@ -14,7 +14,10 @@ try {
     const [output] = rest
     const outputPath = projectPath(root, output, { write: true })
     if (outputPath === projectPath(root, input)) throw new Error("Output must not overwrite source")
-    const bundle = await buildLiterate(runtime.read_text(input), { document: input })
+    const bundle = await buildLiterate(runtime.read_text(input), {
+      document: input,
+      moduleRoot: root,
+    })
     await writeFile(outputPath, `${JSON.stringify(bundle)}\n`, "utf8")
   } else if (command === "run" && rest.length === 0) {
     const result = await runLiterate(JSON.parse(runtime.read_text(input)), { moduleRoot: root })

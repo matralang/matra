@@ -1,9 +1,11 @@
 import assert from "node:assert/strict"
 import { spawnSync } from "node:child_process"
+import { createHash } from "node:crypto"
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
+import { deflateRawSync } from "node:zlib"
 import { buildLiterate, LiterateError, runLiterate } from "@matra/core/experimental/literate"
 
 const markdown = `---
@@ -18,6 +20,88 @@ p { data.title }
 ({ title: "Hello" })
 \`\`\`
 `
+
+function crc32(bytes) {
+  let crc = 0xffffffff
+  for (const byte of bytes) {
+    crc ^= byte
+    for (let bit = 0; bit < 8; bit++) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0)
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0
+}
+
+function createZip(files) {
+  const local = []
+  const central = []
+  let offset = 0
+  for (const [name, content] of Object.entries(files)) {
+    const filename = Buffer.from(name)
+    const source = Buffer.from(content)
+    const compressed = deflateRawSync(source)
+    const crc = crc32(source)
+    const localHeader = Buffer.alloc(30)
+    localHeader.writeUInt32LE(0x04034b50, 0)
+    localHeader.writeUInt16LE(20, 4)
+    localHeader.writeUInt16LE(8, 8)
+    localHeader.writeUInt32LE(crc, 14)
+    localHeader.writeUInt32LE(compressed.length, 18)
+    localHeader.writeUInt32LE(source.length, 22)
+    localHeader.writeUInt16LE(filename.length, 26)
+    local.push(localHeader, filename, compressed)
+    const centralHeader = Buffer.alloc(46)
+    centralHeader.writeUInt32LE(0x02014b50, 0)
+    centralHeader.writeUInt16LE(20, 4)
+    centralHeader.writeUInt16LE(20, 6)
+    centralHeader.writeUInt16LE(8, 10)
+    centralHeader.writeUInt32LE(crc, 16)
+    centralHeader.writeUInt32LE(compressed.length, 20)
+    centralHeader.writeUInt32LE(source.length, 24)
+    centralHeader.writeUInt16LE(filename.length, 28)
+    centralHeader.writeUInt32LE(offset, 42)
+    central.push(centralHeader, filename)
+    offset += localHeader.length + filename.length + compressed.length
+  }
+  const centralDirectory = Buffer.concat(central)
+  const end = Buffer.alloc(22)
+  end.writeUInt32LE(0x06054b50, 0)
+  end.writeUInt16LE(Object.keys(files).length, 8)
+  end.writeUInt16LE(Object.keys(files).length, 10)
+  end.writeUInt32LE(centralDirectory.length, 12)
+  end.writeUInt32LE(offset, 16)
+  return Buffer.concat([...local, centralDirectory, end])
+}
+
+async function writePythonWheelRoot(moduleRoot) {
+  const wheelPath = "wheels/sample_wheel-1.0-py3-none-any.whl"
+  const bytes = createZip({
+    "sample_pkg/__init__.py": "answer = 42\n",
+    "sample_wheel-1.0.dist-info/METADATA":
+      "Metadata-Version: 2.1\nName: sample-wheel\nVersion: 1.0\n\n",
+    "sample_wheel-1.0.dist-info/WHEEL":
+      "Wheel-Version: 1.0\nGenerator: test\nRoot-Is-Purelib: true\nTag: py3-none-any\n\n",
+    "sample_wheel-1.0.dist-info/top_level.txt": "sample_pkg\n",
+  })
+  await mkdir(join(moduleRoot, "wheels"), { recursive: true })
+  await writeFile(join(moduleRoot, wheelPath), bytes)
+  await writeFile(
+    join(moduleRoot, "matra.python.lock.json"),
+    JSON.stringify({
+      format: "matra-python-wheels-1",
+      pyodide: "314.0.7",
+      packages: [
+        {
+          name: "sample-wheel",
+          version: "1.0",
+          file: wheelPath,
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+        },
+      ],
+    }),
+  )
+  return join(moduleRoot, wheelPath)
+}
 
 test("the unpublished non-experimental subpath is not exported", async () => {
   await assert.rejects(import("@matra/core/literate"), {
@@ -312,6 +396,72 @@ not valid Python !
   const expected = { tag: "p", props: {}, children: [42, 3, 1] }
   assert.deepEqual(await runLiterate(bundle), expected)
   assert.deepEqual(await runLiterate(bundle), expected)
+})
+
+test("Python packages use hash-locked local pure-Python wheels without runtime network access", async () => {
+  const moduleRoot = await mkdtemp(join(tmpdir(), "matra-literate-python-wheel-"))
+  try {
+    await writePythonWheelRoot(moduleRoot)
+    const source = `---
+matra:
+  entry: main.matra
+  values: [value.py]
+  python:
+    packages: [sample-wheel==1.0]
+---
+\`\`\`main.matra
+p { value.answer }
+\`\`\`
+\`\`\`value.py
+from sample_pkg import answer
+__all__ = ["answer"]
+\`\`\`
+`
+    const bundle = await buildLiterate(source, { moduleRoot })
+    assert.deepEqual(
+      bundle.pythonPackages.map(({ name, version }) => ({ name, version })),
+      [{ name: "sample-wheel", version: "1.0" }],
+    )
+    assert.deepEqual(await runLiterate(bundle, { moduleRoot }), {
+      tag: "p",
+      props: {},
+      children: [42],
+    })
+  } finally {
+    await rm(moduleRoot, { recursive: true, force: true })
+  }
+})
+
+test("Python package lock rejects a wheel changed after build", async () => {
+  const moduleRoot = await mkdtemp(join(tmpdir(), "matra-literate-python-wheel-"))
+  try {
+    const wheel = await writePythonWheelRoot(moduleRoot)
+    const source = `---
+matra:
+  entry: main.matra
+  values: [value.py]
+  python:
+    packages: [sample-wheel==1.0]
+---
+\`\`\`main.matra
+p { value.answer }
+\`\`\`
+\`\`\`value.py
+from sample_pkg import answer
+__all__ = ["answer"]
+\`\`\`
+`
+    const bundle = await buildLiterate(source, { moduleRoot })
+    await writeFile(wheel, "tampered")
+    await assert.rejects(runLiterate(bundle, { moduleRoot }), {
+      code: "PY_PACKAGE_LOCK",
+    })
+    await assert.rejects(buildLiterate(source, { moduleRoot }), {
+      code: "PY_PACKAGE_LOCK",
+    })
+  } finally {
+    await rm(moduleRoot, { recursive: true, force: true })
+  }
 })
 
 test("Python build validates syntax, imports, exports, and dependency cycles without executing code", async () => {
