@@ -162,6 +162,12 @@ fs.writeFileSync(path.join(args[args.indexOf("--dest")+1], "sample_wheel-1.0-py3
     props: {},
     children: [42],
   })
+  const all = spawnSync(process.execPath, [cli, "install", "--yes"], {
+    cwd: root,
+    encoding: "utf8",
+    env: { ...process.env, PATH: bin, MATRA_TEST_PIP_LOG: pipLog },
+  })
+  assert.equal(all.status, 0, all.stderr)
 })
 
 test("npm deps install and update use a locked package store for one document", async t => {
@@ -223,6 +229,171 @@ fs.writeFileSync(path.join(root,"package-lock.json"),JSON.stringify({lockfileVer
   })
   assert.equal(updated.status, 0, updated.stderr)
   assert.equal(JSON.parse(await readFile(npmLog, "utf8"))[0], "update")
+  const all = spawnSync(process.execPath, [cli, "deps", "install", "--yes"], {
+    cwd: root,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      PATH: bin,
+      MATRA_PYTHON: join(root, "missing-python"),
+      MATRA_TEST_NPM_LOG: npmLog,
+    },
+  })
+  assert.equal(all.status, 0, all.stderr)
+})
+
+async function combinedProject(t) {
+  const root = await tempRoot(t)
+  const bin = join(root, "bin")
+  await mkdir(bin)
+  const source = `---
+matra:
+  entry: main.matra
+  values: [math.js, value.py]
+  javascript:
+    packages: [matra-test-package]
+  python:
+    packages: [sample-wheel]
+---
+\`\`\`main.matra
+p { math.answer; value.answer }
+\`\`\`
+\`\`\`math.js
+export * from "matra-test-package"
+\`\`\`
+\`\`\`value.py
+from sample_pkg import answer
+__all__ = ["answer"]
+\`\`\`
+`
+  await writeFile(join(root, "index.md"), source)
+  await mkdir(join(root, "pages"))
+  await writeFile(join(root, "pages", "example.md"), source)
+  const wheel = wheelZip({
+    "sample_pkg/__init__.py": "answer = 42\n",
+    "sample_wheel-1.0.dist-info/METADATA":
+      "Metadata-Version: 2.1\nName: sample-wheel\nVersion: 1.0\n\n",
+    "sample_wheel-1.0.dist-info/WHEEL":
+      "Wheel-Version: 1.0\nRoot-Is-Purelib: true\nTag: py3-none-any\n\n",
+  }).toString("base64")
+  await executable(
+    join(bin, "npm"),
+    `const fs=require("node:fs"); const path=require("node:path");
+fs.appendFileSync(process.env.MATRA_TEST_COMMAND_LOG,"npm\\n");
+if(process.env.MATRA_TEST_FAIL==="npm"){console.error("npm test failure");process.exit(1)}
+const args=process.argv.slice(2); const root=args[args.indexOf("--prefix")+1];
+const pkg=path.join(root,"node_modules","matra-test-package");
+fs.mkdirSync(pkg,{recursive:true});
+fs.writeFileSync(path.join(pkg,"package.json"),JSON.stringify({name:"matra-test-package",type:"module",exports:"./index.js"}));
+fs.writeFileSync(path.join(pkg,"index.js"),"export const answer=42");
+fs.writeFileSync(path.join(root,"package-lock.json"),JSON.stringify({lockfileVersion:3,packages:{}}));`,
+  )
+  const python = join(bin, "python3")
+  await executable(
+    python,
+    `const fs=require("node:fs"); const path=require("node:path");
+fs.appendFileSync(process.env.MATRA_TEST_COMMAND_LOG,"python\\n");
+if(process.env.MATRA_TEST_FAIL==="python"){console.error("pip test failure");process.exit(1)}
+const args=process.argv.slice(2);
+fs.writeFileSync(path.join(args[args.indexOf("--dest")+1],"sample_wheel-1.0-py3-none-any.whl"),Buffer.from("${wheel}","base64"));`,
+  )
+  const log = join(root, "commands.log")
+  const env = {
+    ...process.env,
+    PATH: bin,
+    MATRA_PYTHON: python,
+    MATRA_TEST_COMMAND_LOG: log,
+  }
+  return {
+    root,
+    log,
+    source,
+    invoke: (args, overrides = {}) =>
+      spawnSync(process.execPath, [cli, ...args], {
+        cwd: root,
+        encoding: "utf8",
+        env: { ...env, ...overrides },
+      }),
+  }
+}
+
+test("install aliases prepare both ecosystems for default and explicit documents", async t => {
+  const { root, log, source, invoke } = await combinedProject(t)
+  for (const [args, document] of [
+    [["install", "--yes"], "index.md"],
+    [["deps", "install", "--yes"], "index.md"],
+    [["install", "pages/example.md", "--yes"], "pages/example.md"],
+    [["deps", "install", "pages/example.md", "--yes"], "pages/example.md"],
+  ]) {
+    const result = invoke(args)
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal((result.stdout.match(/network access/g) ?? []).length, 1)
+    assert.ok(
+      await readFile(
+        join(getLiterateDependencyDirectory(root, document, "javascript"), "package-lock.json"),
+      ),
+    )
+    const bundle = await buildLiterate(source, { document, moduleRoot: root })
+    assert.deepEqual(await runLiterate(bundle, { moduleRoot: root }), {
+      tag: "p",
+      props: {},
+      children: [42, 42],
+    })
+  }
+  assert.equal(await readFile(log, "utf8"), "npm\npython\n".repeat(4))
+})
+
+test("combined install confirms once before either command and validates the whole declaration", async t => {
+  const { root, log, source, invoke } = await combinedProject(t)
+  const unconfirmed = invoke(["install"])
+  assert.equal(unconfirmed.status, 1)
+  assert.match(unconfirmed.stderr, /rerun with --yes/)
+  assert.match(unconfirmed.stdout, /npm/)
+  assert.match(unconfirmed.stdout, /pip/)
+  await assert.rejects(readFile(log), { code: "ENOENT" })
+  await writeFile(join(root, "index.md"), source.replace("sample-wheel]", "sample-wheel==1.0]"))
+  const invalid = invoke(["deps", "install", "--yes"])
+  assert.equal(invalid.status, 1)
+  assert.match(invalid.stderr, /INVALID_FRONTMATTER/)
+  await assert.rejects(readFile(log), { code: "ENOENT" })
+})
+
+test("combined install skips Python after npm failure and reports partial Python failure", async t => {
+  const { root, log, invoke } = await combinedProject(t)
+  const npmFailed = invoke(["install", "--yes"], { MATRA_TEST_FAIL: "npm" })
+  assert.equal(npmFailed.status, 1)
+  assert.match(npmFailed.stderr, /npm test failure/)
+  assert.equal(await readFile(log, "utf8"), "npm\n")
+  const pythonFailed = invoke(["install", "--yes"], { MATRA_TEST_FAIL: "python" })
+  assert.equal(pythonFailed.status, 1)
+  assert.match(pythonFailed.stderr, /pip test failure/)
+  assert.equal(await readFile(log, "utf8"), "npm\nnpm\npython\n")
+  assert.ok(
+    await readFile(
+      join(getLiterateDependencyDirectory(root, "index.md", "javascript"), "package-lock.json"),
+    ),
+  )
+  await assert.rejects(
+    readFile(
+      join(getLiterateDependencyDirectory(root, "index.md", "python"), "matra.python.lock.json"),
+    ),
+    { code: "ENOENT" },
+  )
+})
+
+test("combined install without dependencies needs no tools or confirmation", async t => {
+  const root = await tempRoot(t)
+  await writeFile(join(root, "index.md"), "---\nmatra:\n  entry: main.matra\n---\n")
+  for (const args of [["install"], ["deps", "install"]]) {
+    const result = spawnSync(process.execPath, [cli, ...args], {
+      cwd: root,
+      encoding: "utf8",
+      env: { ...process.env, PATH: "" },
+    })
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /No dependencies declared/)
+    assert.doesNotMatch(result.stdout, /network access/)
+  }
 })
 
 test("npm deps install does not execute commands without an explicit confirmation", async t => {

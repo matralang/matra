@@ -137,6 +137,13 @@ module側のtop-level副作用は各runで再実行され、process-globalな変
 ### 依存の準備
 
 依存はFront Matterの`matra.javascript.packages`と`matra.python.packages`にpackage名だけを宣言する。
+`matra install [DOCUMENT] [--yes]`はnpmとPythonをまとめて準備する。
+`matra deps install [DOCUMENT] [--yes]`も同義で、文書の省略時はproject rootの`index.md`を使う。
+project設定fileの追加や他文書の自動探索は行わない。依存がないecosystemはtoolの起動も省略し、
+両方とも依存がない場合はnetwork確認なしで終了する。
+両方の宣言と実行計画を準備してから一度だけ確認し、npm、Pythonの順で実行する。
+npmが失敗した場合はPythonを実行しない。Pythonが失敗した場合はエラー終了するが、
+完了したnpm installをrollbackしない。既存のlock維持・文書別storeは個別installと共通である。
 `matra deps install npm DOCUMENT`と`matra deps install python DOCUMENT`でecosystemごとに準備し、
 初回installは最新の互換versionを自動解決する。npmは文書ごとの内部`package.json`と
 `package-lock.json`を管理する。PythonではhostのPython 3/pipで同梱PyodideのPython version向けwheelを取得し、

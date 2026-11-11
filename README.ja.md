@@ -100,7 +100,9 @@ build時には文書内のJavaScriptが実行されるため、信頼する文�
 現在の開発版の準備とpack検証ではRust・pnpmが必要です。
 
 Front Matterの`matra.javascript.packages`と`matra.python.packages`にはpackage名だけを記述し、
-`matra deps install npm index.md`と`matra deps install python index.md`で個別に準備します。
+`matra install`（`matra deps install`も同義）で両方をまとめて準備します。文書の省略時は`index.md`、
+別の文書は`matra install pages/example.md`で指定します。
+`matra deps install npm index.md`と`matra deps install python index.md`で個別にも準備できます。
 versionは初回install時に自動解決され、文書別のlockに記録されます。通常のinstallはlockを維持し、
 `matra deps update npm index.md`または`matra deps update python index.md`で明示的に更新します。
 生成物は`.matra/deps/`以下にまとまり、`matra build`は依存をinstallしません。

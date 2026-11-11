@@ -144,18 +144,26 @@ Future modes must share these initialization/call semantics without build-time e
 ### Dependency preparation
 
 Declare unversioned package names in `matra.javascript.packages` and `matra.python.packages`.
+`matra install [DOCUMENT] [--yes]` prepares both ecosystems, as does its alias
+`matra deps install [DOCUMENT] [--yes]`. The default document is the project-root `index.md`.
+No project manifest is added and no other documents are discovered automatically.
+An ecosystem without dependencies needs no tool; with neither ecosystem declared, exit without
+network confirmation. Validate both declarations and prepare the entire execution plan before
+confirming once, then run npm followed by Python. Skip Python if npm fails. A Python failure returns
+an error without rolling back a completed npm install. Lock preservation and document stores are
+shared with individual installation.
 Run `matra deps install npm DOCUMENT` or `matra deps install python DOCUMENT` to prepare one
 ecosystem at a time. The first install resolves compatible versions automatically. npm maintains
 a generated manifest and lock per document. Python uses the host's Python 3/pip to download wheels
 for the bundled Pyodide Python version, restricted to binary `py3-none-any` wheels.
 `MATRA_PYTHON` may select the executable; otherwise the CLI uses `python3` (or `python` on Windows).
 
-Generated files live under `.matra/deps/<document-key>/npm/` or `python/`. Python's lock records
+Generated files live under `.matra/deps/<document-key>/javascript/` or `python/`. Python's lock records
 resolved versions, metadata, and SHA-256 values. Install honors existing locks; `matra deps update
 npm DOCUMENT` or `matra deps update python DOCUMENT` explicitly resolves versions again.
 The operation does not execute wheel code. It uses Matra Command's explicit execution plan,
 requests network access, and prompts before running; use `--yes` for non-interactive confirmation.
-npm lifecycle scripts are disabled. Install operations are per-ecosystem and are not transactional.
+npm lifecycle scripts are disabled. Install operations are not transactional across ecosystems.
 
 `matra build` and `runLiterate` never install or resolve dependencies. Prepare them explicitly
 before execution, and pass the same project root to build and run when using the library API.

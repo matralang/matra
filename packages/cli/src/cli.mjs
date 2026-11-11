@@ -7,6 +7,8 @@ import { buildProject, initProject } from "./project.mjs"
 
 const usage = `Usage: matra init DIRECTORY
        matra build
+       matra install [DOCUMENT] [--yes]
+       matra deps install [DOCUMENT] [--yes]
        matra deps install (npm|python) DOCUMENT [--yes]
        matra deps update (npm|python) DOCUMENT [--yes]
        matra site build
@@ -18,6 +20,7 @@ build  Build index.md and matra.css into dist/ in the current directory.
 site   Build the configured multi-page site into dist/.
 dev    Serve on 127.0.0.1:3000 and rebuild on changes. Refresh the browser to view changes.
 deps   Install or update npm/Python packages declared by the selected document.
+install  Install both ecosystems (default document: index.md); alias of deps install.
 
 matra build executes selected JavaScript in index.md.
 matra site build executes only explicitly named .matra.md pages and layouts.
@@ -42,18 +45,23 @@ try {
     const output = await buildProject(process.cwd())
     console.log(`Generated: ${output}`)
   } else if (
-    args[0] === "deps" &&
-    ["install", "update"].includes(args[1]) &&
-    ["npm", "python"].includes(args[2]) &&
-    (args.length === 4 || (args.length === 5 && args[4] === "--yes"))
+    args[0] === "install" ||
+    (args[0] === "deps" && ["install", "update"].includes(args[1]))
   ) {
-    await installDependencies(
-      process.cwd(),
-      args[2],
-      args[3],
-      args[4] === "--yes",
-      args[1] === "update",
-    )
+    const update = args[0] === "deps" && args[1] === "update"
+    const operands = args.slice(args[0] === "deps" ? 2 : 1)
+    const yes = operands.at(-1) === "--yes"
+    if (yes) operands.pop()
+    const ecosystem = ["npm", "python"].includes(operands[0]) ? operands.shift() : "all"
+    if (
+      operands.length > 1 ||
+      operands.some(value => !value || value.startsWith("-")) ||
+      (ecosystem !== "all" && operands.length !== 1) ||
+      (update && ecosystem === "all")
+    ) {
+      throw new Error(usage)
+    }
+    await installDependencies(process.cwd(), ecosystem, operands[0] ?? "index.md", yes, update)
   } else if (args[0] === "site" && args[1] === "build" && args.length === 2) {
     const outputs = await buildSite(process.cwd())
     console.log(`Generated ${outputs.length} site file(s)`)

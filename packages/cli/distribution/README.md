@@ -56,8 +56,10 @@ Build errors appear in the terminal and return HTTP 503 until fixed.
 macOS may require approval for software downloaded from the Internet. This development
 distribution is not signed or notarized; follow your organization's security policy.
 
-Declare package names in the document front matter, then run `matra deps install npm index.md`
-or `matra deps install python index.md` before building. Versions are resolved automatically and
+Declare package names in the document front matter, then run `matra install` (alias:
+`matra deps install`) before building. Both ecosystems are prepared for `index.md` by default;
+use `matra install DOCUMENT` for another document. Individual preparation is still available via
+`matra deps install npm DOCUMENT` or `matra deps install python DOCUMENT`. Versions are resolved automatically and
 saved in per-document locks under `.matra/deps/`. Python downloads only Pyodide-compatible
 `py3-none-any` wheels. The command confirms network access first and disables npm lifecycle
 scripts. Python wheels require a system Python 3 with pip; the standalone distribution does not

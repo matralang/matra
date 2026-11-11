@@ -142,7 +142,7 @@ function packageFromWheel(file, bytes) {
 }
 
 function executionPlan(specs) {
-  const children = specs.map(({ id, program, args, cwd, writes }) => ({
+  const children = specs.map(({ id, program, args, cwd, writes, requires = [] }) => ({
     tag: "command",
     props: {
       id,
@@ -150,6 +150,7 @@ function executionPlan(specs) {
       args,
       cwd,
       produces: writes,
+      requires,
       capabilities: {
         read: [cwd],
         write: writes,
@@ -317,8 +318,8 @@ export async function installDependencies(
   yes = false,
   update = false,
 ) {
-  if (ecosystem !== "npm" && ecosystem !== "python") {
-    throw new Error("Specify an ecosystem: npm or python")
+  if (!["all", "npm", "python"].includes(ecosystem)) {
+    throw new Error("Specify an ecosystem: all, npm or python")
   }
   root = await realpath(resolve(root))
   if (!documentPath || isAbsolute(documentPath) || documentPath.split(/[\\/]/).includes("..")) {
@@ -333,29 +334,27 @@ export async function installDependencies(
   const documentName = relative(root, document)
   const markdown = await readFile(document, "utf8")
   const declared = readLiteratePackages(markdown, { document: documentName })
-  const packages = parsePackageNames(
-    declared[ecosystem === "npm" ? "javascript" : "python"],
-    ecosystem === "npm" ? "javascript" : "python",
-    documentName,
-  )
-  if (packages.length === 0) {
-    console.log(`No ${ecosystem} dependencies declared in ${documentName}.`)
+  const npmPackages =
+    ecosystem === "python" ? [] : parsePackageNames(declared.javascript, "javascript", documentName)
+  const pythonPackages =
+    ecosystem === "npm" ? [] : parsePackageNames(declared.python, "python", documentName)
+  if (npmPackages.length === 0 && pythonPackages.length === 0) {
+    const label = ecosystem === "all" ? "" : `${ecosystem} `
+    console.log(`No ${label}dependencies declared in ${documentName}.`)
     return
   }
 
-  const dependencyRoot = getLiterateDependencyDirectory(
-    root,
-    documentName,
-    ecosystem === "npm" ? "javascript" : "python",
-  )
-  await ensureDirectory(dependencyRoot)
-  const stagingRoot = ecosystem === "python" ? await mkdtemp(join(tmpdir(), "matra-python-")) : null
+  const npmRoot = getLiterateDependencyDirectory(root, documentName, "javascript")
+  const pythonRoot = getLiterateDependencyDirectory(root, documentName, "python")
+  if (npmPackages.length) await ensureDirectory(npmRoot)
+  if (pythonPackages.length) await ensureDirectory(pythonRoot)
+  const stagingRoot = pythonPackages.length ? await mkdtemp(join(tmpdir(), "matra-python-")) : null
   try {
     const specs = []
     let npmCommand
     let pythonWheels
     let pythonConstraints
-    if (ecosystem === "npm") {
+    if (npmPackages.length) {
       npmCommand = await npmInvocation()
       specs.push({
         id: update ? "npm-update" : "npm-install",
@@ -364,20 +363,18 @@ export async function installDependencies(
           ...npmCommand.args,
           update ? "update" : "install",
           "--prefix",
-          dependencyRoot,
+          npmRoot,
           "--ignore-scripts",
           "--no-audit",
           "--no-fund",
         ],
         cwd: root,
-        writes: [dependencyRoot],
+        writes: [npmRoot],
       })
     }
-    if (ecosystem === "python") {
+    if (pythonPackages.length) {
       const target = getPythonPackageTarget()
-      const oldPackages = update
-        ? new Map()
-        : await readExistingLock(dependencyRoot, target.pyodide)
+      const oldPackages = update ? new Map() : await readExistingLock(pythonRoot, target.pyodide)
       pythonWheels = join(stagingRoot, "wheels")
       await mkdir(pythonWheels)
       const args = [
@@ -404,7 +401,7 @@ export async function installDependencies(
         )
         args.push("--constraint", pythonConstraints)
       }
-      args.push(...packages)
+      args.push(...pythonPackages)
       const python =
         process.env.MATRA_PYTHON ?? (process.platform === "win32" ? "python" : "python3")
       specs.push({
@@ -412,12 +409,13 @@ export async function installDependencies(
         program: python,
         args,
         cwd: root,
-        writes: [stagingRoot, dependencyRoot],
+        writes: [stagingRoot, pythonRoot],
+        requires: npmPackages.length ? [update ? "npm-update" : "npm-install"] : [],
       })
     }
     const plan = executionPlan(specs)
     await confirmPlan(plan, yes)
-    if (ecosystem === "npm") await prepareNpmManifest(dependencyRoot, packages)
+    if (npmPackages.length) await prepareNpmManifest(npmRoot, npmPackages)
     const authorized = authorizePlan(plan, {
       commands: plan.capabilities.commands,
       read: plan.capabilities.read,
@@ -434,9 +432,10 @@ export async function installDependencies(
         signal: controller.signal,
         onEvent: event => {
           if (event.type === "finish" && event.result?.status !== "ok") {
-            console.error(
-              `${event.command.id}: ${event.result?.error ?? event.result?.stderr ?? "failed"}`,
-            )
+            const details = [event.result?.error, event.result?.stderr?.trim()]
+              .filter(Boolean)
+              .join(": ")
+            console.error(`${event.command.id}: ${details || "failed"}`)
           }
         },
       })
@@ -445,8 +444,8 @@ export async function installDependencies(
       process.removeListener("SIGTERM", abort)
     }
     if (result.status !== "ok") throw new Error("Dependency command failed")
-    if (ecosystem === "python") {
-      await installPythonPackages(dependencyRoot, packages, pythonWheels, documentName)
+    if (pythonPackages.length) {
+      await installPythonPackages(pythonRoot, pythonPackages, pythonWheels, documentName)
     }
   } finally {
     if (stagingRoot) await rm(stagingRoot, { recursive: true, force: true })

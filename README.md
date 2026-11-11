@@ -104,7 +104,9 @@ Execution uses the bundled compiler Wasm and manifest without Rust, pnpm, or a n
 preparing and packing the development tools still requires Rust and pnpm.
 
 For external modules, list package names in `matra.javascript.packages` and
-`matra.python.packages` in the document front matter, then prepare them separately with
+`matra.python.packages` in the document front matter, then run `matra install`
+(alias: `matra deps install`) to prepare both. The default document is `index.md`; use
+`matra install pages/example.md` for another document. Individual preparation remains available with
 `matra deps install npm index.md` and `matra deps install python index.md`. Versions are
 resolved automatically and recorded in per-document locks. Install preserves existing locks;
 `matra deps update npm index.md` or `matra deps update python index.md` explicitly refreshes them.
