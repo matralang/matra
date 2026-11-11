@@ -138,6 +138,31 @@ describe("Matra parser", () => {
     assert.equal(module.statements[2].expression.kind, "member")
   })
 
+  it("preserves raw JavaScript in nodejs blocks with JavaScript-aware brace matching", () => {
+    const code = [
+      'const close = "}";',
+      "// }",
+      "const regex = /}/;",
+      "const template = `value: $" + "{({ close }).close}`;",
+      'return { close, valid: regex.test("}") && template === "value: }" };',
+    ].join("\n")
+    const source = `nodejs(stdout="json", bind="answer") {\n${code}\n}`
+
+    assert.deepEqual(evaluateStatic(parse(source)), {
+      tag: "nodejs",
+      props: { stdout: "json", bind: "answer" },
+      children: [`\n${code}\n`],
+    })
+  })
+
+  it("rejects the legacy nodejs bracket and text syntax", () => {
+    assert.throws(() => parse('nodejs[stdout="json"] `return 1`'), ProgramSyntaxError)
+    assert.throws(
+      () => parse("nodejs() { return 1"),
+      /Unterminated JavaScript code block at offset/,
+    )
+  })
+
   it("parses static data, attributes, and static lets", () => {
     const module = parse(`let title = "Matra"
 article.card.card(lang="ja", options={theme: "dark"}) {

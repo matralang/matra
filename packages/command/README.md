@@ -57,16 +57,18 @@ block receives parsed standard input as `input`; either return a value or call
 `emit(value)`. Async code and `await` are supported.
 
 ```matra
-nodejs[stdout="json" bind="answer"] `
+nodejs(stdout="json", bind="answer") {
 return { answer: 6 * 7 }
-`
+}
 ```
 
-Use the alternative `~...~` delimiter when JavaScript template literals need
-backticks. Browser applications can import `@matra/command/browser` and call
+The body is preserved as JavaScript source. A `}` inside a string, comment,
+regular expression, or template literal does not close the block. Browser
+applications can import `@matra/command/browser` and call
 `executeNodejsBlock()`. Browser blocks run in a disposable Web Worker; Node
 APIs and arbitrary terminal commands are unavailable. This is not an OS
 security sandbox, so only execute code the user has chosen to run.
+The old `nodejs[...]` form with a backtick-delimited body is not accepted.
 
 ## Protocol v0.1
 

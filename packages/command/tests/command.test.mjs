@@ -11,7 +11,6 @@ import {
 
 const command = props => ({ tag: "command", props, children: [] })
 const workflow = children => ({ tag: "workflow", props: {}, children })
-const nodejs = (props, code) => ({ tag: "nodejs", props, children: [code] })
 
 describe("Matra command planning", () => {
   it("plans a command parsed from current Matra source", () => {
@@ -134,9 +133,11 @@ describe("Matra command authorization", () => {
 
 describe("Matra local process execution", () => {
   it("executes the same nodejs block syntax through the Node adapter", async () => {
-    const plan = planCommands(
-      nodejs({ stdout: "json", bind: "answer" }, "return { answer: 6 * 7 }"),
-    )
+    const source = `nodejs(stdout="json", bind="answer") {
+return { answer: 6 * 7 }
+}`
+    const ast = staticValueToAST(evaluateStatic(parse(source)))
+    const plan = planCommands(ast)
     assert.deepEqual(plan.capabilities.commands, ["node"])
     const result = await executePlan(authorizePlan(plan, { commands: ["node"] }))
     assert.deepEqual(result.bindings.answer, { answer: 42 })

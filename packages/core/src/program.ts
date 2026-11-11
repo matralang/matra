@@ -1,4 +1,5 @@
 /** 標準文法の parser と、静的取得・明示的実行。 */
+import { tokenizer as createJavaScriptTokenizer } from "acorn"
 import type { MatraScalar } from "./ast/types.js"
 
 export type MatraExpression =
@@ -554,7 +555,8 @@ class ProgramParser {
       else break
     }
     if (this.startsNode()) {
-      const attributes = this.consume("(")
+      const hasAttributes = this.consume("(")
+      const attributes = hasAttributes
         ? this.list(
             ")",
             () => {
@@ -567,12 +569,13 @@ class ProgramParser {
           )
         : []
       if (id !== undefined) attributes.unshift({ key: "id", value: { kind: "literal", value: id } })
+      const body = name === "nodejs" && hasAttributes ? this.javascriptBlock() : this.block(true)
       return {
         kind: "node",
         tag: name,
         classes: [...new Set(classes)],
         attributes,
-        body: this.block(true),
+        body,
       }
     }
     this.index = checkpoint
@@ -596,6 +599,16 @@ class ProgramParser {
     while (this.token(cursor).kind === "newline") cursor++
     const following = this.token(cursor)
     return following.kind === "symbol" && following.value === "="
+  }
+  private javascriptBlock(): MatraStatement[] {
+    const opening = this.peek()
+    this.expect("{")
+    const start = opening.offset + 1
+    const { code, end } = readJavaScriptBlock(this.source, start)
+    this.tokens.length = this.index
+    this.lexer = tokenize(this.source, end)
+    this.expect("}")
+    return [{ kind: "expression", expression: { kind: "literal", value: code } }]
   }
   private list<T>(end: string, item: () => T, attributes = false): T[] {
     return this.nested(() => {
@@ -736,6 +749,33 @@ function* tokenize(source: string, index = 0): Generator<Token> {
     throw new ProgramSyntaxError(`Unexpected '${char}' at offset ${offset}.`)
   }
   yield { kind: "eof", value: "", offset: source.length }
+}
+
+function readJavaScriptBlock(source: string, start: number): { code: string; end: number } {
+  const tokenizer = createJavaScriptTokenizer(source.slice(start), { ecmaVersion: "latest" })
+  let depth = 0
+  while (true) {
+    let token: ReturnType<typeof tokenizer.getToken>
+    try {
+      token = tokenizer.getToken()
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error
+      const offset = start + ("pos" in error ? Number(error.pos) : 0)
+      throw new ProgramSyntaxError(`Invalid JavaScript code block at offset ${offset}.`)
+    }
+    if (token.type.label === "eof") {
+      throw new ProgramSyntaxError(`Unterminated JavaScript code block at offset ${source.length}.`)
+    }
+    if (token.type.label === "{" || token.type.label === "${") {
+      depth++
+    } else if (token.type.label === "}") {
+      if (depth === 0) {
+        const end = start + token.start
+        return { code: source.slice(start, end), end }
+      }
+      depth--
+    }
+  }
 }
 
 class MarkupParser {

@@ -56,12 +56,14 @@ const result = await executePlan(authorized)
 呼び出してください。async codeと`await`も利用できます。
 
 ```matra
-nodejs[stdout="json" bind="answer"] `
+nodejs(stdout="json", bind="answer") {
 return { answer: 6 * 7 }
-`
+}
 ```
 
-JavaScript template literalでbacktickが必要な場合は`~...~` delimiterを使えます。
+本文はJavaScript sourceとしてそのまま保持されます。外側の`}`は、文字列・comment・正規表現・
+template literal内ではblockの終端として扱われません。
+旧`nodejs[...]`とbacktick本文を組み合わせる記法は使用できません。
 browserでは`@matra/command/browser`の`executeNodejsBlock()`を利用します。使い捨て
 Web Worker内で動作し、Node APIや任意のterminal commandは利用できません。これは
 OS security sandboxではないため、ユーザーが実行を選んだcodeだけを対象にしてください。
