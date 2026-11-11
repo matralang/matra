@@ -6,10 +6,10 @@
 
 This document separates the initial implementation contract from future design proposals.
 It is not a formal grammar specification. The implemented scope is the explicit entry, `.js.part`,
-and relative imports between `.js` modules fenced in the Markdown document. npm dependencies and
-Python integration are later stages.
+relative imports between `.js` modules fenced in the Markdown document, and preinstalled npm
+dependencies. Python integration is a later stage.
 It supplements the [common runtime roadmap](./portable-runtime.md) without adding
-npm or Python integration to the v0.3 minimal implementation.
+Python integration to the v0.3 minimal implementation.
 
 The scope is loading Markdown documents containing ordinary Matra Programs, module resolution,
 language interoperation, and developer tooling. Changes to Matra compiler source grammar are out of scope.
@@ -71,8 +71,10 @@ the total `60`. Run regressions with `node --test crates/matra-seed/tests/litera
   headers are diagnosed as unsupported, never inferred from the body.
 - A `.js` fence may use static ESM imports/re-exports to relative `.js` fences in the same document.
   Specifiers must start with `./` or `../`, end in `.js`, and resolve to a registered fence.
-  npm/bare specifiers, Node builtins, dynamic `import()`, import attributes, top-level await, and
-  cyclic dependencies are rejected. Imported modules need not also be listed in `matra.values`.
+  Bare package specifiers may import/re-export npm packages installed in advance in the execution
+  environment. Do not generate or modify `node_modules`. Reject direct Node builtin imports, package import maps,
+  dynamic `import()`, import attributes, top-level await, and cyclic dependencies. Imported modules
+  need not also be listed in `matra.values`.
   A public root colliding with a Matra binding uses the existing duplicate-binding diagnostic.
 - A `.js.part` body is syntax-checked as one parenthesized JavaScript expression in strict mode.
   Object/function/arrow expressions, newlines, and JavaScript comments are accepted.
@@ -85,6 +87,9 @@ expressions and `.js` modules/dependencies, validates imports, and compiles Matr
 execute user code. At runtime, selected `.js.part` values initialize in ascending ASCII path order,
 then selected ESM modules initialize through the standard Node.js loader before the Matra entry runs.
 ESM dependency ordering follows the standard loader, and each module initializes once per run.
+Bare packages resolve from `node_modules` under `runLiterate`'s `moduleRoot` (default: `process.cwd()`).
+The CLI passes its `ROOT`. Resolve packages and their transitive dependencies with Node.js's standard
+loader; build does not install or execute them.
 Function bodies execute only when called. `.js.part` expressions retain their fresh VM context.
 Standard `.js` modules execute in the Node.js process and are not isolated from host globals or permissions.
 Restricting static imports is not a sandbox and does not prevent module code from accessing `process` or other
@@ -127,9 +132,9 @@ must not load the literate host or compiler Wasm, or introduce new dependencies
 on Node.js-specific modules. The HTML renderer does not gain execution features.
 The CLI provides `matra-literate build ROOT DOCUMENT.md OUTPUT.json` and
 `matra-literate run ROOT OUTPUT.json`.
-Standard JavaScript ESM fences in Markdown and relative imports within the same
-document are supported experimentally. Browser execution, npm package
-resolution, and Python imports are outside this API's scope.
+Standard JavaScript ESM fences in Markdown, relative imports within the same
+document, and bare imports of preinstalled npm packages are supported experimentally.
+Browser execution, automatic npm installation, and Python imports are outside this API's scope.
 
 This is a documented and tested public API, but stable-API compatibility is not
 guaranteed. Provide migration instructions for changes or moves. The unpublished
@@ -142,12 +147,15 @@ approach, not to ordinary Core APIs.
 | API | Input | Successful result | Does not perform |
 | --- | --- | --- | --- |
 | `buildLiterate(markdown, options?)` | Markdown string and optional `options.document` name | Promise of an executable bundle | Execution of document JavaScript expressions/functions or Matra programs; HTML generation |
-| `runLiterate(bundle)` | Executable bundle with a supported format and ABI | Promise of a value in the document data subset | Recompilation, HTML generation, or file output |
+| `runLiterate(bundle, options?)` | Executable bundle with a supported format and ABI; optional `globals` and `moduleRoot` | Promise of a value in the document data subset | Recompilation, package installation, HTML generation, or file output |
 
 `options.document` is a diagnostic name, defaulting to `<markdown>`, not an
 instruction to read a file. FrontMatter is the source of truth for entry and
 values; caller overrides are rejected. Bundle the matching compiler Wasm so
 ordinary use does not require compiler path or acquisition configuration.
+`moduleRoot` is the project directory used to resolve npm dependencies and
+defaults to `process.cwd()`. Install required packages in advance; documents and
+bundles do not install or embed dependencies.
 
 Build returns a versioned bundle that can be saved and restored as JSON.
 It contains Wasm, selected JavaScript sources, and source locations; it does not
@@ -604,8 +612,7 @@ Implement incrementally:
 
 1. Implement named virtual files, explicit entry selection, and synchronous selected `.js.part` values/functions (initial release).
 2. Experimentally implement standard JavaScript ESM fences and same-document relative imports.
-   Consider npm dependencies and parameter headers separately.
-3. Complete dependency management, error mapping, completion, and debugging support.
+3. Improve npm dependency diagnostics, error mapping, completion, and debugging support.
 4. Independently design and validate Python integration against the calling contract.
 
 Add at least the following regression tests:

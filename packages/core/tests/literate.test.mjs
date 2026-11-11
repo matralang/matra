@@ -1,5 +1,8 @@
 import assert from "node:assert/strict"
 import { spawnSync } from "node:child_process"
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { test } from "node:test"
 import { buildLiterate, LiterateError, runLiterate } from "@matra/core/experimental/literate"
 
@@ -219,6 +222,46 @@ ${body}
       assert.equal(error.code, expected)
       return true
     })
+  }
+})
+
+test("standard modules resolve preinstalled npm packages from moduleRoot", async () => {
+  const moduleRoot = await mkdtemp(join(tmpdir(), "matra-literate-npm-"))
+  try {
+    const packageDirectory = join(moduleRoot, "node_modules", "matra-test-package")
+    await mkdir(packageDirectory, { recursive: true })
+    await writeFile(
+      join(packageDirectory, "package.json"),
+      JSON.stringify({
+        name: "matra-test-package",
+        type: "module",
+        exports: { ".": "./index.js" },
+      }),
+    )
+    await writeFile(
+      join(packageDirectory, "index.js"),
+      "export const add = (left, right) => left + right\n",
+    )
+    const source = `---
+matra:
+  entry: main.matra
+  values: [math.js]
+---
+\`\`\`main.matra
+p { math.add(19, 23) }
+\`\`\`
+\`\`\`math.js
+export * from "matra-test-package"
+\`\`\`
+`
+    const bundle = await buildLiterate(source)
+    assert.deepEqual(await runLiterate(bundle, { moduleRoot }), {
+      tag: "p",
+      props: {},
+      children: [42],
+    })
+  } finally {
+    await rm(moduleRoot, { recursive: true, force: true })
   }
 })
 

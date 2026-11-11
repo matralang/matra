@@ -25,6 +25,7 @@ export interface LiterateBundle {
 
 export interface LiterateRunOptions {
   globals?: Record<string, StaticValue>
+  moduleRoot?: string
 }
 
 export async function buildLiterate(

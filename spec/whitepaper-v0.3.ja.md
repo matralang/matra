@@ -249,7 +249,8 @@ p { analytics.total(data) }
 
 `.js.part`は単一のJavaScript式であり、データだけでなく関数も公開できる。
 `analytics/total.js.part`はMatra側の`analytics.total`になる。
-標準の`.js` moduleのimport/export、npmやPythonの直接連携は、この初版経路には含まれない。
+標準の`.js` moduleではnamed exportまたはdefault-only exportを公開でき、同文書内の相対importと
+事前install済みnpm packageのimportを使える。Pythonの直接連携やnpm packageの自動installは含まれない。
 Markdown全体をMatra文法で解析するのでも、説明文を自動的にHTMLへ変換するのでもない。
 
 ### 6.2 buildとrunを分ける

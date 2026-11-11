@@ -175,8 +175,10 @@ const html = toHTML(staticValueToAST(value))
 文書先頭のYAML FrontMatterで`matra.entry`と省略可能な`matra.values`を指定します。
 buildは文書コードを実行せず、runは実行結果の値を返します。通常の利用に中間ファイルは不要です。
 値fenceの`.js.part`に加え、`.js` fenceは標準ESMのnamed exportまたはdefault-only exportを公開できます。
-同文書内の相対static import/re-exportを解決しますが、npm/Node builtin、dynamic import、循環依存、
-top-level awaitは未対応です。標準moduleはNode.js process内で実行され、sandboxではありません。
+同文書内の相対static import/re-exportと、事前install済みnpm packageのimportに対応します。
+依存は`runLiterate`の`moduleRoot`（省略時は`process.cwd()`）から解決し、自動installはしません。
+直接のNode builtin import、dynamic import、循環依存、top-level awaitは未対応です。
+標準moduleはNode.js process内で実行され、sandboxではありません。
 信頼した文書だけを実行してください。Matra nodeは第一級実行時値ではなく、現状はplain dataとして渡ります。
 関数・options・bundle・errorの型定義もサブパスから提供します。
 `LiterateError`は`code`・`document`・`path`・`line`・利用可能な`cause`を持ちます。

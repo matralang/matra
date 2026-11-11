@@ -97,22 +97,20 @@ try {
     "---",
     "matra:",
     "  entry: main.matra",
-    "  values: [math.js]",
+    "  values: [markup.js]",
     "---",
     "\`\`\`main.matra",
-    "p { math.total([10, 20, 30]) }",
+    'p { markup.render("packed") }',
     "\`\`\`",
-    "\`\`\`math.js",
-    'export { default as total } from "./sum.js"',
-    "\`\`\`",
-    "\`\`\`sum.js",
-    "export default values => values.reduce((sum, value) => sum + value, 0)",
+    "\`\`\`markup.js",
+    'import { toHTML } from "@matra/html"',
+    'export const render = value => toHTML({ tag: "p", props: {}, children: [value] })',
     "\`\`\`",
   ].join("\\n"))
-  assert.deepEqual(await runLiterate(moduleBundle), {
+  assert.deepEqual(await runLiterate(moduleBundle, { moduleRoot: process.cwd() }), {
     tag: "p",
     props: {},
-    children: [60],
+    children: ["<p>packed</p>"],
   })
 } catch (error) {
   if (process.env.EXPECT_COMPILER_ERROR === "1") {
@@ -260,7 +258,7 @@ import { evaluate, parse, staticValueToAST } from "@matra/core/browser"
 const options: LiterateBuildOptions = { document: "example.md" }
 const bundle: LiterateBundle = await buildLiterate("", options)
 await runLiterate(bundle)
-const runOptions: LiterateRunOptions = { globals: { page: { title: "Host data" } } }
+const runOptions: LiterateRunOptions = { globals: { page: { title: "Host data" } }, moduleRoot: "." }
 await runLiterate(bundle, runOptions)
 const inspect = (error: LiterateError): string => error.code + error.document + error.path + error.line
 void inspect

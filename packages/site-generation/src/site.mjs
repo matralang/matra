@@ -24,7 +24,10 @@ const OUTPUT_MANIFEST = ".matra-site-manifest.json"
 
 export async function renderLiterateDocument(markdown, options = {}) {
   const bundle = await buildLiterate(markdown, { document: options.document })
-  const value = await runLiterate(bundle, { globals: options.globals })
+  const value = await runLiterate(bundle, {
+    globals: options.globals,
+    moduleRoot: options.moduleRoot,
+  })
   return staticValueToAST(value)
 }
 
@@ -467,6 +470,7 @@ async function renderPage(page, settings) {
   }
   const value = await runLiterate(page.bundle, {
     globals: globalsFor(page, settings, []),
+    moduleRoot: settings.root,
   })
   return staticValueToAST(value)
 }
@@ -477,7 +481,7 @@ async function renderLayout(layout, content, page, settings) {
   }
   const pageContent = content.tag === "$root" ? content.children : [content]
   const globals = globalsFor(page, settings, pageContent)
-  const value = await runLiterate(layout.bundle, { globals })
+  const value = await runLiterate(layout.bundle, { globals, moduleRoot: settings.root })
   return staticValueToAST(value)
 }
 

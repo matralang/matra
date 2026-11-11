@@ -1,6 +1,7 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, rm, stat, symlink, writeFile } from "node:fs/promises"
+import { isBuiltin } from "node:module"
 import { tmpdir } from "node:os"
-import { dirname, join, posix as posixPath } from "node:path"
+import { dirname, join, posix as posixPath, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 import { types } from "node:util"
 import { createContext, Script } from "node:vm"
@@ -114,9 +115,28 @@ function moduleImports(block, blocks) {
       source = node.source.value
     }
     if (source === undefined) return
+    if (typeof source !== "string") {
+      fail("UNSUPPORTED_IMPORT", block, "Module specifier must be a string")
+    }
+    if (!source.startsWith("./") && !source.startsWith("../")) {
+      const parts = source.split("/")
+      if (
+        source.startsWith("#") ||
+        source.startsWith("/") ||
+        source.includes("\\") ||
+        source.includes("?") ||
+        source.includes("#") ||
+        source.includes(":") ||
+        /\s/.test(source) ||
+        isBuiltin(source) ||
+        parts.some(part => !part || part === "." || part === "..") ||
+        (source.startsWith("@") && (parts.length < 2 || parts[0].length < 2))
+      ) {
+        fail("UNSUPPORTED_IMPORT", block, `Unsupported module specifier: ${source}`)
+      }
+      return
+    }
     if (
-      typeof source !== "string" ||
-      (!source.startsWith("./") && !source.startsWith("../")) ||
       source.includes("\\") ||
       source.includes("?") ||
       source.includes("#") ||
@@ -199,6 +219,9 @@ function moduleExportNames(block, blocks, cache = new Map()) {
       if (node.exported) {
         names.add(node.exported.name ?? node.exported.value)
       } else {
+        if (!node.source.value.startsWith("./") && !node.source.value.startsWith("../")) {
+          return null
+        }
         const dependency = moduleImports(block, blocks).find(
           imported =>
             posixPath.normalize(
@@ -230,7 +253,9 @@ function publicBindings(selected, blocks) {
       add(parts, block)
       continue
     }
-    const names = [...moduleExportNames(block, blocks)].sort()
+    const exportedNames = moduleExportNames(block, blocks)
+    if (exportedNames === null) continue
+    const names = [...exportedNames].sort()
     if (names.length === 0) fail("NO_EXPORTS", block, "Selected module has no exports")
     if (names.includes("default")) {
       if (names.length !== 1) {
@@ -515,12 +540,24 @@ function bindPublicValue(globals, parts, value, block) {
   target[name] = value
 }
 
-async function loadStandardModules(roots, dependencies, globals, prototypes) {
+async function loadStandardModules(roots, dependencies, globals, prototypes, moduleRoot) {
   if (roots.length === 0) return async () => {}
   const directory = await mkdtemp(join(tmpdir(), "matra-literate-"))
   let current = roots[0]
   try {
     await writeFile(join(directory, "package.json"), '{"type":"module"}', "utf8")
+    const nodeModules = join(resolve(moduleRoot), "node_modules")
+    try {
+      if ((await stat(nodeModules)).isDirectory()) {
+        await symlink(
+          nodeModules,
+          join(directory, "node_modules"),
+          process.platform === "win32" ? "junction" : "dir",
+        )
+      }
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error
+    }
     for (const block of [...roots, ...dependencies]) {
       const file = join(directory, ...block.path.split("/"))
       await mkdir(dirname(file), { recursive: true })
@@ -618,7 +655,9 @@ export async function runLiterate(bundle, options = {}) {
     options === null ||
     typeof options !== "object" ||
     Array.isArray(options) ||
-    Object.keys(options).some(key => key !== "globals") ||
+    Object.keys(options).some(key => key !== "globals" && key !== "moduleRoot") ||
+    (options.moduleRoot !== undefined &&
+      (typeof options.moduleRoot !== "string" || options.moduleRoot.length === 0)) ||
     (options.globals !== undefined &&
       (options.globals === null ||
         typeof options.globals !== "object" ||
@@ -697,6 +736,7 @@ export async function runLiterate(bundle, options = {}) {
     bundle.modules ?? [],
     globals,
     prototypes,
+    options.moduleRoot ?? process.cwd(),
   )
   try {
     const hostGlobals = options.globals ?? {}

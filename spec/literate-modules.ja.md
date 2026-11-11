@@ -5,10 +5,10 @@
 ## 状態と対象
 
 本書は初版の実装契約と将来の設計案を区別して記述する。正式な文法仕様ではない。
-実装範囲は次節の明示入口、`.js.part`、Markdown内`.js` moduleの相対importに限定する。
-npm依存とPython連携は後続段階である。
+実装範囲は次節の明示入口、`.js.part`、Markdown内`.js` moduleの相対importと事前install済みnpm依存である。
+Python連携は後続段階である。
 [共通ランタイムのロードマップ](./portable-runtime.ja.md)を補足するが、
-v0.3の最小実動版にnpm・Python連携を追加するものではない。
+v0.3の最小実動版にPython連携を追加するものではない。
 
 対象は、一般のMatra Programを含むMarkdown文書の読み込み、モジュール解決、
 言語間連携と開発環境である。Matra compiler sourceの文法変更は対象外とする。
@@ -65,7 +65,9 @@ JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結�
   その他の形式と`?values`引数ヘッダーは未対応として診断する。本文から形式を推測しない。
 - `.js` fenceは同じ文書内の`.js` fenceへの相対static ESM import/re-exportを使える。
   import pathは`./`または`../`で始まり、`.js`で終わり、登録済みfenceへ解決しなければならない。
-  npm/bare specifier、Node builtin、dynamic `import()`、import attributes、top-level await、循環依存は拒否する。
+  bare package specifierは、実行環境に事前installされたnpm packageのimport/re-exportに使える。
+  `node_modules`の自動生成・変更はしない。fenceからの直接Node builtin import、package import map、dynamic `import()`、
+  import attributes、top-level await、循環依存は拒否する。
   import対象は`matra.values`へ重ねて列挙しなくてよい。
   Matraのbindingと同名の公開rootは既存のduplicate-binding診断で拒否する。
 - `.js.part`はstrict modeで本文全体を括弧で囲んだ単一のJavaScript式として構文検証する。
@@ -78,6 +80,8 @@ JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結�
 import解決を検証してMatraをWasmへcompileする。buildはユーザーコードを実行しない。
 実行時は選択した`.js.part`をASCII path昇順で初期化し、選択したESM moduleをNode.js標準loaderで初期化してから入口を実行する。
 ESMの依存初期化順は標準loaderに従い、各moduleは一回のrunで一度だけ初期化する。関数本体は呼び出し時だけ実行する。
+bare packageの解決起点は`runLiterate`の`moduleRoot`（省略時は`process.cwd()`）にある`node_modules`とする。
+CLIは指定された`ROOT`を渡す。依存packageとその推移依存はNode.js標準loaderで解決し、build時にinstall・実行しない。
 再実行では新しいJavaScript contextと値を作り、同一実行内のclosure状態だけを保持する。
 `.js.part`は従来どおり新規VM contextで評価し、公開名・Matra bindingを注入しない。
 標準`.js` moduleはNode.js process内で実行され、hostのglobalや権限から隔離されない。
@@ -119,19 +123,21 @@ Node.js固有の実行機構とcompiler供給の実装は通常のCore入口か�
 通常の`@matra/core`のimportはliterate hostやcompiler Wasmを読み込まず、
 Node.js固有moduleへの新しい依存を持たせない。HTML rendererにも実行機能を含めない。
 CLIは`matra-literate build ROOT DOCUMENT.md OUTPUT.json`と`matra-literate run ROOT OUTPUT.json`を提供する。
-Markdown内の標準JavaScript ESM fenceと同文書内の相対importを実験的にサポートする。
-ブラウザ実行、npm package解決、Pythonの直接importはこの公開APIの範囲外とする。
+Markdown内の標準JavaScript ESM fence、同文書内の相対import、事前install済みnpm packageのbare importを実験的にサポートする。
+ブラウザ実行、npm packageの自動install、Pythonの直接importはこの公開APIの範囲外とする。
 
 ### 関数と値の契約
 
 | API | 入力 | 成功時の結果 | 実行しないこと |
 | --- | --- | --- | --- |
 | `buildLiterate(markdown, options?)` | Markdown文字列、省略可能な文書名`options.document` | 実行用bundleを返すPromise | 文書中のJavaScript式・関数とMatraプログラムの実行、HTML生成 |
-| `runLiterate(bundle)` | 対応する形式・ABIの実行用bundle | 文書data subsetの値を返すPromise | 再コンパイル、HTML生成、ファイルへの出力 |
+| `runLiterate(bundle, options?)` | 対応する形式・ABIのbundle、省略可能な`globals`と`moduleRoot` | 文書data subsetの値を返すPromise | 再コンパイル、packageのinstall、HTML生成、ファイルへの出力 |
 
 `options.document`は診断用の名前で、省略時は`<markdown>`とする。ファイルを自動で読み込む指定ではない。
 entryとvaluesはFrontMatterを正本とし、呼び出し側からの上書きは拒否する。
 対応するcompiler Wasmを同梱するため、通常の利用でcompilerのpath指定や取得設定は要求しない。
+`moduleRoot`はnpm依存を解決するproject directoryであり、省略時は`process.cwd()`を使う。
+必要なpackageは事前にprojectへinstallする。文書やbundleが依存をinstall・同梱することはない。
 
 buildの戻り値はJSONとして保存・復元できるversion付きbundleとする。Wasmに加えて選択した
 JavaScriptソースと元位置を含み、ソース秘匿や任意version間の互換性は保証しない。
@@ -552,8 +558,7 @@ JavaScriptの関数宣言の巻き上げは「最初に全コードを評価す�
 
 1. 名前付き仮想ファイル、明示入口、選択した`.js.part`の同期的な値・関数連携を実装する（初版）。
 2. Markdown内の標準JavaScript ESMと同文書内相対importを実験的に実装する。
-   npm依存と引数ヘッダーは別段階で検討する。
-3. 依存管理とエラー位置・補完・デバッグの対応を整える。
+3. npm依存の診断、エラー位置・補完・デバッグの対応を整える。
 4. 呼び出し契約に沿ってPython連携を個別に検討・検証する。
 
 少なくとも次の回帰testを追加する。

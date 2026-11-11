@@ -17,7 +17,7 @@ try {
     const bundle = await buildLiterate(runtime.read_text(input), { document: input })
     await writeFile(outputPath, `${JSON.stringify(bundle)}\n`, "utf8")
   } else if (command === "run" && rest.length === 0) {
-    const result = await runLiterate(JSON.parse(runtime.read_text(input)))
+    const result = await runLiterate(JSON.parse(runtime.read_text(input)), { moduleRoot: root })
     process.stdout.write(`${JSON.stringify(result)}\n`)
   } else {
     throw new Error(

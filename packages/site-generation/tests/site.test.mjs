@@ -101,6 +101,44 @@ article { h1 { page.data.title }; p { site.data.label } }
   )
 })
 
+test("resolves preinstalled npm packages from the site project root", async t => {
+  const root = await project(t)
+  const packageDirectory = join(root, "node_modules", "matra-site-package")
+  await mkdir(packageDirectory, { recursive: true })
+  await writeFile(
+    join(packageDirectory, "package.json"),
+    JSON.stringify({
+      name: "matra-site-package",
+      type: "module",
+      exports: { ".": "./index.js" },
+    }),
+  )
+  await writeFile(join(packageDirectory, "index.js"), 'export const answer = "from npm"\n')
+  await writeFile(
+    join(root, "pages", "npm.matra.md"),
+    `---
+matra:
+ entry: main.matra
+ values: [value.js]
+site:
+ data:
+   title: npm
+---
+\`\`\`main.matra
+article { p { value.answer } }
+\`\`\`
+\`\`\`value.js
+import { answer } from "matra-site-package"
+export { answer }
+\`\`\`
+`,
+  )
+
+  await buildSite(root)
+
+  assert.match(await readFile(join(root, "dist", "npm", "index.html"), "utf8"), /from npm/)
+})
+
 test("supports JSON and static Matra configuration files", async t => {
   for (const [filename, source] of [
     [

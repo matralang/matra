@@ -251,7 +251,9 @@ p { analytics.total(data) }
 
 A `.js.part` body is one JavaScript expression and may expose functions as well as data.
 `analytics/total.js.part` becomes `analytics.total` in Matra.
-Standard `.js` module import/export, npm, and direct Python integration are not implemented in this initial route.
+Standard `.js` modules can expose named exports or a default export alone and import
+same-document modules or preinstalled npm packages. Direct Python integration and
+automatic npm installation are not part of this route.
 The loader neither parses all Markdown through the Matra grammar nor automatically renders its prose as HTML.
 
 ### 6.2 Separate build and run

@@ -192,8 +192,11 @@ bundles that lack the ABI field.
 
 Alongside `.js.part` value fences, `.js` fences can expose standard ESM named
 exports or a default export alone. Static relative imports/re-exports between
-fences in the same document are supported; npm/Node builtins, dynamic imports,
-cycles, and top-level await are not. Standard modules execute in the Node.js
+fences in the same document and bare imports of preinstalled npm packages are
+supported. Install dependencies before running; they resolve from
+`runLiterate`'s `moduleRoot` (default: `process.cwd()`). The CLI uses its `ROOT`.
+No automatic installation occurs. Direct Node builtin imports, dynamic imports,
+cycles, and top-level await are not supported. Standard modules execute in the Node.js
 process and are not sandboxed; run trusted documents only. Matra nodes are not
 first-class runtime values and currently cross only as plain data.
 
