@@ -5,10 +5,9 @@
 ## 状態と対象
 
 本書は初版の実装契約と将来の設計案を区別して記述する。正式な文法仕様ではない。
-実装範囲は次節の明示入口、`.js.part`、Markdown内`.js` moduleの相対importと事前install済みnpm依存である。
-Python連携は後続段階である。
-[共通ランタイムのロードマップ](./portable-runtime.ja.md)を補足するが、
-v0.3の最小実動版にPython連携を追加するものではない。
+実装範囲は次節の明示入口、`.js.part`、Markdown内`.js` moduleの相対importと事前install済みnpm依存、
+およびPyodideで実行する`.py` moduleである。
+[共通ランタイムのロードマップ](./portable-runtime.ja.md)を補足する。
 
 対象は、一般のMatra Programを含むMarkdown文書の読み込み、モジュール解決、
 言語間連携と開発環境である。Matra compiler sourceの文法変更は対象外とする。
@@ -29,8 +28,9 @@ pnpm literate -- run ROOT OUTPUT.json
 ```
 
 文書先頭のYAML FrontMatterに`matra.entry`と`matra.values`を指定する。
-入口は単一の`.matra`仮想ファイル、値は`.js.part`または`.js`のlistとする。
+入口は単一の`.matra`仮想ファイル、値は`.js.part`、`.js`または`.py`のlistとする。
 `.js`は標準JavaScript ESMとして扱い、named exportまたはdefault-only exportを公開できる。
+`.py`はPython moduleとして扱い、`__all__`で列挙したexportを公開する。
 `matra.values`で選んだmoduleのみMatraへ公開し、相対importで到達するfenceはdependencyとして含めるが、
 別途選択されない限りMatra名へ公開しない。
 `matra.values`を省略した場合は空listとし、指定しないblockは初期化・実行しない。
@@ -38,7 +38,8 @@ build APIとCLIは実行環境上の文書名・pathだけを受け取り、entr
 FrontMatterのない文書、無効なYAML、欠落または不正な設定はdiagnosticにする。
 暗黙のimportや実ファイル検索はない。
 `ROOT`と実ファイルのパスは[共通ランタイムの論理パス契約](./portable-runtime.ja.md)に従う。
-出力はversion付きJSON bundle（Wasm、選択した式と元位置）とし、`run`は文書data modelの
+出力はversion付きJSON bundle（Wasm、選択blockと必要なmodule dependencyのsource・元位置）とし、
+`run`は文書data modelの
 JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結果はエラーとする。
 [実行可能なサンプル](../crates/matra-seed/examples/literate-values.md)は合計`60`を含む文書を生成する。
 回帰testは`node --test crates/matra-seed/tests/literate-runtime.test.mjs`で実行する。
@@ -57,11 +58,12 @@ JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結�
   ファイル名は`/`区切り、各componentはASCIIのidentifierまたはそれにdot接尾辞を付けた形とし、
   `.`・`..`、空component、絶対パス、backslash、queryを拒否する。
   パスは大小文字を区別するが、大小文字だけ異なる重複も拒否する。
-- 全名前付きfenceの重複パスを登録時に拒否する。`.js`と`.js.part`は別形式とする。
+- 全名前付きfenceの重複パスを登録時に拒否する。`.js`、`.js.part`、`.py`は別形式とする。
   `.js.part`の公開名は接尾辞を除いたpath、`.js`のnamed exportはmodule pathにexport名を追加したpath、
   default-only exportは接尾辞を除いたmodule pathとする。同じmoduleでdefaultとnamed exportを併用しない。
+  `.py`の`__all__`に列挙したexportはmodule pathにexport名を追加したpathとする。
   実際に公開される同名・親子名は衝突エラーとする。
-- 選択した入口は`.matra`、値は`.js.part`または`.js`のみ受理する。
+- 選択した入口は`.matra`、値は`.js.part`、`.js`または`.py`のみ受理する。
   その他の形式と`?values`引数ヘッダーは未対応として診断する。本文から形式を推測しない。
 - `.js` fenceは同じ文書内の`.js` fenceへの相対static ESM import/re-exportを使える。
   import pathは`./`または`../`で始まり、`.js`で終わり、登録済みfenceへ解決しなければならない。
@@ -70,6 +72,14 @@ JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結�
   import attributes、top-level await、循環依存は拒否する。
   import対象は`matra.values`へ重ねて列挙しなくてよい。
   Matraのbindingと同名の公開rootは既存のduplicate-binding診断で拒否する。
+- `.py` fenceは同一文書内の他の`.py` fenceとPython標準ライブラリをimportできる。
+  文書内moduleはPythonのimport名（pathの`/`を`.`へ変換）で解決し、build時に依存をbundleへ含める。
+  Pyodide付属の標準ライブラリ以外のwheel、PyPI、`micropip`は初版では使わない。
+  選択した各moduleは`__all__`を文字列のliteral list/tupleとして宣言し、各exportをmoduleの公開名に対応させる。
+  `__all__`未指定や不正なexport、循環依存はdiagnosticにする。動的importは未対応とする。
+- `.py`の公開値は共通data valueまたは同期関数に限る。Python整数は安全なbinary64整数範囲に制限し、
+  `None`、boolean、有限float、文字列、密なlist、文字列keyのdictを境界ごとにcopyする。
+  class instance、tuple、set、bytes、循環、awaitable、async functionは拒否する。
 - `.js.part`はstrict modeで本文全体を括弧で囲んだ単一のJavaScript式として構文検証する。
   object式、関数式、arrow、改行とJavaScript commentを受理する。
   import/export宣言、複数文、末尾semicolonを拒否する。別形式へのfallbackはない。
@@ -77,11 +87,17 @@ JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結�
 ### 登録・build・実行
 
 登録は名前・衝突・選択対象を検証し、buildは選択した`.js.part`式と`.js` module/dependencyの構文・
-import解決を検証してMatraをWasmへcompileする。buildはユーザーコードを実行しない。
+import解決、`.py` moduleのPython構文・import依存を検証してMatraをWasmへcompileする。
+Python syntax解析にはPyodideを使うが、build時に文書のPython codeを実行しない。
 実行時は選択した`.js.part`をASCII path昇順で初期化し、選択したESM moduleをNode.js標準loaderで初期化してから入口を実行する。
 ESMの依存初期化順は標準loaderに従い、各moduleは一回のrunで一度だけ初期化する。関数本体は呼び出し時だけ実行する。
 bare packageの解決起点は`runLiterate`の`moduleRoot`（省略時は`process.cwd()`）にある`node_modules`とする。
 CLIは指定された`ROOT`を渡す。依存packageとその推移依存はNode.js標準loaderで解決し、build時にinstall・実行しない。
+選択されたPython moduleはrunごとに初期化したPyodide runtimeで実行する。
+Pyodide runtimeとPython標準ライブラリはnpm配布物へ同梱し、実行時のPython downloadはしない。
+Python moduleのimportとtop-level codeはrun時に評価し、関数本体は呼び出し時に実行する。
+PythonとJavaScriptのmodule状態はrun間で共有しない。Python側からNode.js等のhost機能へアクセス可能なため、
+Pyodideもsandboxではなく、信頼した文書だけを実行する。
 再実行では新しいJavaScript contextと値を作り、同一実行内のclosure状態だけを保持する。
 `.js.part`は従来どおり新規VM contextで評価し、公開名・Matra bindingを注入しない。
 標準`.js` moduleはNode.js process内で実行され、hostのglobalや権限から隔離されない。
@@ -93,14 +109,16 @@ module側のtop-level副作用は各runで再実行され、process-globalな変
 
 ### 値境界とdiagnostic
 
-`.js.part`と`.js`の値境界では`null`、boolean、有限数、文字列、密な配列、plain objectのown enumerableな
-文字列key/data propertyを再帰copyする。JavaScriptからMatraへは関数値も公開できる。
-Matraから渡す引数はcopyし、JavaScript側の変更をMatraへ反映しない。戻り値もcopyする。
+`.js.part`、`.js`、`.py`の値境界では`null`、boolean、有限数、文字列、密な配列、plain objectのown enumerableな
+文字列key/data propertyを再帰copyする。JavaScript/PythonからMatraへは同期関数値も公開できる。
+Matraから渡す引数はcopyし、host側の変更をMatraへ反映しない。戻り値もcopyする。
 共有参照は保存せず、循環、accessor、symbol key、非enumerable property、疎配列、
 独自prototype、`undefined`、BigInt、非有限数、Promise/thenableを拒否する。
+Python整数は`-(2^53-1)`から`2^53-1`の範囲に限り、Python関数が返すtuple、set、bytes、class instance、
+async function/awaitableも拒否する。
 文書nodeは現状plain dataとして渡せるが、Matra nodeを第一級値とする専用変換はない。
 standard moduleのtop-level exportは関数または共通data valueとし、関数を含むobject exportは拒否する。
-Matra関数のJavaScriptへの引き渡し、非同期処理は未対応とする。
+Matra関数のJavaScript/Pythonへの引き渡し、非同期処理は未対応とする。
 JavaScript関数の`this`は`undefined`とし、非関数の呼び出しは既存hostの明示的エラーとする。
 文書出力は上記data subsetのみを受理し、関数値は拒否する。
 
@@ -123,14 +141,15 @@ Node.js固有の実行機構とcompiler供給の実装は通常のCore入口か�
 通常の`@matra/core`のimportはliterate hostやcompiler Wasmを読み込まず、
 Node.js固有moduleへの新しい依存を持たせない。HTML rendererにも実行機能を含めない。
 CLIは`matra-literate build ROOT DOCUMENT.md OUTPUT.json`と`matra-literate run ROOT OUTPUT.json`を提供する。
-Markdown内の標準JavaScript ESM fence、同文書内の相対import、事前install済みnpm packageのbare importを実験的にサポートする。
-ブラウザ実行、npm packageの自動install、Pythonの直接importはこの公開APIの範囲外とする。
+Markdown内の標準JavaScript ESM fence、同文書内の相対import、事前install済みnpm packageのbare import、
+およびPyodideによる`.py` moduleを実験的にサポートする。Pythonは標準ライブラリに限定する。
+ブラウザ実行とnpm/Python packageの自動installはこの公開APIの範囲外とする。
 
 ### 関数と値の契約
 
 | API | 入力 | 成功時の結果 | 実行しないこと |
 | --- | --- | --- | --- |
-| `buildLiterate(markdown, options?)` | Markdown文字列、省略可能な文書名`options.document` | 実行用bundleを返すPromise | 文書中のJavaScript式・関数とMatraプログラムの実行、HTML生成 |
+| `buildLiterate(markdown, options?)` | Markdown文字列、省略可能な文書名`options.document` | 実行用bundleを返すPromise | 文書中のJavaScript/Python codeとMatra programの実行、HTML生成 |
 | `runLiterate(bundle, options?)` | 対応する形式・ABIのbundle、省略可能な`globals`と`moduleRoot` | 文書data subsetの値を返すPromise | 再コンパイル、packageのinstall、HTML生成、ファイルへの出力 |
 
 `options.document`は診断用の名前で、省略時は`<markdown>`とする。ファイルを自動で読み込む指定ではない。
@@ -413,7 +432,7 @@ Markdown
   └─ 名前付きブロックの収集とモジュール解決
        ├─ Matra → compiler → Wasm
        ├─ JavaScript → JavaScript module
-       └─ Python → Python実行環境（将来）
+       └─ Python → Pyodide runtime
                     ↕
              共通の呼び出し契約
 ```
@@ -425,10 +444,8 @@ Markdown
 既存ABIをそのまま安定した共通プロトコルとして保証しない。
 WASIやComponent Modelの採否も別途判断する。
 
-JavaScriptブロック内から標準のimportでnpm資産を使う方向とするが、
-依存宣言、lock、対応version、解決基準を先に定める。
-任意のnpm packageやnative addonの互換性、3 OSでの同一動作、Webでの動作は保証しない。
-Pythonは将来の拡張であり、実行環境やパッケージ連携の方式は未決である。
+JavaScript blockは事前install済みnpm packageを標準importで使える。Python blockはPyodideの標準ライブラリを使う。
+PyPI/wheel依存の管理、任意のnpm packageやnative addonの互換性、3 OSでの同一動作、Webでの動作は保証しない。
 
 引数・戻り値について、数値、文字列、配列、オブジェクト、文書ノード、数式、
 巨大整数、バイナリ、関数参照の対応範囲とcopy/共有の意味を定義する。
@@ -437,8 +454,8 @@ Pythonは将来の拡張であり、実行環境やパッケージ連携の方�
 
 ### 共通インターフェース初版案（意味契約）
 
-これはNode.js ESM初版を越えてJavaScript・Pythonを共通に扱うための設計案であり、
-ここに記すwire encodingとPython連携は未実装である。
+これはNode.js ESM初版を越えてJavaScript・Pythonを共通に扱う意味契約案である。
+ここに記すMatraJSON wire encodingは未実装だが、Python moduleはPyodideを使いこの値境界の一部を実装する。
 言語固有のmodule loaderと、言語間で共通にする値・呼び出しの意味を分ける。
 以下ではtransportをNode.js host内の直接接続とし、Matraの実行には既存のWasm方式を使う。
 JavaScript/Python自体をWasmへcompileすることは要求しない。別process、WASI、Component Modelは初版の対象外とする。
@@ -547,39 +564,19 @@ JavaScriptの関数宣言の巻き上げは「最初に全コードを評価す�
 構文エラーと実行時エラーを元のブロックの行・列に対応させる。
 短縮形から明示形への展開や実ファイルへの切り出しを開発支援の候補にする。
 
-## 実装前の決定事項と検証
+## 初版実装の確認と後続検証
 
-本書の例は提案する受理例であり、適合性テストが通っていることを意味しない。
-上記の未決事項に加え、パスの基準、許可する名前、大小文字・Unicode正規化、
-拡張子、`?`の区切り、fenceの空白・comment・delimiterの契約を日英で確定する。
-共通ランタイムの既存の論理パス契約との関係も明示する。
+初版契約のNode.js向け実装は実験的に提供する。`.js.part`、標準ESMと同文書内相対import、
+事前install済みnpm依存、標準ライブラリ限定のPyodide `.py` moduleを含む。
+Python buildはASTとimport依存を解析するだけで文書コードを実行せず、runごとに新しいPyodide runtimeを使う。
+これはNode.js以外のhost、一般的なsandbox、全npm/Python packageとの互換性を保証しない。
 
-実装は次の順で段階的に進める。
+主な回帰検証は次のとおり。
 
-1. 名前付き仮想ファイル、明示入口、選択した`.js.part`の同期的な値・関数連携を実装する（初版）。
-2. Markdown内の標準JavaScript ESMと同文書内相対importを実験的に実装する。
-3. npm依存の診断、エラー位置・補完・デバッグの対応を整える。
-4. 呼び出し契約に沿ってPython連携を個別に検討・検証する。
+- `pnpm --filter @matra/core run build`でcompiler Wasmを生成し、Stage 2/3のbyte equalityを確認する。
+- `node --test packages/core/tests/literate.test.mjs`で`.js.part`、ESM/npm、Pythonの構文・import・値境界・実行を検証する。
+- `node --test --test-concurrency=1 crates/matra-seed/tests/literate-runtime.test.mjs`でseed側の共有runtime回帰を検証する。
+- `pnpm test:literate:package`でpack済みCoreのPyodide同梱とcheckout外の実行を検証する。
 
-少なくとも次の回帰testを追加する。
-
-- 三つの形式と名前付きexport形式で、Matraから呼び出した結果が`60`になること。
-- 値形式の配列・オブジェクト・数値・文字列・boolean・nullをMatraから利用でき、
-  データセットを関数化せず参照できること。非関数の呼び出しは明確に失敗すること。
-- 単なるparse成功だけでなく、生成モジュールとMatraの文書出力を検証すること。
-- 同じ公開名、重複仮想パス、不正パス、欠けたモジュール・exportを拒否すること。
-- 引数ヘッダー形式の`return`文、複数の文、不正なJavaScriptを拒否し、
-  別形式へのfallbackや暗黙の成功にしないこと。
-- 説明用ブロックを実行せず、ブロック順を変えても依存関係に従うこと。
-- 例外、非同期処理、初期化失敗が、定めた契約と元のMarkdown位置で通知されること。
-- comment、改行、delimiter、値形式とモジュール形式の境界を検証すること。
-- `.js`と`.js.part`の判別、接尾辞を除いた公開名、形式間の名前の衝突を検証すること。
-- 名前の登録でユーザーコードを実行せず、コンパイル時にも実行しないこと。
-  両実行方式で、定めた初期化順・副作用・結果が一致すること。
-- 既存のMatra文書とcompiler sourceのfence選択・実行を維持すること。
-
-parser、AST/data model、lowering、runtime、diagnosticの影響を個別に確認し、
-不要な層を変更しない。互換性を壊す実装ではv0.xの破壊的変更と明示し、
-影響を受けるexamples、tests、README、migration文書を列挙する。
-compiler/bootstrapへ影響する場合はRust seedとStage 1/2/3を検証し、
-Stage 2/3の生成Wasmのbyte equalityを維持する。
+補完、型チェック、整形、デバッグと元文書の詳細なsource mappingは後続課題とする。
+Matra nodeの専用wire conversion、非同期interop、PyPI/wheel、browser実行も初版の範囲外である。

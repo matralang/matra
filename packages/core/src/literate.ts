@@ -20,6 +20,7 @@ export interface LiterateBundle {
   entry: LiterateBlock
   values: LiterateBlock[]
   modules?: LiterateBlock[]
+  pythonModules?: LiterateBlock[]
   wasm: string
 }
 

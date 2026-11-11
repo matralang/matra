@@ -180,6 +180,10 @@ buildは文書コードを実行せず、runは実行結果の値を返します
 直接のNode builtin import、dynamic import、循環依存、top-level awaitは未対応です。
 標準moduleはNode.js process内で実行され、sandboxではありません。
 信頼した文書だけを実行してください。Matra nodeは第一級実行時値ではなく、現状はplain dataとして渡ります。
+Pythonの`.py` fenceは同梱Pyodide runtimeで実行します。各moduleは文字列のliteral list/tupleによる`__all__`を宣言し、
+そこに列挙した名前をmodule pathの下に公開します。同一文書内のPython fenceと標準ライブラリをimportできます。
+Pythonは標準ライブラリのみで、PyPI/wheelのinstallは未対応です。共通data valueと同期関数を境界越しに利用でき、
+runごとに新しいruntimeを作ります。Pyodideはsecurity sandboxではありません。
 関数・options・bundle・errorの型定義もサブパスから提供します。
 `LiterateError`は`code`・`document`・`path`・`line`・利用可能な`cause`を持ちます。
 bundleは`format: "matra-literate-1"`と`abi: "matra-value-1"`を持ち、JSON保存・復元が可能です。

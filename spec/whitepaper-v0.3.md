@@ -57,7 +57,7 @@ a simple feature rollback or compatibility with those implementations.
 | [Grammar v0.3](./grammar.md) | Authoritative syntax, parsing, and evaluation for general Matra Programs and compiler source |
 | [Data Model](./data-model.md) and [AST](./ast.md) | Evaluated document values, exchange representation, and document Morphion |
 | [Matra Program](./program.md) | Native execution profile and provisional compiler ABI |
-| [Literate modules](./literate-modules.md) | Implemented explicit-entry/`.js.part` integration and unimplemented later proposals |
+| [Literate modules](./literate-modules.md) | Experimental contracts for explicit entry, `.js.part`, standard ESM/npm, and standard-library-only Python integration |
 | [Portable runtime](./portable-runtime.md) | Minimal host API, portability goals, and limitations |
 | [v0.3 release criteria](./release-v0.3.md) | Package priorities, validation records, and publication decisions |
 
@@ -252,8 +252,9 @@ p { analytics.total(data) }
 A `.js.part` body is one JavaScript expression and may expose functions as well as data.
 `analytics/total.js.part` becomes `analytics.total` in Matra.
 Standard `.js` modules can expose named exports or a default export alone and import
-same-document modules or preinstalled npm packages. Direct Python integration and
-automatic npm installation are not part of this route.
+same-document modules or preinstalled npm packages. Python `.py` modules run in Pyodide
+and declare exports through `__all__`. Python is limited to the standard library; Python
+and npm packages are not installed automatically.
 The loader neither parses all Markdown through the Matra grammar nor automatically renders its prose as HTML.
 
 ### 6.2 Separate build and run
@@ -272,12 +273,12 @@ const html = toHTML(staticValueToAST(value))
 ```
 
 Build validates configuration, names, and expression syntax and compiles Matra to Wasm.
-It does not execute user code in the document.
-Run initializes each selected JavaScript expression once in path order, then executes the Matra entry in Wasm.
-Each run receives a fresh JavaScript context. This host integration route is separate from Core's ordinary `evaluate()`.
+It does not execute document code.
+Run initializes selected JavaScript/Python modules, then executes the Matra entry in Wasm.
+Each run receives a fresh JavaScript context and Pyodide runtime. This host integration route is separate from Core's ordinary `evaluate()`.
 
 Values are copied across an explicit boundary. The supported data subset is JSON-compatible,
-with JavaScript functions additionally exposable to Matra. Cycles, accessors, custom prototypes,
+with JavaScript/Python synchronous functions additionally exposable to Matra. Cycles, accessors, custom prototypes,
 sparse arrays, `undefined`, non-finite numbers, and Promises are rejected.
 Passing Matra functions to JavaScript and asynchronous integration are not supported.
 Document output cannot contain functions.
@@ -332,7 +333,7 @@ The baseline commit's [release checklist](./release-v0.3.md#release-checklist)
 records completion of producing identical sample HTML on Windows/macOS/Linux with Node.js 22/24.
 This is evidence for the sample and validation environments, not a formal support declaration
 covering arbitrary dependencies or minimum OS versions.
-A standalone runtime, package manager, general task engine, and npm/Python integration remain future work.
+A standalone runtime, package manager, general task engine, and PyPI dependency integration remain future work.
 
 ## 9. Application packages and maturity
 
@@ -413,7 +414,7 @@ v0.3 prioritizes a coherent document model and small, verifiable routes from exp
 execution and output. Public APIs, compiler artifacts, diagnostics, and distribution should
 remain aligned, while SVG, mathematics, and editor maturity are reported individually.
 
-Later work includes standard JavaScript modules, npm/Python connections, a runtime covering
+Later work includes a runtime covering
 dependencies, more detailed source maps, resource limits, and ABI stabilization.
 These require further design and validation and are not implemented features of the current subset.
 v0.x favors familiar notation and experimentation; work toward v1.x strengthens type safety,

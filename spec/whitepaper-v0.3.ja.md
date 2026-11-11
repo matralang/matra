@@ -54,7 +54,7 @@ HTMLの`p`やSVGの`circle`は用途側が意味を与える名前であり、Co
 | [Grammar v0.3](./grammar.ja.md) | 一般のMatra Programとcompiler sourceの構文、parse・評価の正本 |
 | [Data Model](./data-model.ja.md)・[AST](./ast.ja.md) | 評価後の文書値、交換表現、文書Morphion |
 | [Matra Program](./program.ja.md) | native実行profileと暫定compiler ABI |
-| [Literate modules](./literate-modules.ja.md) | 実装済みの明示入口・`.js.part`連携と、未実装の後続設計 |
+| [Literate modules](./literate-modules.ja.md) | 明示入口、`.js.part`、標準ESM/npm、標準ライブラリ限定Python連携の実験的契約 |
 | [Portable runtime](./portable-runtime.ja.md) | 最小host APIと移植性の目標・制限 |
 | [v0.3 release条件](./release-v0.3.ja.md) | packageごとの優先度、検証記録、公開判定 |
 
@@ -250,7 +250,8 @@ p { analytics.total(data) }
 `.js.part`は単一のJavaScript式であり、データだけでなく関数も公開できる。
 `analytics/total.js.part`はMatra側の`analytics.total`になる。
 標準の`.js` moduleではnamed exportまたはdefault-only exportを公開でき、同文書内の相対importと
-事前install済みnpm packageのimportを使える。Pythonの直接連携やnpm packageの自動installは含まれない。
+事前install済みnpm packageのimportを使える。`.py` moduleはPyodideで実行し、`__all__`で公開名を指定する。
+Pythonは標準ライブラリに限定し、Python/npm packageの自動installは行わない。
 Markdown全体をMatra文法で解析するのでも、説明文を自動的にHTMLへ変換するのでもない。
 
 ### 6.2 buildとrunを分ける
@@ -268,11 +269,11 @@ const html = toHTML(staticValueToAST(value))
 // <p>60</p>
 ```
 
-buildは設定・名前・式構文を検証し、MatraをWasmへcompileする。文書中のユーザーコードは実行しない。
-runは選択したJavaScript式をパス順に各1回初期化し、入口のMatraをWasmで実行する。
-再実行時は新しいJavaScript contextを作る。通常のCoreの`evaluate()`とは別のhost連携経路である。
+buildは設定・名前・式構文を検証し、MatraをWasmへcompileする。文書中のユーザーcodeは実行しない。
+runは選択したJavaScript/Python moduleを初期化し、入口のMatraをWasmで実行する。
+再実行時は新しいJavaScript contextとPyodide runtimeを作る。通常のCoreの`evaluate()`とは別のhost連携経路である。
 
-値は明示した境界でcopyする。JSON互換のdata subsetとJavaScript関数の公開に対応する一方、
+値は明示した境界でcopyする。JSON互換のdata subsetとJavaScript/Python同期関数の公開に対応する一方、
 循環、accessor、独自prototype、疎配列、`undefined`、非有限数、Promiseなどは拒否する。
 Matra関数をJavaScriptへ渡す機能や非同期連携は未対応である。
 文書結果には関数を含められない。
@@ -324,7 +325,7 @@ path検査は移植性のための制約であり、OS security sandboxではな
 Windows・macOS・Linux × Node.js 22/24で検証サンプルから同じHTMLを得る確認を完了としている。
 これは対象サンプル・検証環境での実績であり、任意の依存関係やOS最低versionまで含む
 正式サポートの宣言ではない。独立runtime、package manager、汎用task engine、
-npm/Python統合は今後の範囲である。
+PyPI package連携は今後の範囲である。
 
 ## 9. 応用パッケージと到達点
 
@@ -401,7 +402,7 @@ v0.3では、文書モデルの一貫性と、説明から実行・出力まで�
 既存API、compiler artifact、diagnostic、配布物の対応を保ち、
 SVG・数式・編集環境の成熟度は個別に示す。
 
-その先には、標準JavaScript module・npm・Pythonとの接続、依存関係を含むruntimeの提供、
+その先には、PyPI依存を含むruntimeの提供、
 より詳細なsource map、resource limit、ABIの安定化がある。
 これらは現行の実装済み機能ではなく、設計・検証を要する後続課題である。
 v0.xでは親しみやすい記述と実験を優先し、v1.xへ向けて型安全性・静的解析・互換性の保証を整える。

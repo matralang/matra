@@ -112,6 +112,25 @@ try {
     props: {},
     children: ["<p>packed</p>"],
   })
+  const pythonBundle = await buildLiterate([
+    "---",
+    "matra:",
+    "  entry: main.matra",
+    "  values: [calculation.py]",
+    "---",
+    "\`\`\`main.matra",
+    "p { calculation.add(19, 23) }",
+    "\`\`\`",
+    "\`\`\`calculation.py",
+    "__all__ = ['add']",
+    "def add(left, right): return left + right",
+    "\`\`\`",
+  ].join("\\n"))
+  assert.deepEqual(await runLiterate(pythonBundle), {
+    tag: "p",
+    props: {},
+    children: [42],
+  })
 } catch (error) {
   if (process.env.EXPECT_COMPILER_ERROR === "1") {
     assert.ok(error instanceof LiterateError)

@@ -48,7 +48,8 @@
   },
   "dependencies": {
     "acorn": "^8.19.0",
-    "js-yaml": "^5.2.2"
+    "js-yaml": "^5.2.2",
+    "pyodide": "314.0.7"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",

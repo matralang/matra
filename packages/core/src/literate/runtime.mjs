@@ -9,6 +9,7 @@ import { parse as parseJavaScript } from "acorn"
 import { load as loadYaml } from "js-yaml"
 import { LITERATE_ABI, loadCompiler } from "./compiler.mjs"
 import { formatCompilerDiagnostic, reserveCompilerWorkspace } from "./compiler-host.mjs"
+import { analyzePythonModules, loadPythonModules } from "./python-runtime.mjs"
 import { instantiateMatra } from "./value-host.mjs"
 
 export class LiterateError extends Error {
@@ -33,6 +34,11 @@ function fail(code, block, message, cause) {
 }
 
 function publicName(block) {
+  if (block.path.endsWith(".py")) {
+    const stem = block.path.slice(0, -".py".length)
+    const packagePath = stem.endsWith("/__init__") ? stem.slice(0, -"/__init__".length) : stem
+    return packagePath.split(/[/.]/)
+  }
   const suffix = block.path.endsWith(".js.part") ? ".js.part" : ".js"
   return block.path.slice(0, -suffix.length).split("/")
 }
@@ -239,7 +245,7 @@ function moduleExportNames(block, blocks, cache = new Map()) {
   return names
 }
 
-function publicBindings(selected, blocks) {
+function publicBindings(selected, blocks, pythonExports = new Map()) {
   const bindings = []
   const add = (parts, block) => {
     if (parts.some(part => !/^[A-Za-z_$][\w$]*$/.test(part))) {
@@ -251,6 +257,10 @@ function publicBindings(selected, blocks) {
     const parts = publicName(block)
     if (block.path.endsWith(".js.part")) {
       add(parts, block)
+      continue
+    }
+    if (block.path.endsWith(".py")) {
+      for (const name of pythonExports.get(block.path) ?? []) add([...parts, name], block)
       continue
     }
     const exportedNames = moduleExportNames(block, blocks)
@@ -379,7 +389,7 @@ function selectBlocks(collected, { document, entry, values }) {
       }
       valueNames.push(name)
       valueBlocks.set(name, block)
-    } else if (path.endsWith(".js")) {
+    } else if (path.endsWith(".js") || path.endsWith(".py")) {
       moduleNames.add(publicName(block).join("."))
     }
   }
@@ -402,6 +412,7 @@ function selectBlocks(collected, { document, entry, values }) {
   const selected = values.map(path => {
     if (typeof path === "string" && path.endsWith(".js")) return select(path, ".js")
     if (typeof path === "string" && path.endsWith(".js.part")) return select(path, ".js.part")
+    if (typeof path === "string" && path.endsWith(".py")) return select(path, ".py")
     const block = blocks.get(typeof path === "string" ? path.toLowerCase() : "")
     if (!block)
       return fail(
@@ -409,7 +420,7 @@ function selectBlocks(collected, { document, entry, values }) {
         { document, path: path ?? "<value>", line: 1 },
         "Virtual file not found",
       )
-    return fail("UNSUPPORTED_FORMAT", block, "Expected .js or .js.part")
+    return fail("UNSUPPORTED_FORMAT", block, "Expected .js, .js.part, or .py")
   })
   selected.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
   for (const block of selected) {
@@ -418,13 +429,37 @@ function selectBlocks(collected, { document, entry, values }) {
   const roots = selected.filter(block => block.path.endsWith(".js"))
   const modules = collectModules(roots, blocks)
   publicBindings(selected, blocks)
-  return { entry: main, values: selected, modules }
+  return {
+    entry: main,
+    values: selected,
+    modules,
+    pythonBlocks: [...blocks.values()].filter(block => block.path.endsWith(".py")),
+  }
 }
 
 /** @returns {Promise<import("../literate.js").LiterateBundle>} */
 export async function buildLiterate(markdown, options = {}) {
   const registration = registerLiterate(markdown, options)
-  const { entry } = registration
+  const { entry, values, pythonBlocks, ...bundleRegistration } = registration
+  const pythonRoots = values.filter(block => block.path.endsWith(".py"))
+  let python
+  try {
+    python = await analyzePythonModules(pythonRoots, pythonBlocks)
+  } catch (error) {
+    if (error instanceof LiterateError) throw error
+    const block = error.block ?? pythonRoots[0] ?? entry
+    fail(
+      error.code ?? "PY_BUILD",
+      { ...block, line: block.line + (error.line ?? 1) - 1 },
+      error.message ?? String(error),
+      error,
+    )
+  }
+  publicBindings(
+    values,
+    new Map([...values, ...pythonBlocks].map(block => [block.path, block])),
+    python?.exports,
+  )
   let compiler
   try {
     compiler = await loadCompiler()
@@ -445,7 +480,15 @@ export async function buildLiterate(markdown, options = {}) {
   const wasm = Buffer.from(
     new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true)),
   ).toString("base64")
-  return { format: "matra-literate-1", abi: LITERATE_ABI, ...registration, wasm }
+  return {
+    format: "matra-literate-1",
+    abi: LITERATE_ABI,
+    ...bundleRegistration,
+    entry,
+    values,
+    ...(pythonRoots.length ? { pythonModules: python.modules } : {}),
+    wasm,
+  }
 }
 
 function copyValue(
@@ -628,17 +671,22 @@ function validateBundle(bundle) {
     !bundle.values.every(validBlock) ||
     (bundle.modules !== undefined &&
       (!Array.isArray(bundle.modules) || !bundle.modules.every(validBlock))) ||
+    (bundle.pythonModules !== undefined &&
+      (!Array.isArray(bundle.pythonModules) || !bundle.pythonModules.every(validBlock))) ||
     typeof bundle.wasm !== "string" ||
     !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(bundle.wasm)
   ) {
     fail("INVALID_BUNDLE", location, "Invalid or unsupported literate bundle")
   }
   // 保存済みbundleにも登録時と同じ選択・衝突規則を適用する。
-  const registered = selectBlocks([bundle.entry, ...bundle.values, ...(bundle.modules ?? [])], {
-    document: bundle.entry.document,
-    entry: bundle.entry.path,
-    values: bundle.values.map(block => block.path),
-  })
+  const registered = selectBlocks(
+    [bundle.entry, ...bundle.values, ...(bundle.modules ?? []), ...(bundle.pythonModules ?? [])],
+    {
+      document: bundle.entry.document,
+      entry: bundle.entry.path,
+      values: bundle.values.map(block => block.path),
+    },
+  )
   const expectedModules = registered.modules.map(block => block.path).sort()
   const actualModules = (bundle.modules ?? []).map(block => block.path).sort()
   if (
@@ -646,6 +694,18 @@ function validateBundle(bundle) {
     expectedModules.some((path, i) => path !== actualModules[i])
   ) {
     fail("INVALID_BUNDLE", location, "Bundle module dependencies do not match selected imports")
+  }
+  if (
+    (bundle.values.some(block => block.path.endsWith(".py")) &&
+      bundle.pythonModules === undefined) ||
+    (!bundle.values.some(block => block.path.endsWith(".py")) &&
+      (bundle.pythonModules?.length ?? 0) > 0) ||
+    (bundle.pythonModules ?? []).some(
+      block =>
+        !block.path.endsWith(".py") || bundle.values.some(value => value.path === block.path),
+    )
+  ) {
+    fail("INVALID_BUNDLE", location, "Invalid Python module dependency list")
   }
 }
 
@@ -738,7 +798,47 @@ export async function runLiterate(bundle, options = {}) {
     prototypes,
     options.moduleRoot ?? process.cwd(),
   )
+  let pythonRuntime
   try {
+    const pythonRoots = blocks.filter(block => block.path.endsWith(".py"))
+    if (pythonRoots.length) {
+      try {
+        pythonRuntime = await loadPythonModules(pythonRoots, bundle.pythonModules ?? [])
+      } catch (error) {
+        if (error instanceof LiterateError) throw error
+        const block = error.block ?? pythonRoots[0]
+        fail(
+          error.code ?? "PY_INITIALIZE",
+          { ...block, line: block.line + (error.line ?? 1) - 1 },
+          error.message ?? String(error),
+          error,
+        )
+      }
+      const availableBlocks = new Map(
+        [...bundle.values, ...(bundle.modules ?? []), ...(bundle.pythonModules ?? [])].map(
+          block => [block.path, block],
+        ),
+      )
+      publicBindings(bundle.values, availableBlocks, pythonRuntime.exportNames)
+      for (const block of pythonRoots) {
+        const parts = publicName(block)
+        const values = pythonRuntime.exports.get(block.path)
+        for (const [name, value] of Object.entries(values)) {
+          const exposed = typeof value === "function" ? pythonRuntime.wrapFunction(value) : value
+          bindPublicValue(
+            globals,
+            [...parts, name],
+            copyValue(exposed, {
+              block,
+              prototypes,
+              functions: typeof exposed === "function",
+              functionResults: false,
+            }),
+            block,
+          )
+        }
+      }
+    }
     const hostGlobals = options.globals ?? {}
     const copiedHostGlobals = copyValue(hostGlobals, {
       block: { document: bundle.entry.document, path: "<globals>", line: 1 },
@@ -763,6 +863,7 @@ export async function runLiterate(bundle, options = {}) {
       fail("MATRA_RUNTIME", bundle.entry, error?.message ?? String(error), error)
     }
   } finally {
+    await pythonRuntime?.cleanup()
     await cleanupModules()
   }
 }

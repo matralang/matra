@@ -13,7 +13,9 @@
 
 v0.3の到達点は、Node.js上のホストを使い、同じMatra／Wasmプロジェクトを
 Windows・macOS・Linuxで変更せずにbuild・実行することである。
-独立したruntimeの配布、パッケージ管理、汎用タスクengine、npm・Python連携は含めない。
+独立runtimeの配布、package管理、汎用task engine、一般的なnpm/Python package連携は含めない。
+Node.js literate hostには実験的なESM/npm/Pyodide adapterがあるが、portable runtimeの機能ではなく、
+任意packageとの互換性を保証しない。
 以下はexperimentalな最小契約であり、全体の完成は後述のロードマップに残す。
 
 ### 実行手順
@@ -195,7 +197,7 @@ Wasmであっても、importするhost機能・ABI・実行モデルが合うこ
 OS固有のinstall scriptやローカルCLIを隠れた前提にしない。
 registry、manifest、lock形式、cache、更新・offline動作の詳細は未決とする。
 
-npm・Python資産は、連携ごとに対応条件を確認する。
+npm・Python資産をportable runtimeへ統合する場合は、連携ごとに対応条件を確認する。
 既存の`@matra/*` npmパッケージも、それだけで共通ランタイム対応になるわけではない。
 任意のnpm/Pythonパッケージ、native addon、外部runtimeとの互換性は約束しない。
 
@@ -236,10 +238,9 @@ CIのhostセットアップの差と、ユーザープロジェクト側の差�
 
 ## v0.3以降の設計で決めること
 
-Markdownの名前付きfenceを仮想ファイルとして扱う複数言語連携は、
-[文芸的プログラミングの設計案](./literate-modules.ja.md)に整理する。
-JavaScriptモジュールの公開と短縮形、将来のPython連携を検討するものであり、未実装である。
-v0.3の最小契約や既存文法を変更しない。
+Markdownの名前付きfenceを仮想ファイルとして扱う実験的なJavaScript ESM/npm連携と
+標準ライブラリ限定Python連携は、[文芸的プログラミングの契約](./literate-modules.ja.md)に定める。
+これらのadapterはportable runtimeへは統合せず、v0.3のMatra文法も変更しない。
 
 v0.3のNode.jsホストと単一sourceの実行を足場に、正式なPCホストの配布方式とサポート表、
 file/path APIの拡張、ローカルパッケージの読み込み単位、汎用タスク定義を決める。

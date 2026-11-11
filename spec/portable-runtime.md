@@ -13,7 +13,9 @@ The [grammar specification](./grammar.md) remains authoritative for syntax and e
 
 The v0.3 milestone is to build and run the same Matra/Wasm project unchanged on
 Windows, macOS, and Linux using a host running on Node.js.
-It excludes standalone runtime distribution, package management, a general task engine, and npm/Python integration.
+It excludes standalone runtime distribution, package management, a general task engine, and
+general npm/Python package integration. The Node.js literate host has experimental ESM/npm/Pyodide
+adapters; these are not part of the portable runtime or a promise of arbitrary package compatibility.
 This is an experimental minimal contract; completion of the whole system remains on the roadmap below.
 
 ### Running the sample
@@ -209,7 +211,7 @@ do not silently fall back to another version.
 OS-specific install scripts or local CLIs must not become hidden prerequisites.
 Registry, manifest and lock formats, caching, updates, and offline behavior remain undecided.
 
-Integrate npm and Python assets only after validating the requirements of each integration.
+Integrate npm and Python assets into a portable runtime only after validating the requirements of each integration.
 Existing `@matra/*` npm packages do not automatically qualify for the common runtime.
 Do not promise compatibility with arbitrary npm/Python packages, native addons, or external runtimes.
 
@@ -251,10 +253,9 @@ Declare formal support only after satisfying phase 4.
 
 ## Design decisions after v0.3
 
-The [literate programming proposal](./literate-modules.md) describes multilingual integration
-using named Markdown fences as virtual files.
-It considers JavaScript module exposure, shorthands, and future Python integration; none is implemented.
-It does not change the v0.3 minimal contract or existing grammar.
+The [literate programming contract](./literate-modules.md) describes experimental JavaScript ESM/npm
+and standard-library-only Python integration in the Node.js host, using named Markdown fences as virtual files.
+These adapters do not extend the portable runtime or change the v0.3 Matra grammar.
 
 Build on the v0.3 Node.js host and single-source execution to decide formal PC host distribution
 and the support matrix, file/path API extensions, local package loading units, and general task definitions.

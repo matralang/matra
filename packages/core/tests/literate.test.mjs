@@ -265,6 +265,139 @@ export * from "matra-test-package"
   }
 })
 
+test("Python modules use Pyodide, expose __all__, resolve document modules, and reset per run", async () => {
+  const source = `---
+matra:
+  entry: main.matra
+  values: [pkg/calculations.py]
+---
+\`\`\`main.matra
+p {
+  pkg.calculations.add(40, pkg.calculations.data.amount);
+  pkg.calculations.total(pkg.calculations.data.items);
+  pkg.calculations.next_value()
+}
+\`\`\`
+\`\`\`pkg/calculations.py
+from math import floor
+from .helpers import amount
+
+__all__ = ["add", "data", "total", "next_value"]
+data = {"amount": amount, "items": [1, 2]}
+counter = 0
+
+def add(left, right):
+    return floor(left + right)
+
+def total(values):
+    return sum(values)
+
+def next_value():
+    global counter
+    counter += 1
+    return counter
+\`\`\`
+\`\`\`pkg/helpers.py
+amount = 2
+\`\`\`
+\`\`\`unused.py
+not valid Python !
+\`\`\`
+`
+  const bundle = await buildLiterate(source)
+  assert.deepEqual(
+    bundle.pythonModules.map(block => block.path),
+    ["pkg/helpers.py"],
+  )
+  const expected = { tag: "p", props: {}, children: [42, 3, 1] }
+  assert.deepEqual(await runLiterate(bundle), expected)
+  assert.deepEqual(await runLiterate(bundle), expected)
+})
+
+test("Python build validates syntax, imports, exports, and dependency cycles without executing code", async () => {
+  const document = python => `---
+matra:
+  entry: main.matra
+  values: [value.py]
+---
+\`\`\`main.matra
+p { value.answer }
+\`\`\`
+${python}
+`
+  const validSource = `\`\`\`value.py
+raise RuntimeError("build must not execute Python")
+__all__ = ["answer"]
+answer = 42
+\`\`\`
+`
+  const bundle = await buildLiterate(document(validSource))
+  assert.equal(bundle.values[0].path, "value.py")
+
+  for (const [python, expected] of [
+    ["```value.py\n__all__ = ['answer']\nanswer = (\n```\n", "PY_SYNTAX"],
+    ["```value.py\n__all__ = ['answer']\nimport requests\nanswer = 1\n```\n", "PY_IMPORT"],
+    ["```value.py\n__all__ = ['answer']\n__import__('math')\nanswer = 1\n```\n", "PY_IMPORT"],
+    ["```value.py\nanswer = 1\n```\n", "PY_EXPORT"],
+    [
+      "```value.py\n__all__ = ['answer']\nfrom helper import value\nanswer = value\n```\n```helper.py\nfrom value import answer\nvalue = answer\n```\n",
+      "PY_MODULE_CYCLE",
+    ],
+  ]) {
+    await assert.rejects(buildLiterate(document(python)), error => {
+      assert.ok(error instanceof LiterateError)
+      assert.equal(error.code, expected)
+      return true
+    })
+  }
+})
+
+test("Python exports reject unsupported data and asynchronous functions", async () => {
+  for (const python of [
+    "__all__ = ['value']\nvalue = (1, 2)\n",
+    "__all__ = ['value']\nasync def value(): return 1\n",
+    "__all__ = ['value']\nvalue = 9007199254740992\n",
+    "__all__ = ['missing']\nvalue = 1\n",
+  ]) {
+    const source = `---
+matra:
+  entry: main.matra
+  values: [value.py]
+---
+\`\`\`main.matra
+p { value.value }
+\`\`\`
+\`\`\`value.py
+${python}\`\`\`
+`
+    const bundle = await buildLiterate(source)
+    await assert.rejects(runLiterate(bundle), error => {
+      assert.ok(error instanceof LiterateError)
+      assert.equal(error.code, "PY_INITIALIZE")
+      return true
+    })
+  }
+
+  const functionResult = `---
+matra:
+  entry: main.matra
+  values: [value.py]
+---
+\`\`\`main.matra
+p { value.invalid_result() }
+\`\`\`
+\`\`\`value.py
+__all__ = ["invalid_result"]
+def invalid_result(): return (1, 2)
+\`\`\`
+`
+  await assert.rejects(runLiterate(await buildLiterate(functionResult)), error => {
+    assert.ok(error instanceof LiterateError)
+    assert.equal(error.code, "JS_CALL")
+    return true
+  })
+})
+
 test("ordinary Core import does not load the Node literate host", () => {
   const result = spawnSync(
     process.execPath,

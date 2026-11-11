@@ -200,6 +200,15 @@ cycles, and top-level await are not supported. Standard modules execute in the N
 process and are not sandboxed; run trusted documents only. Matra nodes are not
 first-class runtime values and currently cross only as plain data.
 
+Python `.py` fences run through the bundled Pyodide runtime. Each selected module
+must declare `__all__` as a literal list/tuple of strings; its listed names are
+exposed below the module path. Python
+imports may target other fences in the same document or the standard library.
+Only the standard library is available: PyPI/wheel installation is not supported.
+Python values are copied through the common data subset, and synchronous functions
+may be called from Matra. Python modules execute in a fresh runtime per run.
+Pyodide is not a security sandbox.
+
 The matching compiler Wasm and a version/SHA-256/ABI manifest are bundled.
 After installation, Rust, a checkout, and compiler downloads are unnecessary.
 Package development, build, and packing require Rust; compiler generation verifies
