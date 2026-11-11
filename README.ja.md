@@ -85,7 +85,7 @@ hello/
   index.md           # FrontMatter・Matra・JavaScriptデータを含む文書
   matra.css          # @matra/stylesのCSS。自由に編集可能
   matra.css.LICENSE  # CSSのライセンス
-  .gitignore         # /dist/と.matra/を除外
+  .gitignore         # /dist/と.matra内の実行時生成物を除外
 ```
 
 入口は`index.md`、CSSは`matra.css`、出力先は`dist/`に固定しています。
@@ -93,7 +93,8 @@ hello/
 `dist/matra.css`、`dist/matra.css.LICENSE`を生成・更新します。
 `dist/index.html`はブラウザで直接開け、閲覧にネットワーク接続は不要です。
 未知の出力ファイルは削除せず、出力先のsymlinkは拒否します。
-build時には文書内のJavaScriptが実行されるため、信頼する文書のみをbuildしてください。
+build時には文書内で選択されたJavaScriptとPythonが実行されます。OS sandboxやtimeoutはないため、
+信頼する文書のみをbuildしてください。
 通常のliterate API・`matra-literate` CLI・文法は変更していません。
 `runLiterate()`には、検証済みhost dataを渡す追加の`globals` optionがあります。
 利用時には同梱compiler Wasmとmanifestを使い、Rust・pnpm・ネットワークは不要です。
@@ -106,8 +107,42 @@ Front Matterの`matra.javascript.packages`と`matra.python.packages`にはpackag
 versionは初回install時に自動解決され、文書別のlockに記録されます。通常のinstallはlockを維持し、
 `matra deps update npm index.md`または`matra deps update python index.md`で明示的に更新します。
 生成物は`.matra/deps/`以下にまとまり、`matra build`は依存をinstallしません。
+lockによる依存versionの再現が必要な場合は、`.matra/deps/`内の`package-lock.json`、
+`matra.python.lock.json`とPython wheelをcommitしてください。生成時の`.gitignore`はこれらを追跡対象にし、
+`node_modules`などの実行時生成物を除外します。lockは文書ごとに分かれ、Python lockはwheel本体を参照します。
 network access前に確認し、npm lifecycle scriptは無効にします。Python wheel準備にはPATH上のPython 3とpip
 （または`MATRA_PYTHON`）が必要で、`py3-none-any` wheelだけに対応します。
+
+JavaScriptとPythonの外部packageを使う例です。以下を`index.md`に保存し、`matra install`の後に
+`matra build`を実行します。
+
+````markdown
+---
+matra:
+  entry: main.matra
+  values: [slug.js, domain.py]
+  javascript:
+    packages: [lodash-es]
+  python:
+    packages: [idna]
+---
+
+```main.matra
+p { slug.value }
+p { domain.value }
+```
+
+```slug.js
+import { kebabCase } from "lodash-es"
+export const value = kebabCase("Hello Matra")
+```
+
+```domain.py
+import idna
+value = idna.encode("例え.テスト").decode()
+__all__ = ["value"]
+```
+````
 
 ### 宣言的な複数ページサイト
 
@@ -117,6 +152,8 @@ network access前に確認し、npm lifecycle scriptは無効にします。Pyth
 `dist/`以下へroute形式のHTMLを生成します。schemaと制約は
 [サイト生成の実装契約](./spec/site-generation.ja.md)を参照してください。
 従来の単一ページ`matra build`とは独立しています。
+サイト内の実行ページとlayoutの依存は、`matra site install`で一括準備できます。
+確認を省略する場合は`matra site install --yes`を使います。
 
 ### ローカルプレビュー
 

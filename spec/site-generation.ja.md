@@ -16,7 +16,8 @@ parser、AST/data model、compiler ABI、既存のCore・HTML APIの既存動作
 
 ## MVPの実装契約
 
-サイト生成は既存の単一ページ`matra build`とは別に、明示的な`matra site build`で有効にします。
+サイト生成は既存の単一ページ`matra build`とは別に、`matra site install`と
+`matra site build`で操作します。installは設定済みの実行ページとlayoutの依存を準備します。
 共通エンジンのpackageは`@matra/site-generation`です。設定ファイルは次のいずれか1つだけを置きます。
 
 - `matra.site.yaml`: YAML

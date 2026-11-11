@@ -48,9 +48,9 @@ Open the printed URL (`http://127.0.0.1:3000/` by default).
 Changes rebuild automatically; refresh the browser manually. Ctrl+C stops the server.
 Use `matra dev --port 3001` if the default port is occupied.
 
-`matra build` executes selected JavaScript in `index.md`; `matra site build` executes only
-explicit `.matra.md` pages and layouts. Ordinary site Markdown is rendered as content.
-Build only trusted programs: execution has no OS sandbox or timeout.
+`matra build` executes selected JavaScript and Python in `index.md`; `matra site build` executes
+only explicit `.matra.md` pages and layouts. Ordinary site Markdown is rendered as content.
+JavaScript and Python execution has no OS sandbox or timeout. Build only trusted programs.
 The development server serves only generated HTML, CSS, and the CSS license.
 Build errors appear in the terminal and return HTTP 503 until fixed.
 macOS may require approval for software downloaded from the Internet. This development
@@ -62,8 +62,10 @@ use `matra install DOCUMENT` for another document. Individual preparation is sti
 `matra deps install npm DOCUMENT` or `matra deps install python DOCUMENT`. Versions are resolved automatically and
 saved in per-document locks under `.matra/deps/`. Python downloads only Pyodide-compatible
 `py3-none-any` wheels. The command confirms network access first and disables npm lifecycle
-scripts. Python wheels require a system Python 3 with pip; the standalone distribution does not
-bundle a package manager.
+scripts. To reproduce dependency versions, commit the `package-lock.json`,
+`matra.python.lock.json`, and Python wheels under `.matra/deps/`; the generated `.gitignore`
+tracks these artifacts and excludes runtime files. Python wheels require a system Python 3 with pip;
+the standalone distribution does not bundle a package manager.
 
 ## Declarative sites
 
@@ -76,7 +78,8 @@ matra site build
 
 Ordinary `.md` files under the configured pages directory are Markdown pages.
 Use `.matra.md` only for executable page programs and layouts.
-The command writes route-based HTML into the configured output directory.
+Run `matra site install` to prepare dependencies for all executable pages and layouts before
+building. The build command writes route-based HTML into the configured output directory.
 See the [site-generation contract](https://github.com/matralang/matra/blob/main/spec/site-generation.md)
 for configuration and supported behavior.
 

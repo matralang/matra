@@ -18,7 +18,8 @@ This proposal does not override the [grammar](./grammar.md) or
 
 ## MVP implementation contract
 
-Site generation is explicitly enabled by `matra site build`, separate from the existing single-page `matra build`.
+Site generation uses `matra site install` and `matra site build`, separate from the existing single-page
+`matra build`. The install command prepares dependencies for configured executable pages and layouts.
 The shared engine package is `@matra/site-generation`. Place exactly one of these configuration files in the project root:
 
 - `matra.site.yaml`: YAML

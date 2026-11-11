@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises"
-import { buildSite } from "@matra/site-generation"
+import { buildSite, getSiteProgramDocuments } from "@matra/site-generation"
 import { installDependencies } from "./deps.mjs"
 import { startDev } from "./dev.mjs"
 import { buildProject, initProject } from "./project.mjs"
@@ -11,21 +11,23 @@ const usage = `Usage: matra init DIRECTORY
        matra deps install [DOCUMENT] [--yes]
        matra deps install (npm|python) DOCUMENT [--yes]
        matra deps update (npm|python) DOCUMENT [--yes]
+       matra site install [--yes]
        matra site build
        matra dev [--port PORT]
        matra --version
 
 init   Create a new project directory.
 build  Build index.md and matra.css into dist/ in the current directory.
+site install  Install dependencies for executable site pages and layouts.
 site   Build the configured multi-page site into dist/.
 dev    Serve on 127.0.0.1:3000 and rebuild on changes. Refresh the browser to view changes.
 deps   Install or update npm/Python packages declared by the selected document.
 install  Install both ecosystems (default document: index.md); alias of deps install.
 
-matra build executes selected JavaScript in index.md.
+matra build executes selected JavaScript and Python in index.md.
 matra site build executes only explicitly named .matra.md pages and layouts.
 matra deps install prompts before network access; npm lifecycle scripts are disabled.
-Only build trusted programs; execution has no OS sandbox or timeout.`
+Only build trusted programs; JavaScript and Python execution has no OS sandbox or timeout.`
 
 const args = process.argv.slice(2)
 if (args[0] === "--") args.shift()
@@ -44,6 +46,21 @@ try {
   } else if (args[0] === "build" && args.length === 1) {
     const output = await buildProject(process.cwd())
     console.log(`Generated: ${output}`)
+  } else if (
+    args[0] === "site" &&
+    args[1] === "install" &&
+    (args.length === 2 || (args.length === 3 && args[2] === "--yes"))
+  ) {
+    const yes = args.length === 3
+    const documents = await getSiteProgramDocuments(process.cwd())
+    if (documents.length === 0) {
+      console.log("No executable site pages or layouts found.")
+    } else {
+      for (const document of documents) {
+        console.log(`Installing dependencies for ${document}`)
+        await installDependencies(process.cwd(), "all", document, yes)
+      }
+    }
   } else if (
     args[0] === "install" ||
     (args[0] === "deps" && ["install", "update"].includes(args[1]))
@@ -91,6 +108,14 @@ try {
     throw new Error(usage)
   }
 } catch (error) {
-  console.error(`${error.code ? `${error.code}: ` : ""}${error.message}`)
+  let message = error.message
+  const missingDependencies =
+    (error.code === "PY_PACKAGE_LOCK" &&
+      /Cannot read matra\.python\.lock\.json|Package is not locked/.test(message)) ||
+    (error.code === "JS_INITIALIZE" && /Cannot find package/.test(message))
+  if (missingDependencies && error.document) {
+    message += `\nRun \`matra install ${error.document}\` to prepare its dependencies.`
+  }
+  console.error(`${error.code ? `${error.code}: ` : ""}${message}`)
   process.exitCode = 1
 }

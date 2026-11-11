@@ -49,9 +49,9 @@ matra dev
 変更すると自動で再buildします。ブラウザは手動で再読み込みしてください。
 Ctrl+Cで停止します。ポートが使用中なら`matra dev --port 3001`で変更できます。
 
-`matra build`は`index.md`で選択されたJavaScriptを実行し、`matra site build`は明示した
+`matra build`は`index.md`で選択されたJavaScriptとPythonを実行し、`matra site build`は明示した
 `.matra.md`ページとlayoutだけを実行します。サイトの通常のMarkdownは文書データです。
-信頼するプログラムだけをbuildしてください。OS sandbox・timeoutは保証しません。
+JavaScript・PythonともにOS sandboxやtimeoutはありません。信頼するプログラムだけをbuildしてください。
 サーバーは生成HTML・CSS・CSSライセンスだけを配信します。
 buildエラーはターミナルに表示し、修正されるまでHTTP 503を返します。
 インターネットから取得したソフトウェアはmacOSで実行承認が必要になる場合があります。
@@ -62,6 +62,9 @@ Front Matterにpackage名を記述し、build前に`matra install`（`matra deps
 `matra deps install npm DOCUMENT`と`matra deps install python DOCUMENT`で個別にも準備できます。
 versionは自動解決して文書別lockに保存し、
 生成物は`.matra/deps/`以下にまとめます。PythonはPyodide互換`py3-none-any` wheelを使います。
+依存versionを再現するには、`.matra/deps/`内の`package-lock.json`、
+`matra.python.lock.json`とPython wheelをcommitしてください。生成時の`.gitignore`はlockとwheelを追跡し、
+実行時生成物を除外します。
 network access前に確認し、npm lifecycle scriptは無効にします。Python wheel用のPython 3/pipは
 システムに別途必要です。同梱配布物にはpackage managerを含みません。
 
@@ -78,6 +81,7 @@ matra site build
 実行するページとlayoutだけを`.matra.md`にします。routeに対応するHTMLを
 設定した出力directoryへ生成します。詳細は
 [サイト生成の実装契約](https://github.com/matralang/matra/blob/main/spec/site-generation.ja.md)を参照してください。
+build前に`matra site install`を実行すると、実行ページとlayoutの依存を一括準備できます。
 
 ## 内容と出典
 

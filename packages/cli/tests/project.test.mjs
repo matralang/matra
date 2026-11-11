@@ -38,7 +38,21 @@ test("CLI initializes and builds an offline page outside the checkout without ex
     "matra.css",
     "matra.css.LICENSE",
   ])
-  assert.equal(await readFile(join(project, ".gitignore"), "utf8"), "/dist/\n.matra/\n")
+  assert.equal(
+    await readFile(join(project, ".gitignore"), "utf8"),
+    `/dist/
+.matra/*
+!.matra/deps/
+.matra/deps/*
+!.matra/deps/*/
+.matra/deps/*/javascript/**
+!.matra/deps/*/javascript/package-lock.json
+.matra/deps/*/python/**
+!.matra/deps/*/python/matra.python.lock.json
+!.matra/deps/*/python/wheels/
+!.matra/deps/*/python/wheels/*.whl
+`,
+  )
   assert.deepEqual(await readFile(join(project, "matra.css")), await readFile(css))
   assert.deepEqual(
     await readFile(join(project, "matra.css.LICENSE")),
@@ -103,6 +117,7 @@ test("CLI reports invalid usage, help, and version without creating files", asyn
     ["install", "--unknown"],
     ["install", "--yes", "--yes"],
     ["install", "index.md", "extra"],
+    ["site", "install", "extra"],
     ["deps", "install", "npm"],
     ["deps", "update"],
     ["deps", "install", "index.md", "extra"],
@@ -115,7 +130,10 @@ test("CLI reports invalid usage, help, and version without creating files", asyn
     assert.equal(result.status, 1)
     assert.match(result.stderr, /Usage: matra/)
   }
-  assert.equal(invoke(root, "--help").status, 0)
+  const help = invoke(root, "--help")
+  assert.equal(help.status, 0)
+  assert.match(help.stdout, /matra site install/)
+  assert.match(help.stdout, /JavaScript and Python execution/)
   for (const port of ["0", "65536", "99999999999999999999"]) {
     const result = invoke(root, "dev", "--port", port)
     assert.equal(result.status, 1)
@@ -173,6 +191,87 @@ html { head {}; body { ...page.content } }
   assert.match(result.stdout, /Generated 1 site file/)
   assert.match(await readFile(join(root, "dist", "index.html"), "utf8"), /<h1>Multi-page<\/h1>/)
   assert.match(invoke(root, "build").stderr, /index\.md/)
+})
+
+test("site install prepares only executable pages and layouts from configured directories", async t => {
+  const root = await temporary(t)
+  await Promise.all(
+    ["routes", "content", "shells"].map(path => mkdir(join(root, path), { recursive: true })),
+  )
+  await writeFile(
+    join(root, "matra.site.json"),
+    JSON.stringify({
+      version: 1,
+      site: {
+        pages: "routes",
+        documents: "content",
+        layouts: "shells",
+        defaultLayout: "default",
+      },
+    }),
+  )
+  await writeFile(
+    join(root, "routes", "index.matra.md"),
+    `---
+matra:
+  entry: main.matra
+---
+\`\`\`main.matra
+html { head {}; body {} }
+\`\`\`
+`,
+  )
+  await writeFile(join(root, "routes", "about.md"), `# Ordinary Markdown\n`)
+  await writeFile(join(root, "content", "shared.md"), `# Content data\n`)
+  await writeFile(
+    join(root, "shells", "default.matra.md"),
+    `---
+matra:
+  entry: main.matra
+---
+\`\`\`main.matra
+html { head {}; body { ...page.content } }
+\`\`\`
+`,
+  )
+
+  const result = invoke(root, "site", "install", "--yes")
+
+  assert.equal(result.status, 0, result.stderr)
+  assert.match(result.stdout, /No dependencies declared in routes\/index\.matra\.md/)
+  assert.match(result.stdout, /No dependencies declared in shells\/default\.matra\.md/)
+  assert.doesNotMatch(result.stdout, /about\.md|shared\.md/)
+})
+
+test("build suggests installing dependencies when a Python lock is missing", async t => {
+  const root = await temporary(t)
+  const project = await initProject(join(root, "project"))
+  await writeFile(
+    join(project, "index.md"),
+    `---
+matra:
+  entry: main.matra
+  values: [value.py]
+  python:
+    packages: [idna]
+---
+\`\`\`main.matra
+p { value.domain }
+\`\`\`
+\`\`\`value.py
+import idna
+domain = idna.encode("example.com").decode()
+__all__ = ["domain"]
+\`\`\`
+`,
+  )
+
+  const result = invoke(project, "build")
+
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /Cannot read matra\.python\.lock\.json/)
+  assert.match(result.stderr, /Run `matra install index\.md` to prepare its dependencies\./)
+  assert.equal(result.stdout, "")
 })
 
 test("failed compilation or execution preserves previous output and unrelated files", async t => {

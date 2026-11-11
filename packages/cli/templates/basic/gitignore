@@ -1,2 +1,11 @@
 /dist/
-.matra/
+.matra/*
+!.matra/deps/
+.matra/deps/*
+!.matra/deps/*/
+.matra/deps/*/javascript/**
+!.matra/deps/*/javascript/package-lock.json
+.matra/deps/*/python/**
+!.matra/deps/*/python/matra.python.lock.json
+!.matra/deps/*/python/wheels/
+!.matra/deps/*/python/wheels/*.whl

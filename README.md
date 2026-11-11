@@ -89,7 +89,7 @@ hello/
   index.md           # FrontMatter, Matra structure, and JavaScript data
   matra.css          # Editable CSS from @matra/styles
   matra.css.LICENSE  # CSS license
-  .gitignore         # Excludes /dist/
+  .gitignore         # Excludes /dist/ and runtime files under .matra/
 ```
 
 The entry document (`index.md`), stylesheet (`matra.css`), and output directory (`dist/`)
@@ -97,7 +97,8 @@ are fixed conventions, requiring no configuration file. Run `matra build` in the
 directory to compile and execute the document and generate/update `dist/index.html`,
 `dist/matra.css`, and `dist/matra.css.LICENSE`. Open the HTML directly in a browser;
 viewing needs no network. Unknown output files are not deleted, and symlink output paths
-are rejected. Only build trusted documents: their JavaScript executes during the build.
+are rejected. Build only trusted documents: selected JavaScript and Python execute during the build,
+without an OS sandbox or timeout.
 The existing literate API behavior, `matra-literate` CLI, and language grammar are unchanged.
 `runLiterate()` also accepts an additive `globals` option for validated host data.
 Execution uses the bundled compiler Wasm and manifest without Rust, pnpm, or a network;
@@ -110,16 +111,50 @@ For external modules, list package names in `matra.javascript.packages` and
 `matra deps install npm index.md` and `matra deps install python index.md`. Versions are
 resolved automatically and recorded in per-document locks. Install preserves existing locks;
 `matra deps update npm index.md` or `matra deps update python index.md` explicitly refreshes them.
-Generated files live under `.matra/deps/`. Network access is confirmed first and npm lifecycle
-scripts are disabled. Python wheel preparation requires Python 3 and pip on PATH (or
-`MATRA_PYTHON`); only `py3-none-any` wheels are accepted. `matra build` itself never installs dependencies.
+Generated files live under `.matra/deps/`. To reproduce dependency versions, commit the
+`package-lock.json`, `matra.python.lock.json`, and Python wheels there. The generated `.gitignore`
+tracks these lock artifacts but excludes installed runtime files such as `node_modules`.
+Locks are per document; Python locks reference their wheel files. Network access is confirmed first
+and npm lifecycle scripts are disabled. Python wheel preparation requires Python 3 and pip on PATH
+(or `MATRA_PYTHON`); only `py3-none-any` wheels are accepted. `matra build` itself never installs dependencies.
+
+For example, save this as `index.md`, then run `matra install` and `matra build`:
+
+````markdown
+---
+matra:
+  entry: main.matra
+  values: [slug.js, domain.py]
+  javascript:
+    packages: [lodash-es]
+  python:
+    packages: [idna]
+---
+
+```main.matra
+p { slug.value }
+p { domain.value }
+```
+
+```slug.js
+import { kebabCase } from "lodash-es"
+export const value = kebabCase("Hello Matra")
+```
+
+```domain.py
+import idna
+value = idna.encode("例え.テスト").decode()
+__all__ = ["value"]
+```
+````
 
 ### Declarative multi-page sites
 
 The CLI also supports a separate site-generation workflow. Create `matra.site.yaml`,
 `matra.site.json`, or a static Matra configuration file named `matra.site.matra`.
 Ordinary Markdown under `pages/` is content; executable pages and shared layouts use `.matra.md`.
-Run `matra site build` to generate routes under `dist/`. See the
+Run `matra site install` to prepare dependencies declared by all executable pages and layouts,
+then run `matra site build` to generate routes under `dist/`. See the
 [site-generation contract](./spec/site-generation.md) for the configuration schema and limits.
 This command does not change the existing single-page `matra build` workflow.
 

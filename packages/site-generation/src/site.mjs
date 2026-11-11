@@ -35,32 +35,7 @@ export async function renderLiterateDocument(markdown, options = {}) {
 }
 
 export async function buildSite(directory) {
-  const root = resolve(directory)
-  const config = await readConfig(root)
-  const settings = normalizeSettings(config, root)
-  for (const input of [
-    settings.pagesDirectory,
-    ...settings.documentDirectories,
-    settings.layoutsDirectory,
-    ...(settings.assetsDirectory ? [settings.assetsDirectory] : []),
-  ]) {
-    if (
-      input === settings.outputDirectory ||
-      input.startsWith(`${settings.outputDirectory}${sep}`) ||
-      settings.outputDirectory.startsWith(`${input}${sep}`)
-    ) {
-      throw new Error("site.output must not overlap a site input directory")
-    }
-  }
-  await Promise.all([
-    assertDirectory(root, settings.pagesDirectory),
-    ...settings.documentDirectories.map(path => assertDirectory(root, path)),
-    assertDirectory(root, settings.layoutsDirectory, { optional: true }),
-    ...(settings.assetsDirectory ? [assertDirectory(root, settings.assetsDirectory)] : []),
-  ])
-  const documents = await collectDocuments(root, settings)
-  const layouts = await collectLayouts(root, settings)
-  const pages = await collectPages(root, settings, documents, layouts)
+  const { root, settings, documents, layouts, pages } = await loadSite(resolve(directory))
   const assets = settings.assetsDirectory ? await collectAssets(settings.assetsDirectory) : []
   const outputPlan = planOutput(pages, assets, settings)
   settings.routes = new Map(pages.map(page => [page.path, page.route]))
@@ -111,6 +86,43 @@ export async function buildSite(directory) {
   for (const asset of assets) rendered.push({ path: asset.output, content: asset.content })
   await publish(root, settings.outputDirectory, rendered)
   return rendered.map(file => join(settings.outputDirectory, file.path))
+}
+
+export async function getSiteProgramDocuments(directory) {
+  const { layouts, pages } = await loadSite(resolve(directory))
+  return [
+    ...[...layouts.values()].map(layout => layout.document),
+    ...pages.filter(page => page.kind === "program").map(page => page.document),
+  ].sort((left, right) => left.localeCompare(right, "en"))
+}
+
+async function loadSite(root) {
+  const config = await readConfig(root)
+  const settings = normalizeSettings(config, root)
+  for (const input of [
+    settings.pagesDirectory,
+    ...settings.documentDirectories,
+    settings.layoutsDirectory,
+    ...(settings.assetsDirectory ? [settings.assetsDirectory] : []),
+  ]) {
+    if (
+      input === settings.outputDirectory ||
+      input.startsWith(`${settings.outputDirectory}${sep}`) ||
+      settings.outputDirectory.startsWith(`${input}${sep}`)
+    ) {
+      throw new Error("site.output must not overlap a site input directory")
+    }
+  }
+  await Promise.all([
+    assertDirectory(root, settings.pagesDirectory),
+    ...settings.documentDirectories.map(path => assertDirectory(root, path)),
+    assertDirectory(root, settings.layoutsDirectory, { optional: true }),
+    ...(settings.assetsDirectory ? [assertDirectory(root, settings.assetsDirectory)] : []),
+  ])
+  const documents = await collectDocuments(root, settings)
+  const layouts = await collectLayouts(root, settings)
+  const pages = await collectPages(root, settings, documents, layouts)
+  return { root, settings, documents, layouts, pages }
 }
 
 async function readConfig(root) {
