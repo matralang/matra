@@ -93,7 +93,7 @@ HTMLテンプレートに加えて、ページごとのデータ受け渡し、�
 
 現行CLIの[`buildProject`](../packages/cli/src/project.mjs)は、単一の`index.md`を
 literate APIでcompile・実行し、HTML・CSS・ライセンスを出力します。
-[`公式サイトのビルド処理`](../apps/website/src/build.ts)にはページ収集、メタデータ解釈、
+[`別repositoryの公式サイト`](https://github.com/matralang/website)にはページ収集、メタデータ解釈、
 出力先決定、共通要素の挿入があり、サイトごとの定型作業の具体例になります。
 ただし、公式サイト固有の広告・計測・redirect処理までエンジンの既定動作にはしません。
 

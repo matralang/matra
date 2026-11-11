@@ -97,7 +97,7 @@ like Nuxt Content's `.md` documents, without requiring program settings or code 
 
 The current CLI's [`buildProject`](../packages/cli/src/project.mjs) compiles and runs a single
 `index.md` via the literate API, then writes HTML, CSS, and its license.
-The [official website build](../apps/website/src/build.ts) collects pages, interprets metadata,
+The [official website in its separate repository](https://github.com/matralang/website) collects pages, interprets metadata,
 determines output paths, and inserts shared elements, providing concrete examples of site-specific boilerplate.
 Website-specific advertising, analytics, and redirects do not become engine defaults.
 

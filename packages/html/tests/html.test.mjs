@@ -1,5 +1,4 @@
 import assert from "node:assert/strict"
-import { readFile } from "node:fs/promises"
 import { describe, it } from "node:test"
 import { evaluateStatic, parse, staticValueToAST } from "@matra/core"
 
@@ -52,13 +51,14 @@ describe("@matra/html", () => {
     assert.equal(toHTML(parseStaticDocument("<hr.divider />")), '<hr class="divider">')
   })
 
-  it("preserves the Playground card AST and output after markup refinement", async () => {
-    const markdown = await readFile(
-      new URL("../../../apps/website/src/pages/play.md", import.meta.url),
-      "utf8",
-    )
-    const source = markdown.match(/```card\.matra\n([\s\S]*?)\n```/)?.[1]
-    assert.ok(source)
+  it("preserves the card AST and output after markup refinement", () => {
+    const source = `article.matra-frame {
+  <p.eyebrow>MATRA</p>
+  <h2>Structure first.</h2>
+  <p>Edit this source and watch it render.</p>
+  <a.matra-button href="/spec/">Read the spec</a>
+  <hr />
+}`
     const previous = `article.matra-frame {
   p.eyebrow { "MATRA" }
   h2 { "Structure first." }

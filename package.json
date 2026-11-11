@@ -8,7 +8,7 @@
     "distribution:verify": "node packages/cli/scripts/verify-distribution.mjs",
     "test:cli": "pnpm --filter @matra/core run build && pnpm --filter @matra/html run build && pnpm --filter @matra/site-generation run test && pnpm --filter @matra/cli run test",
     "verify:npm-cli": "node packages/cli/scripts/verify-npm.mjs",
-    "build": "pnpm --filter @matra/core run build && pnpm --filter @matra/command run build && pnpm --filter @matra/math run build && pnpm --filter @matra/math-compute-engine run build && pnpm --filter @matra/graphics run build && pnpm --filter @matra/html run build && pnpm --filter @matra/site-generation run build && pnpm --filter @matra/styles run build && pnpm --filter @matra/kernel run build && pnpm --filter @matra/website run build && cargo build --manifest-path crates/matra-seed/Cargo.toml",
+    "build": "pnpm --filter @matra/core run build && pnpm --filter @matra/command run build && pnpm --filter @matra/math run build && pnpm --filter @matra/math-compute-engine run build && pnpm --filter @matra/graphics run build && pnpm --filter @matra/html run build && pnpm --filter @matra/site-generation run build && pnpm --filter @matra/styles run build && pnpm --filter @matra/kernel run build && cargo build --manifest-path crates/matra-seed/Cargo.toml",
     "bootstrap:compile": "node crates/matra-seed/host/bootstrap.mjs",
     "bootstrap:artifact": "node crates/matra-seed/host/materialize.mjs",
     "bootstrap:verify": "node crates/matra-seed/host/verify-self-host.mjs",

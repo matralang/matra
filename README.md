@@ -284,6 +284,7 @@ Matra bootstrap compiler status.
 
 公式サイト・ドキュメント・Playgroundは
 [`matralang/website`](https://github.com/matralang/website) で管理しています。
+The legacy `apps/website` has been removed and is no longer built, tested, or deployed by this workspace.
 
 ## Development
 

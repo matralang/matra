@@ -274,6 +274,7 @@ Rust seed compilerとMatra製bootstrap compilerの開発状況は
 
 公式サイト・ドキュメント・Playgroundは
 [`matralang/website`](https://github.com/matralang/website) で管理しています。
+旧`apps/website`は削除済みで、このworkspaceのbuild・test・deploy対象には含みません。
 
 ## Development
 
