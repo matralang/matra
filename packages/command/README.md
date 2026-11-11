@@ -102,7 +102,8 @@ Commands are topologically ordered by `requires`. A failed command produces a
 structured result, and dependent commands are marked `skipped`. JSON and NDJSON
 outputs are validated as JSON-compatible Matra values.
 
-The CLI's `matra deps install DOCUMENT` workflow also uses Matra Command to
-execute the planned npm and Python wheel download steps after explicit user
-confirmation. It requests network access, disables npm lifecycle scripts, and
-keeps JavaScript and Python dependency manifests and lockfiles separate.
+The CLI's `matra deps install npm DOCUMENT` and
+`matra deps install python DOCUMENT` workflows also use Matra Command to run
+each planned dependency preparation step after explicit user confirmation.
+They request network access, disable npm lifecycle scripts, and store separate
+per-document npm and Python manifests and locks under `.matra/deps/`.

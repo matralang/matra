@@ -45,6 +45,7 @@ export async function buildProject(directory) {
   await regularFile(license)
   const ast = await renderLiterateDocument(await readFile(source, "utf8"), {
     document: "index.md",
+    moduleRoot: root,
   })
   const html = `<!doctype html>\n${toHTML(ast)}\n`
   const output = join(root, "dist")

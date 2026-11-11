@@ -74,14 +74,17 @@ JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結�
   Matraのbindingと同名の公開rootは既存のduplicate-binding診断で拒否する。
 - `.py` fenceは同一文書内の他の`.py` fenceとPython標準ライブラリをimportできる。
   文書内moduleはPythonのimport名（pathの`/`を`.`へ変換）で解決し、build時に依存をbundleへ含める。
-  外部packageは`matra.python.packages`に`name==version`で厳密pinし、build/runの`moduleRoot`にある
-  `matra.python.lock.json`にも対応entryを置く。lock formatは`matra-python-wheels-1`で、
-  同梱Pyodideの厳密なversionに固定する。entryにはcanonical package名、version、project相対wheel path、
+  外部packageは`matra.python.packages`にpackage名だけを記述する。versionはinstall時に自動解決し、
+  文書ごとの`.matra/deps/<document-key>/python/matra.python.lock.json`へ対応entryを記録する。
+  `<document-key>`はproject相対文書pathのbackslashを`/`へ正規化した文字列のlowercase SHA-256である。
+  lock formatは`matra-python-wheels-1`で、
+  同梱Pyodideの厳密なversionに固定する。entryにはcanonical package名、version、Python store相対wheel path、
   SHA-256を記録する。`py3-none-any` wheelだけを受理し、内容はpurelib fileに限定する。
   wheelが宣言する依存packageもすべてlockに含める。buildはpackage codeを実行せずhashとmetadataを検証する。
   bundleにはwheel bytesではなくpathとhashを記録し、run時にhashを再検証してfresh runtimeへinstallする。
   実行時network access、PyPI解決、`micropip`は使わない。
-  例えばfront matterは`python: { packages: ["idna==3.10"] }`とする。lock fileの形式例:
+  例えばfront matterは`javascript: { packages: ["lodash-es"] }`と`python: { packages: ["idna"] }`とする。
+  lock fileの形式例:
 
   ```json
   {
@@ -112,12 +115,13 @@ import解決、`.py` moduleのPython構文・import依存を検証してMatraを
 Python syntax解析にはPyodideを使うが、build時に文書のPython codeを実行しない。
 実行時は選択した`.js.part`をASCII path昇順で初期化し、選択したESM moduleをNode.js標準loaderで初期化してから入口を実行する。
 ESMの依存初期化順は標準loaderに従い、各moduleは一回のrunで一度だけ初期化する。関数本体は呼び出し時だけ実行する。
-bare packageの解決起点は`runLiterate`の`moduleRoot`（省略時は`process.cwd()`）にある`node_modules`とする。
+bare packageの解決起点は`moduleRoot`（省略時は`process.cwd()`）にある
+`.matra/deps/<document-key>/javascript/node_modules`とする。
 CLIは指定された`ROOT`を渡す。依存packageとその推移依存はNode.js標準loaderで解決し、build時にinstall・実行しない。
 選択されたPython moduleはrunごとに初期化したPyodide runtimeで実行する。
 Pyodide runtimeとPython標準ライブラリはnpm配布物へ同梱し、実行時のPython downloadはしない。
-build時のwheel参照解決には`buildLiterate`の`moduleRoot`（省略時は`process.cwd()`）を使い、
-`runLiterate`にも同じrootを渡す。CLIは`ROOT`を両方に使う。Python packageの実行時network accessはない。
+build時のwheel参照解決には文書別store内のwheelを使い、
+`runLiterate`にも同じ`moduleRoot`を渡す。CLIは`ROOT`を両方に使う。Python packageの実行時network accessはない。
 Python moduleのimportとtop-level codeはrun時に評価し、関数本体は呼び出し時に実行する。
 PythonとJavaScriptのmodule状態はrun間で共有しない。Python側からNode.js等のhost機能へアクセス可能なため、
 Pyodideもsandboxではなく、信頼した文書だけを実行する。
@@ -132,20 +136,27 @@ module側のtop-level副作用は各runで再実行され、process-globalな変
 
 ### 依存の準備
 
-`matra deps install DOCUMENT`は指定文書とprojectの依存を準備する。
-JavaScript依存はprojectの標準`package.json`から読み、npmに通常のlockfileを管理させる。
-指定文書に`matra.python.packages`があれば、hostのPython 3/pipで同梱PyodideのPython version向けwheelを取得し、
+依存はFront Matterの`matra.javascript.packages`と`matra.python.packages`にpackage名だけを宣言する。
+`matra deps install npm DOCUMENT`と`matra deps install python DOCUMENT`でecosystemごとに準備し、
+初回installは最新の互換versionを自動解決する。npmは文書ごとの内部`package.json`と
+`package-lock.json`を管理する。PythonではhostのPython 3/pipで同梱PyodideのPython version向けwheelを取得し、
 binaryの`py3-none-any`だけに限定する。Python executableは`MATRA_PYTHON`で指定でき、省略時は
 macOS/Linuxで`python3`、Windowsで`python`を使う。
 
-Python wheelは`wheels/`へcopyし、metadataとSHA-256をproject共通の`matra.python.lock.json`へ統合する。
-lockは文書間で共有し、同じpackage名には一つのversionだけを許可する。version競合時はPython lockを変更せず失敗する。
-wheel codeは実行しない。Matra Commandの明示的なexecution planを使い、network accessを要求して実行前に確認する。
-非対話実行では`--yes`で確認できる。npm lifecycle scriptは無効にする。
-npmとPythonは別processのためtransactionではなく、一方の成功後に他方が失敗する場合がある。
+生成物は文書key別の`.matra/deps/<document-key>/`へまとめる。npmは`javascript/`にmanifest、lock、
+`node_modules/`、Pythonは`python/`にwheel lockと`wheels/`を置く。通常installは既存lockに制約され、
+`matra deps update npm DOCUMENT`または`matra deps update python DOCUMENT`だけがversionを再解決する。
+wheel metadataとSHA-256を記録し、wheel codeは実行しない。Matra Commandの明示的なexecution planを使い、
+network accessを要求して実行前に確認する。非対話実行では`--yes`で確認できる。
+npm lifecycle scriptは無効にする。
+
+`<document-key>`はproject相対文書pathのbackslashを`/`へ正規化した文字列のlowercase SHA-256である。
+
+`matra.javascript.packages`はunscopedまたはscoped npm package名を受け付ける。
+`matra.python.packages`はPEP 503で正規化されるpackage名を受け付ける。version、range、URLは記述しない。
 
 `matra build`と`runLiterate`は依存のinstall・解決を行わない。事前に明示操作で準備する。
-library APIではbuild/run両方に同じproject rootを渡す。
+library APIではbuild/run両方に同じproject rootを`moduleRoot`として渡す。
 
 ### 値境界とdiagnostic
 

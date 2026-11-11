@@ -182,7 +182,8 @@ buildは文書コードを実行せず、runは実行結果の値を返します
 信頼した文書だけを実行してください。Matra nodeは第一級実行時値ではなく、現状はplain dataとして渡ります。
 Pythonの`.py` fenceは同梱Pyodide runtimeで実行します。各moduleは文字列のliteral list/tupleによる`__all__`を宣言し、
 そこに列挙した名前をmodule pathの下に公開します。同一文書内のPython fenceと標準ライブラリをimportできます。
-外部packageは厳密な`name==version` pinと、`moduleRoot`内の`matra.python.lock.json`にあるSHA-256 entryで指定します。
+外部packageはFront Matterへpackage名だけを記述し、versionは依存準備時に自動解決します。
+解決結果とSHA-256は文書ごとの`.matra/deps/`内のlockへ記録します。
 localの`py3-none-any` wheelだけに対応し、build/run時にnetwork accessはありません。共通data valueと同期関数を境界越しに利用でき、
 runごとに新しいruntimeを作ります。Pyodideはsecurity sandboxではありません。
 関数・options・bundle・errorの型定義もサブパスから提供します。

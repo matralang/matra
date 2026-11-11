@@ -38,7 +38,7 @@ test("CLI initializes and builds an offline page outside the checkout without ex
     "matra.css",
     "matra.css.LICENSE",
   ])
-  assert.equal(await readFile(join(project, ".gitignore"), "utf8"), "/dist/\n")
+  assert.equal(await readFile(join(project, ".gitignore"), "utf8"), "/dist/\n.matra/\n")
   assert.deepEqual(await readFile(join(project, "matra.css")), await readFile(css))
   assert.deepEqual(
     await readFile(join(project, "matra.css.LICENSE")),

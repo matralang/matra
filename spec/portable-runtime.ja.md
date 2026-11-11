@@ -156,7 +156,7 @@ Web環境の対応機能も別に示し、利用できない機能は実行前�
   外部プロセス連携の資産である。`shell: false`でも外部プログラムの存在や移植性は保証されない。
   既存の実行機能を削除せず、環境固有処理へ接続する拡張として位置づける。
   capability宣言だけで子プロセスをOS sandboxに隔離できるわけではない。
-  CLIの`matra deps install DOCUMENT`はこの実行計画をnpm/Python wheel準備に使い、
+  CLIの`matra deps install npm DOCUMENT`／`matra deps install python DOCUMENT`はこの実行計画をecosystem別の依存準備に使い、
   network access前に確認する。build/runから依存installは行わない。
 - [`loadMatra`](../packages/core/src/jsonmatra.ts)はNode.jsのfile APIとmodule読み込みを利用する
   文書ローダーである。共通パッケージの読み込み・依存解決とは役割を分ける。

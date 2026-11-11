@@ -166,7 +166,8 @@ Build reproducibility needs a separate contract specifying inputs, toolchains, a
   plans and explicit authorization. Even `shell: false` does not guarantee an external program's
   availability or portability. Keep existing execution features and position them as extensions
   connecting to environment-specific operations.
-  The CLI's `matra deps install DOCUMENT` uses these plans for npm/Python wheel preparation,
+  The CLI's `matra deps install npm DOCUMENT` / `matra deps install python DOCUMENT` uses these plans for
+  ecosystem-specific dependency preparation,
   confirms network access first, and never installs dependencies during build/run.
   Capability declarations alone do not place child processes in an OS sandbox.
 - [`loadMatra`](../packages/core/src/jsonmatra.ts) is a document loader using Node.js file APIs and

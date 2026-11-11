@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { mkdir, mkdtemp, rm, stat, symlink, writeFile } from "node:fs/promises"
 import { isBuiltin } from "node:module"
 import { tmpdir } from "node:os"
@@ -205,6 +206,16 @@ function boundNames(pattern) {
       property.type === "RestElement" ? boundNames(property.argument) : boundNames(property.value),
     )
   }
+  for (const value of pythonPackages) {
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value)) {
+      fail("INVALID_FRONTMATTER", location, "matra.python.packages must contain package names only")
+    }
+    const key = value.replaceAll(/[-_.]+/g, "-").toLowerCase()
+    if (pythonPackageNames.has(key)) {
+      fail("INVALID_FRONTMATTER", location, `Duplicate Python package: ${value}`)
+    }
+    pythonPackageNames.add(key)
+  }
   return []
 }
 
@@ -331,20 +342,82 @@ function frontMatterConfig(markdown, document) {
     fail("INVALID_FRONTMATTER", location, "matra.python must be a mapping")
   }
   const pythonPackages = python.packages === undefined ? [] : python.packages
+  const pythonPackageNames = new Set()
   if (!Array.isArray(pythonPackages) || pythonPackages.some(value => typeof value !== "string")) {
+    fail("INVALID_FRONTMATTER", location, "matra.python.packages must be a list of package names")
+  }
+  for (const value of pythonPackages) {
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value)) {
+      fail(
+        "INVALID_FRONTMATTER",
+        location,
+        "matra.python.packages must contain unversioned package names",
+      )
+    }
+    const name = value.replaceAll(/[-_.]+/g, "-").toLowerCase()
+    if (pythonPackageNames.has(name)) {
+      fail("INVALID_FRONTMATTER", location, `Duplicate Python package: ${value}`)
+    }
+    pythonPackageNames.add(name)
+  }
+  const javascript = config.javascript === undefined ? {} : config.javascript
+  if (!javascript || typeof javascript !== "object" || Array.isArray(javascript)) {
+    fail("INVALID_FRONTMATTER", location, "matra.javascript must be a mapping")
+  }
+  const javascriptPackages = javascript.packages === undefined ? [] : javascript.packages
+  if (
+    !Array.isArray(javascriptPackages) ||
+    javascriptPackages.some(value => typeof value !== "string")
+  ) {
     fail(
       "INVALID_FRONTMATTER",
       location,
-      "matra.python.packages must be a list of pinned requirements",
+      "matra.javascript.packages must be a list of package names",
     )
+  }
+  const javascriptPackageNames = new Set()
+  for (const value of javascriptPackages) {
+    if (!/^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/.test(value)) {
+      fail(
+        "INVALID_FRONTMATTER",
+        location,
+        "matra.javascript.packages must contain unversioned package names",
+      )
+    }
+    if (javascriptPackageNames.has(value)) {
+      fail("INVALID_FRONTMATTER", location, `Duplicate JavaScript package: ${value}`)
+    }
+    javascriptPackageNames.add(value)
   }
   const bodyOffset = opening[0].length + closing.index + closing[0].length
   const bodyLine = markdown.slice(0, bodyOffset).split("\n").length - 1
-  return { entry: config.entry, values, pythonPackages, bodyLine }
+  return { entry: config.entry, values, javascriptPackages, pythonPackages, bodyLine }
 }
 
 export function readPythonPackages(markdown, options = {}) {
   return frontMatterConfig(markdown, options.document ?? "<markdown>").pythonPackages
+}
+
+export function readLiteratePackages(markdown, options = {}) {
+  const config = frontMatterConfig(markdown, options.document ?? "<markdown>")
+  return {
+    javascript: config.javascriptPackages,
+    python: config.pythonPackages,
+  }
+}
+
+export function getLiterateDependencyDirectory(moduleRoot, document, ecosystem) {
+  if (
+    typeof moduleRoot !== "string" ||
+    moduleRoot.length === 0 ||
+    typeof document !== "string" ||
+    document.length === 0 ||
+    !["javascript", "python"].includes(ecosystem)
+  ) {
+    throw new TypeError("Expected a project root, document path, and dependency ecosystem")
+  }
+  const documentKey = createHash("sha256").update(document.replaceAll("\\", "/")).digest("hex")
+  return join(resolve(moduleRoot), ".matra", "deps", documentKey, ecosystem)
 }
 
 export function getPythonPackageTarget() {
@@ -368,7 +441,10 @@ export function registerLiterate(markdown, options = {}) {
       "Configure entry and values in YAML front matter",
     )
   }
-  const { entry, values, pythonPackages, bodyLine } = frontMatterConfig(markdown, document)
+  const { entry, values, javascriptPackages, pythonPackages, bodyLine } = frontMatterConfig(
+    markdown,
+    document,
+  )
   const collected = []
   const lines = markdown.replaceAll("\r\n", "\n").split("\n")
   for (let index = bodyLine; index < lines.length; index++) {
@@ -385,10 +461,19 @@ export function registerLiterate(markdown, options = {}) {
     block.source = lines.slice(start, index).join("\n")
     collected.push(block)
   }
-  return selectBlocks(collected, { document, entry, values, pythonPackages })
+  return selectBlocks(collected, {
+    document,
+    entry,
+    values,
+    javascriptPackages,
+    pythonPackages,
+  })
 }
 
-function selectBlocks(collected, { document, entry, values, pythonPackages }) {
+function selectBlocks(
+  collected,
+  { document, entry, values, javascriptPackages = [], pythonPackages = [] },
+) {
   const blocks = new Map()
   const valueNames = []
   const valueBlocks = new Map()
@@ -467,6 +552,7 @@ function selectBlocks(collected, { document, entry, values, pythonPackages }) {
     entry: main,
     values: selected,
     modules,
+    javascriptPackages,
     pythonPackages,
     pythonBlocks: [...blocks.values()].filter(block => block.path.endsWith(".py")),
   }
@@ -475,8 +561,13 @@ function selectBlocks(collected, { document, entry, values, pythonPackages }) {
 /** @returns {Promise<import("../literate.js").LiterateBundle>} */
 export async function buildLiterate(markdown, options = {}) {
   const registration = registerLiterate(markdown, options)
-  const { entry, values, pythonBlocks, pythonPackages, ...bundleRegistration } = registration
+  const { entry, values, pythonBlocks, javascriptPackages, pythonPackages, ...bundleRegistration } =
+    registration
+  const javascriptRoots = values.filter(block => block.path.endsWith(".js"))
   const pythonRoots = values.filter(block => block.path.endsWith(".py"))
+  if (javascriptPackages.length && javascriptRoots.length === 0) {
+    fail("JS_PACKAGE_ROOT", entry, "JavaScript packages require at least one selected .js module")
+  }
   if (pythonPackages.length && pythonRoots.length === 0) {
     fail("PY_PACKAGE_LOCK", entry, "Python packages require at least one selected .py module")
   }
@@ -484,10 +575,11 @@ export async function buildLiterate(markdown, options = {}) {
   if (typeof moduleRoot !== "string" || moduleRoot.length === 0) {
     fail("INVALID_OPTIONS", entry, "moduleRoot must be a non-empty path")
   }
+  const pythonRoot = getLiterateDependencyDirectory(moduleRoot, entry.document, "python")
   let lockedPackages
   try {
     lockedPackages = await resolvePythonPackages(
-      moduleRoot,
+      pythonRoot,
       pythonPackages,
       pythonRoots[0] ?? entry,
     )
@@ -748,6 +840,8 @@ function validateBundle(bundle) {
       document: bundle.entry.document,
       entry: bundle.entry.path,
       values: bundle.values.map(block => block.path),
+      javascriptPackages: [],
+      pythonPackages: [],
     },
   )
   const expectedModules = registered.modules.map(block => block.path).sort()
@@ -859,7 +953,11 @@ export async function runLiterate(bundle, options = {}) {
     bundle.modules ?? [],
     globals,
     prototypes,
-    options.moduleRoot ?? process.cwd(),
+    getLiterateDependencyDirectory(
+      options.moduleRoot ?? process.cwd(),
+      bundle.entry.document,
+      "javascript",
+    ),
   )
   let pythonRuntime
   try {
@@ -870,7 +968,11 @@ export async function runLiterate(bundle, options = {}) {
           pythonRoots,
           bundle.pythonModules ?? [],
           bundle.pythonPackages ?? [],
-          options.moduleRoot ?? process.cwd(),
+          getLiterateDependencyDirectory(
+            options.moduleRoot ?? process.cwd(),
+            bundle.entry.document,
+            "python",
+          ),
         )
       } catch (error) {
         if (error instanceof LiterateError) throw error

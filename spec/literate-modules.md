@@ -73,25 +73,27 @@ the total `60`. Run regressions with `node --test crates/matra-seed/tests/litera
   headers are diagnosed as unsupported, never inferred from the body.
 - A `.js` fence may use static ESM imports/re-exports to relative `.js` fences in the same document.
   Specifiers must start with `./` or `../`, end in `.js`, and resolve to a registered fence.
-  Bare package specifiers may import/re-export npm packages installed in advance in the execution
-  environment. Do not generate or modify `node_modules`. Reject direct Node builtin imports, package import maps,
+  Bare package specifiers may import/re-export packages listed by name in
+  `matra.javascript.packages` and installed under the selected document's dependency store.
+  Do not generate or modify a project-root `node_modules`. Reject direct Node builtin imports, package import maps,
   dynamic `import()`, import attributes, top-level await, and cyclic dependencies. Imported modules
   need not also be listed in `matra.values`.
   A public root colliding with a Matra binding uses the existing duplicate-binding diagnostic.
 - A `.py` fence may import other `.py` fences in the same document and Python's standard library.
   Resolve fenced modules using Python import names (path `/` becomes `.`) and include reachable
-  dependencies in the bundle. Third-party packages require exact `name==version` pins in
-  `matra.python.packages` and matching entries in `matra.python.lock.json` under build/run's
-  `moduleRoot`. The lock format is `matra-python-wheels-1` and binds the package set to the exact
-  bundled Pyodide version. Entries contain the canonical package name, version, project-relative
+  dependencies in the bundle. Third-party packages are listed by name in `matra.python.packages`.
+  The installer resolves compatible versions and records them in
+  `.matra/deps/<document-key>/python/matra.python.lock.json`. The lock format is
+  `matra-python-wheels-1` and binds the package set to the exact bundled Pyodide version.
+  Entries contain the canonical package name, version, store-relative
   wheel path, and SHA-256. Only `py3-none-any` wheels are accepted; wheel contents are limited to
   purelib files, and every declared dependency must also be locked. Build validates hashes and
   metadata without executing package code. The bundle stores wheel references and hashes, not wheel
-  bytes; run rechecks hashes and installs into its fresh runtime without network access. No PyPI
-  resolution or `micropip` is performed. Each selected module must declare `__all__` as a literal
+  bytes; run rechecks hashes and installs into its fresh runtime without network access. Build/run do
+  not resolve packages through PyPI or use `micropip`. Each selected module must declare `__all__` as a literal
   list/tuple of string export names. Reject missing/invalid exports, cycles, and dynamic imports.
-  For example, the front matter may contain `python: { packages: ["idna==3.10"] }`. Its lock file
-  has this shape:
+  For example, the front matter may contain `javascript: { packages: ["lodash-es"] }` and
+  `python: { packages: ["idna"] }`. The Python lock file has this shape:
 
   ```json
   {
@@ -120,7 +122,8 @@ expressions and `.js` modules/dependencies, validates imports, parses Python syn
 using Pyodide, and compiles Matra to Wasm; it does not execute document code. At runtime, selected `.js.part` values initialize in ascending ASCII path order,
 then selected ESM modules initialize through the standard Node.js loader before the Matra entry runs.
 ESM dependency ordering follows the standard loader, and each module initializes once per run.
-Bare packages resolve from `node_modules` under `runLiterate`'s `moduleRoot` (default: `process.cwd()`).
+Bare packages resolve from `.matra/deps/<document-key>/javascript/node_modules` under
+`runLiterate`'s `moduleRoot` (default: `process.cwd()`).
 The CLI passes its `ROOT`. Resolve packages and their transitive dependencies with Node.js's standard
 loader; build does not install or execute them.
 Selected Python modules execute in a fresh Pyodide runtime on each run. Include Pyodide and its standard
@@ -140,20 +143,19 @@ Future modes must share these initialization/call semantics without build-time e
 
 ### Dependency preparation
 
-`matra deps install DOCUMENT` prepares dependencies declared by the selected document and project.
-It reads JavaScript dependencies from the project's standard `package.json` and lets npm maintain
-its normal lockfile. If a Python package list is present in the selected document's
-`matra.python.packages`, it invokes the host's Python 3/pip to download wheels for the bundled
-Pyodide Python version, restricted to binary `py3-none-any` wheels. `MATRA_PYTHON` may select the
-Python executable; otherwise the CLI uses `python3` (or `python` on Windows).
+Declare unversioned package names in `matra.javascript.packages` and `matra.python.packages`.
+Run `matra deps install npm DOCUMENT` or `matra deps install python DOCUMENT` to prepare one
+ecosystem at a time. The first install resolves compatible versions automatically. npm maintains
+a generated manifest and lock per document. Python uses the host's Python 3/pip to download wheels
+for the bundled Pyodide Python version, restricted to binary `py3-none-any` wheels.
+`MATRA_PYTHON` may select the executable; otherwise the CLI uses `python3` (or `python` on Windows).
 
-Python wheels are copied into `wheels/`, and their metadata and SHA-256 values are merged into the
-project-wide `matra.python.lock.json`. The lock is shared by documents: each package name can have
-only one version in the project. A conflicting version fails without changing the Python lock.
+Generated files live under `.matra/deps/<document-key>/npm/` or `python/`. Python's lock records
+resolved versions, metadata, and SHA-256 values. Install honors existing locks; `matra deps update
+npm DOCUMENT` or `matra deps update python DOCUMENT` explicitly resolves versions again.
 The operation does not execute wheel code. It uses Matra Command's explicit execution plan,
 requests network access, and prompts before running; use `--yes` for non-interactive confirmation.
-npm lifecycle scripts are disabled. The npm and Python operations are separate processes and are
-not transactional with each other, so one may have completed if the other fails.
+npm lifecycle scripts are disabled. Install operations are per-ecosystem and are not transactional.
 
 `matra build` and `runLiterate` never install or resolve dependencies. Prepare them explicitly
 before execution, and pass the same project root to build and run when using the library API.
@@ -216,11 +218,11 @@ approach, not to ordinary Core APIs.
 instruction to read a file. FrontMatter is the source of truth for entry and
 values; caller overrides are rejected. Bundle the matching compiler Wasm so
 ordinary use does not require compiler path or acquisition configuration.
-`moduleRoot` is the project directory used to resolve npm dependencies and
-Python wheel references; it defaults to `process.cwd()`. Install npm packages
-and place Python wheels there in advance. Builds and runs do not download or
-modify project dependencies; Python wheels are installed only into the fresh
-in-memory Pyodide runtime. Bundles store wheel paths and hashes, not wheel bytes.
+`moduleRoot` is the project directory used to resolve the per-document dependency stores under
+`.matra/deps/`; it defaults to `process.cwd()`. The document key is the lowercase SHA-256 of its
+project-relative path after converting backslashes to `/`. Prepare dependencies there in advance.
+Builds and runs do not download or modify project dependencies; Python wheels are installed only
+into the fresh in-memory Pyodide runtime. Bundles store wheel paths and hashes, not wheel bytes.
 
 Build returns a versioned bundle that can be saved and restored as JSON.
 It contains Wasm, selected JavaScript sources, and source locations; it does not

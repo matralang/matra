@@ -14,13 +14,14 @@ import {
   writeFile,
 } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { delimiter, isAbsolute, join, relative, resolve, sep } from "node:path"
+import { delimiter, dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
 import { env, execPath, platform, stdin, stdout } from "node:process"
 import { createInterface } from "node:readline/promises"
 import { authorizePlan, executePlan, planCommands } from "@matra/command"
 import {
+  getLiterateDependencyDirectory,
   getPythonPackageTarget,
-  readPythonPackages,
+  readLiteratePackages,
   validatePythonWheels,
 } from "@matra/core/experimental/literate"
 
@@ -31,23 +32,18 @@ function packageNameKey(name) {
   return name.replaceAll(/[-_.]+/g, "-").toLowerCase()
 }
 
-function parseRequirements(requirements, document) {
-  const parsed = new Map()
-  for (const requirement of requirements) {
-    const match =
-      typeof requirement === "string" &&
-      /^([A-Za-z0-9][A-Za-z0-9._-]*)==([A-Za-z0-9][A-Za-z0-9.+!_-]*)$/.exec(requirement)
-    if (!match) {
-      throw new Error(
-        `${document}: Python dependencies must use exact name==version pins: ${requirement}`,
-      )
+function parsePackageNames(packages, ecosystem, document) {
+  const parsed = []
+  for (const value of packages) {
+    const valid =
+      typeof value === "string" &&
+      (ecosystem === "javascript"
+        ? /^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/.test(value)
+        : /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value))
+    if (!valid) {
+      throw new Error(`${document}: ${ecosystem} dependencies must be package names only: ${value}`)
     }
-    const name = packageNameKey(match[1])
-    const previous = parsed.get(name)
-    if (previous && previous !== match[2]) {
-      throw new Error(`${document}: conflicting Python pins for ${name}`)
-    }
-    parsed.set(name, match[2])
+    if (!parsed.includes(value)) parsed.push(value)
   }
   return parsed
 }
@@ -203,42 +199,80 @@ async function confirmPlan(plan, yes) {
   }
 }
 
+async function ensureDirectory(path) {
+  const target = resolve(path)
+  const missing = []
+  let current = target
+  while (true) {
+    try {
+      const info = await lstat(current)
+      if (!info.isDirectory() || info.isSymbolicLink()) {
+        throw new Error(`Expected a regular directory, not a file or symlink: ${current}`)
+      }
+      break
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error
+      missing.push(current)
+      const parent = dirname(current)
+      if (parent === current) throw new Error(`Cannot find a parent directory for ${target}`)
+      current = parent
+    }
+  }
+  for (const directory of missing.reverse()) {
+    try {
+      await mkdir(directory)
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error
+    }
+    const info = await lstat(directory)
+    if (!info.isDirectory() || info.isSymbolicLink()) {
+      throw new Error(`Expected a regular directory, not a file or symlink: ${directory}`)
+    }
+  }
+}
+
+async function prepareNpmManifest(directory, packages) {
+  await ensureDirectory(directory)
+  const manifest = join(directory, "package.json")
+  try {
+    const info = await lstat(manifest)
+    if (!info.isFile() || info.isSymbolicLink()) {
+      throw new Error("Generated package.json must be a regular file")
+    }
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error
+  }
+  const contents = {
+    private: true,
+    type: "module",
+    dependencies: Object.fromEntries(packages.map(name => [name, "*"])),
+  }
+  await writeFile(manifest, `${JSON.stringify(contents, null, 2)}\n`)
+}
+
 async function installPythonPackages(root, requirements, staging, document) {
-  const target = getPythonPackageTarget()
-  const oldPackages = await readExistingLock(root, target.pyodide)
-  const requested = parseRequirements(requirements, document)
+  const requested = new Set(requirements.map(packageNameKey))
   const wheels = []
   for (const file of await readdir(staging)) {
+    if (!file.endsWith(".whl")) continue
     const bytes = await readFile(join(staging, file))
     wheels.push(packageFromWheel(file, bytes))
   }
   if (wheels.length === 0) throw new Error("pip download completed without producing any wheels")
+  const names = new Set()
   for (const wheel of wheels) {
-    const old = oldPackages.get(wheel.name)
-    if (old && (old.version !== wheel.version || old.sha256 !== wheel.sha256)) {
-      throw new Error(
-        `Project Python lock conflict for ${wheel.name}: ${old.version} and ${wheel.version}`,
-      )
-    }
-    oldPackages.set(wheel.name, wheel)
+    if (names.has(wheel.name)) throw new Error(`pip produced duplicate wheels for ${wheel.name}`)
+    names.add(wheel.name)
   }
-  for (const [name, version] of requested) {
-    if (oldPackages.get(name)?.version !== version) {
-      throw new Error(`pip did not produce the requested Python package: ${name}==${version}`)
+  for (const name of requested) {
+    if (!names.has(name)) {
+      throw new Error(`pip did not produce the requested Python package: ${name}`)
     }
   }
-  await validatePythonWheels([...oldPackages.values()], document)
+  await validatePythonWheels(wheels, document)
 
   const wheelRoot = join(root, wheelDirectory)
-  try {
-    const info = await lstat(wheelRoot)
-    if (!info.isDirectory() || info.isSymbolicLink()) {
-      throw new Error(`${wheelDirectory} must be a regular directory`)
-    }
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error
-    await mkdir(wheelRoot)
-  }
+  await ensureDirectory(wheelRoot)
   for (const wheel of wheels) {
     const destination = join(wheelRoot, wheel.file.split("/").at(-1))
     try {
@@ -261,8 +295,8 @@ async function installPythonPackages(root, requirements, staging, document) {
   }
   const lock = {
     format: "matra-python-wheels-1",
-    pyodide: target.pyodide,
-    packages: [...oldPackages.values()]
+    pyodide: getPythonPackageTarget().pyodide,
+    packages: wheels
       .map(({ bytes: _bytes, ...entry }) => entry)
       .sort((left, right) => left.name.localeCompare(right.name)),
   }
@@ -276,8 +310,17 @@ async function installPythonPackages(root, requirements, staging, document) {
   console.log(`Updated: ${lockFile} (${wheels.length} wheel(s) downloaded)`)
 }
 
-export async function installDependencies(root, documentPath, yes = false) {
-  root = resolve(root)
+export async function installDependencies(
+  root,
+  ecosystem,
+  documentPath,
+  yes = false,
+  update = false,
+) {
+  if (ecosystem !== "npm" && ecosystem !== "python") {
+    throw new Error("Specify an ecosystem: npm or python")
+  }
+  root = await realpath(resolve(root))
   if (!documentPath || isAbsolute(documentPath) || documentPath.split(/[\\/]/).includes("..")) {
     throw new Error("Specify a Markdown document path relative to the project root")
   }
@@ -287,68 +330,94 @@ export async function installDependencies(root, documentPath, yes = false) {
   if (!documentInfo.isFile() || documentInfo.isSymbolicLink()) {
     throw new Error("Document path must be a regular file inside the project root")
   }
+  const documentName = relative(root, document)
   const markdown = await readFile(document, "utf8")
-  const requirements = readPythonPackages(markdown, { document: relative(root, document) })
-  parseRequirements(requirements, relative(root, document))
-
-  let npm = false
-  try {
-    const manifest = await lstat(join(root, "package.json"))
-    if (!manifest.isFile() || manifest.isSymbolicLink()) {
-      throw new Error("package.json must be a regular file")
-    }
-    npm = true
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error
-  }
-  if (!npm && requirements.length === 0) {
-    console.log("No npm or Python dependencies declared.")
+  const declared = readLiteratePackages(markdown, { document: documentName })
+  const packages = parsePackageNames(
+    declared[ecosystem === "npm" ? "javascript" : "python"],
+    ecosystem === "npm" ? "javascript" : "python",
+    documentName,
+  )
+  if (packages.length === 0) {
+    console.log(`No ${ecosystem} dependencies declared in ${documentName}.`)
     return
   }
 
-  const staging = requirements.length ? await mkdtemp(join(tmpdir(), "matra-python-wheels-")) : null
+  const dependencyRoot = getLiterateDependencyDirectory(
+    root,
+    documentName,
+    ecosystem === "npm" ? "javascript" : "python",
+  )
+  await ensureDirectory(dependencyRoot)
+  const stagingRoot = ecosystem === "python" ? await mkdtemp(join(tmpdir(), "matra-python-")) : null
   try {
-    const target = requirements.length ? getPythonPackageTarget() : null
     const specs = []
-    if (npm) {
-      const npmCommand = await npmInvocation()
+    let npmCommand
+    let pythonWheels
+    let pythonConstraints
+    if (ecosystem === "npm") {
+      npmCommand = await npmInvocation()
       specs.push({
-        id: "npm-install",
+        id: update ? "npm-update" : "npm-install",
         program: npmCommand.program,
-        args: [...npmCommand.args, "install", "--ignore-scripts", "--no-audit", "--no-fund"],
+        args: [
+          ...npmCommand.args,
+          update ? "update" : "install",
+          "--prefix",
+          dependencyRoot,
+          "--ignore-scripts",
+          "--no-audit",
+          "--no-fund",
+        ],
         cwd: root,
-        writes: [root],
+        writes: [dependencyRoot],
       })
     }
-    if (requirements.length) {
+    if (ecosystem === "python") {
+      const target = getPythonPackageTarget()
+      const oldPackages = update
+        ? new Map()
+        : await readExistingLock(dependencyRoot, target.pyodide)
+      pythonWheels = join(stagingRoot, "wheels")
+      await mkdir(pythonWheels)
+      const args = [
+        "-m",
+        "pip",
+        "download",
+        "--only-binary=:all:",
+        "--implementation",
+        "py",
+        "--python-version",
+        target.python.split(".").slice(0, 2).join("."),
+        "--abi",
+        "none",
+        "--platform",
+        "any",
+        "--dest",
+        pythonWheels,
+      ]
+      if (oldPackages.size) {
+        pythonConstraints = join(stagingRoot, "constraints.txt")
+        await writeFile(
+          pythonConstraints,
+          [...oldPackages.values()].map(({ name, version }) => `${name}==${version}\n`).join(""),
+        )
+        args.push("--constraint", pythonConstraints)
+      }
+      args.push(...packages)
       const python =
         process.env.MATRA_PYTHON ?? (process.platform === "win32" ? "python" : "python3")
       specs.push({
         id: "python-wheels",
         program: python,
-        args: [
-          "-m",
-          "pip",
-          "download",
-          "--only-binary=:all:",
-          "--implementation",
-          "py",
-          "--python-version",
-          target.python.split(".").slice(0, 2).join("."),
-          "--abi",
-          "none",
-          "--platform",
-          "any",
-          "--dest",
-          staging,
-          ...requirements,
-        ],
+        args,
         cwd: root,
-        writes: [staging],
+        writes: [stagingRoot, dependencyRoot],
       })
     }
     const plan = executionPlan(specs)
     await confirmPlan(plan, yes)
+    if (ecosystem === "npm") await prepareNpmManifest(dependencyRoot, packages)
     const authorized = authorizePlan(plan, {
       commands: plan.capabilities.commands,
       read: plan.capabilities.read,
@@ -376,8 +445,10 @@ export async function installDependencies(root, documentPath, yes = false) {
       process.removeListener("SIGTERM", abort)
     }
     if (result.status !== "ok") throw new Error("Dependency command failed")
-    if (requirements.length) await installPythonPackages(root, requirements, staging, documentPath)
+    if (ecosystem === "python") {
+      await installPythonPackages(dependencyRoot, packages, pythonWheels, documentName)
+    }
   } finally {
-    if (staging) await rm(staging, { recursive: true, force: true })
+    if (stagingRoot) await rm(stagingRoot, { recursive: true, force: true })
   }
 }

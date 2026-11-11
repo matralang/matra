@@ -7,7 +7,11 @@ import { join } from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
 import { deflateRawSync } from "node:zlib"
-import { buildLiterate, runLiterate } from "@matra/core/experimental/literate"
+import {
+  buildLiterate,
+  getLiterateDependencyDirectory,
+  runLiterate,
+} from "@matra/core/experimental/literate"
 
 const cli = fileURLToPath(new URL("../src/cli.mjs", import.meta.url))
 
@@ -72,11 +76,10 @@ async function executable(path, source) {
   await chmod(path, 0o755)
 }
 
-test("deps install uses Matra Command, confirms network access, and creates the shared Python lock", async t => {
+test("Python deps install resolves unpinned packages into a per-document lock", async t => {
   const root = await tempRoot(t)
   const bin = join(root, "bin")
   await mkdir(bin)
-  await writeFile(join(root, "package.json"), JSON.stringify({ private: true }))
   await writeFile(
     join(root, "index.md"),
     `---
@@ -84,7 +87,7 @@ matra:
   entry: main.matra
   values: [value.py]
   python:
-    packages: [sample-wheel==1.0]
+    packages: [sample-wheel]
 ---
 \`\`\`main.matra
 p { value.answer }
@@ -104,6 +107,7 @@ __all__ = ["answer"]
     "sample_wheel-1.0.dist-info/top_level.txt": "sample_pkg\n",
   }).toString("base64")
   const pipLog = join(root, "pip-args.json")
+  const pythonRoot = getLiterateDependencyDirectory(root, "index.md", "python")
   await executable(
     join(bin, "python3"),
     `const fs=require("node:fs"); const path=require("node:path");
@@ -111,35 +115,27 @@ const args=process.argv.slice(2);
 fs.writeFileSync(process.env.MATRA_TEST_PIP_LOG, JSON.stringify(args));
 fs.writeFileSync(path.join(args[args.indexOf("--dest")+1], "sample_wheel-1.0-py3-none-any.whl"), Buffer.from("${wheel}", "base64"));`,
   )
-  const npmLog = join(root, "npm-args.json")
-  await executable(
-    join(bin, "npm"),
-    `require("node:fs").writeFileSync(process.env.MATRA_TEST_NPM_LOG, JSON.stringify(process.argv.slice(2)));`,
-  )
-  const result = spawnSync(process.execPath, [cli, "deps", "install", "index.md", "--yes"], {
-    cwd: root,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      PATH: bin,
-      MATRA_TEST_PIP_LOG: pipLog,
-      MATRA_TEST_NPM_LOG: npmLog,
+  const result = spawnSync(
+    process.execPath,
+    [cli, "deps", "install", "python", "index.md", "--yes"],
+    {
+      cwd: root,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: bin,
+        MATRA_TEST_PIP_LOG: pipLog,
+      },
     },
-  })
+  )
   assert.equal(result.status, 0, result.stderr)
   assert.match(result.stdout, /network access/)
-  assert.deepEqual(JSON.parse(await readFile(npmLog, "utf8")), [
-    "install",
-    "--ignore-scripts",
-    "--no-audit",
-    "--no-fund",
-  ])
   const pipArgs = JSON.parse(await readFile(pipLog, "utf8"))
   assert.deepEqual(pipArgs.slice(0, 3), ["-m", "pip", "download"])
   assert.ok(pipArgs.includes("--only-binary=:all:"))
   assert.ok(pipArgs.includes("--platform") && pipArgs[pipArgs.indexOf("--platform") + 1] === "any")
-  assert.ok(pipArgs.includes("sample-wheel==1.0"))
-  const lock = JSON.parse(await readFile(join(root, "matra.python.lock.json"), "utf8"))
+  assert.ok(pipArgs.includes("sample-wheel"))
+  const lock = JSON.parse(await readFile(join(pythonRoot, "matra.python.lock.json"), "utf8"))
   assert.equal(lock.format, "matra-python-wheels-1")
   assert.equal(lock.pyodide, "314.0.7")
   assert.deepEqual(
@@ -154,10 +150,11 @@ fs.writeFileSync(path.join(args[args.indexOf("--dest")+1], "sample_wheel-1.0-py3
     ],
   )
   assert.deepEqual(
-    await readFile(join(root, "wheels/sample_wheel-1.0-py3-none-any.whl")),
+    await readFile(join(pythonRoot, "wheels/sample_wheel-1.0-py3-none-any.whl")),
     Buffer.from(wheel, "base64"),
   )
   const bundle = await buildLiterate(await readFile(join(root, "index.md"), "utf8"), {
+    document: "index.md",
     moduleRoot: root,
   })
   assert.deepEqual(await runLiterate(bundle, { moduleRoot: root }), {
@@ -167,18 +164,88 @@ fs.writeFileSync(path.join(args[args.indexOf("--dest")+1], "sample_wheel-1.0-py3
   })
 })
 
-test("deps install does not execute commands without an explicit confirmation", async t => {
+test("npm deps install and update use a locked package store for one document", async t => {
+  const root = await tempRoot(t)
+  const bin = join(root, "bin")
+  await mkdir(bin)
+  const source = `---
+matra:
+  entry: main.matra
+  values: [math.js]
+  javascript:
+    packages: [matra-test-package]
+---
+\`\`\`main.matra
+p { math.answer }
+\`\`\`
+\`\`\`math.js
+export * from "matra-test-package"
+\`\`\`
+`
+  await writeFile(join(root, "index.md"), source)
+  const dependencyRoot = getLiterateDependencyDirectory(root, "index.md", "javascript")
+  const npmLog = join(root, "npm-args.json")
+  await executable(
+    join(bin, "npm"),
+    `const fs=require("node:fs"); const path=require("node:path"); const args=process.argv.slice(2);
+const root=args[args.indexOf("--prefix")+1];
+fs.writeFileSync(process.env.MATRA_TEST_NPM_LOG, JSON.stringify(args));
+fs.mkdirSync(path.join(root,"node_modules","matra-test-package"),{recursive:true});
+fs.writeFileSync(path.join(root,"node_modules","matra-test-package","package.json"),JSON.stringify({name:"matra-test-package",type:"module",exports:"./index.js"}));
+fs.writeFileSync(path.join(root,"node_modules","matra-test-package","index.js"),"export const answer=42");
+fs.writeFileSync(path.join(root,"package-lock.json"),JSON.stringify({lockfileVersion:3,packages:{}}));`,
+  )
+  const result = spawnSync(process.execPath, [cli, "deps", "install", "npm", "index.md", "--yes"], {
+    cwd: root,
+    encoding: "utf8",
+    env: { ...process.env, PATH: bin, MATRA_TEST_NPM_LOG: npmLog },
+  })
+  assert.equal(result.status, 0, result.stderr)
+  const args = JSON.parse(await readFile(npmLog, "utf8"))
+  assert.deepEqual(args.slice(0, 2), ["install", "--prefix"])
+  assert.ok(args.includes("--ignore-scripts"))
+  assert.deepEqual(JSON.parse(await readFile(join(dependencyRoot, "package.json"), "utf8")), {
+    private: true,
+    type: "module",
+    dependencies: { "matra-test-package": "*" },
+  })
+  assert.ok((await readFile(join(dependencyRoot, "package-lock.json"), "utf8")).length > 0)
+  const bundle = await buildLiterate(source, { document: "index.md", moduleRoot: root })
+  assert.deepEqual(await runLiterate(bundle, { moduleRoot: root }), {
+    tag: "p",
+    props: {},
+    children: [42],
+  })
+  const updated = spawnSync(process.execPath, [cli, "deps", "update", "npm", "index.md", "--yes"], {
+    cwd: root,
+    encoding: "utf8",
+    env: { ...process.env, PATH: bin, MATRA_TEST_NPM_LOG: npmLog },
+  })
+  assert.equal(updated.status, 0, updated.stderr)
+  assert.equal(JSON.parse(await readFile(npmLog, "utf8"))[0], "update")
+})
+
+test("npm deps install does not execute commands without an explicit confirmation", async t => {
   const root = await tempRoot(t)
   const marker = join(root, "unexpected")
-  await writeFile(join(root, "package.json"), JSON.stringify({ private: true }))
-  await writeFile(join(root, "index.md"), `---\nmatra:\n  entry: main.matra\n---\n`)
+  await writeFile(
+    join(root, "index.md"),
+    `---
+matra:
+  entry: main.matra
+  values: [main.js]
+  javascript:
+    packages: [left-pad]
+---
+`,
+  )
   const bin = join(root, "bin")
   await mkdir(bin)
   await executable(
     join(bin, "npm"),
     `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "ran");`,
   )
-  const result = spawnSync(process.execPath, [cli, "deps", "install", "index.md"], {
+  const result = spawnSync(process.execPath, [cli, "deps", "install", "npm", "index.md"], {
     cwd: root,
     encoding: "utf8",
     env: { ...process.env, PATH: bin },
@@ -188,30 +255,47 @@ test("deps install does not execute commands without an explicit confirmation", 
   await assert.rejects(readFile(marker), { code: "ENOENT" })
 })
 
-test("deps install rejects conflicting versions in the project-wide Python lock", async t => {
+test("Python deps install honors its lock and update explicitly resolves packages again", async t => {
   const root = await tempRoot(t)
   const bin = join(root, "bin")
   await mkdir(bin)
+  const pythonRoot = getLiterateDependencyDirectory(root, "index.md", "python")
   await writeFile(
     join(root, "index.md"),
     `---
 matra:
   entry: main.matra
+  values: [value.py]
   python:
-    packages: [sample-wheel==1.0]
+    packages: [sample-wheel]
 ---
+\`\`\`main.matra
+p { value.answer }
+\`\`\`
+\`\`\`value.py
+from sample_pkg import answer
+__all__ = ["answer"]
+\`\`\`
 `,
   )
-  const bytes = wheelZip({
+  const wheel2 = wheelZip({
+    "sample_pkg/__init__.py": "answer = 42\n",
     "sample_wheel-2.0.dist-info/METADATA":
       "Metadata-Version: 2.1\nName: sample-wheel\nVersion: 2.0\n\n",
     "sample_wheel-2.0.dist-info/WHEEL":
       "Wheel-Version: 1.0\nGenerator: test\nRoot-Is-Purelib: true\nTag: py3-none-any\n\n",
   })
-  await mkdir(join(root, "wheels"))
-  await writeFile(join(root, "wheels/sample_wheel-2.0-py3-none-any.whl"), bytes)
+  const wheel1 = wheelZip({
+    "sample_pkg/__init__.py": "answer = 21\n",
+    "sample_wheel-1.0.dist-info/METADATA":
+      "Metadata-Version: 2.1\nName: sample-wheel\nVersion: 1.0\n\n",
+    "sample_wheel-1.0.dist-info/WHEEL":
+      "Wheel-Version: 1.0\nGenerator: test\nRoot-Is-Purelib: true\nTag: py3-none-any\n\n",
+  })
+  await mkdir(join(pythonRoot, "wheels"), { recursive: true })
+  await writeFile(join(pythonRoot, "wheels/sample_wheel-2.0-py3-none-any.whl"), wheel2)
   await writeFile(
-    join(root, "matra.python.lock.json"),
+    join(pythonRoot, "matra.python.lock.json"),
     JSON.stringify({
       format: "matra-python-wheels-1",
       pyodide: "314.0.7",
@@ -220,32 +304,53 @@ matra:
           name: "sample-wheel",
           version: "2.0",
           file: "wheels/sample_wheel-2.0-py3-none-any.whl",
-          sha256: createHash("sha256").update(bytes).digest("hex"),
+          sha256: createHash("sha256").update(wheel2).digest("hex"),
         },
       ],
     }),
   )
+  const pipLog = join(root, "pip-args.jsonl")
   await executable(
     join(bin, "python3"),
     `const fs=require("node:fs"); const path=require("node:path"); const args=process.argv.slice(2);
-fs.writeFileSync(path.join(args[args.indexOf("--dest")+1], "sample_wheel-1.0-py3-none-any.whl"), Buffer.from(${JSON.stringify(
-      wheelZip({
-        "sample_wheel-1.0.dist-info/METADATA":
-          "Metadata-Version: 2.1\nName: sample-wheel\nVersion: 1.0\n\n",
-        "sample_wheel-1.0.dist-info/WHEEL":
-          "Wheel-Version: 1.0\nGenerator: test\nRoot-Is-Purelib: true\nTag: py3-none-any\n\n",
-      }).toString("base64"),
-    )}, "base64"));`,
+fs.appendFileSync(process.env.MATRA_TEST_PIP_LOG, JSON.stringify(args)+"\\n");
+const locked=args.includes("--constraint");
+const filename=locked?"sample_wheel-2.0-py3-none-any.whl":"sample_wheel-1.0-py3-none-any.whl";
+const contents=locked?${JSON.stringify(wheel2.toString("base64"))}:${JSON.stringify(wheel1.toString("base64"))};
+fs.writeFileSync(path.join(args[args.indexOf("--dest")+1], filename), Buffer.from(contents, "base64"));`,
   )
-  const result = spawnSync(process.execPath, [cli, "deps", "install", "index.md", "--yes"], {
-    cwd: root,
-    encoding: "utf8",
-    env: { ...process.env, PATH: bin, MATRA_PYTHON: join(bin, "python3") },
-  })
-  assert.equal(result.status, 1)
-  assert.match(result.stderr, /Python lock conflict for sample-wheel/)
+  const env = {
+    ...process.env,
+    PATH: bin,
+    MATRA_PYTHON: join(bin, "python3"),
+    MATRA_TEST_PIP_LOG: pipLog,
+  }
+  const installed = spawnSync(
+    process.execPath,
+    [cli, "deps", "install", "python", "index.md", "--yes"],
+    { cwd: root, encoding: "utf8", env },
+  )
+  assert.equal(installed.status, 0, installed.stderr)
   assert.equal(
-    JSON.parse(await readFile(join(root, "matra.python.lock.json"), "utf8")).packages[0].version,
+    JSON.parse(await readFile(join(pythonRoot, "matra.python.lock.json"), "utf8")).packages[0]
+      .version,
     "2.0",
   )
+  const updated = spawnSync(
+    process.execPath,
+    [cli, "deps", "update", "python", "index.md", "--yes"],
+    { cwd: root, encoding: "utf8", env },
+  )
+  assert.equal(updated.status, 0, updated.stderr)
+  assert.equal(
+    JSON.parse(await readFile(join(pythonRoot, "matra.python.lock.json"), "utf8")).packages[0]
+      .version,
+    "1.0",
+  )
+  const args = (await readFile(pipLog, "utf8"))
+    .trim()
+    .split("\n")
+    .map(line => JSON.parse(line))
+  assert.ok(args[0].includes("--constraint"))
+  assert.ok(!args[1].includes("--constraint"))
 })

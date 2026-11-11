@@ -419,15 +419,11 @@ export async function resolvePythonPackages(moduleRoot, requirements, block) {
     packages.set(packageKey, wheel)
   }
   for (const requirement of requirements) {
-    const match =
-      typeof requirement === "string" &&
-      /^([A-Za-z0-9][A-Za-z0-9._-]*)==([A-Za-z0-9][A-Za-z0-9.+!_-]*)$/.exec(requirement)
-    const wheel = match && packages.get(packageNameKey(match[1]))
-    if (!wheel || wheel.version !== match[2]) {
-      throw packageError(
-        block,
-        `Requirement is not pinned in matra.python.lock.json: ${requirement}`,
-      )
+    const valid =
+      typeof requirement === "string" && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(requirement)
+    const wheel = valid && packages.get(packageNameKey(requirement))
+    if (!wheel) {
+      throw packageError(block, `Package is not locked in matra.python.lock.json: ${requirement}`)
     }
   }
   return [...packages.values()]

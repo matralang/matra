@@ -3,6 +3,7 @@ import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
+import { getLiterateDependencyDirectory } from "@matra/core/experimental/literate"
 import { buildSite } from "../src/site.mjs"
 
 const layout = `---
@@ -101,9 +102,10 @@ article { h1 { page.data.title }; p { site.data.label } }
   )
 })
 
-test("resolves preinstalled npm packages from the site project root", async t => {
+test("resolves preinstalled npm packages from the page-specific dependency store", async t => {
   const root = await project(t)
-  const packageDirectory = join(root, "node_modules", "matra-site-package")
+  const dependencyRoot = getLiterateDependencyDirectory(root, "pages/npm.matra.md", "javascript")
+  const packageDirectory = join(dependencyRoot, "node_modules", "matra-site-package")
   await mkdir(packageDirectory, { recursive: true })
   await writeFile(
     join(packageDirectory, "package.json"),
@@ -120,6 +122,8 @@ test("resolves preinstalled npm packages from the site project root", async t =>
 matra:
  entry: main.matra
  values: [value.js]
+ javascript:
+   packages: [matra-site-package]
 site:
  data:
    title: npm

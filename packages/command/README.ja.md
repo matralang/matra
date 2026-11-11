@@ -82,6 +82,7 @@ OS/container sandbox内でMatraを実行してください。
 commandは`requires`に従ってtopological orderへ並び替えます。失敗結果は構造化して返し、
 依存commandを`skipped`にします。JSON/NDJSON出力はJSON互換Matra valueとして検証します。
 
-CLIの`matra deps install DOCUMENT`もMatra Commandを使い、計画したnpm処理とPython wheel downloadを
-明示的なユーザー確認後に実行します。network accessを要求し、npm lifecycle scriptを無効にします。
-JavaScriptとPythonの依存manifest・lockfileはそれぞれ独立しています。
+CLIの`matra deps install npm DOCUMENT`と`matra deps install python DOCUMENT`もMatra Commandを使い、
+計画した依存準備を明示的なユーザー確認後に個別実行します。network accessを要求し、
+npm lifecycle scriptを無効にします。npmとPythonのmanifest・lockfileは文書ごとに分離され、
+生成物は`.matra/deps/`以下に置かれます。

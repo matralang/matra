@@ -86,7 +86,7 @@ export async function verifyDistribution(directory) {
       await readFile(join(project, "dist/matra.css.LICENSE")),
       await readFile(join(home, "app/node_modules/@matra/styles/LICENSE")),
     )
-    assert.equal(await readFile(join(project, ".gitignore"), "utf8"), "/dist/\n")
+    assert.equal(await readFile(join(project, ".gitignore"), "utf8"), "/dist/\n.matra/\n")
 
     const reservation = createServer()
     reservation.listen(0, "127.0.0.1")

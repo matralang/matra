@@ -1,7 +1,9 @@
 import {
   buildLiterate as build,
+  getLiterateDependencyDirectory as getDependencyDirectory,
   getPythonPackageTarget as getPythonTarget,
-  readPythonPackages as readPythonPackagePins,
+  readLiteratePackages as readPackageNames,
+  readPythonPackages as readPythonPackageNames,
   runLiterate as run,
   validatePythonWheels as validatePythonWheelFiles,
 } from "./literate/runtime.mjs"
@@ -50,11 +52,31 @@ export interface LiteratePythonWheel {
   bytes: Uint8Array
 }
 
+export interface LiteratePackages {
+  javascript: string[]
+  python: string[]
+}
+
+export function readLiteratePackages(
+  markdown: string,
+  options: Pick<LiterateBuildOptions, "document"> = {},
+): LiteratePackages {
+  return readPackageNames(markdown, options)
+}
+
+export function getLiterateDependencyDirectory(
+  moduleRoot: string,
+  document: string,
+  ecosystem: "javascript" | "python",
+): string {
+  return getDependencyDirectory(moduleRoot, document, ecosystem)
+}
+
 export function readPythonPackages(
   markdown: string,
   options: Pick<LiterateBuildOptions, "document"> = {},
 ): string[] {
-  return readPythonPackagePins(markdown, options)
+  return readPythonPackageNames(markdown, options)
 }
 
 export function getPythonPackageTarget(): { pyodide: string; python: string } {

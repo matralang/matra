@@ -57,8 +57,9 @@ buildエラーはターミナルに表示し、修正されるまでHTTP 503を�
 インターネットから取得したソフトウェアはmacOSで実行承認が必要になる場合があります。
 この開発版は署名・公証を行っていません。組織のセキュリティポリシーに従ってください。
 
-build前に`matra deps install index.md`で依存を準備できます。JavaScriptはnpmの
-`package.json`とlockfile、Pythonは指定文書が宣言するPyodide互換`py3-none-any` wheelを使います。
+Front Matterにpackage名を記述し、build前に`matra deps install npm index.md`または
+`matra deps install python index.md`で準備できます。versionは自動解決して文書別lockに保存し、
+生成物は`.matra/deps/`以下にまとめます。PythonはPyodide互換`py3-none-any` wheelを使います。
 network access前に確認し、npm lifecycle scriptは無効にします。Python wheel用のPython 3/pipは
 システムに別途必要です。同梱配布物にはpackage managerを含みません。
 

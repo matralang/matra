@@ -23,7 +23,10 @@ const SITE_KEYS = new Set(["route", "layout", "data"])
 const OUTPUT_MANIFEST = ".matra-site-manifest.json"
 
 export async function renderLiterateDocument(markdown, options = {}) {
-  const bundle = await buildLiterate(markdown, { document: options.document })
+  const bundle = await buildLiterate(markdown, {
+    document: options.document,
+    moduleRoot: options.moduleRoot,
+  })
   const value = await runLiterate(bundle, {
     globals: options.globals,
     moduleRoot: options.moduleRoot,
@@ -79,11 +82,17 @@ export async function buildSite(directory) {
     ),
   }))
   for (const layout of layouts.values()) {
-    layout.bundle = await buildLiterate(layout.source, { document: layout.document })
+    layout.bundle = await buildLiterate(layout.source, {
+      document: layout.document,
+      moduleRoot: root,
+    })
   }
   for (const page of pages) {
     if (page.kind === "program") {
-      page.bundle = await buildLiterate(page.source, { document: page.document })
+      page.bundle = await buildLiterate(page.source, {
+        document: page.document,
+        moduleRoot: root,
+      })
     }
   }
 

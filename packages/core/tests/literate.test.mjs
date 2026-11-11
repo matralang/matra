@@ -6,7 +6,12 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
 import { deflateRawSync } from "node:zlib"
-import { buildLiterate, LiterateError, runLiterate } from "@matra/core/experimental/literate"
+import {
+  buildLiterate,
+  getLiterateDependencyDirectory,
+  LiterateError,
+  runLiterate,
+} from "@matra/core/experimental/literate"
 
 const markdown = `---
 matra:
@@ -312,7 +317,24 @@ ${body}
 test("standard modules resolve preinstalled npm packages from moduleRoot", async () => {
   const moduleRoot = await mkdtemp(join(tmpdir(), "matra-literate-npm-"))
   try {
-    const packageDirectory = join(moduleRoot, "node_modules", "matra-test-package")
+    const source =
+      `---
+matra:
+  entry: main.matra
+  values: [math.js]
+  javascript:
+    packages: [matra-test-package]
+---
+` +
+      `\`\`\`main.matra
+p { math.add(19, 23) }
+\`\`\`
+\`\`\`math.js
+export * from "matra-test-package"
+\`\`\`
+`
+    const dependencyRoot = getLiterateDependencyDirectory(moduleRoot, "<markdown>", "javascript")
+    const packageDirectory = join(dependencyRoot, "node_modules", "matra-test-package")
     await mkdir(packageDirectory, { recursive: true })
     await writeFile(
       join(packageDirectory, "package.json"),
@@ -326,19 +348,7 @@ test("standard modules resolve preinstalled npm packages from moduleRoot", async
       join(packageDirectory, "index.js"),
       "export const add = (left, right) => left + right\n",
     )
-    const source = `---
-matra:
-  entry: main.matra
-  values: [math.js]
----
-\`\`\`main.matra
-p { math.add(19, 23) }
-\`\`\`
-\`\`\`math.js
-export * from "matra-test-package"
-\`\`\`
-`
-    const bundle = await buildLiterate(source)
+    const bundle = await buildLiterate(source, { moduleRoot })
     assert.deepEqual(await runLiterate(bundle, { moduleRoot }), {
       tag: "p",
       props: {},
@@ -401,13 +411,15 @@ not valid Python !
 test("Python packages use hash-locked local pure-Python wheels without runtime network access", async () => {
   const moduleRoot = await mkdtemp(join(tmpdir(), "matra-literate-python-wheel-"))
   try {
-    await writePythonWheelRoot(moduleRoot)
+    const document = "index.md"
+    const pythonRoot = getLiterateDependencyDirectory(moduleRoot, document, "python")
+    await writePythonWheelRoot(pythonRoot)
     const source = `---
 matra:
   entry: main.matra
   values: [value.py]
   python:
-    packages: [sample-wheel==1.0]
+    packages: [sample-wheel]
 ---
 \`\`\`main.matra
 p { value.answer }
@@ -417,7 +429,7 @@ from sample_pkg import answer
 __all__ = ["answer"]
 \`\`\`
 `
-    const bundle = await buildLiterate(source, { moduleRoot })
+    const bundle = await buildLiterate(source, { document, moduleRoot })
     assert.deepEqual(
       bundle.pythonPackages.map(({ name, version }) => ({ name, version })),
       [{ name: "sample-wheel", version: "1.0" }],
@@ -435,13 +447,15 @@ __all__ = ["answer"]
 test("Python package lock rejects a wheel changed after build", async () => {
   const moduleRoot = await mkdtemp(join(tmpdir(), "matra-literate-python-wheel-"))
   try {
-    const wheel = await writePythonWheelRoot(moduleRoot)
+    const document = "index.md"
+    const pythonRoot = getLiterateDependencyDirectory(moduleRoot, document, "python")
+    const wheel = await writePythonWheelRoot(pythonRoot)
     const source = `---
 matra:
   entry: main.matra
   values: [value.py]
   python:
-    packages: [sample-wheel==1.0]
+    packages: [sample-wheel]
 ---
 \`\`\`main.matra
 p { value.answer }
@@ -451,7 +465,7 @@ from sample_pkg import answer
 __all__ = ["answer"]
 \`\`\`
 `
-    const bundle = await buildLiterate(source, { moduleRoot })
+    const bundle = await buildLiterate(source, { document, moduleRoot })
     await writeFile(wheel, "tampered")
     await assert.rejects(runLiterate(bundle, { moduleRoot }), {
       code: "PY_PACKAGE_LOCK",

@@ -204,8 +204,9 @@ Python `.py` fences run through the bundled Pyodide runtime. Each selected modul
 must declare `__all__` as a literal list/tuple of strings; its listed names are
 exposed below the module path. Python
 imports may target other fences in the same document or the standard library.
-Third-party packages can be used as exact `name==version` pins with matching
-SHA-256 entries in `matra.python.lock.json` under `moduleRoot`. Only local
+Declare third-party packages by name in front matter; dependency preparation
+resolves versions and stores them with SHA-256 entries in per-document locks
+under `.matra/deps/`. Only local
 `py3-none-any` wheels are supported; build and run do not access the network.
 Python values are copied through the common data subset, and synchronous functions
 may be called from Matra. Python modules execute in a fresh runtime per run.

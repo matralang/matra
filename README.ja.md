@@ -85,7 +85,7 @@ hello/
   index.md           # FrontMatter・Matra・JavaScriptデータを含む文書
   matra.css          # @matra/stylesのCSS。自由に編集可能
   matra.css.LICENSE  # CSSのライセンス
-  .gitignore         # /dist/を除外
+  .gitignore         # /dist/と.matra/を除外
 ```
 
 入口は`index.md`、CSSは`matra.css`、出力先は`dist/`に固定しています。
@@ -99,12 +99,13 @@ build時には文書内のJavaScriptが実行されるため、信頼する文�
 利用時には同梱compiler Wasmとmanifestを使い、Rust・pnpm・ネットワークは不要です。
 現在の開発版の準備とpack検証ではRust・pnpmが必要です。
 
-外部moduleを使うprojectでは`matra deps install index.md`を実行します。
-JavaScriptは`package.json`とnpm lockfile、Pythonは指定文書の`matra.python.packages`を使い、
-wheelをproject共通の`matra.python.lock.json`へ統合します。network access前に確認し、
-npm lifecycle scriptは無効にします。Python wheel準備にはPATH上のPython 3とpip
+Front Matterの`matra.javascript.packages`と`matra.python.packages`にはpackage名だけを記述し、
+`matra deps install npm index.md`と`matra deps install python index.md`で個別に準備します。
+versionは初回install時に自動解決され、文書別のlockに記録されます。通常のinstallはlockを維持し、
+`matra deps update npm index.md`または`matra deps update python index.md`で明示的に更新します。
+生成物は`.matra/deps/`以下にまとまり、`matra build`は依存をinstallしません。
+network access前に確認し、npm lifecycle scriptは無効にします。Python wheel準備にはPATH上のPython 3とpip
 （または`MATRA_PYTHON`）が必要で、`py3-none-any` wheelだけに対応します。
-`matra build`は依存をinstallしません。
 
 ### 宣言的な複数ページサイト
 
