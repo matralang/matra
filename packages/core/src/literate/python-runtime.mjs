@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { readFile, realpath } from "node:fs/promises"
 import { createRequire } from "node:module"
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
+import { dirname, isAbsolute, join, posix as posixPath, relative, resolve, sep } from "node:path"
 import { loadPyodide } from "pyodide"
 
 const require = createRequire(import.meta.url)
@@ -680,7 +680,7 @@ export async function loadPythonModules(roots, dependencies, packages, moduleRoo
     directory = `/tmp/matra-${randomUUID()}`
     pyodide.FS.mkdirTree(directory)
     for (const block of [...roots, ...dependencies]) {
-      const path = join(directory, ...moduleFilePath(block).split("/"))
+      const path = posixPath.join(directory, ...moduleFilePath(block).split("/"))
       const parent = path.slice(0, path.lastIndexOf("/"))
       pyodide.FS.mkdirTree(parent)
       pyodide.FS.writeFile(path, block.source, { encoding: "utf8" })

@@ -60,8 +60,8 @@ jobs:
         run: rustup toolchain install 1.97.1 --profile minimal
       - name: Install JavaScript dependencies
         run: pnpm install --frozen-lockfile
-      - name: Build compiler and HTML renderer
-        run: pnpm --filter @matra/core run build && pnpm --filter @matra/html run build
+      - name: Build CLI dependencies
+        run: pnpm --filter @matra/core run build && pnpm --filter @matra/command run build && pnpm --filter @matra/html run build
       - name: Verify CLI contracts
         run: pnpm --filter @matra/cli run test
       - name: Build and verify native folder and extracted ZIP

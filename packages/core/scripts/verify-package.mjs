@@ -12,6 +12,7 @@ const [managerCommand, ...managerArgs] = /\.(?:c|m)?js$/i.test(manager)
   ? [process.execPath, manager]
   : [manager]
 const core = fileURLToPath(new URL("..", import.meta.url))
+const command = fileURLToPath(new URL("../../command/", import.meta.url))
 const html = fileURLToPath(new URL("../../html/", import.meta.url))
 const cliPackage = fileURLToPath(new URL("../../cli/", import.meta.url))
 const siteGeneration = fileURLToPath(new URL("../../site-generation/", import.meta.url))
@@ -25,6 +26,7 @@ const invoke = (cwd, ...args) =>
 
 try {
   invoke(core, "pack", "--out", join(root, "core.tgz"))
+  invoke(command, "pack", "--out", join(root, "command.tgz"))
   invoke(html, "pack", "--out", join(root, "html.tgz"))
   invoke(cliPackage, "pack", "--out", join(root, "cli.tgz"))
   invoke(siteGeneration, "pack", "--out", join(root, "site-generation.tgz"))
@@ -34,6 +36,7 @@ try {
     join(root, "pnpm-workspace.yaml"),
     "overrides:\n" +
       "  '@matra/core': file:./core.tgz\n" +
+      "  '@matra/command': file:./command.tgz\n" +
       "  '@matra/html': file:./html.tgz\n" +
       "  '@matra/site-generation': file:./site-generation.tgz\n" +
       "  '@matra/styles': file:./styles.tgz\n",
@@ -43,6 +46,7 @@ try {
     "add",
     "--ignore-scripts",
     "./core.tgz",
+    "./command.tgz",
     "./html.tgz",
     "./cli.tgz",
     "./site-generation.tgz",
@@ -71,14 +75,20 @@ try {
   await writeFile(join(root, "web-page.md"), markdown)
   const script = `
 import assert from "node:assert/strict"
-import { readFile } from "node:fs/promises"
+import { mkdir, readFile, realpath, symlink } from "node:fs/promises"
+import { join } from "node:path"
 import {
   evaluate,
   parse,
   staticValueToAST as staticValueToBrowserAST,
 } from "@matra/core/browser"
 import { staticValueToAST } from "@matra/core"
-import { buildLiterate, runLiterate, LiterateError } from "@matra/core/experimental/literate"
+import {
+  buildLiterate,
+  getLiterateDependencyDirectory,
+  runLiterate,
+  LiterateError,
+} from "@matra/core/experimental/literate"
 import { toHTML } from "@matra/html"
 assert.deepEqual(
   staticValueToBrowserAST(evaluate(parse('article { h1 { "Browser entry" } }'))),
@@ -98,6 +108,8 @@ try {
     "matra:",
     "  entry: main.matra",
     "  values: [markup.js]",
+    "  javascript:",
+    '    packages: ["@matra/html"]',
     "---",
     "\`\`\`main.matra",
     'p { markup.render("packed") }',
@@ -107,6 +119,21 @@ try {
     'export const render = value => toHTML({ tag: "p", props: {}, children: [value] })',
     "\`\`\`",
   ].join("\\n"))
+  const moduleRoot = process.cwd()
+  const dependencyDirectory = getLiterateDependencyDirectory(
+    moduleRoot,
+    "<markdown>",
+    "javascript",
+  )
+  const packageLink = join(dependencyDirectory, "node_modules", "@matra", "html")
+  await mkdir(join(dependencyDirectory, "node_modules", "@matra"), { recursive: true })
+  const packageTarget = await realpath(join(moduleRoot, "node_modules", "@matra", "html"))
+  try {
+    assert.equal(await realpath(packageLink), packageTarget)
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error
+    await symlink(packageTarget, packageLink, process.platform === "win32" ? "junction" : "dir")
+  }
   assert.deepEqual(await runLiterate(moduleBundle, { moduleRoot: process.cwd() }), {
     tag: "p",
     props: {},
@@ -301,7 +328,7 @@ if (browserValue !== undefined) void staticValueToAST(browserValue)
     { cwd: root, encoding: "utf8" },
   )
   console.log(
-    "Packed Core/HTML/CLI/Site/Styles: APIs, types, init/build/site/dev, missing/corrupt compiler, and Rust-free execution passed.",
+    "Packed Core/Command/HTML/CLI/Site/Styles: APIs, types, init/build/site/dev, missing/corrupt compiler, and Rust-free execution passed.",
   )
 } finally {
   await rm(root, { recursive: true, force: true })
