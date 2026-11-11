@@ -1,15 +1,24 @@
 import assert from "node:assert/strict"
 import { spawn, spawnSync } from "node:child_process"
 import { once } from "node:events"
-import { mkdtemp, readFile, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { runLauncher } from "./distribution-platform.mjs"
 
-const [cliArchive, stylesArchive] = process.argv.slice(2).map(path => resolve(path))
-if (!cliArchive || !stylesArchive || !process.env.npm_execpath) {
-  throw new Error("Run via npm with CLI and Styles tarball paths")
+const [cliArchive, stylesArchive, commandArchive, coreArchive, siteGenerationArchive] = process.argv
+  .slice(2)
+  .map(path => (path ? resolve(path) : undefined))
+if (
+  !cliArchive ||
+  !stylesArchive ||
+  !commandArchive ||
+  !coreArchive ||
+  !siteGenerationArchive ||
+  !process.env.npm_execpath
+) {
+  throw new Error("Run via npm with CLI, Styles, Command, Core, and Site Generation tarball paths")
 }
 const npm = process.env.npm_execpath
 const work = await mkdtemp(join(tmpdir(), "matra-npm-"))
@@ -38,15 +47,43 @@ try {
     "--no-fund",
     cliArchive,
     stylesArchive,
+    commandArchive,
+    coreArchive,
+    siteGenerationArchive,
   ])
   const cli = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"))
   assert.equal(launch(["--version"]).trim(), cli.version)
   launch(["init", "hello"])
   const project = join(work, "hello")
   launch(["build"], project)
+  assert.match(launch(["install"], project), /No dependencies declared/)
   assert.match(await readFile(join(project, "dist/index.html"), "utf8"), /Hello, Matra!/)
   assert.ok((await readFile(join(project, "dist/matra.css"))).length > 0)
   assert.ok((await readFile(join(project, "dist/matra.css.LICENSE"))).length > 0)
+
+  const site = join(work, "site")
+  await Promise.all(["pages", "layouts"].map(path => mkdir(join(site, path), { recursive: true })))
+  await writeFile(
+    join(site, "matra.site.json"),
+    JSON.stringify({
+      version: 1,
+      site: { pages: "pages", layouts: "layouts", defaultLayout: "default" },
+    }),
+  )
+  await writeFile(
+    join(site, "layouts", "default.matra.md"),
+    `---
+matra:
+  entry: main.matra
+---
+\`\`\`main.matra
+html { head {}; body { ...page.content } }
+\`\`\`
+`,
+  )
+  await writeFile(join(site, "pages", "index.md"), "# Packed site\n")
+  launch(["site", "build"], site)
+  assert.match(await readFile(join(site, "dist/index.html"), "utf8"), /<h1>Packed site<\/h1>/)
 
   const listener = createServer()
   listener.listen(0, "127.0.0.1")
@@ -88,7 +125,7 @@ try {
       await once(child, "exit")
     }
   }
-  console.log("Packed npm CLI passed version, init, build, and dev checks.")
+  console.log("Packed npm CLI passed version, init, install, build, site, and dev checks.")
 } finally {
   await rm(work, { recursive: true, force: true })
 }

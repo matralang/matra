@@ -124,24 +124,31 @@ buildは文書中のJavaScriptを実行するため、信頼する文書だけ�
 OS sandboxとtimeoutは保証しません。npm導入はNode.jsが必要で、同梱ZIPとは別経路です。
 
 公開前に、cleanな候補commitを固定し、CLIが依存するCore・HTML・site-generationの
-指定versionとnpm上の実物・integrityを照合します。CLIとStylesをpackし、
-Windows/macOS × Node.js 22/24の[専用CI](../.github/workflows/npm-cli.yml)で
-隔離prefixへのnpm global install、`--version`、init/build/devを確認します。
-この検証は未公開StylesのtarballをCLIと同時にインストールするため、
-registry上のCLI単独インストールを保証するものではありません。
-実機でPATH設定、ブラウザ表示とCtrl+Cも確認します。候補の修正後は再検証します。
+指定versionとnpm上の実物・integrityを照合します。CLI・Core・site-generation・
+Command・Stylesをpackし、Windows/macOS × Node.js 22/24の
+[専用CI](../.github/workflows/npm-cli.yml)で隔離prefixへのnpm global install、
+`--version`、init/build/devを確認します。この検証はCore・site-generation・Command・
+Stylesのlocal tarballをCLIと同時にインストールするため、registry上のCLI単独installを
+保証するものではありません。実機でPATH設定、ブラウザ表示とCtrl+Cも確認します。
+候補の修正後は再検証します。
 
 公開は別途承認を得た後に行います。npm上のversionが未使用であることと公開権限を確認し、
-Stylesを先に、CLIを後に`preview`タグで公開します。公開後、空の環境で
+Coreを先に、その依存先のCommandとsite-generationを次に、最後にCLIを`preview`タグで公開します。
+Styles `0.1.0`は公開済みです。公開後、空の環境で
 CLIのみを上記コマンドでregistryから取得し、init/build/devとintegrityを再確認します。
 失敗時はwebsiteを公開せず原因を調査し、必要なら新versionを準備します。
 websiteの準備中表示を外すのはregistry検証と公開承認の後です。
 
 ```sh
-pnpm --filter @matra/styles publish --tag preview --access public
+pnpm --filter @matra/core publish --tag preview --access public
+pnpm --filter @matra/command publish --tag preview --access public
+pnpm --filter @matra/site-generation publish --tag preview --access public
 pnpm --filter @matra/cli publish --tag preview --access public
+npm view @matra/core@0.3.1-site.1 dist.integrity
+npm view @matra/command@0.1.0 dist.integrity dependencies
+npm view @matra/site-generation@0.1.0-site.3 dist.integrity dependencies
 npm view @matra/styles@0.1.0 dist.integrity
-npm view @matra/cli@0.3.2-alpha.0 dist.integrity dependencies
+npm view @matra/cli@0.3.2-alpha.1 dist.integrity dependencies
 ```
 
 ### 2026年11月7日の公開記録
@@ -162,3 +169,13 @@ registryからCLIのみを隔離prefixに導入し、init/build/devとブラウ�
 - 両packageに`preview`と`latest`が付いています。CLIの`latest`は公開前の`0.0.0-stage`から
   実験版`0.3.2-alpha.0`へ変化しました。復元せず進める利用者の判断を記録します。
 - 既存ZIPやGitタグは変更していません。Windows実機でのregistryからの再導入は未確認です。
+
+### 次候補の準備
+
+次のCLI候補は`0.3.2-alpha.1`です。現在のsourceでは未公開の
+`@matra/core@0.3.1-site.1`、`@matra/site-generation@0.1.0-site.3`、
+`@matra/command@0.1.0`をruntime dependencyとして使います。
+npm CLI CIは5 packageのtarballをまとめてpack・installし、macOS/Windows × Node.js 22/24で
+検証します。公開時はCore、Commandとsite-generation、CLIの順に公開し、
+告知前にregistryのみを使うCLI単独installを別途確認してください。
+この準備ではpackageを公開せず、既存ZIPとtagも変更しません。

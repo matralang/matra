@@ -3,7 +3,7 @@
 ## 日本語
 
 興味のある開発者が試すための実験的配布です。安定版・正式サポートの宣言ではありません。
-この候補は`0.3.2-alpha.0`です。既存のZIPやタグは変更せず、署名や専用インストーラーは
+この候補は`0.3.2-alpha.1`です。既存のZIPやタグは変更せず、署名や専用インストーラーは
 今後の改善とします。
 
 ### Windowsの既知のダウンロード警告
@@ -28,13 +28,13 @@ checksumを確認して展開してください。展開したフォルダーを
 - 署名・公証なし。macOSの実行承認が必要になる場合があります
 - 文書内のJavaScriptを実行します。信頼する文書のみをbuildしてください。sandbox・timeout保証なし
 - `dev`はlocalhostのみ。自動再buildに対応し、ブラウザ再読み込みは手動
-- 既存ディレクトリへの`init`、外部拡張、npm・Pythonの直接importは対象外
+- 外部packageは事前の`matra install`が必要です。buildは依存を自動installしません
 - 宣言的な複数ページサイトは`matra site build`で利用可能。詳細は同梱READMEを参照
 - ZIPのbyte再現性は保証しません。checksumは破損検出用で、電子署名ではありません
 
 ## English
 
-This `0.3.2-alpha.0` candidate is an experimental distribution, not a stable release or
+This `0.3.2-alpha.1` candidate is an experimental distribution, not a stable release or
 an official support guarantee. Existing ZIPs and tags remain unchanged; signing and a
 dedicated installer are future improvements.
 
@@ -61,7 +61,7 @@ and `versions.json` for exact versions and the source commit.
 - Unsigned and not notarized; macOS may require approval to run downloaded software
 - Builds execute document JavaScript; only build trusted documents. No sandbox/timeout guarantee
 - Localhost-only dev server with automatic rebuild; browser refresh is manual
-- No init into existing directories, external extensions, or direct npm/Python imports
+- External packages require `matra install`; builds do not install dependencies automatically
 - Declarative multi-page sites are available with `matra site build`; see the bundled README
 - ZIP byte reproducibility is not guaranteed; checksums detect corruption, not signed authenticity
 
@@ -72,15 +72,15 @@ Save the ZIP and checksum together and adjust filenames for your target.
 
 ```sh
 # macOS arm64
-shasum -a 256 -c matra-0.3.2-alpha.0-darwin-arm64.zip.sha256
+shasum -a 256 -c matra-0.3.2-alpha.1-darwin-arm64.zip.sha256
 # Linux x64
-sha256sum -c matra-0.3.2-alpha.0-linux-x64.zip.sha256
+sha256sum -c matra-0.3.2-alpha.1-linux-x64.zip.sha256
 ```
 
 Windows PowerShell（x64の例 / x64 example）：
 
 ```powershell
-$zip = "matra-0.3.2-alpha.0-win32-x64.zip"
+$zip = "matra-0.3.2-alpha.1-win32-x64.zip"
 $expected = ((Get-Content "$zip.sha256" -Raw) -split '\s+')[0]
 if ((Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) {
     throw "Checksum mismatch"
@@ -93,12 +93,12 @@ if ((Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected)
 
 ```sh
 # macOS arm64 example
-export PATH="/absolute/path/to/matra-0.3.2-alpha.0-darwin-arm64:$PATH"
+export PATH="/absolute/path/to/matra-0.3.2-alpha.1-darwin-arm64:$PATH"
 ```
 
 ```powershell
 # Windows x64 example
-$env:Path = "C:\path\to\matra-0.3.2-alpha.0-win32-x64;$env:Path"
+$env:Path = "C:\path\to\matra-0.3.2-alpha.1-win32-x64;$env:Path"
 ```
 
 ```sh

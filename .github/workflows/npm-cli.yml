@@ -22,12 +22,23 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
+      - name: Install Rust toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal
       - run: pnpm install --frozen-lockfile
-      - name: Pack CLI and Styles
+      - name: Pack CLI dependencies and Styles
         shell: bash
         run: |
+          pnpm --filter @matra/core pack --out "$RUNNER_TEMP/core.tgz"
+          pnpm --filter @matra/site-generation pack --out "$RUNNER_TEMP/site-generation.tgz"
+          pnpm --filter @matra/command pack --out "$RUNNER_TEMP/command.tgz"
           pnpm --filter @matra/styles pack --out "$RUNNER_TEMP/styles.tgz"
           pnpm --filter @matra/cli pack --out "$RUNNER_TEMP/cli.tgz"
       - name: Verify isolated npm global installation
         shell: bash
-        run: npm run verify:npm-cli -- "$RUNNER_TEMP/cli.tgz" "$RUNNER_TEMP/styles.tgz"
+        run: |
+          npm run verify:npm-cli -- \
+            "$RUNNER_TEMP/cli.tgz" \
+            "$RUNNER_TEMP/styles.tgz" \
+            "$RUNNER_TEMP/command.tgz" \
+            "$RUNNER_TEMP/core.tgz" \
+            "$RUNNER_TEMP/site-generation.tgz"

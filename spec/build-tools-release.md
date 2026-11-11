@@ -129,24 +129,31 @@ Builds execute document JavaScript; only use trusted documents. No OS sandbox or
 is guaranteed. Unlike the bundled ZIP, this path requires Node.js.
 
 Before publication, fix a clean candidate commit and check the specified Core, HTML, and
-site-generation versions against the actual npm packages and their integrity. Pack CLI and
-Styles and use the [dedicated CI](../.github/workflows/npm-cli.yml) on Windows/macOS and
-Node.js 22/24 to check npm global installation into an isolated prefix, `--version`, init,
-build, and dev. The test installs the unpublished Styles tarball alongside CLI; it does not
-prove that CLI alone can be installed from the registry. Check PATH, browser display, and
-Ctrl+C on actual devices as well. Reverify after any candidate changes.
+site-generation versions against the actual npm packages and their integrity. Pack CLI,
+Core, site-generation, Command, and Styles, then use the
+[dedicated CI](../.github/workflows/npm-cli.yml) on Windows/macOS and Node.js 22/24 to
+check npm global installation into an isolated prefix, `--version`, init, build, and dev.
+The test installs local Core, site-generation, Command, and Styles tarballs alongside CLI;
+it does not prove that CLI alone can be installed from the registry. Check PATH, browser
+display, and Ctrl+C on actual devices as well. Reverify after any candidate changes.
 
 Publish only after separate approval. Check version availability and npm permissions;
-publish Styles first, then CLI using the `preview` tag. After publication, install CLI alone
-from the registry in a clean environment and recheck init/build/dev and integrity. If this
-fails, do not deploy the website; investigate and prepare a new version if needed. Remove
-the website's preparation notice only after registry verification and deployment approval.
+publish Core before its dependent Command and site-generation packages, then publish CLI,
+using the `preview` tag. Styles `0.1.0` is already published. After publication, install
+CLI alone from the registry in a clean environment and recheck init/build/dev and integrity.
+If this fails, do not deploy the website; investigate and prepare a new version if needed.
+Remove the website's preparation notice only after registry verification and deployment approval.
 
 ```sh
-pnpm --filter @matra/styles publish --tag preview --access public
+pnpm --filter @matra/core publish --tag preview --access public
+pnpm --filter @matra/command publish --tag preview --access public
+pnpm --filter @matra/site-generation publish --tag preview --access public
 pnpm --filter @matra/cli publish --tag preview --access public
+npm view @matra/core@0.3.1-site.1 dist.integrity
+npm view @matra/command@0.1.0 dist.integrity dependencies
+npm view @matra/site-generation@0.1.0-site.3 dist.integrity dependencies
 npm view @matra/styles@0.1.0 dist.integrity
-npm view @matra/cli@0.3.2-alpha.0 dist.integrity dependencies
+npm view @matra/cli@0.3.2-alpha.1 dist.integrity dependencies
 ```
 
 ### Publication record: November 7, 2026
@@ -168,3 +175,12 @@ Both registry integrity values matched packs from the candidate commit.
   to experimental `0.3.2-alpha.0`; the user chose to proceed without restoring it.
 - Existing ZIPs and Git tags are unchanged. Registry installation on an actual Windows machine
   has not yet been verified.
+
+### Next candidate preparation
+
+The next CLI candidate is `0.3.2-alpha.1`. Its current source uses unpublished
+`@matra/core@0.3.1-site.1`, `@matra/site-generation@0.1.0-site.3`, and
+`@matra/command@0.1.0` runtime dependencies. The npm CLI CI packs and installs all five
+tarballs on macOS/Windows with Node.js 22/24. Publish Core, then Command and site-generation,
+then CLI; separately verify a registry-only CLI install before announcing it. This
+preparation does not publish packages or change the existing ZIPs and tags.
