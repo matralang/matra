@@ -128,8 +128,10 @@ matra:
 ---
 
 ```main.matra
-p { slug.value }
-p { domain.value }
+main {
+  p { slug.value }
+  p { domain.value }
+}
 ```
 
 ```slug.js
