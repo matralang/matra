@@ -103,13 +103,17 @@ test("registration rejects duplicate paths, ambiguous public names, invalid path
       ),
     code("NOT_FOUND"),
   )
-  for (const path of ["module.js", "value.py", "a.partial.js"]) {
+  for (const path of ["value.py", "a.partial.js"]) {
     const markdown = document("p { 1 }", { [path]: "42" })
     assert.throws(
       () => registerLiterate(markdown, options()),
       code(path === "a.partial.js" ? "INVALID_PATH" : "UNSUPPORTED_FORMAT"),
     )
   }
+  assert.throws(
+    () => registerLiterate(document("p { module.answer }", { "module.js": "42" }), options()),
+    code("NO_EXPORTS"),
+  )
   const markdown = document("p { x }", { "x.js.part": "1" })
   assert.throws(
     () =>

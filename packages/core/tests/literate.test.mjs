@@ -113,6 +113,115 @@ test("public errors include document location and build does not execute values"
   })
 })
 
+test("standard JavaScript modules expose named and default exports through Matra paths", async () => {
+  const source = `---
+matra:
+  entry: main.matra
+  values: [analytics.js]
+---
+\`\`\`main.matra
+p { analytics.total([10, 20, 30]) }
+\`\`\`
+\`\`\`analytics.js
+export { default as total } from "./analytics/total.js"
+\`\`\`
+\`\`\`analytics/total.js
+export default function (values) {
+  return values.reduce((sum, value) => sum + value, 0)
+}
+\`\`\`
+`
+  const bundle = await buildLiterate(source)
+  assert.deepEqual(
+    bundle.modules.map(block => block.path),
+    ["analytics/total.js"],
+  )
+  assert.deepEqual(await runLiterate(bundle), {
+    tag: "p",
+    props: {},
+    children: [60],
+  })
+
+  const defaultModule = `---
+matra:
+  entry: main.matra
+  values: [analytics/total.js]
+---
+\`\`\`main.matra
+p { analytics.total(3) }
+\`\`\`
+\`\`\`analytics/total.js
+export default value => value * 2
+\`\`\`
+`
+  assert.deepEqual(await runLiterate(await buildLiterate(defaultModule)), {
+    tag: "p",
+    props: {},
+    children: [6],
+  })
+})
+
+test("module build validates relative dependencies without evaluating module code", async () => {
+  const source = `---
+matra:
+  entry: main.matra
+  values: [value.js]
+---
+\`\`\`main.matra
+p { value.answer }
+\`\`\`
+\`\`\`value.js
+import { answer } from "./answer.js"
+export { answer }
+\`\`\`
+\`\`\`answer.js
+throw new Error("module initialization")
+export const answer = 42
+\`\`\`
+`
+  const bundle = await buildLiterate(source)
+  assert.deepEqual(
+    bundle.modules.map(block => block.path),
+    ["answer.js"],
+  )
+  await assert.rejects(runLiterate(bundle), error => {
+    assert.ok(error instanceof LiterateError)
+    assert.equal(error.code, "JS_INITIALIZE")
+    assert.equal(error.path, "value.js")
+    assert.match(error.cause.message, /module initialization/)
+    return true
+  })
+})
+
+test("standard module imports reject unsupported specifiers, cycles, async initialization, and mixed exports", async () => {
+  const document = body => `---
+matra:
+  entry: main.matra
+  values: [value.js]
+---
+\`\`\`main.matra
+p { value.answer }
+\`\`\`
+${body}
+`
+  for (const [body, expected] of [
+    ["```value.js\nimport fs from 'node:fs'\nexport { fs }\n```\n", "UNSUPPORTED_IMPORT"],
+    ["```value.js\nexport const answer = await Promise.resolve(1)\n```\n", "UNSUPPORTED_ASYNC"],
+    [
+      "```value.js\nimport './dep.js'\nexport const answer = 1\n```\n```dep.js\nimport './value.js'\n```\n",
+      "MODULE_CYCLE",
+    ],
+    ["```value.js\nexport default 1\nexport const answer = 2\n```\n", "MIXED_EXPORTS"],
+    ["```value.js\nexport const answer = import('./dep.js')\n```\n", "UNSUPPORTED_IMPORT"],
+  ]) {
+    await assert.rejects(buildLiterate(document(body)), error => {
+      assert.ok(error instanceof LiterateError)
+      assert.equal(error.code, expected)
+      return true
+    })
+  }
+})
+
 test("ordinary Core import does not load the Node literate host", () => {
   const result = spawnSync(
     process.execPath,

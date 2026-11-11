@@ -265,6 +265,9 @@ importers:
 
   packages/core:
     dependencies:
+      acorn:
+        specifier: ^8.19.0
+        version: 8.19.0
       js-yaml:
         specifier: ^5.2.2
         version: 5.2.2
@@ -854,6 +857,11 @@ packages:
 
   '@zeit/schemas@2.36.0':
     resolution: {integrity: sha512-7kjMwcChYEzMKjeex9ZFXkt1AyNov9R5HZtjBKVsmVpw7pa7ZtlCGvCBC2vnnXctaYN+aRI61HjIqeetZW5ROg==}
+
+  acorn@8.19.0:
+    resolution: {integrity: sha512-oJlA3XiRm7Cyk6qFD2Jn8ak9B7jSy0qy00ADO3+8dpT0LSjFihQYv4C02LFCSYJV3Q37xYwwRy5m+IpIiUzqWw==}
+    engines: {node: '>=0.4.0'}
+    hasBin: true
 
   ajv@8.18.0:
     resolution: {integrity: sha512-PlXPeEWMXMZ7sPYOHqmDyCJzcfNrUr3fGNKtezX14ykXOEIvyK81d+qydx89KY5O71FKMPaQ2vBfBFI5NHR63A==}
@@ -1928,6 +1936,8 @@ snapshots:
   '@xmldom/xmldom@0.9.12': {}
 
   '@zeit/schemas@2.36.0': {}
+
+  acorn@8.19.0: {}
 
   ajv@8.18.0:
     dependencies:

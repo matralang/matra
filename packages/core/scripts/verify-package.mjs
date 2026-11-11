@@ -93,6 +93,27 @@ try {
   assert.match(html, /すべて読む目安：24分/)
   assert.match(html, /Matra &amp; Web/)
   assert.equal((html.match(/<li>/g) ?? []).length, 3)
+  const moduleBundle = await buildLiterate([
+    "---",
+    "matra:",
+    "  entry: main.matra",
+    "  values: [math.js]",
+    "---",
+    "\`\`\`main.matra",
+    "p { math.total([10, 20, 30]) }",
+    "\`\`\`",
+    "\`\`\`math.js",
+    'export { default as total } from "./sum.js"',
+    "\`\`\`",
+    "\`\`\`sum.js",
+    "export default values => values.reduce((sum, value) => sum + value, 0)",
+    "\`\`\`",
+  ].join("\\n"))
+  assert.deepEqual(await runLiterate(moduleBundle), {
+    tag: "p",
+    props: {},
+    children: [60],
+  })
 } catch (error) {
   if (process.env.EXPECT_COMPILER_ERROR === "1") {
     assert.ok(error instanceof LiterateError)

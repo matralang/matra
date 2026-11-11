@@ -190,6 +190,13 @@ options, bundle, and error types. `LiterateError` has `code`, `document`, `path`
 `format: "matra-literate-1"` and `abi: "matra-value-1"`. Rebuild older internal
 bundles that lack the ABI field.
 
+Alongside `.js.part` value fences, `.js` fences can expose standard ESM named
+exports or a default export alone. Static relative imports/re-exports between
+fences in the same document are supported; npm/Node builtins, dynamic imports,
+cycles, and top-level await are not. Standard modules execute in the Node.js
+process and are not sandboxed; run trusted documents only. Matra nodes are not
+first-class runtime values and currently cross only as plain data.
+
 The matching compiler Wasm and a version/SHA-256/ABI manifest are bundled.
 After installation, Rust, a checkout, and compiler downloads are unnecessary.
 Package development, build, and packing require Rust; compiler generation verifies

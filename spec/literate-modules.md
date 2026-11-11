@@ -5,8 +5,9 @@
 ## Status and scope
 
 This document separates the initial implementation contract from future design proposals.
-It is not a formal grammar specification. Only the explicit entry and `.js.part` subset below is
-implemented; the later `.js`, npm, and Python examples remain proposals.
+It is not a formal grammar specification. The implemented scope is the explicit entry, `.js.part`,
+and relative imports between `.js` modules fenced in the Markdown document. npm dependencies and
+Python integration are later stages.
 It supplements the [common runtime roadmap](./portable-runtime.md) without adding
 npm or Python integration to the v0.3 minimal implementation.
 
@@ -31,7 +32,10 @@ pnpm literate -- run ROOT OUTPUT.json
 
 The YAML FrontMatter at the start of the document specifies `matra.entry` and
 `matra.values`. The entry is one `.matra` virtual file; values are a list of
-`.js.part` paths. If `matra.values` is omitted, it defaults to an empty list.
+`.js.part` or `.js` paths. Standard JavaScript ESM modules may expose named exports
+or a default export alone. Only modules selected by `matra.values` are exposed to Matra.
+Fenced modules reached by relative imports are included as dependencies but are not
+exposed under Matra names unless selected separately.
 Unselected blocks are never initialized or executed. The build API and CLI
 receive the document's runtime name/path only; entry and value selection comes
 from the document. Missing FrontMatter, invalid YAML, or missing/invalid
@@ -59,11 +63,16 @@ the total `60`. Run regressions with `node --test crates/matra-seed/tests/litera
   explanatory. Paths use `/`; components are ASCII identifiers optionally followed by dot suffixes.
   Reject `.`, `..`, empty components, absolute paths, backslashes, and queries.
   Paths are case-sensitive, but case-only duplicates are also rejected.
-- Registration rejects duplicate paths across all named fences. `.js` and `.js.part` register distinct
-  formats, removing the whole suffix and mapping path separators to dots for public names.
-  Equal or ancestor/descendant public names (`a` and `a.b`) conflict even in unselected blocks.
-- Only `.matra` entries and `.js.part` values can be selected. Standard `.js` modules, other formats,
-  and `?values` headers are diagnosed as unsupported, never inferred from the body.
+- Registration rejects duplicate paths across all named fences. `.js` and `.js.part` are distinct formats.
+  A `.js.part` public name is its path without the suffix; named exports from `.js` map to the module path
+  plus the export name; a default-only export maps to the module path without the suffix. A module cannot
+  mix default and named exports. Collisions among actual public names, including parent/child names, are errors.
+- Only `.matra` entries and `.js.part` or `.js` values can be selected. Other formats and `?values`
+  headers are diagnosed as unsupported, never inferred from the body.
+- A `.js` fence may use static ESM imports/re-exports to relative `.js` fences in the same document.
+  Specifiers must start with `./` or `../`, end in `.js`, and resolve to a registered fence.
+  npm/bare specifiers, Node builtins, dynamic `import()`, import attributes, top-level await, and
+  cyclic dependencies are rejected. Imported modules need not also be listed in `matra.values`.
   A public root colliding with a Matra binding uses the existing duplicate-binding diagnostic.
 - A `.js.part` body is syntax-checked as one parenthesized JavaScript expression in strict mode.
   Object/function/arrow expressions, newlines, and JavaScript comments are accepted.
@@ -71,27 +80,30 @@ the total `60`. Run regressions with `node --test crates/matra-seed/tests/litera
 
 ### Registration, build, and execution
 
-Registration validates names, collisions, and selection. Build only syntax-checks selected expressions
-and compiles Matra to Wasm. Neither executes user expressions or function bodies.
-At runtime, selected values initialize exactly once in ascending ASCII path order, before the entry.
-Function bodies execute only when called. Each run creates a fresh JavaScript context and values;
-closure state persists only within that run. Expressions share that fresh context, but public names
-and Matra bindings are not injected into JavaScript.
-Only standard synchronous JavaScript built-ins are intended; Node.js `process`, `require`, timers,
-imports, string code generation, and Wasm generation are not provided.
-This is not an OS sandbox or a timeout guarantee: execute trusted documents only.
+Registration validates names, collisions, and selection. Build syntax-checks selected `.js.part`
+expressions and `.js` modules/dependencies, validates imports, and compiles Matra to Wasm; it does not
+execute user code. At runtime, selected `.js.part` values initialize in ascending ASCII path order,
+then selected ESM modules initialize through the standard Node.js loader before the Matra entry runs.
+ESM dependency ordering follows the standard loader, and each module initializes once per run.
+Function bodies execute only when called. `.js.part` expressions retain their fresh VM context.
+Standard `.js` modules execute in the Node.js process and are not isolated from host globals or permissions.
+Restricting static imports is not a sandbox and does not prevent module code from accessing `process` or other
+host capabilities. Module top-level effects run on each run; changes to process globals may persist across runs.
+Execute trusted documents only. No OS sandbox or timeout is guaranteed.
 The initial implementation offers Wasm execution only, not a second interpreter mode.
 Future modes must share these initialization/call semantics without build-time evaluation.
 
 ### Value boundary and diagnostics
 
-Recursively copy `null`, booleans, finite numbers, strings, dense arrays, and plain objects with own
+Across `.js.part` and `.js` boundaries, recursively copy `null`, booleans, finite numbers, strings, dense arrays, and plain objects with own
 enumerable string-keyed data properties. JavaScript-to-Matra values may also contain functions.
 Arguments passed from Matra are copied; JavaScript mutations do not update Matra data.
 Return values are copied too. Aliasing is not preserved. Reject cycles, accessors, symbol keys,
 non-enumerable properties, sparse arrays, custom prototypes, `undefined`, BigInt, non-finite numbers,
-and Promises/thenables. Document nodes can cross as plain data; there is no special conversion
-for math, binary data, or class instances. Matra function arguments and asynchronous work are unsupported.
+and Promises/thenables. Document nodes can currently cross as plain data; there is no special conversion
+for math, binary data, or class instances, nor dedicated first-class Matra-node conversion.
+Each top-level standard module export must be a function or common data value; objects containing functions
+are rejected. Matra function arguments and asynchronous work are unsupported.
 JavaScript functions receive `undefined` as `this`; calling non-functions is an explicit existing host error.
 Document output accepts only the data subset above, not functions.
 
@@ -115,8 +127,9 @@ must not load the literate host or compiler Wasm, or introduce new dependencies
 on Node.js-specific modules. The HTML renderer does not gain execution features.
 The CLI provides `matra-literate build ROOT DOCUMENT.md OUTPUT.json` and
 `matra-literate run ROOT OUTPUT.json`.
-Browser execution and direct imports of standard JavaScript modules, npm
-packages, or Python are outside this API's scope.
+Standard JavaScript ESM fences in Markdown and relative imports within the same
+document are supported experimentally. Browser execution, npm package
+resolution, and Python imports are outside this API's scope.
 
 This is a documented and tested public API, but stable-API compatibility is not
 guaranteed. Provide migration instructions for changes or moves. The unpublished
@@ -459,9 +472,9 @@ Do not assume that current synchronous host calls automatically await JavaScript
 
 ### Initial common interface proposal (semantic contract)
 
-This is an initial design proposal for future standard JavaScript module and Python integration, not an
-implemented contract. Define language-specific module loaders separately from the meaning of cross-language
-values and calls. The initial transport is a direct connection within a Node.js host, with Matra continuing
+This is a design proposal for common JavaScript/Python semantics beyond the initial Node.js ESM support.
+The wire encoding and Python integration described here are not implemented. Define language-specific module
+loaders separately from the meaning of cross-language values and calls. The initial transport is a direct connection within a Node.js host, with Matra continuing
 to execute through its existing Wasm approach. JavaScript and Python themselves need not be compiled to Wasm.
 Separate processes, WASI, and the Component Model are out of scope for this first proposal.
 
@@ -540,7 +553,7 @@ This is an initial semantic proposal. The dependency declaration format, determi
 modules, module cache/state across runs, resource limits, and package resolution for JavaScript and Python remain
 to be decided. Treating Matra nodes as first-class runtime values in Matra programs also requires a separate
 grammar/runtime contract; this wire encoding alone does not implement that behavior. It does not change the
-existing `.js.part` contract, `matra-value-1` ABI, or current host APIs.
+existing `.js.part` contract or `matra-value-1` ABI; Node.js ESM support is an experimental host API addition.
 
 ## Compilation and evaluation semantics
 
@@ -590,7 +603,8 @@ Make the relationship to the common runtime's existing logical path contract exp
 Implement incrementally:
 
 1. Implement named virtual files, explicit entry selection, and synchronous selected `.js.part` values/functions (initial release).
-2. Consider standard JavaScript modules, imports/npm dependencies, and parameter headers in separate stages.
+2. Experimentally implement standard JavaScript ESM fences and same-document relative imports.
+   Consider npm dependencies and parameter headers separately.
 3. Complete dependency management, error mapping, completion, and debugging support.
 4. Independently design and validate Python integration against the calling contract.
 

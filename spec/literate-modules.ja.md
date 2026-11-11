@@ -5,7 +5,8 @@
 ## 状態と対象
 
 本書は初版の実装契約と将来の設計案を区別して記述する。正式な文法仕様ではない。
-実装範囲は次節の明示入口と`.js.part`に限定する。後続の`.js`・npm・Python連携例は未実装である。
+実装範囲は次節の明示入口、`.js.part`、Markdown内`.js` moduleの相対importに限定する。
+npm依存とPython連携は後続段階である。
 [共通ランタイムのロードマップ](./portable-runtime.ja.md)を補足するが、
 v0.3の最小実動版にnpm・Python連携を追加するものではない。
 
@@ -28,7 +29,10 @@ pnpm literate -- run ROOT OUTPUT.json
 ```
 
 文書先頭のYAML FrontMatterに`matra.entry`と`matra.values`を指定する。
-入口は単一の`.matra`仮想ファイル、値は`.js.part`のlistとする。
+入口は単一の`.matra`仮想ファイル、値は`.js.part`または`.js`のlistとする。
+`.js`は標準JavaScript ESMとして扱い、named exportまたはdefault-only exportを公開できる。
+`matra.values`で選んだmoduleのみMatraへ公開し、相対importで到達するfenceはdependencyとして含めるが、
+別途選択されない限りMatra名へ公開しない。
 `matra.values`を省略した場合は空listとし、指定しないblockは初期化・実行しない。
 build APIとCLIは実行環境上の文書名・pathだけを受け取り、entry/value設定は文書から読む。
 FrontMatterのない文書、無効なYAML、欠落または不正な設定はdiagnosticにする。
@@ -53,11 +57,16 @@ JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結�
   ファイル名は`/`区切り、各componentはASCIIのidentifierまたはそれにdot接尾辞を付けた形とし、
   `.`・`..`、空component、絶対パス、backslash、queryを拒否する。
   パスは大小文字を区別するが、大小文字だけ異なる重複も拒否する。
-- 全名前付きfenceの重複パスを登録時に拒否する。`.js`と`.js.part`は別形式として登録し、
-  接尾辞を除いたパスをdot区切りの公開名へ対応させる。
-  同じ公開名と親子の公開名（`a`と`a.b`）は、未選択ブロックを含め衝突エラーとする。
-- 選択した入口は`.matra`、値は`.js.part`のみ受理する。標準`.js`モジュール、その他の形式、
-  `?values`引数ヘッダーは未対応として診断する。本文から形式を推測しない。
+- 全名前付きfenceの重複パスを登録時に拒否する。`.js`と`.js.part`は別形式とする。
+  `.js.part`の公開名は接尾辞を除いたpath、`.js`のnamed exportはmodule pathにexport名を追加したpath、
+  default-only exportは接尾辞を除いたmodule pathとする。同じmoduleでdefaultとnamed exportを併用しない。
+  実際に公開される同名・親子名は衝突エラーとする。
+- 選択した入口は`.matra`、値は`.js.part`または`.js`のみ受理する。
+  その他の形式と`?values`引数ヘッダーは未対応として診断する。本文から形式を推測しない。
+- `.js` fenceは同じ文書内の`.js` fenceへの相対static ESM import/re-exportを使える。
+  import pathは`./`または`../`で始まり、`.js`で終わり、登録済みfenceへ解決しなければならない。
+  npm/bare specifier、Node builtin、dynamic `import()`、import attributes、top-level await、循環依存は拒否する。
+  import対象は`matra.values`へ重ねて列挙しなくてよい。
   Matraのbindingと同名の公開rootは既存のduplicate-binding診断で拒否する。
 - `.js.part`はstrict modeで本文全体を括弧で囲んだ単一のJavaScript式として構文検証する。
   object式、関数式、arrow、改行とJavaScript commentを受理する。
@@ -65,25 +74,28 @@ JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結�
 
 ### 登録・build・実行
 
-登録は名前・衝突・選択対象を検証し、buildは選択した式の構文検証とMatraのWasm生成だけを行う。
-どちらもユーザー式や関数本体を実行しない。実行時は選択した値をASCIIパス昇順で各1回初期化し、
-その後に入口を実行する。関数本体は呼び出し時だけ実行する。
+登録は名前・衝突・選択対象を検証し、buildは選択した`.js.part`式と`.js` module/dependencyの構文・
+import解決を検証してMatraをWasmへcompileする。buildはユーザーコードを実行しない。
+実行時は選択した`.js.part`をASCII path昇順で初期化し、選択したESM moduleをNode.js標準loaderで初期化してから入口を実行する。
+ESMの依存初期化順は標準loaderに従い、各moduleは一回のrunで一度だけ初期化する。関数本体は呼び出し時だけ実行する。
 再実行では新しいJavaScript contextと値を作り、同一実行内のclosure状態だけを保持する。
-各式は共通の新規contextで評価するが、公開名・MatraのbindingはJavaScriptへ注入しない。
-JavaScript標準の同期組み込みのみを想定し、Node.jsの`process`・`require`、timer、import、
-文字列からのcode生成、Wasm生成を提供しない。OS sandboxやtimeout保証ではないため、
-信頼した文書だけを選択して実行する。
+`.js.part`は従来どおり新規VM contextで評価し、公開名・Matra bindingを注入しない。
+標準`.js` moduleはNode.js process内で実行され、hostのglobalや権限から隔離されない。
+static importの制限はsandboxではなく、module codeが`process`等へアクセスすることを防がない。
+module側のtop-level副作用は各runで再実行され、process-globalな変更はrunを越えて残り得る。
+信頼した文書だけを実行する。OS sandboxやtimeout保証はない。
 初版はWasm実行のみを提供し、別のインタプリタ方式は追加しない。
 将来の方式もこの初期化・呼び出し契約を共有し、build時評価を導入しない。
 
 ### 値境界とdiagnostic
 
-境界では`null`、boolean、有限数、文字列、密な配列、plain objectのown enumerableな
+`.js.part`と`.js`の値境界では`null`、boolean、有限数、文字列、密な配列、plain objectのown enumerableな
 文字列key/data propertyを再帰copyする。JavaScriptからMatraへは関数値も公開できる。
 Matraから渡す引数はcopyし、JavaScript側の変更をMatraへ反映しない。戻り値もcopyする。
 共有参照は保存せず、循環、accessor、symbol key、非enumerable property、疎配列、
 独自prototype、`undefined`、BigInt、非有限数、Promise/thenableを拒否する。
-文書ノードはplain dataとして渡せるが、数式・binary・クラスinstanceの特別な変換は行わない。
+文書nodeは現状plain dataとして渡せるが、Matra nodeを第一級値とする専用変換はない。
+standard moduleのtop-level exportは関数または共通data valueとし、関数を含むobject exportは拒否する。
 Matra関数のJavaScriptへの引き渡し、非同期処理は未対応とする。
 JavaScript関数の`this`は`undefined`とし、非関数の呼び出しは既存hostの明示的エラーとする。
 文書出力は上記data subsetのみを受理し、関数値は拒否する。
@@ -107,7 +119,8 @@ Node.js固有の実行機構とcompiler供給の実装は通常のCore入口か�
 通常の`@matra/core`のimportはliterate hostやcompiler Wasmを読み込まず、
 Node.js固有moduleへの新しい依存を持たせない。HTML rendererにも実行機能を含めない。
 CLIは`matra-literate build ROOT DOCUMENT.md OUTPUT.json`と`matra-literate run ROOT OUTPUT.json`を提供する。
-ブラウザ実行、標準JavaScript module・npm・Pythonの直接importはこの公開APIの範囲外とする。
+Markdown内の標準JavaScript ESM fenceと同文書内の相対importを実験的にサポートする。
+ブラウザ実行、npm package解決、Pythonの直接importはこの公開APIの範囲外とする。
 
 ### 関数と値の契約
 
@@ -418,7 +431,8 @@ Pythonは将来の拡張であり、実行環境やパッケージ連携の方�
 
 ### 共通インターフェース初版案（意味契約）
 
-これは将来の標準JavaScript module・Python連携に向けた初版の設計案であり、実装済み契約ではない。
+これはNode.js ESM初版を越えてJavaScript・Pythonを共通に扱うための設計案であり、
+ここに記すwire encodingとPython連携は未実装である。
 言語固有のmodule loaderと、言語間で共通にする値・呼び出しの意味を分ける。
 以下ではtransportをNode.js host内の直接接続とし、Matraの実行には既存のWasm方式を使う。
 JavaScript/Python自体をWasmへcompileすることは要求しない。別process、WASI、Component Modelは初版の対象外とする。
@@ -487,7 +501,7 @@ JavaScript/Python自体をWasmへcompileすることは要求しない。別proc
 run間のmodule cache/state、resource limit、JS/Pythonそれぞれのpackage解決は別途決める。
 Matra nodeをMatra Programの第一級実行時値として扱う文法・runtime契約も別途必要であり、
 このwire encodingだけではその機能を実装しない。既存の`.js.part`契約・`matra-value-1` ABI・
-現在のhost APIを変更するものではない。
+現行ABIと`.js.part`契約を変更せず、Node.js ESM連携は実験APIへの追加である。
 
 ## コンパイルと評価の意味
 
@@ -537,7 +551,8 @@ JavaScriptの関数宣言の巻き上げは「最初に全コードを評価す�
 実装は次の順で段階的に進める。
 
 1. 名前付き仮想ファイル、明示入口、選択した`.js.part`の同期的な値・関数連携を実装する（初版）。
-2. 標準JavaScriptモジュールとimport・npm依存、引数ヘッダーを別段階で検討する。
+2. Markdown内の標準JavaScript ESMと同文書内相対importを実験的に実装する。
+   npm依存と引数ヘッダーは別段階で検討する。
 3. 依存管理とエラー位置・補完・デバッグの対応を整える。
 4. 呼び出し契約に沿ってPython連携を個別に検討・検証する。
 

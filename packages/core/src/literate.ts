@@ -19,6 +19,7 @@ export interface LiterateBundle {
   abi: "matra-value-1"
   entry: LiterateBlock
   values: LiterateBlock[]
+  modules?: LiterateBlock[]
   wasm: string
 }
 

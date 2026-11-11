@@ -1,5 +1,10 @@
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { dirname, join, posix as posixPath } from "node:path"
+import { pathToFileURL } from "node:url"
 import { types } from "node:util"
 import { createContext, Script } from "node:vm"
+import { parse as parseJavaScript } from "acorn"
 import { load as loadYaml } from "js-yaml"
 import { LITERATE_ABI, loadCompiler } from "./compiler.mjs"
 import { formatCompilerDiagnostic, reserveCompilerWorkspace } from "./compiler-host.mjs"
@@ -39,6 +44,214 @@ function expression(block) {
     })
   } catch (error) {
     fail("JS_SYNTAX", block, error.message, error)
+  }
+}
+
+function moduleSyntax(block) {
+  try {
+    return parseJavaScript(block.source, { ecmaVersion: "latest", sourceType: "module" })
+  } catch (error) {
+    const line = block.line + (error.loc?.line ?? 1) - 1
+    fail("JS_SYNTAX", { ...block, line }, error.message, error)
+  }
+}
+
+function visitJavaScript(node, visitor) {
+  if (!node || typeof node !== "object") return
+  if (Array.isArray(node)) {
+    for (const item of node) visitJavaScript(item, visitor)
+    return
+  }
+  if (typeof node.type !== "string") return
+  visitor(node)
+  for (const [key, value] of Object.entries(node)) {
+    if (key !== "start" && key !== "end" && key !== "loc") visitJavaScript(value, visitor)
+  }
+}
+
+function rejectTopLevelAwait(node, block, functionDepth = 0) {
+  if (!node || typeof node !== "object") return
+  if (Array.isArray(node)) {
+    for (const item of node) rejectTopLevelAwait(item, block, functionDepth)
+    return
+  }
+  if (typeof node.type !== "string") return
+  const nested =
+    functionDepth +
+    Number(
+      node.type === "FunctionDeclaration" ||
+        node.type === "FunctionExpression" ||
+        node.type === "ArrowFunctionExpression",
+    )
+  if (
+    (node.type === "AwaitExpression" || (node.type === "ForOfStatement" && node.await)) &&
+    !nested
+  ) {
+    fail("UNSUPPORTED_ASYNC", block, "Top-level await is not supported")
+  }
+  for (const [key, value] of Object.entries(node)) {
+    if (key !== "start" && key !== "end" && key !== "loc") {
+      rejectTopLevelAwait(value, block, nested)
+    }
+  }
+}
+
+function moduleImports(block, blocks) {
+  const syntax = moduleSyntax(block)
+  rejectTopLevelAwait(syntax, block)
+  const imports = []
+  visitJavaScript(syntax, node => {
+    if (node.type === "ImportExpression") {
+      fail("UNSUPPORTED_IMPORT", block, "Dynamic import() is not supported")
+    }
+    let source
+    if (node.type === "ImportDeclaration" || node.type === "ExportAllDeclaration") {
+      source = node.source.value
+      if (node.attributes?.length) {
+        fail("UNSUPPORTED_IMPORT", block, "Import attributes are not supported")
+      }
+    } else if (node.type === "ExportNamedDeclaration" && node.source) {
+      source = node.source.value
+    }
+    if (source === undefined) return
+    if (
+      typeof source !== "string" ||
+      (!source.startsWith("./") && !source.startsWith("../")) ||
+      source.includes("\\") ||
+      source.includes("?") ||
+      source.includes("#") ||
+      !source.endsWith(".js")
+    ) {
+      fail("UNSUPPORTED_IMPORT", block, `Only relative .js imports are supported: ${source}`)
+    }
+    const target = posixPath.normalize(posixPath.join(posixPath.dirname(block.path), source))
+    if (
+      target === "." ||
+      target === ".." ||
+      target.startsWith("../") ||
+      posixPath.isAbsolute(target)
+    ) {
+      fail("INVALID_PATH", block, `Import escapes the document: ${source}`)
+    }
+    const imported = blocks.get(target.toLowerCase())
+    if (!imported || imported.path !== target || !target.endsWith(".js")) {
+      fail("MODULE_RESOLUTION", block, `Relative module not found: ${source}`)
+    }
+    imports.push(imported)
+  })
+  return imports
+}
+
+function collectModules(roots, blocks) {
+  const complete = new Set()
+  const active = new Set()
+  const dependencies = new Map()
+  const visit = block => {
+    if (complete.has(block.path)) return
+    if (active.has(block.path)) fail("MODULE_CYCLE", block, "Cyclic module dependency")
+    active.add(block.path)
+    for (const dependency of moduleImports(block, blocks)) visit(dependency)
+    active.delete(block.path)
+    complete.add(block.path)
+    dependencies.set(block.path, block)
+  }
+  for (const root of roots) visit(root)
+  const rootPaths = new Set(roots.map(block => block.path))
+  return [...dependencies.values()]
+    .filter(block => !rootPaths.has(block.path))
+    .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
+}
+
+function boundNames(pattern) {
+  if (!pattern) return []
+  if (pattern.type === "Identifier") return [pattern.name]
+  if (pattern.type === "RestElement") return boundNames(pattern.argument)
+  if (pattern.type === "AssignmentPattern") return boundNames(pattern.left)
+  if (pattern.type === "ArrayPattern") return pattern.elements.flatMap(boundNames)
+  if (pattern.type === "ObjectPattern") {
+    return pattern.properties.flatMap(property =>
+      property.type === "RestElement" ? boundNames(property.argument) : boundNames(property.value),
+    )
+  }
+  return []
+}
+
+function moduleExportNames(block, blocks, cache = new Map()) {
+  if (cache.has(block.path)) return cache.get(block.path)
+  const names = new Set()
+  cache.set(block.path, names)
+  const syntax = moduleSyntax(block)
+  for (const node of syntax.body) {
+    if (node.type === "ExportDefaultDeclaration") {
+      names.add("default")
+    } else if (node.type === "ExportNamedDeclaration") {
+      if (node.declaration) {
+        const declaration = node.declaration
+        if (declaration.id) names.add(declaration.id.name)
+        if (declaration.type === "VariableDeclaration") {
+          for (const item of declaration.declarations) {
+            for (const name of boundNames(item.id)) names.add(name)
+          }
+        }
+      }
+      for (const item of node.specifiers) names.add(item.exported.name ?? item.exported.value)
+    } else if (node.type === "ExportAllDeclaration") {
+      if (node.exported) {
+        names.add(node.exported.name ?? node.exported.value)
+      } else {
+        const dependency = moduleImports(block, blocks).find(
+          imported =>
+            posixPath.normalize(
+              posixPath.join(posixPath.dirname(block.path), node.source.value),
+            ) === imported.path,
+        )
+        if (dependency) {
+          for (const name of moduleExportNames(dependency, blocks, cache)) {
+            if (name !== "default") names.add(name)
+          }
+        }
+      }
+    }
+  }
+  return names
+}
+
+function publicBindings(selected, blocks) {
+  const bindings = []
+  const add = (parts, block) => {
+    if (parts.some(part => !/^[A-Za-z_$][\w$]*$/.test(part))) {
+      fail("INVALID_EXPORT", block, "Export names must be JavaScript identifiers")
+    }
+    bindings.push({ parts, block })
+  }
+  for (const block of selected) {
+    const parts = publicName(block)
+    if (block.path.endsWith(".js.part")) {
+      add(parts, block)
+      continue
+    }
+    const names = [...moduleExportNames(block, blocks)].sort()
+    if (names.length === 0) fail("NO_EXPORTS", block, "Selected module has no exports")
+    if (names.includes("default")) {
+      if (names.length !== 1) {
+        fail("MIXED_EXPORTS", block, "A module must use either a default export or named exports")
+      }
+      add(parts, block)
+    } else {
+      for (const name of names) add([...parts, name], block)
+    }
+  }
+  const names = []
+  for (const { parts, block } of bindings) {
+    const name = parts.join(".")
+    if (
+      names.some(
+        other => name === other || name.startsWith(`${other}.`) || other.startsWith(`${name}.`),
+      )
+    ) {
+      fail("PUBLIC_NAME_COLLISION", block, `Conflicting public name: ${name}`)
+    }
+    names.push(name)
   }
 }
 
@@ -108,9 +321,13 @@ export function registerLiterate(markdown, options = {}) {
 
 function selectBlocks(collected, { document, entry, values }) {
   const blocks = new Map()
-  const names = []
+  const valueNames = []
+  const valueBlocks = new Map()
+  const moduleNames = new Set()
   for (const block of collected) {
     const { path } = block
+    if (path.endsWith(".partial.js"))
+      fail("INVALID_PATH", block, "Use .js.part instead of .partial.js")
     if (path.includes("?")) fail("UNSUPPORTED_FORMAT", block, "Argument headers are not supported")
     if (
       !/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*(?:\/[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)*$/.test(
@@ -122,20 +339,28 @@ function selectBlocks(collected, { document, entry, values }) {
     const key = path.toLowerCase()
     if (blocks.has(key)) fail("DUPLICATE_PATH", block, `Duplicate virtual path: ${path}`)
     blocks.set(key, block)
-    if (path.endsWith(".js") || path.endsWith(".js.part")) {
+    if (path.endsWith(".js.part")) {
       const parts = publicName(block)
       if (parts.some(part => !/^[A-Za-z_$][\w$]*$/.test(part))) {
         fail("INVALID_PATH", block, "Public path components must be identifiers")
       }
       const name = parts.join(".")
       if (
-        names.some(
+        valueNames.some(
           other => name === other || name.startsWith(`${other}.`) || other.startsWith(`${name}.`),
         )
       ) {
         fail("PUBLIC_NAME_COLLISION", block, `Conflicting public name: ${name}`)
       }
-      names.push(name)
+      valueNames.push(name)
+      valueBlocks.set(name, block)
+    } else if (path.endsWith(".js")) {
+      moduleNames.add(publicName(block).join("."))
+    }
+  }
+  for (const name of valueNames) {
+    if (moduleNames.has(name)) {
+      fail("PUBLIC_NAME_COLLISION", valueBlocks.get(name), `Conflicting public name: ${name}`)
     }
   }
   const select = (path, suffix) => {
@@ -149,10 +374,26 @@ function selectBlocks(collected, { document, entry, values }) {
   if (new Set(values).size !== values.length) {
     fail("DUPLICATE_SELECTION", main, "A value was selected more than once")
   }
-  const selected = values.map(path => select(path, ".js.part"))
+  const selected = values.map(path => {
+    if (typeof path === "string" && path.endsWith(".js")) return select(path, ".js")
+    if (typeof path === "string" && path.endsWith(".js.part")) return select(path, ".js.part")
+    const block = blocks.get(typeof path === "string" ? path.toLowerCase() : "")
+    if (!block)
+      return fail(
+        "NOT_FOUND",
+        { document, path: path ?? "<value>", line: 1 },
+        "Virtual file not found",
+      )
+    return fail("UNSUPPORTED_FORMAT", block, "Expected .js or .js.part")
+  })
   selected.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
-  for (const block of selected) expression(block)
-  return { entry: main, values: selected }
+  for (const block of selected) {
+    if (block.path.endsWith(".js.part")) expression(block)
+  }
+  const roots = selected.filter(block => block.path.endsWith(".js"))
+  const modules = collectModules(roots, blocks)
+  publicBindings(selected, blocks)
+  return { entry: main, values: selected, modules }
 }
 
 /** @returns {Promise<import("../literate.js").LiterateBundle>} */
@@ -182,8 +423,12 @@ export async function buildLiterate(markdown, options = {}) {
   return { format: "matra-literate-1", abi: LITERATE_ABI, ...registration, wasm }
 }
 
-function copyValue(value, { block, prototypes, functions, active = new Set() }) {
-  const next = item => copyValue(item, { block, prototypes, functions, active })
+function copyValue(
+  value,
+  { block, prototypes, functions, functionResults = functions, active = new Set() },
+) {
+  const next = (item, allowFunctions = functions) =>
+    copyValue(item, { block, prototypes, functions: allowFunctions, functionResults, active })
   const invalid = message => fail("UNSUPPORTED_VALUE", block, message)
   if (value === null || typeof value === "string" || typeof value === "boolean") return value
   if (typeof value === "number" && Number.isFinite(value)) return value
@@ -191,7 +436,7 @@ function copyValue(value, { block, prototypes, functions, active = new Set() }) 
     return (...args) => {
       try {
         const input = args.map(arg => copyValue(arg, { block, prototypes, functions: false }))
-        return next(Reflect.apply(value, undefined, input))
+        return next(Reflect.apply(value, undefined, input), functionResults)
       } catch (error) {
         if (error instanceof LiterateError) throw error
         fail("JS_CALL", block, error?.message ?? String(error), error)
@@ -254,6 +499,81 @@ function copyValue(value, { block, prototypes, functions, active = new Set() }) 
   return result
 }
 
+function bindPublicValue(globals, parts, value, block) {
+  let target = globals
+  for (const part of parts.slice(0, -1)) {
+    if (!Object.hasOwn(target, part)) target[part] = Object.create(null)
+    if (target[part] === null || typeof target[part] !== "object" || Array.isArray(target[part])) {
+      fail("PUBLIC_NAME_COLLISION", block, `Conflicting public name: ${parts.join(".")}`)
+    }
+    target = target[part]
+  }
+  const name = parts.at(-1)
+  if (Object.hasOwn(target, name)) {
+    fail("PUBLIC_NAME_COLLISION", block, `Conflicting public name: ${parts.join(".")}`)
+  }
+  target[name] = value
+}
+
+async function loadStandardModules(roots, dependencies, globals, prototypes) {
+  if (roots.length === 0) return async () => {}
+  const directory = await mkdtemp(join(tmpdir(), "matra-literate-"))
+  let current = roots[0]
+  try {
+    await writeFile(join(directory, "package.json"), '{"type":"module"}', "utf8")
+    for (const block of [...roots, ...dependencies]) {
+      const file = join(directory, ...block.path.split("/"))
+      await mkdir(dirname(file), { recursive: true })
+      await writeFile(file, block.source, "utf8")
+    }
+    for (const block of roots) {
+      current = block
+      const file = join(directory, ...block.path.split("/"))
+      const namespace = await import(pathToFileURL(file).href)
+      const exports = Object.keys(namespace).sort()
+      if (exports.length === 0) fail("NO_EXPORTS", block, "Selected module has no exports")
+      if (exports.includes("default")) {
+        if (exports.length !== 1) {
+          fail("MIXED_EXPORTS", block, "A module must use either a default export or named exports")
+        }
+        bindPublicValue(
+          globals,
+          publicName(block),
+          copyValue(namespace.default, {
+            block,
+            prototypes,
+            functions: typeof namespace.default === "function",
+            functionResults: false,
+          }),
+          block,
+        )
+      } else {
+        for (const name of exports) {
+          if (!/^[A-Za-z_$][\w$]*$/.test(name)) {
+            fail("INVALID_EXPORT", block, `Export name is not a JavaScript identifier: ${name}`)
+          }
+          bindPublicValue(
+            globals,
+            [...publicName(block), name],
+            copyValue(namespace[name], {
+              block,
+              prototypes,
+              functions: typeof namespace[name] === "function",
+              functionResults: false,
+            }),
+            block,
+          )
+        }
+      }
+    }
+    return () => rm(directory, { recursive: true, force: true })
+  } catch (error) {
+    await rm(directory, { recursive: true, force: true })
+    if (error instanceof LiterateError) throw error
+    fail("JS_INITIALIZE", current, error?.message ?? String(error), error)
+  }
+}
+
 function validateBundle(bundle) {
   const location = { document: "<bundle>", path: "<bundle>", line: 1 }
   const validBlock = block =>
@@ -269,17 +589,27 @@ function validateBundle(bundle) {
     !validBlock(bundle.entry) ||
     !Array.isArray(bundle.values) ||
     !bundle.values.every(validBlock) ||
+    (bundle.modules !== undefined &&
+      (!Array.isArray(bundle.modules) || !bundle.modules.every(validBlock))) ||
     typeof bundle.wasm !== "string" ||
     !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(bundle.wasm)
   ) {
     fail("INVALID_BUNDLE", location, "Invalid or unsupported literate bundle")
   }
   // 保存済みbundleにも登録時と同じ選択・衝突規則を適用する。
-  selectBlocks([bundle.entry, ...bundle.values], {
+  const registered = selectBlocks([bundle.entry, ...bundle.values, ...(bundle.modules ?? [])], {
     document: bundle.entry.document,
     entry: bundle.entry.path,
     values: bundle.values.map(block => block.path),
   })
+  const expectedModules = registered.modules.map(block => block.path).sort()
+  const actualModules = (bundle.modules ?? []).map(block => block.path).sort()
+  if (
+    expectedModules.length !== actualModules.length ||
+    expectedModules.some((path, i) => path !== actualModules[i])
+  ) {
+    fail("INVALID_BUNDLE", location, "Bundle module dependencies do not match selected imports")
+  }
 }
 
 export async function runLiterate(bundle, options = {}) {
@@ -346,6 +676,7 @@ export async function runLiterate(bundle, options = {}) {
   const globals = Object.create(null)
   const blocks = [...bundle.values].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
   for (const block of blocks) {
+    if (!block.path.endsWith(".js.part")) continue
     let value
     try {
       value = expression(block).runInContext(context)
@@ -353,35 +684,45 @@ export async function runLiterate(bundle, options = {}) {
       if (error instanceof LiterateError) throw error
       fail("JS_INITIALIZE", block, error?.message ?? String(error), error)
     }
-    const parts = publicName(block)
-    let target = globals
-    for (const part of parts.slice(0, -1)) {
-      if (!Object.hasOwn(target, part)) target[part] = Object.create(null)
-      target = target[part]
-    }
-    target[parts.at(-1)] = copyValue(value, { block, prototypes, functions: true })
+    bindPublicValue(
+      globals,
+      publicName(block),
+      copyValue(value, { block, prototypes, functions: true }),
+      block,
+    )
   }
-  const hostGlobals = options.globals ?? {}
-  const copiedHostGlobals = copyValue(hostGlobals, {
-    block: { document: bundle.entry.document, path: "<globals>", line: 1 },
+  const moduleRoots = blocks.filter(block => block.path.endsWith(".js"))
+  const cleanupModules = await loadStandardModules(
+    moduleRoots,
+    bundle.modules ?? [],
+    globals,
     prototypes,
-    functions: false,
-  })
-  for (const [name, value] of Object.entries(copiedHostGlobals)) {
-    if (!/^[A-Za-z_$][\w$]*$/.test(name)) {
-      fail("INVALID_GLOBALS", bundle.entry, `Invalid global name: ${name}`)
-    }
-    if (Object.hasOwn(globals, name)) {
-      fail("GLOBAL_COLLISION", bundle.entry, `Host global conflicts with a value module: ${name}`)
-    }
-    globals[name] = value
-  }
+  )
   try {
-    const program = await instantiateMatra(module, { globals })
-    const result = program.run()
-    return copyValue(result, { block: bundle.entry, prototypes, functions: false })
-  } catch (error) {
-    if (error instanceof LiterateError) throw error
-    fail("MATRA_RUNTIME", bundle.entry, error?.message ?? String(error), error)
+    const hostGlobals = options.globals ?? {}
+    const copiedHostGlobals = copyValue(hostGlobals, {
+      block: { document: bundle.entry.document, path: "<globals>", line: 1 },
+      prototypes,
+      functions: false,
+    })
+    for (const [name, value] of Object.entries(copiedHostGlobals)) {
+      if (!/^[A-Za-z_$][\w$]*$/.test(name)) {
+        fail("INVALID_GLOBALS", bundle.entry, `Invalid global name: ${name}`)
+      }
+      if (Object.hasOwn(globals, name)) {
+        fail("GLOBAL_COLLISION", bundle.entry, `Host global conflicts with a value module: ${name}`)
+      }
+      globals[name] = value
+    }
+    try {
+      const program = await instantiateMatra(module, { globals })
+      const result = program.run()
+      return copyValue(result, { block: bundle.entry, prototypes, functions: false })
+    } catch (error) {
+      if (error instanceof LiterateError) throw error
+      fail("MATRA_RUNTIME", bundle.entry, error?.message ?? String(error), error)
+    }
+  } finally {
+    await cleanupModules()
   }
 }
