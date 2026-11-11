@@ -40,7 +40,7 @@ export async function verifyReleaseAssets(directory, commit) {
   )
   const lockfileSha256 = digest(await readFile(join(root, "pnpm-lock.yaml")))
   const versions = new Map()
-  for (const workspace of ["cli", "core", "html", "site-generation", "styles"]) {
+  for (const workspace of ["cli", "command", "core", "html", "site-generation", "styles"]) {
     const pkg = JSON.parse(await readFile(join(root, "packages", workspace, "package.json")))
     versions.set(pkg.name, pkg.version)
   }

@@ -11,8 +11,10 @@ import { LITERATE_ABI, loadCompiler } from "./compiler.mjs"
 import { formatCompilerDiagnostic, reserveCompilerWorkspace } from "./compiler-host.mjs"
 import {
   analyzePythonModules,
+  getPythonPackageTarget as getPythonTarget,
   loadPythonModules,
   resolvePythonPackages,
+  validatePythonWheels as validatePythonWheelsRuntime,
 } from "./python-runtime.mjs"
 import { instantiateMatra } from "./value-host.mjs"
 
@@ -339,6 +341,22 @@ function frontMatterConfig(markdown, document) {
   const bodyOffset = opening[0].length + closing.index + closing[0].length
   const bodyLine = markdown.slice(0, bodyOffset).split("\n").length - 1
   return { entry: config.entry, values, pythonPackages, bodyLine }
+}
+
+export function readPythonPackages(markdown, options = {}) {
+  return frontMatterConfig(markdown, options.document ?? "<markdown>").pythonPackages
+}
+
+export function getPythonPackageTarget() {
+  return getPythonTarget()
+}
+
+export async function validatePythonWheels(packages, document = "<dependency-install>") {
+  await validatePythonWheelsRuntime(packages, {
+    document,
+    path: "<python-packages>",
+    line: 1,
+  })
 }
 
 export function registerLiterate(markdown, options = {}) {

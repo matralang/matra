@@ -130,6 +130,23 @@ module側のtop-level副作用は各runで再実行され、process-globalな変
 初版はWasm実行のみを提供し、別のインタプリタ方式は追加しない。
 将来の方式もこの初期化・呼び出し契約を共有し、build時評価を導入しない。
 
+### 依存の準備
+
+`matra deps install DOCUMENT`は指定文書とprojectの依存を準備する。
+JavaScript依存はprojectの標準`package.json`から読み、npmに通常のlockfileを管理させる。
+指定文書に`matra.python.packages`があれば、hostのPython 3/pipで同梱PyodideのPython version向けwheelを取得し、
+binaryの`py3-none-any`だけに限定する。Python executableは`MATRA_PYTHON`で指定でき、省略時は
+macOS/Linuxで`python3`、Windowsで`python`を使う。
+
+Python wheelは`wheels/`へcopyし、metadataとSHA-256をproject共通の`matra.python.lock.json`へ統合する。
+lockは文書間で共有し、同じpackage名には一つのversionだけを許可する。version競合時はPython lockを変更せず失敗する。
+wheel codeは実行しない。Matra Commandの明示的なexecution planを使い、network accessを要求して実行前に確認する。
+非対話実行では`--yes`で確認できる。npm lifecycle scriptは無効にする。
+npmとPythonは別processのためtransactionではなく、一方の成功後に他方が失敗する場合がある。
+
+`matra build`と`runLiterate`は依存のinstall・解決を行わない。事前に明示操作で準備する。
+library APIではbuild/run両方に同じproject rootを渡す。
+
 ### 値境界とdiagnostic
 
 `.js.part`、`.js`、`.py`の値境界では`null`、boolean、有限数、文字列、密な配列、plain objectのown enumerableな

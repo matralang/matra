@@ -138,6 +138,26 @@ Execute trusted documents only. No OS sandbox or timeout is guaranteed.
 The initial implementation offers Wasm execution only, not a second interpreter mode.
 Future modes must share these initialization/call semantics without build-time evaluation.
 
+### Dependency preparation
+
+`matra deps install DOCUMENT` prepares dependencies declared by the selected document and project.
+It reads JavaScript dependencies from the project's standard `package.json` and lets npm maintain
+its normal lockfile. If a Python package list is present in the selected document's
+`matra.python.packages`, it invokes the host's Python 3/pip to download wheels for the bundled
+Pyodide Python version, restricted to binary `py3-none-any` wheels. `MATRA_PYTHON` may select the
+Python executable; otherwise the CLI uses `python3` (or `python` on Windows).
+
+Python wheels are copied into `wheels/`, and their metadata and SHA-256 values are merged into the
+project-wide `matra.python.lock.json`. The lock is shared by documents: each package name can have
+only one version in the project. A conflicting version fails without changing the Python lock.
+The operation does not execute wheel code. It uses Matra Command's explicit execution plan,
+requests network access, and prompts before running; use `--yes` for non-interactive confirmation.
+npm lifecycle scripts are disabled. The npm and Python operations are separate processes and are
+not transactional with each other, so one may have completed if the other fails.
+
+`matra build` and `runLiterate` never install or resolve dependencies. Prepare them explicitly
+before execution, and pass the same project root to build and run when using the library API.
+
 ### Value boundary and diagnostics
 
 Across `.js.part`, `.js`, and `.py` boundaries, recursively copy `null`, booleans, finite numbers, strings, dense arrays, and plain objects with own

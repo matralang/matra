@@ -103,6 +103,13 @@ The existing literate API behavior, `matra-literate` CLI, and language grammar a
 Execution uses the bundled compiler Wasm and manifest without Rust, pnpm, or a network;
 preparing and packing the development tools still requires Rust and pnpm.
 
+For projects with external modules, run `matra deps install index.md`. The command uses
+`package.json`/npm's lockfile for JavaScript and the selected document's pinned
+`matra.python.packages` for Python, merging pure-Python wheels into the project-wide
+`matra.python.lock.json`. It asks before network access; npm lifecycle scripts are disabled.
+Python wheel preparation requires Python 3 and pip on PATH (or `MATRA_PYTHON`); only
+`py3-none-any` wheels are accepted. `matra build` itself never installs dependencies.
+
 ### Declarative multi-page sites
 
 The CLI also supports a separate site-generation workflow. Create `matra.site.yaml`,

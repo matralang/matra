@@ -3,7 +3,8 @@
 [English](./README.md) | [日本語](./README.ja.md)
 
 Node.js同梱の実験的なフォルダー配布です。内部ファイルは個別に移動しないでください。
-利用時にシステムのNode.js・npm・pnpm・Rust・ネットワーク接続は不要です。
+`init`、`build`、`site`、`dev`にはシステムのNode.js・npm・pnpm・Rust・network接続は不要です。
+`deps install`にはnpm、pip付きPython 3、network接続が必要です。
 macOS・Linux・Windowsのx64 / arm64向けに、対象環境上で配布物を作成します。
 自分のOS・CPUと一致するZIPを選んでください。Linuxは公式Node.jsが対応するglibc環境向けで、
 Alpine / muslは対象外です。CI検証と正式releaseの公開は区別します。
@@ -55,6 +56,11 @@ Ctrl+Cで停止します。ポートが使用中なら`matra dev --port 3001`で
 buildエラーはターミナルに表示し、修正されるまでHTTP 503を返します。
 インターネットから取得したソフトウェアはmacOSで実行承認が必要になる場合があります。
 この開発版は署名・公証を行っていません。組織のセキュリティポリシーに従ってください。
+
+build前に`matra deps install index.md`で依存を準備できます。JavaScriptはnpmの
+`package.json`とlockfile、Pythonは指定文書が宣言するPyodide互換`py3-none-any` wheelを使います。
+network access前に確認し、npm lifecycle scriptは無効にします。Python wheel用のPython 3/pipは
+システムに別途必要です。同梱配布物にはpackage managerを含みません。
 
 ## 宣言的なサイト
 

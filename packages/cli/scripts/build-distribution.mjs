@@ -105,7 +105,7 @@ try {
   }
 
   const packages = new Map()
-  const workspaces = ["cli", "core", "html", "site-generation", "styles"]
+  const workspaces = ["cli", "command", "core", "html", "site-generation", "styles"]
   const sources = new Map()
   for (const workspace of workspaces) {
     const source = join(root, "packages", workspace)

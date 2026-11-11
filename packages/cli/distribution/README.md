@@ -3,7 +3,8 @@
 [English](./README.md) | [日本語](./README.ja.md)
 
 This experimental folder distribution includes Node.js. Do not move its internal files
-independently. No system Node.js, npm, pnpm, Rust, or network connection is required to use it.
+independently. The `init`, `build`, `site`, and `dev` commands need no system Node.js, npm,
+pnpm, Rust, or network connection. `deps install` requires npm, Python 3 with pip, and network access.
 Native builders target macOS, Linux, and Windows on x64 and arm64. Choose the archive
 matching your OS/CPU. Linux requires a glibc-based environment supported by official
 Node.js; Alpine/musl is not supported. CI coverage is distinct from a published release.
@@ -54,6 +55,12 @@ The development server serves only generated HTML, CSS, and the CSS license.
 Build errors appear in the terminal and return HTTP 503 until fixed.
 macOS may require approval for software downloaded from the Internet. This development
 distribution is not signed or notarized; follow your organization's security policy.
+
+Use `matra deps install index.md` to install dependencies before building. It uses npm's
+`package.json` and lockfile, and downloads only Pyodide-compatible `py3-none-any` wheels
+declared by the selected document. It confirms network access first and disables npm lifecycle
+scripts. Python wheels require a system Python 3 with pip; the standalone distribution does
+not bundle a package manager.
 
 ## Declarative sites
 

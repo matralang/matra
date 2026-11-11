@@ -237,6 +237,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@matra/command':
+        specifier: workspace:*
+        version: link:../command
       '@matra/core':
         specifier: workspace:*
         version: link:../core

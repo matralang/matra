@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises"
 import { buildSite } from "@matra/site-generation"
+import { installDependencies } from "./deps.mjs"
 import { startDev } from "./dev.mjs"
 import { buildProject, initProject } from "./project.mjs"
 
 const usage = `Usage: matra init DIRECTORY
        matra build
+       matra deps install DOCUMENT [--yes]
        matra site build
        matra dev [--port PORT]
        matra --version
@@ -14,9 +16,11 @@ init   Create a new project directory.
 build  Build index.md and matra.css into dist/ in the current directory.
 site   Build the configured multi-page site into dist/.
 dev    Serve on 127.0.0.1:3000 and rebuild on changes. Refresh the browser to view changes.
+deps   Install project dependencies declared by package.json and the selected document.
 
 matra build executes selected JavaScript in index.md.
 matra site build executes only explicitly named .matra.md pages and layouts.
+matra deps install prompts before network access; npm lifecycle scripts are disabled.
 Only build trusted programs; execution has no OS sandbox or timeout.`
 
 const args = process.argv.slice(2)
@@ -36,6 +40,12 @@ try {
   } else if (args[0] === "build" && args.length === 1) {
     const output = await buildProject(process.cwd())
     console.log(`Generated: ${output}`)
+  } else if (
+    args[0] === "deps" &&
+    args[1] === "install" &&
+    (args.length === 3 || (args.length === 4 && args[3] === "--yes"))
+  ) {
+    await installDependencies(process.cwd(), args[2], args[3] === "--yes")
   } else if (args[0] === "site" && args[1] === "build" && args.length === 2) {
     const outputs = await buildSite(process.cwd())
     console.log(`Generated ${outputs.length} site file(s)`)

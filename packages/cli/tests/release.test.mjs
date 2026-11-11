@@ -32,7 +32,7 @@ test("release requires six exact archives, correct hashes, clean and matching pr
   const assets = join(work, "assets")
   await mkdir(assets)
   const packages = []
-  for (const workspace of ["cli", "core", "html", "site-generation", "styles"]) {
+  for (const workspace of ["cli", "command", "core", "html", "site-generation", "styles"]) {
     const pkg = JSON.parse(await readFile(join(root, "packages", workspace, "package.json")))
     packages.push({ name: pkg.name, version: pkg.version })
   }

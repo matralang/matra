@@ -99,6 +99,13 @@ build時には文書内のJavaScriptが実行されるため、信頼する文�
 利用時には同梱compiler Wasmとmanifestを使い、Rust・pnpm・ネットワークは不要です。
 現在の開発版の準備とpack検証ではRust・pnpmが必要です。
 
+外部moduleを使うprojectでは`matra deps install index.md`を実行します。
+JavaScriptは`package.json`とnpm lockfile、Pythonは指定文書の`matra.python.packages`を使い、
+wheelをproject共通の`matra.python.lock.json`へ統合します。network access前に確認し、
+npm lifecycle scriptは無効にします。Python wheel準備にはPATH上のPython 3とpip
+（または`MATRA_PYTHON`）が必要で、`py3-none-any` wheelだけに対応します。
+`matra build`は依存をinstallしません。
+
 ### 宣言的な複数ページサイト
 
 別経路として、`matra.site.yaml`、`matra.site.json`、静的Matra設定の`matra.site.matra`を

@@ -8,6 +8,8 @@ import { loadPyodide } from "pyodide"
 const require = createRequire(import.meta.url)
 const indexURL = dirname(require.resolve("pyodide"))
 const pyodideVersion = JSON.parse(readFileSync(join(indexURL, "package.json"), "utf8")).version
+const pyodidePythonVersion = JSON.parse(readFileSync(join(indexURL, "pyodide-lock.json"), "utf8"))
+  .info.python
 let parserRuntime
 
 const helpers = `
@@ -17,6 +19,7 @@ import inspect
 import json
 import math
 import os
+import platform
 import re
 import sys
 import zipfile
@@ -130,10 +133,82 @@ def _matra_wheel_info(path):
                     or name.count("/") == 1 and name.endswith("/__init__.py")
                 )
             })
+        environment = {
+            "implementation_name": sys.implementation.name,
+            "implementation_version": ".".join(str(item) for item in sys.implementation.version[:3]),
+            "os_name": os.name,
+            "platform_machine": platform.machine(),
+            "platform_python_implementation": platform.python_implementation(),
+            "platform_release": platform.release(),
+            "platform_system": platform.system(),
+            "platform_version": platform.version(),
+            "python_full_version": platform.python_version(),
+            "python_version": ".".join(str(item) for item in sys.version_info[:2]),
+            "sys_platform": sys.platform,
+            "extra": "",
+        }
+
+        def marker_value(node):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                return node.value
+            if isinstance(node, ast.Name) and node.id in environment:
+                return environment[node.id]
+            if isinstance(node, ast.BoolOp):
+                values = [marker_value(value) for value in node.values]
+                if isinstance(node.op, ast.And):
+                    return all(values)
+                if isinstance(node.op, ast.Or):
+                    return any(values)
+            if isinstance(node, ast.Compare):
+                left_node = node.left
+                left = marker_value(left_node)
+                result = True
+                for operator, right_node in zip(node.ops, node.comparators):
+                    right = marker_value(right_node)
+                    if isinstance(operator, (ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE)):
+                        if isinstance(left_node, ast.Name) and left_node.id in (
+                            "python_version", "python_full_version", "implementation_version"
+                        ):
+                            def version_tuple(value):
+                                if not re.fullmatch(r"\\d+(?:\\.\\d+)*", value):
+                                    raise ValueError("Unsupported Python version marker")
+                                parts = [int(part) for part in value.split(".")]
+                                while len(parts) > 1 and parts[-1] == 0:
+                                    parts.pop()
+                                return tuple(parts)
+                            left_compare, right_compare = version_tuple(left), version_tuple(right)
+                        else:
+                            left_compare, right_compare = left, right
+                        if isinstance(operator, ast.Eq):
+                            current = left_compare == right_compare
+                        elif isinstance(operator, ast.NotEq):
+                            current = left_compare != right_compare
+                        elif isinstance(operator, ast.Lt):
+                            current = left_compare < right_compare
+                        elif isinstance(operator, ast.LtE):
+                            current = left_compare <= right_compare
+                        elif isinstance(operator, ast.Gt):
+                            current = left_compare > right_compare
+                        else:
+                            current = left_compare >= right_compare
+                    elif isinstance(operator, ast.In):
+                        current = left in right
+                    elif isinstance(operator, ast.NotIn):
+                        current = left not in right
+                    else:
+                        raise ValueError("Unsupported wheel dependency marker operator")
+                    result = result and current
+                    left_node, left = right_node, right
+                return result
+            raise ValueError("Unsupported wheel dependency marker")
+
         requirements = []
         for requirement in message.get_all("Requires-Dist", []):
-            match = re.match(r"\\s*([A-Za-z0-9_.-]+)", requirement)
-            if match:
+            dependency, separator, marker = requirement.partition(";")
+            match = re.match(r"\\s*([A-Za-z0-9_.-]+)", dependency)
+            if match and (
+                not separator or marker_value(ast.parse(marker.strip(), mode="eval").body)
+            ):
                 requirements.append(re.sub(r"[-_.]+", "-", match.group(1)).lower())
         return json.dumps({
             "name": re.sub(r"[-_.]+", "-", message["Name"]).lower(),
@@ -431,6 +506,66 @@ function importDependencies(block, info, modules, packageImports) {
   return [...dependencies]
 }
 
+function inspectWheelsWithRuntime(pyodide, packages, block) {
+  const packageImports = new Set()
+  const lockedPackages = new Set(packages.map(item => packageNameKey(item.name)))
+  const wheelDirectory = `/tmp/matra-wheel-check-${randomUUID()}`
+  pyodide.FS.mkdirTree(wheelDirectory)
+  try {
+    for (const [index, packageInfo] of packages.entries()) {
+      const path = `${wheelDirectory}/${index}.whl`
+      pyodide.FS.writeFile(path, packageInfo.bytes)
+      pyodide.globals.set("_matra_wheel_path", path)
+      let raw
+      try {
+        raw = pyodide.runPython("_matra_wheel_info(_matra_wheel_path)")
+      } finally {
+        pyodide.globals.set("_matra_wheel_path", null)
+      }
+      const info = JSON.parse(raw)
+      if (info.name !== packageNameKey(packageInfo.name) || info.version !== packageInfo.version) {
+        throw packageError(block, `Wheel metadata does not match lock entry: ${packageInfo.file}`)
+      }
+      if (
+        info.imports.some(name => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) ||
+        info.requires.some(name => !lockedPackages.has(name))
+      ) {
+        throw packageError(
+          block,
+          `Wheel has invalid imports or an unlocked dependency: ${packageInfo.file}`,
+        )
+      }
+      for (const name of info.imports) packageImports.add(name)
+    }
+  } catch (error) {
+    if (error.code) throw error
+    throw packageError(
+      block,
+      `Cannot inspect a locked Python wheel: ${error.message ?? String(error)}`,
+      error,
+    )
+  } finally {
+    for (const name of pyodide.FS.readdir(wheelDirectory)) {
+      if (name.endsWith(".whl")) pyodide.FS.unlink(`${wheelDirectory}/${name}`)
+    }
+    pyodide.FS.rmdir(wheelDirectory)
+  }
+  return packageImports
+}
+
+export function getPythonPackageTarget() {
+  return { pyodide: pyodideVersion, python: pyodidePythonVersion }
+}
+
+export async function validatePythonWheels(packages, block) {
+  if (packages.length === 0) return
+  parserRuntime ??= createRuntime().catch(error => {
+    parserRuntime = undefined
+    throw error
+  })
+  inspectWheelsWithRuntime(await parserRuntime, packages, block)
+}
+
 function analyzeWithRuntime(pyodide, roots, candidates, packages = []) {
   const modules = new Map()
   for (const block of candidates) {
@@ -451,48 +586,7 @@ function analyzeWithRuntime(pyodide, roots, candidates, packages = []) {
   } finally {
     stdlibProxy.destroy()
   }
-  const packageImports = new Set()
-  const lockedPackages = new Set(packages.map(item => packageNameKey(item.name)))
-  const wheelDirectory = `/tmp/matra-wheel-check-${randomUUID()}`
-  pyodide.FS.mkdirTree(wheelDirectory)
-  try {
-    for (const [index, packageInfo] of packages.entries()) {
-      const path = `${wheelDirectory}/${index}.whl`
-      pyodide.FS.writeFile(path, packageInfo.bytes)
-      pyodide.globals.set("_matra_wheel_path", path)
-      let raw
-      try {
-        raw = pyodide.runPython("_matra_wheel_info(_matra_wheel_path)")
-      } finally {
-        pyodide.globals.set("_matra_wheel_path", null)
-      }
-      const info = JSON.parse(raw)
-      if (info.name !== packageNameKey(packageInfo.name) || info.version !== packageInfo.version) {
-        throw packageError(
-          roots[0],
-          `Wheel metadata does not match lock entry: ${packageInfo.file}`,
-        )
-      }
-      if (
-        info.imports.some(name => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) ||
-        info.requires.some(name => !lockedPackages.has(name))
-      ) {
-        throw packageError(
-          roots[0],
-          `Wheel has invalid imports or an unlocked dependency: ${packageInfo.file}`,
-        )
-      }
-      for (const name of info.imports) packageImports.add(name)
-    }
-  } catch (error) {
-    if (error.code) throw error
-    throw packageError(roots[0], "Cannot inspect a locked Python wheel", error)
-  } finally {
-    for (const name of pyodide.FS.readdir(wheelDirectory)) {
-      if (name.endsWith(".whl")) pyodide.FS.unlink(`${wheelDirectory}/${name}`)
-    }
-    pyodide.FS.rmdir(wheelDirectory)
-  }
+  const packageImports = inspectWheelsWithRuntime(pyodide, packages, roots[0])
   const dependencies = new Map()
   const parseBlock = block => {
     if (infos.has(block.path)) return infos.get(block.path)

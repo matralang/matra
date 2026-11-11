@@ -1,4 +1,10 @@
-import { buildLiterate as build, runLiterate as run } from "./literate/runtime.mjs"
+import {
+  buildLiterate as build,
+  getPythonPackageTarget as getPythonTarget,
+  readPythonPackages as readPythonPackagePins,
+  runLiterate as run,
+  validatePythonWheels as validatePythonWheelFiles,
+} from "./literate/runtime.mjs"
 import type { StaticValue } from "./program.js"
 
 export { LiterateError } from "./literate/runtime.mjs"
@@ -34,6 +40,32 @@ export interface LiterateBundle {
 export interface LiterateRunOptions {
   globals?: Record<string, StaticValue>
   moduleRoot?: string
+}
+
+export interface LiteratePythonWheel {
+  name: string
+  version: string
+  file: string
+  sha256: string
+  bytes: Uint8Array
+}
+
+export function readPythonPackages(
+  markdown: string,
+  options: Pick<LiterateBuildOptions, "document"> = {},
+): string[] {
+  return readPythonPackagePins(markdown, options)
+}
+
+export function getPythonPackageTarget(): { pyodide: string; python: string } {
+  return getPythonTarget()
+}
+
+export async function validatePythonWheels(
+  packages: LiteratePythonWheel[],
+  document?: string,
+): Promise<void> {
+  return validatePythonWheelFiles(packages, document)
 }
 
 export async function buildLiterate(
