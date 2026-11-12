@@ -76,7 +76,9 @@ async function executable(path, source) {
   await chmod(path, 0o755)
 }
 
-test("Python deps install resolves unpinned packages into a per-document lock", async t => {
+test("Python deps install resolves unpinned packages into a per-document lock", {
+  skip: process.platform === "win32" && "Uses a POSIX shebang mock for pip",
+}, async t => {
   const root = await tempRoot(t)
   const bin = join(root, "bin")
   await mkdir(bin)
@@ -426,7 +428,9 @@ matra:
   await assert.rejects(readFile(marker), { code: "ENOENT" })
 })
 
-test("Python deps install honors its lock and update explicitly resolves packages again", async t => {
+test("Python deps install honors its lock and update explicitly resolves packages again", {
+  skip: process.platform === "win32" && "Uses a POSIX shebang mock for pip",
+}, async t => {
   const root = await tempRoot(t)
   const bin = join(root, "bin")
   await mkdir(bin)

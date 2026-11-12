@@ -140,8 +140,18 @@ try {
     if (sources.has(manifest.name)) {
       await copyFile(join(root, "LICENSE"), join(licenses, licenseName))
     } else {
-      const license = licenseFilename(await readdir(source), manifest.name)
-      await copyFile(join(source, license), join(licenses, licenseName))
+      const entries = await readdir(source)
+      const candidates = entries.filter(entry => /^licen[cs]e(?:[.-]|$)/i.test(entry))
+      if (candidates.length === 1) {
+        await copyFile(join(source, candidates[0]), join(licenses, licenseName))
+      } else if (candidates.length === 0 && manifest.license === "MPL-2.0") {
+        await copyFile(
+          new URL("../licenses/MPL-2.0.txt", import.meta.url),
+          join(licenses, licenseName),
+        )
+      } else {
+        licenseFilename(entries, manifest.name)
+      }
     }
     packages.set(manifest.name, {
       name: manifest.name,
