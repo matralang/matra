@@ -175,7 +175,7 @@ registryからCLIのみを隔離prefixに導入し、init/build/devとブラウ�
 
 承認に基づき、source commit `e297c3cbfe1eacf96609da0c0e3fa46bb6ba1d41`から
 Core `0.3.1-site.1`、Command `0.1.0`、site-generation `0.1.0-site.3`、
-CLI `0.3.2-alpha.1`の順にnpm公開しました。4 packageの`preview` tagは候補を指し、
+CLI `0.3.2-alpha.1`の順にnpm公開しました。公開当時の4 packageの`preview` tagは候補を指し、
 `latest`は従来の値を維持しています。Styles `0.1.0`は既公開です。
 [npm CLI CI](https://github.com/matralang/matra/actions/runs/43127441219)、
 [配布CI](https://github.com/matralang/matra/actions/runs/43127441245)の6対象、
@@ -191,6 +191,22 @@ Node.js 24.17.0 / npm 11.13.0のmacOS環境で、registryからCLI単独を一�
 registry tarballとintegrityが一致すること、`matra --version`、init/build/devを確認しました。
 Windows実機でのregistry installと対話的な操作は未確認です。npm package公開のみを行い、
 website deploy、既存ZIP、Git tagは変更していません。
+
+### Core browser向け公開記録
+
+2026年11月12日、承認に基づきsource commit `c483462263bf5ef7abada1bcca556d03a3f5d11c`から
+Core `0.3.1-site.2`をnpm公開しました。`preview`はこのversionを指し、
+`latest`は`0.3.0`のままです。他package、website deploy、既存ZIP、Git tagは変更していません。
+[npm CLI CI](https://github.com/matralang/matra/actions/runs/43144528020)、
+[配布CI](https://github.com/matralang/matra/actions/runs/43144527886)、
+[portable CI](https://github.com/matralang/matra/actions/runs/43144527820)が成功しました。
+
+- Core integrity: `sha512-WulRgpt6STO9WgM5Sw06qzPQlUIIPvwyKSTTgsDtDORtAzruRwI8tadFaSluWBT5lkfgufrvIfXRARr1qkkl8w==`
+- macOS / Node.js 24.17.0 / npm 11.13.0で、registryから新規consumerへ導入し、
+  同期・非同期browser entryとJavaScript blockを確認しました。registry integrityは
+  事前に検証したtarballと一致しました。
+- Core単体のminify・ESM分割計測は初期16,045 bytes、追加122,139 bytes、
+  総量138,184 bytesです。websiteとWorker全体の容量・browser動作は未検証です。
 
 ### 次候補
 

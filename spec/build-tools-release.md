@@ -181,7 +181,7 @@ Both registry integrity values matched packs from the candidate commit.
 
 Following approval, Core `0.3.1-site.1`, Command `0.1.0`, site-generation `0.1.0-site.3`,
 and CLI `0.3.2-alpha.1` were published from source commit
-`e297c3cbfe1eacf96609da0c0e3fa46bb6ba1d41`, in dependency order. Their `preview` tags point
+`e297c3cbfe1eacf96609da0c0e3fa46bb6ba1d41`, in dependency order. At publication, their `preview` tags pointed
 to these candidates; existing `latest` tags were preserved. Styles `0.1.0` was already published.
 All [npm CLI CI](https://github.com/matralang/matra/actions/runs/43127441219),
 six [distribution CI](https://github.com/matralang/matra/actions/runs/43127441245) targets,
@@ -198,6 +198,22 @@ prefix from the registry. The registry tarball integrity matched, and `matra --v
 build, and dev passed. Registry installation and interactive operations on a physical Windows
 machine remain unverified. Only npm packages were published; no website deployment, existing ZIP,
 or Git tag was changed.
+
+### Core browser publication record
+
+On November 12, 2026, following approval, Core `0.3.1-site.2` was published from source commit
+`c483462263bf5ef7abada1bcca556d03a3f5d11c`. `preview` points to this version, while `latest`
+remains `0.3.0`. No other packages, website deployment, existing ZIPs, or Git tags were changed.
+[npm CLI CI](https://github.com/matralang/matra/actions/runs/43144528020),
+[distribution CI](https://github.com/matralang/matra/actions/runs/43144527886), and
+[portable CI](https://github.com/matralang/matra/actions/runs/43144527820) passed.
+
+- Core integrity: `sha512-WulRgpt6STO9WgM5Sw06qzPQlUIIPvwyKSTTgsDtDORtAzruRwI8tadFaSluWBT5lkfgufrvIfXRARr1qkkl8w==`
+- On macOS with Node.js 24.17.0 / npm 11.13.0, a fresh consumer installed the package from
+  the registry and checked synchronous and asynchronous browser entries and a JavaScript block.
+  Registry integrity matched the previously verified tarball.
+- The minified, ESM-split Core-only sample measured 16,045 initial bytes, 122,139 additional
+  bytes, and 138,184 bytes total. Full website and Worker sizes and browser behavior are unverified.
 
 ### Next candidate
 
