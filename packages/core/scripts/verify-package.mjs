@@ -68,6 +68,8 @@ try {
   )
   assert.equal(installedCore.exports["./browser"].import, "./dist/browser.js")
   assert.equal(installedCore.exports["./browser"].types, "./dist/browser.d.ts")
+  assert.equal(installedCore.exports["./browser-async"].import, "./dist/browser-async.js")
+  assert.equal(installedCore.exports["./browser-async"].types, "./dist/browser-async.d.ts")
   const markdown = await readFile(
     new URL("../../html/examples/web-page.md", import.meta.url),
     "utf8",
@@ -82,6 +84,7 @@ import {
   parse,
   staticValueToAST as staticValueToBrowserAST,
 } from "@matra/core/browser"
+import { parse as parseAsync } from "@matra/core/browser-async"
 import { staticValueToAST } from "@matra/core"
 import {
   buildLiterate,
@@ -94,6 +97,7 @@ assert.deepEqual(
   staticValueToBrowserAST(evaluate(parse('article { h1 { "Browser entry" } }'))),
   { tag: "article", props: {}, children: [{ tag: "h1", props: {}, children: ["Browser entry"] }] },
 )
+assert.deepEqual(await parseAsync('nodejs(bind="x") { return { text: "}" }; }'), parse('nodejs(bind="x") { return { text: "}" }; }'))
 await assert.rejects(import("@matra/core/literate"), {
   code: "ERR_PACKAGE_PATH_NOT_EXPORTED",
 })

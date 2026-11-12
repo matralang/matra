@@ -66,6 +66,26 @@ JavaScript module loading. Evaluation executes Matra control flow synchronously;
 use an appropriate Worker if the application needs to remain responsive. It is
 not a general-purpose sandbox for untrusted programs.
 
+For applications that can use an asynchronous parser, `@matra/core/browser-async`
+offers the same exports and grammar, except that `parse()` returns a Promise:
+
+```js
+import { evaluate, parse, staticValueToAST } from "@matra/core/browser-async"
+
+const ast = staticValueToAST(evaluate(await parse('article { "Hello" }')))
+```
+
+The parser loads Acorn only when it encounters a JavaScript `nodejs(...)` block.
+Parsing then restarts with the same tokenizer as the synchronous entry. Module
+loading errors reject the Promise; syntax errors retain the same type and message.
+Bundlers must support dynamic imports and ESM code splitting to keep Acorn in a
+separate file. Without splitting it can still be included in the initial bundle.
+When using it in a Worker, use a module Worker and serve all emitted chunks.
+When the tokenizer is needed, its chunk adds to the total downloaded bytes:
+splitting does not reduce the total size or guarantee a site's own bundle budgets.
+The Core regression test measures a minified Core-only sample with esbuild, not
+the complete application or Worker.
+
 ## Morphion document model
 
 Represent each document node as finite terms with an exponent and coefficient
@@ -270,7 +290,7 @@ returned by v0.3 `parse()`.
 ```text
 src/
 ├── ast/        # document types, conversion, traversal, transformation
-├── program.ts  # current source parser, static retrieval, explicit evaluation
+├── program.ts  # synchronous parser entry
 ├── parser/     # public parse export, historical Peggy grammar assets
 ├── jsonmatra.ts # file input and host value helpers
 ├── markdown.ts # source fence extraction
@@ -278,7 +298,7 @@ src/
 └── standard.ts # standard functions on document ASTs
 ```
 
-Current `parse()` uses `program.ts`. The Peggy parser regenerated during builds
+Current `parse()` uses `program-base.ts`. The Peggy parser regenerated during builds
 is not the current public parser. Do not edit generated files directly.
 
 ## Documentation languages

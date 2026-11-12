@@ -17,6 +17,10 @@
       "types": "./dist/browser.d.ts",
       "import": "./dist/browser.js"
     },
+    "./browser-async": {
+      "types": "./dist/browser-async.d.ts",
+      "import": "./dist/browser-async.js"
+    },
     "./experimental/literate": {
       "types": "./dist/literate.d.ts",
       "node": "./dist/literate.js"
@@ -53,6 +57,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.0",
+    "esbuild": "^0.28.2",
     "peggy": "^5.0.6",
     "typescript": "^5.9.3"
   }

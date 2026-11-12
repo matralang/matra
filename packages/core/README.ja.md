@@ -63,6 +63,24 @@ const html = toHTML(ast)
 Matraの評価は同期的にcontrol flowを実行します。UIの応答性が必要な場合はWorkerを利用してください。
 信頼できないprogramに対する汎用sandboxではありません。
 
+非同期parserを利用できるapplicationでは、`@matra/core/browser-async`を選択できます。
+同じexportと文法を提供しますが、`parse()`はPromiseを返します。
+
+```js
+import { evaluate, parse, staticValueToAST } from "@matra/core/browser-async"
+
+const ast = staticValueToAST(evaluate(await parse('article { "Hello" }')))
+```
+
+JavaScriptの`nodejs(...)` blockに到達した場合だけAcornを読み込み、同期entryと同じ
+tokenizerを使って先頭からparseし直します。moduleの読み込みエラーはPromiseをrejectし、
+文法エラーの型とメッセージは変わりません。Acornを別ファイルに分けるには、
+bundlerでdynamic importとESM code splittingを有効にする必要があります。
+分割しなければ初期bundleに含まれる場合があります。Workerではmodule Workerを使用し、
+生成されたすべてのchunkを配信してください。tokenizerが必要な場合はそのchunkも
+ダウンロードされるため、分割しても総容量は減らず、サイト固有の予算達成も保証しません。
+Coreの回帰testはesbuildでminifyしたCoreのみの例を計測し、applicationやWorker全体は計測しません。
+
 ## モーフィオン文書モデル
 
 文書nodeを指数と係数`val`の有限項として表します。
@@ -247,7 +265,7 @@ v0.3の`parse()`が返す`MatraModule`用の評価器ではありません。
 ```text
 src/
 ├── ast/        # 文書の型、相互変換、走査、変換
-├── program.ts  # 現行ソースのparser、静的取得、明示的評価
+├── program.ts  # 同期parser entry
 ├── parser/     # 公開parse export、旧Peggy grammarの資産
 ├── jsonmatra.ts # ファイル入力とホスト値の補助API
 ├── markdown.ts # source fenceの抽出
@@ -255,7 +273,7 @@ src/
 └── standard.ts # 文書AST上の標準関数
 ```
 
-現行`parse()`は`program.ts`を使用します。build時に再生成するPeggy parserは
+現行`parse()`は`program-base.ts`を使用します。build時に再生成するPeggy parserは
 現行公開parserではありません。生成ファイルを直接編集しないでください。
 
 ## ドキュメントの言語
