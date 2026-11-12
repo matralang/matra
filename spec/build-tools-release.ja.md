@@ -208,9 +208,10 @@ Core `0.3.1-site.2`をnpm公開しました。`preview`はこのversionを指し
 - Core単体のminify・ESM分割計測は初期16,045 bytes、追加122,139 bytes、
   総量138,184 bytesです。websiteとWorker全体の容量・browser動作は未検証です。
 
-### 次候補
+### Matra部品対応の公開候補と記録
 
-関数形式のMatra部品を含むnpm候補を準備します。公開はまだ行っていません。
+関数形式のMatra部品を含むnpm候補を準備し、2026年11月12日に公開しました。
+以下は準備時の契約と検証記録です。公開結果は末尾に記録します。
 
 | Package | 候補version | pack時の関連依存 |
 | --- | --- | --- |
@@ -251,3 +252,24 @@ Stage 2/3一致の記録を確認しました。Windows、Node.js 22、remote CI
 - Core: `sha512-6/T6kS8NqlLZ7P5UhXmDz6zRmYENkuy85TKJaKPT9zHkqRhx6Y9pK3xycnPBTF/4KQ4f1GXvaD7G+1la7Yzc5Q==`
 - site-generation: `sha512-DTFuQuiKGI048SbBq87GR5k40cJMDAQ4mFKh3I2dOxJsabooHcZqsHNPBbShlGR3oj+rhk1XVb8rkdlU/ajK/Q==`
 - CLI: `sha512-quUxdEFH1M7F0NYWIxA0HCzh6BBn34miVItoBMBSkGZ4XFwLFiSn8KQ6KZr8m4om28qhb0ZvTMb3RVVpuKRRDA==`
+
+#### 公開結果
+
+承認に基づき、候補commit `47d59b182b0617f10e96b2a870db68d08af9ef64`の
+[npm CLI CI](https://github.com/matralang/matra/actions/runs/43153547957)の4構成、
+[配布CI](https://github.com/matralang/matra/actions/runs/43153547942)の6対象と出典検証、
+[portable CI](https://github.com/matralang/matra/actions/runs/43153547928)の6構成の成功を確認しました。
+非対話環境からのCore公開はnpmの追加認証要求で停止したため、利用者が対話環境で公開を完了しました。
+registryで上記3 packageのversion・依存・integrityを照合し、
+各tarballの実bytesが準備検証済みtarballと一致することを確認しました。
+
+- 3 packageの`preview`は上記候補versionを指します。
+- `latest`はCore `0.3.0`、site-generation `0.1.0-site.0`、CLI `0.3.2-alpha.0`のままです。
+- macOS arm64 / Node.js 24.17.0 / npm 11.13.0で、registryからCLI
+  `0.3.2-alpha.2`だけを一時prefixへglobal installし、version・init/build・site install/build、
+  部品の入れ子・escape・basePath、devのHTTP 200と本文を確認しました。
+- Windows実機でのregistry installと対話操作は未確認です。website deploy、既存ZIP、Git tagは変更していません。
+
+```sh
+npm install --global @matra/cli@0.3.2-alpha.2
+```

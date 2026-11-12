@@ -217,9 +217,10 @@ remains `0.3.0`. No other packages, website deployment, existing ZIPs, or Git ta
 - The minified, ESM-split Core-only sample measured 16,045 initial bytes, 122,139 additional
   bytes, and 138,184 bytes total. Full website and Worker sizes and browser behavior are unverified.
 
-### Next candidate
+### Matra component candidate and publication record
 
-The following npm candidates include function-style Matra components. They have not been published.
+The following npm candidates include function-style Matra components and were published on November 12, 2026.
+The preparation contract and checks follow; publication results are recorded at the end.
 
 | Package | Candidate version | Related packed dependencies |
 | --- | --- | --- |
@@ -262,3 +263,26 @@ Verified tarball integrities follow. Reverify after candidate changes or repacki
 - Core: `sha512-6/T6kS8NqlLZ7P5UhXmDz6zRmYENkuy85TKJaKPT9zHkqRhx6Y9pK3xycnPBTF/4KQ4f1GXvaD7G+1la7Yzc5Q==`
 - site-generation: `sha512-DTFuQuiKGI048SbBq87GR5k40cJMDAQ4mFKh3I2dOxJsabooHcZqsHNPBbShlGR3oj+rhk1XVb8rkdlU/ajK/Q==`
 - CLI: `sha512-quUxdEFH1M7F0NYWIxA0HCzh6BBn34miVItoBMBSkGZ4XFwLFiSn8KQ6KZr8m4om28qhb0ZvTMb3RVVpuKRRDA==`
+
+#### Publication results
+
+Following approval, all four [npm CLI CI](https://github.com/matralang/matra/actions/runs/43153547957)
+configurations, six [distribution CI](https://github.com/matralang/matra/actions/runs/43153547942)
+targets and provenance checks, and six [portable CI](https://github.com/matralang/matra/actions/runs/43153547928)
+configurations passed for candidate commit `47d59b182b0617f10e96b2a870db68d08af9ef64`.
+The non-interactive Core publication stopped at npm's additional authentication requirement;
+the user completed publication interactively.
+Registry versions, dependencies, and integrities were checked for all three packages,
+and downloaded tarball bytes matched the previously verified candidate tarballs.
+
+- All three `preview` tags point to the candidate versions above.
+- `latest` remains Core `0.3.0`, site-generation `0.1.0-site.0`, and CLI `0.3.2-alpha.0`.
+- On macOS arm64 / Node.js 24.17.0 / npm 11.13.0, CLI `0.3.2-alpha.2` alone was installed
+  globally from the registry into a temporary prefix. Version, init/build, site install/build,
+  nested components, escaping, basePath, and dev HTTP 200/body checks passed.
+- Registry installation and interactive operations on a physical Windows machine remain unverified.
+  No website deployment, existing ZIP, or Git tag was changed.
+
+```sh
+npm install --global @matra/cli@0.3.2-alpha.2
+```
