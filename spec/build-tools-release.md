@@ -106,6 +106,7 @@ No npm publication or website deployment is performed.
 
 For the event, a separate installation path using Node.js 22/24 and npm is available.
 CLI `0.3.2-alpha.0` and Styles `0.1.0` are published on npm as experimental packages.
+The follow-up CLI `0.3.2-alpha.1` was also published on November 12, 2026 (see the publication record).
 The campaign's announcement and support period are separate from the lifetime of the tools.
 Dates and support scope are undecided; published packages will not be removed at the end.
 Existing ZIPs and Git tags remain unchanged.
@@ -113,7 +114,7 @@ Existing ZIPs and Git tags remain unchanged.
 Use these commands:
 
 ```sh
-npm install --global @matra/cli@0.3.2-alpha.0
+npm install --global @matra/cli@0.3.2-alpha.1
 matra --version
 matra init hello
 cd hello
@@ -176,11 +177,28 @@ Both registry integrity values matched packs from the candidate commit.
 - Existing ZIPs and Git tags are unchanged. Registry installation on an actual Windows machine
   has not yet been verified.
 
-### Next candidate preparation
+### Publication record: November 12, 2026
 
-The next CLI candidate is `0.3.2-alpha.1`. Its current source uses unpublished
-`@matra/core@0.3.1-site.1`, `@matra/site-generation@0.1.0-site.3`, and
-`@matra/command@0.1.0` runtime dependencies. The npm CLI CI packs and installs all five
-tarballs on macOS/Windows with Node.js 22/24. Publish Core, then Command and site-generation,
-then CLI; separately verify a registry-only CLI install before announcing it. This
-preparation does not publish packages or change the existing ZIPs and tags.
+Following approval, Core `0.3.1-site.1`, Command `0.1.0`, site-generation `0.1.0-site.3`,
+and CLI `0.3.2-alpha.1` were published from source commit
+`e297c3cbfe1eacf96609da0c0e3fa46bb6ba1d41`, in dependency order. Their `preview` tags point
+to these candidates; existing `latest` tags were preserved. Styles `0.1.0` was already published.
+All [npm CLI CI](https://github.com/matralang/matra/actions/runs/43127441219),
+six [distribution CI](https://github.com/matralang/matra/actions/runs/43127441245) targets,
+and [portable CI](https://github.com/matralang/matra/actions/runs/43127441444) passed.
+
+- Core integrity: `sha512-FIV721ltIYt8Mwyhn6aI6C+gAIR/X81LvMxqpmH97FJ2Et7LhnmklBMfnKMiZg2NMx534E6Jicna8WiwjtZ3Zw==`
+- Command integrity: `sha512-u3TR7t6fzevxw818+DuoOezqqse6kW6PmYq7QNfve5p6rc5ZqgPZ88p8axkvlLtANjiUk4n+JAjZVtSz1flfrQ==`
+- site-generation integrity: `sha512-jWgjfG7i247ge8IB6juGpuM3O1b7eVh2pHSflT2rxVALNTciXjHA9S5oojdg6oMWECvfAlhBvGzeo3ZUx08TQg==`
+- CLI integrity: `sha512-Eszw10KYemu0VIw4CORQzCfbURWrK0AFq9FxE2l2n5b3kDaNsKsriUkWSKCkLtolBgy4pNjNua1a1uxgNJmLOA==`
+- Styles integrity: `sha512-wwaL93dZ83xir5ygumYpcD/2DHwyuS9XxJ/Y2ar4oINthOWOlyb1Y+s+dD+SZnKolHRifDfgFF7HvzoBLiHzLw==`
+
+On macOS with Node.js 24.17.0 / npm 11.13.0, CLI alone was installed globally into a temporary
+prefix from the registry. The registry tarball integrity matched, and `matra --version`, init,
+build, and dev passed. Registry installation and interactive operations on a physical Windows
+machine remain unverified. Only npm packages were published; no website deployment, existing ZIP,
+or Git tag was changed.
+
+### Next candidate
+
+Decide the next version, dependencies, and verification scope when preparing the next candidate.

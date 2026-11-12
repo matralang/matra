@@ -101,6 +101,7 @@ npm公開・website deployは行いません。
 
 技術書典向けに、Node.js 22/24とnpmを利用する別経路を用意しました。
 CLI `0.3.2-alpha.0`とStyles `0.1.0`はnpm公開済みの実験版です。
+後続のCLI `0.3.2-alpha.1`も2026年11月12日に公開しました（公開記録を参照）。
 キャンペーンの案内・サポート期間を限定することと、配布物の利用期限は別です。
 期間やサポート内容は未決定で、公開したpackageを期間終了時に削除しません。
 既存のZIPとGitタグは変更していません。
@@ -108,7 +109,7 @@ CLI `0.3.2-alpha.0`とStyles `0.1.0`はnpm公開済みの実験版です。
 利用コマンドは次のとおりです。
 
 ```sh
-npm install --global @matra/cli@0.3.2-alpha.0
+npm install --global @matra/cli@0.3.2-alpha.1
 matra --version
 matra init hello
 cd hello
@@ -170,12 +171,27 @@ registryからCLIのみを隔離prefixに導入し、init/build/devとブラウ�
   実験版`0.3.2-alpha.0`へ変化しました。復元せず進める利用者の判断を記録します。
 - 既存ZIPやGitタグは変更していません。Windows実機でのregistryからの再導入は未確認です。
 
-### 次候補の準備
+### 2026年11月12日の公開記録
 
-次のCLI候補は`0.3.2-alpha.1`です。現在のsourceでは未公開の
-`@matra/core@0.3.1-site.1`、`@matra/site-generation@0.1.0-site.3`、
-`@matra/command@0.1.0`をruntime dependencyとして使います。
-npm CLI CIは5 packageのtarballをまとめてpack・installし、macOS/Windows × Node.js 22/24で
-検証します。公開時はCore、Commandとsite-generation、CLIの順に公開し、
-告知前にregistryのみを使うCLI単独installを別途確認してください。
-この準備ではpackageを公開せず、既存ZIPとtagも変更しません。
+承認に基づき、source commit `e297c3cbfe1eacf96609da0c0e3fa46bb6ba1d41`から
+Core `0.3.1-site.1`、Command `0.1.0`、site-generation `0.1.0-site.3`、
+CLI `0.3.2-alpha.1`の順にnpm公開しました。4 packageの`preview` tagは候補を指し、
+`latest`は従来の値を維持しています。Styles `0.1.0`は既公開です。
+[npm CLI CI](https://github.com/matralang/matra/actions/runs/43127441219)、
+[配布CI](https://github.com/matralang/matra/actions/runs/43127441245)の6対象、
+[portable CI](https://github.com/matralang/matra/actions/runs/43127441444)がすべて成功しました。
+
+- Core integrity: `sha512-FIV721ltIYt8Mwyhn6aI6C+gAIR/X81LvMxqpmH97FJ2Et7LhnmklBMfnKMiZg2NMx534E6Jicna8WiwjtZ3Zw==`
+- Command integrity: `sha512-u3TR7t6fzevxw818+DuoOezqqse6kW6PmYq7QNfve5p6rc5ZqgPZ88p8axkvlLtANjiUk4n+JAjZVtSz1flfrQ==`
+- site-generation integrity: `sha512-jWgjfG7i247ge8IB6juGpuM3O1b7eVh2pHSflT2rxVALNTciXjHA9S5oojdg6oMWECvfAlhBvGzeo3ZUx08TQg==`
+- CLI integrity: `sha512-Eszw10KYemu0VIw4CORQzCfbURWrK0AFq9FxE2l2n5b3kDaNsKsriUkWSKCkLtolBgy4pNjNua1a1uxgNJmLOA==`
+- Styles integrity: `sha512-wwaL93dZ83xir5ygumYpcD/2DHwyuS9XxJ/Y2ar4oINthOWOlyb1Y+s+dD+SZnKolHRifDfgFF7HvzoBLiHzLw==`
+
+Node.js 24.17.0 / npm 11.13.0のmacOS環境で、registryからCLI単独を一時prefixへglobal installし、
+registry tarballとintegrityが一致すること、`matra --version`、init/build/devを確認しました。
+Windows実機でのregistry installと対話的な操作は未確認です。npm package公開のみを行い、
+website deploy、既存ZIP、Git tagは変更していません。
+
+### 次候補
+
+次のversion、依存関係と検証範囲は、候補を固定する前に改めて確認します。
