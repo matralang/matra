@@ -125,11 +125,11 @@ buildは文書中のJavaScriptを実行するため、信頼する文書だけ�
 OS sandboxとtimeoutは保証しません。npm導入はNode.jsが必要で、同梱ZIPとは別経路です。
 
 公開前に、cleanな候補commitを固定し、CLIが依存するCore・HTML・site-generationの
-指定versionとnpm上の実物・integrityを照合します。CLI・Core・site-generation・
-Command・Stylesをpackし、Windows/macOS × Node.js 22/24の
+指定versionとnpm上の実物・integrityを照合します。CLI・Core・site-generationをpackし、
+変更のないCommand `0.1.0`とStyles `0.1.0`はregistryのtarballを取得して、Windows/macOS × Node.js 22/24の
 [専用CI](../.github/workflows/npm-cli.yml)で隔離prefixへのnpm global install、
-`--version`、init/build/devを確認します。この検証はCore・site-generation・Command・
-Stylesのlocal tarballをCLIと同時にインストールするため、registry上のCLI単独installを
+`--version`、init/build/dev、部品の生成と失敗時の出力保持を確認します。この検証は
+候補Core・site-generationのlocal tarballと既公開Command・StylesをCLIと同時にインストールするため、registry上のCLI単独installを
 保証するものではありません。実機でPATH設定、ブラウザ表示とCtrl+Cも確認します。
 候補の修正後は再検証します。
 
@@ -210,4 +210,44 @@ Core `0.3.1-site.2`をnpm公開しました。`preview`はこのversionを指し
 
 ### 次候補
 
-次のversion、依存関係と検証範囲は、候補を固定する前に改めて確認します。
+関数形式のMatra部品を含むnpm候補を準備します。公開はまだ行っていません。
+
+| Package | 候補version | pack時の関連依存 |
+| --- | --- | --- |
+| `@matra/core` | `0.3.1-site.3` | compiler ABIは`matra-value-1`のまま |
+| `@matra/site-generation` | `0.1.0-site.4` | Core `^0.3.1-site.3`、HTML `^0.3.1-site.0` |
+| `@matra/cli` | `0.3.2-alpha.2` | Core `0.3.1-site.3`、site-generation `0.1.0-site.4` |
+
+Command `0.1.0`、HTML `0.3.1-site.0`、Styles `0.1.0`は再公開しません。
+既公開CommandのCore依存`^0.3.1-site.1`は候補Coreも受理するため、
+registryのCommand・Stylesと候補3 packageを使った隔離npm installで実際の解決先を検証します。
+候補versionは準備時のregistry一覧では未使用です。公開直前にも再確認します。
+
+部品は`site.components`で登録した`.matra`に`fn Card(props, children) { ... }`として定義し、
+ページ・layoutから`Card({ title: "見出し" }, [p { "本文" }])`で呼び出します。
+通常のHTMLへ展開し、Shadow DOM・新文法・JavaScriptからの直接ページ登録APIは含みません。
+候補のpackと隔離installでは、依存version・Coreの解決先、init/build/install/dev、
+Markdownと実行ページの部品再利用、入れ子、escape、basePath、
+循環エラー時の旧HTML・manifest保持を確認します。
+
+公開前には変更をcommit・pushしてcleanな候補commitを固定し、更新したnpm CLI CIの4構成、
+配布CIの6対象、portable CIを確認します。ローカル検証だけで他OS・Node.js版の成功とはしません。
+既存のZIP、Git tag、website deploy、npmのtagは準備作業では変更しません。
+公開は別途承認を得た後、Core → site-generation → CLIの順で`preview`へ行い、
+`latest`は維持します。Commandは上記の旧手順例とは異なり、この候補ではpublishしません。
+公開後はregistryからCLI単独を導入して再検証します。
+
+#### ローカルの準備検証
+
+macOS arm64 / Node.js 24.17.0 / npm 11.13.0で、候補3 packageのpack、
+既公開Command・Stylesのregistry tarballとの隔離global install、上記のsmoke検証が成功しました。
+HTMLもregistryの`0.3.1-site.0`を使い、CLI・site-generation・CommandのCore解決先が
+候補`0.3.1-site.3`で一致することを確認しました。
+関連40 test、`pnpm run lint`（build・型checkを含む）、`git diff --check`も成功しました。
+Coreのtarballには新APIの型定義とcompilerを含み、compiler manifestのversion・ABI・hashと
+Stage 2/3一致の記録を確認しました。Windows、Node.js 22、remote CIはこの候補では未確認です。
+検証したtarballのintegrityは次のとおりです。候補の修正・再pack後は再検証します。
+
+- Core: `sha512-6/T6kS8NqlLZ7P5UhXmDz6zRmYENkuy85TKJaKPT9zHkqRhx6Y9pK3xycnPBTF/4KQ4f1GXvaD7G+1la7Yzc5Q==`
+- site-generation: `sha512-DTFuQuiKGI048SbBq87GR5k40cJMDAQ4mFKh3I2dOxJsabooHcZqsHNPBbShlGR3oj+rhk1XVb8rkdlU/ajK/Q==`
+- CLI: `sha512-quUxdEFH1M7F0NYWIxA0HCzh6BBn34miVItoBMBSkGZ4XFwLFiSn8KQ6KZr8m4om28qhb0ZvTMb3RVVpuKRRDA==`

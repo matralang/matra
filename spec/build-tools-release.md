@@ -131,10 +131,12 @@ is guaranteed. Unlike the bundled ZIP, this path requires Node.js.
 
 Before publication, fix a clean candidate commit and check the specified Core, HTML, and
 site-generation versions against the actual npm packages and their integrity. Pack CLI,
-Core, site-generation, Command, and Styles, then use the
+Core, and site-generation, and fetch unchanged Command `0.1.0` and Styles `0.1.0` tarballs from the registry.
+Use the
 [dedicated CI](../.github/workflows/npm-cli.yml) on Windows/macOS and Node.js 22/24 to
-check npm global installation into an isolated prefix, `--version`, init, build, and dev.
-The test installs local Core, site-generation, Command, and Styles tarballs alongside CLI;
+check npm global installation into an isolated prefix, `--version`, init, build, dev,
+component rendering, and output preservation on failure.
+The test installs local candidate Core/site-generation and published Command/Styles tarballs alongside CLI;
 it does not prove that CLI alone can be installed from the registry. Check PATH, browser
 display, and Ctrl+C on actual devices as well. Reverify after any candidate changes.
 
@@ -217,4 +219,46 @@ remains `0.3.0`. No other packages, website deployment, existing ZIPs, or Git ta
 
 ### Next candidate
 
-Decide the next version, dependencies, and verification scope when preparing the next candidate.
+The following npm candidates include function-style Matra components. They have not been published.
+
+| Package | Candidate version | Related packed dependencies |
+| --- | --- | --- |
+| `@matra/core` | `0.3.1-site.3` | Compiler ABI remains `matra-value-1` |
+| `@matra/site-generation` | `0.1.0-site.4` | Core `^0.3.1-site.3`, HTML `^0.3.1-site.0` |
+| `@matra/cli` | `0.3.2-alpha.2` | Core `0.3.1-site.3`, site-generation `0.1.0-site.4` |
+
+Command `0.1.0`, HTML `0.3.1-site.0`, and Styles `0.1.0` will not be republished.
+Published Command depends on Core `^0.3.1-site.1`, which accepts the candidate Core.
+Verify actual resolution using the published Command/Styles tarballs and the three candidate packages
+in an isolated npm installation. These candidate versions were unused in the registry when preparation began;
+recheck immediately before publication.
+
+Define `fn Card(props, children) { ... }` in `.matra` files registered through `site.components`;
+pages and layouts call `Card({ title: "Heading" }, [p { "Body" }])`.
+Components expand to ordinary HTML. Shadow DOM, new grammar, and direct JavaScript page registration are excluded.
+Packed installation checks cover dependency versions and Core resolution, init/build/install/dev,
+components in Markdown layouts and executable pages, nesting, escaping, basePath, and preservation of old
+HTML/manifests on cycle errors.
+
+Before publication, commit and push changes, fix a clean candidate commit, and check all four updated npm CLI CI
+configurations, six distribution targets, and portable CI. Local checks do not establish success on other OS/Node.js versions.
+Preparation does not modify existing ZIPs, Git tags, website deployment, or npm tags.
+After separate approval, publish Core, then site-generation, then CLI using `preview`, preserving `latest`.
+Unlike the older command example above, do not publish Command for this candidate.
+After publication, install CLI alone from the registry and verify again.
+
+#### Local preparation verification
+
+On macOS arm64 / Node.js 24.17.0 / npm 11.13.0, packing the three candidates,
+isolated global installation with registry Command/Styles tarballs, and the smoke checks above passed.
+HTML `0.3.1-site.0` also came from the registry. CLI, site-generation, and Command all resolved
+Core to candidate `0.3.1-site.3`.
+The 40 related tests, `pnpm run lint` (including build/type checks), and `git diff --check` passed.
+The Core tarball includes the new API declarations and compiler; compiler manifest version, ABI, hash,
+and Stage 2/3 equality record were checked.
+Windows, Node.js 22, and remote CI remain unverified for this candidate.
+Verified tarball integrities follow. Reverify after candidate changes or repacking.
+
+- Core: `sha512-6/T6kS8NqlLZ7P5UhXmDz6zRmYENkuy85TKJaKPT9zHkqRhx6Y9pK3xycnPBTF/4KQ4f1GXvaD7G+1la7Yzc5Q==`
+- site-generation: `sha512-DTFuQuiKGI048SbBq87GR5k40cJMDAQ4mFKh3I2dOxJsabooHcZqsHNPBbShlGR3oj+rhk1XVb8rkdlU/ajK/Q==`
+- CLI: `sha512-quUxdEFH1M7F0NYWIxA0HCzh6BBn34miVItoBMBSkGZ4XFwLFiSn8KQ6KZr8m4om28qhb0ZvTMb3RVVpuKRRDA==`

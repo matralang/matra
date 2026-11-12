@@ -25,20 +25,20 @@ jobs:
       - name: Install Rust toolchain
         run: rustup toolchain install 1.97.1 --profile minimal
       - run: pnpm install --frozen-lockfile
-      - name: Pack CLI dependencies and Styles
+      - name: Pack candidates and fetch unchanged published dependencies
         shell: bash
         run: |
           pnpm --filter @matra/core pack --out "$RUNNER_TEMP/core.tgz"
           pnpm --filter @matra/site-generation pack --out "$RUNNER_TEMP/site-generation.tgz"
-          pnpm --filter @matra/command pack --out "$RUNNER_TEMP/command.tgz"
-          pnpm --filter @matra/styles pack --out "$RUNNER_TEMP/styles.tgz"
+          npm pack @matra/command@0.1.0 --ignore-scripts --pack-destination "$RUNNER_TEMP"
+          npm pack @matra/styles@0.1.0 --ignore-scripts --pack-destination "$RUNNER_TEMP"
           pnpm --filter @matra/cli pack --out "$RUNNER_TEMP/cli.tgz"
       - name: Verify isolated npm global installation
         shell: bash
         run: |
           npm run verify:npm-cli -- \
             "$RUNNER_TEMP/cli.tgz" \
-            "$RUNNER_TEMP/styles.tgz" \
-            "$RUNNER_TEMP/command.tgz" \
+            "$RUNNER_TEMP/matra-styles-0.1.0.tgz" \
+            "$RUNNER_TEMP/matra-command-0.1.0.tgz" \
             "$RUNNER_TEMP/core.tgz" \
             "$RUNNER_TEMP/site-generation.tgz"

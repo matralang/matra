@@ -1,10 +1,11 @@
 import assert from "node:assert/strict"
 import { spawn, spawnSync } from "node:child_process"
 import { once } from "node:events"
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises"
 import { createServer } from "node:net"
 import { tmpdir } from "node:os"
-import { join, resolve } from "node:path"
+import { dirname, join, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
 import { runLauncher } from "./distribution-platform.mjs"
 
 const [cliArchive, stylesArchive, commandArchive, coreArchive, siteGenerationArchive] = process.argv
@@ -36,6 +37,32 @@ function launch(args, cwd = work) {
   return runLauncher(home, args, { cwd, env: process.env, encoding: "utf8" })
 }
 
+function expectFailure(args, cwd, message) {
+  const result = spawnSync(process.execPath, [join(modules, "@matra/cli/src/cli.mjs"), ...args], {
+    cwd,
+    encoding: "utf8",
+  })
+  if (result.error) throw result.error
+  assert.equal(result.status, 1, result.stderr)
+  assert.equal(result.stdout, "")
+  assert.match(result.stderr, message)
+}
+
+const modules = join(prefix, process.platform === "win32" ? "node_modules" : "lib/node_modules")
+
+async function resolvedEntry(specifier, entry) {
+  const resolved = run(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      `console.log(import.meta.resolve(${JSON.stringify(specifier)}))`,
+    ],
+    dirname(join(modules, "@matra", entry)),
+  ).trim()
+  return realpath(fileURLToPath(resolved))
+}
+
 try {
   run(process.execPath, [
     npm,
@@ -52,6 +79,50 @@ try {
     siteGenerationArchive,
   ])
   const cli = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"))
+  const core = JSON.parse(
+    await readFile(new URL("../../core/package.json", import.meta.url), "utf8"),
+  )
+  const generator = JSON.parse(
+    await readFile(new URL("../../site-generation/package.json", import.meta.url), "utf8"),
+  )
+  const html = JSON.parse(
+    await readFile(new URL("../../html/package.json", import.meta.url), "utf8"),
+  )
+  const installed = {}
+  for (const [name, version] of [
+    ["cli", cli.version],
+    ["core", core.version],
+    ["site-generation", generator.version],
+    ["command", "0.1.0"],
+    ["styles", "0.1.0"],
+  ]) {
+    installed[name] = JSON.parse(
+      await readFile(join(modules, "@matra", name, "package.json"), "utf8"),
+    )
+    assert.equal(installed[name].version, version)
+  }
+  assert.equal(installed.cli.dependencies["@matra/core"], core.version)
+  assert.equal(installed.cli.dependencies["@matra/site-generation"], generator.version)
+  assert.equal(installed.cli.dependencies["@matra/html"], html.version)
+  assert.equal(installed.cli.dependencies["@matra/command"], installed.command.version)
+  assert.equal(installed.cli.dependencies["@matra/styles"], installed.styles.version)
+  assert.equal(installed["site-generation"].dependencies["@matra/core"], `^${core.version}`)
+  assert.equal(installed["site-generation"].dependencies["@matra/html"], `^${html.version}`)
+  const coreEntry = await realpath(join(modules, "@matra/core/dist/index.js"))
+  for (const entry of [
+    "cli/src/cli.mjs",
+    "site-generation/src/index.mjs",
+    "command/dist/index.js",
+  ]) {
+    assert.equal(await resolvedEntry("@matra/core", entry), coreEntry)
+  }
+  for (const entry of ["cli/src/cli.mjs", "site-generation/src/index.mjs"]) {
+    const htmlEntry = await resolvedEntry("@matra/html", entry)
+    const installedHtml = JSON.parse(
+      await readFile(resolve(dirname(htmlEntry), "../package.json"), "utf8"),
+    )
+    assert.equal(installedHtml.version, html.version)
+  }
   assert.equal(launch(["--version"]).trim(), cli.version)
   launch(["init", "hello"])
   const project = join(work, "hello")
@@ -62,12 +133,20 @@ try {
   assert.ok((await readFile(join(project, "dist/matra.css.LICENSE"))).length > 0)
 
   const site = join(work, "site")
-  await Promise.all(["pages", "layouts"].map(path => mkdir(join(site, path), { recursive: true })))
+  await Promise.all(
+    ["pages", "layouts", "components"].map(path => mkdir(join(site, path), { recursive: true })),
+  )
   await writeFile(
     join(site, "matra.site.json"),
     JSON.stringify({
       version: 1,
-      site: { pages: "pages", layouts: "layouts", defaultLayout: "default" },
+      site: {
+        pages: "pages",
+        layouts: "layouts",
+        components: "components",
+        defaultLayout: "default",
+        basePath: "/preview",
+      },
     }),
   )
   await writeFile(
@@ -77,13 +156,53 @@ matra:
   entry: main.matra
 ---
 \`\`\`main.matra
-html { head {}; body { ...page.content } }
+html { head {}; body { Frame({ title: "Layout" }, page.content) } }
 \`\`\`
 `,
   )
+  const cardPath = join(site, "components", "Card.matra")
+  await writeFile(
+    cardPath,
+    'fn Card(props, children) { article.card { h2 { props.title }; a(href="/guide/") { "Guide" }; ...children } }',
+  )
+  await writeFile(
+    join(site, "components", "Frame.matra"),
+    "fn Frame(props, children) { main { Card(props, children) } }",
+  )
   await writeFile(join(site, "pages", "index.md"), "# Packed site\n")
+  await writeFile(
+    join(site, "pages", "about.matra.md"),
+    `---
+matra:
+  entry: main.matra
+site:
+  data:
+    title: "<Packed component>"
+---
+\`\`\`main.matra
+Card({ title: page.data.title }, [p { "<Body>" }])
+\`\`\`
+`,
+  )
+  const installOutput = launch(["site", "install", "--yes"], site).replaceAll("\\", "/")
+  assert.match(installOutput, /pages\/about\.matra\.md/)
+  assert.doesNotMatch(installOutput, /components\/|Card\.matra|Frame\.matra/)
   launch(["site", "build"], site)
-  assert.match(await readFile(join(site, "dist/index.html"), "utf8"), /<h1>Packed site<\/h1>/)
+  const home = await readFile(join(site, "dist/index.html"), "utf8")
+  const about = await readFile(join(site, "dist/about/index.html"), "utf8")
+  const manifest = await readFile(join(site, "dist/.matra-site-manifest.json"), "utf8")
+  assert.match(home, /<h1>Packed site<\/h1>/)
+  assert.match(home, /<article class="card"><h2>Layout<\/h2>/)
+  assert.match(about, /<h2>&lt;Packed component&gt;<\/h2>/)
+  assert.match(about, /<p>&lt;Body&gt;<\/p>/)
+  assert.match(about, /href="\/preview\/guide\/"/)
+  assert.doesNotMatch(about, /&amp;lt;/)
+  assert.equal((about.match(/<article class="card">/g) ?? []).length, 2)
+  await writeFile(cardPath, "fn Card(props, children) { Card(props, children) }")
+  expectFailure(["site", "build"], site, /Card -> Card/)
+  assert.equal(await readFile(join(site, "dist/index.html"), "utf8"), home)
+  assert.equal(await readFile(join(site, "dist/about/index.html"), "utf8"), about)
+  assert.equal(await readFile(join(site, "dist/.matra-site-manifest.json"), "utf8"), manifest)
 
   const listener = createServer()
   listener.listen(0, "127.0.0.1")
@@ -92,7 +211,6 @@ html { head {}; body { ...page.content } }
   await new Promise((resolve, reject) =>
     listener.close(error => (error ? reject(error) : resolve())),
   )
-  const modules = join(prefix, process.platform === "win32" ? "node_modules" : "lib/node_modules")
   const child = spawn(
     process.execPath,
     [join(modules, "@matra/cli/src/cli.mjs"), "dev", "--port", String(port)],
@@ -125,7 +243,9 @@ html { head {}; body { ...page.content } }
       await once(child, "exit")
     }
   }
-  console.log("Packed npm CLI passed version, init, install, build, site, and dev checks.")
+  console.log(
+    "Packed npm CLI passed dependency resolution, version, init, install, build, components, failure preservation, and dev checks.",
+  )
 } finally {
   await rm(work, { recursive: true, force: true })
 }
