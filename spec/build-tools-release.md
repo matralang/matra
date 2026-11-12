@@ -286,3 +286,30 @@ and downloaded tarball bytes matched the previously verified candidate tarballs.
 ```sh
 npm install --global @matra/cli@0.3.2-alpha.2
 ```
+
+### Direct JavaScript page registration candidate
+
+Prepare Core `0.3.1-site.4`, site-generation `0.1.0-site.5`, and CLI `0.3.2-alpha.3`.
+The new `generateSite()` and `buildMatraProgram()` APIs pass JavaScript routes, sources, layouts,
+and data into components without intermediate Markdown. File-based builds, grammar, and compiler ABI remain unchanged.
+Do not republish Command `0.1.0`, HTML `0.3.1-site.0`, or Styles `0.1.0`.
+
+Pack candidates and verify isolated npm installation with published dependencies, direct page registration,
+props across multiple pages, escaping, absence of intermediate input files, and preservation of old HTML/manifests on failure.
+Retain init/build/site/install/dev coverage. After the Windows/macOS × Node.js 22/24 npm CLI CI,
+six distribution targets, and portable CI pass, proceed with approved publication in Core → site-generation → CLI order.
+Update only `preview`; preserve `latest`, existing ZIPs, Git tags, and website deployment.
+If additional authentication blocks publication, complete it interactively and recheck registry integrity
+and CLI-only installation afterward.
+
+Candidate lint, 52 related tests, `test:literate:package`, and isolated npm smoke checks passed.
+The tested tarballs have these SHA-512 integrity values:
+
+```text
+@matra/core@0.3.1-site.4
+sha512-wTam4blLSwrcTGyqqmOt1BNFUXOAbbvs2q6VdRcGZkTMr09mPxM2WWDLAIU3PDCOu8FyqpajOqXwMhz6l6/mIA==
+@matra/site-generation@0.1.0-site.5
+sha512-6hwjWxhYd2lPpbJ3pUgJT5U9qSIEcB0SeM57Iu2MMKor66evMvSuGpzYviez8GIkyfs/gG58iV0QVO/Bb+Pvzw==
+@matra/cli@0.3.2-alpha.3
+sha512-xfAO4F+42CV03FdOwtM/fBnS17z3M1/84FTzuMVYtOD3d0QoKt0pCPFXhVOwKj6iBJDELSGlrKCgUk1IPmN8gA==
+```

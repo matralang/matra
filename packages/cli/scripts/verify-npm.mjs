@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { runLauncher } from "./distribution-platform.mjs"
 
 const [cliArchive, stylesArchive, commandArchive, coreArchive, siteGenerationArchive] = process.argv
@@ -204,6 +204,45 @@ Card({ title: page.data.title }, [p { "<Body>" }])
   assert.equal(await readFile(join(site, "dist/about/index.html"), "utf8"), about)
   assert.equal(await readFile(join(site, "dist/.matra-site-manifest.json"), "utf8"), manifest)
 
+  const direct = join(work, "direct")
+  await mkdir(direct)
+  const generatorURL = pathToFileURL(join(modules, "@matra/site-generation/src/index.mjs")).href
+  await writeFile(
+    join(work, "verify-direct.mjs"),
+    `
+import assert from "node:assert/strict"
+import { readFile, readdir } from "node:fs/promises"
+import { generateSite } from ${JSON.stringify(generatorURL)}
+const root = ${JSON.stringify(direct)}
+const products = [
+  { slug: "first", title: "<Direct>", body: "Body & details" },
+  { slug: "second", title: "Second", body: "Another body" },
+]
+const options = {
+  root,
+  defaultLayout: "default",
+  layouts: { default: { source: "html { head {}; body { ...page.content } }" } },
+  components: { Card: { source: "fn Card(props, children) { article { h2 { props.title }; ...children } }" } },
+  pages: products.map(product => ({
+    kind: "matra", route: "/" + product.slug + "/", data: product,
+    source: 'Card({ title: page.data.title }, [p { page.data.body }])',
+  })),
+}
+await generateSite(options)
+const first = await readFile(root + "/dist/first/index.html", "utf8")
+assert.ok(first.includes("<h2>&lt;Direct&gt;</h2>"))
+assert.ok(first.includes("<p>Body &amp; details</p>"))
+assert.ok((await readFile(root + "/dist/second/index.html", "utf8")).includes("<h2>Second</h2>"))
+assert.deepEqual(await readdir(root), ["dist"])
+const manifest = await readFile(root + "/dist/.matra-site-manifest.json", "utf8")
+options.pages[0].source = "invalid {"
+await assert.rejects(generateSite(options))
+assert.equal(await readFile(root + "/dist/first/index.html", "utf8"), first)
+assert.equal(await readFile(root + "/dist/.matra-site-manifest.json", "utf8"), manifest)
+`,
+  )
+  run(process.execPath, [join(work, "verify-direct.mjs")])
+
   const listener = createServer()
   listener.listen(0, "127.0.0.1")
   await once(listener, "listening")
@@ -244,7 +283,7 @@ Card({ title: page.data.title }, [p { "<Body>" }])
     }
   }
   console.log(
-    "Packed npm CLI passed dependency resolution, version, init, install, build, components, failure preservation, and dev checks.",
+    "Packed npm CLI passed dependency resolution, version, init, install, build, components, direct page registration, failure preservation, and dev checks.",
   )
 } finally {
   await rm(work, { recursive: true, force: true })

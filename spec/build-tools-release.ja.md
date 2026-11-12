@@ -273,3 +273,29 @@ registryで上記3 packageのversion・依存・integrityを照合し、
 ```sh
 npm install --global @matra/cli@0.3.2-alpha.2
 ```
+
+### JavaScript直接ページ登録の公開候補
+
+Core `0.3.1-site.4`、site-generation `0.1.0-site.5`、CLI `0.3.2-alpha.3`を準備します。
+`generateSite()`と`buildMatraProgram()`を追加し、JavaScriptのroute・source・layout・dataを
+中間Markdownなしで部品へ渡します。既存のファイル方式、文法、compiler ABIは維持します。
+Command `0.1.0`、HTML `0.3.1-site.0`、Styles `0.1.0`は再公開しません。
+
+候補をpackし、既公開依存との隔離npm installで直接ページ登録、複数ページへのprops連携、
+escape、中間入力ファイルなし、失敗時の旧HTML・manifest保持を検証します。
+通常のinit/build/site/install/devも維持し、npm CLI CIのWindows/macOS × Node.js 22/24、
+配布6対象とportable CIの成功後、承認済みの公開をCore → site-generation → CLIの順で進めます。
+`preview`だけを更新し、`latest`、既存ZIP、Git tag、website deployは変更しません。
+追加認証で停止した場合は対話環境で公開し、公開後にregistryのintegrityとCLI単独導入を再検証します。
+
+候補のlint、関連52テスト、`test:literate:package`、隔離npm smokeは成功しました。
+検証したtarballのSHA-512 integrityは次のとおりです。
+
+```text
+@matra/core@0.3.1-site.4
+sha512-wTam4blLSwrcTGyqqmOt1BNFUXOAbbvs2q6VdRcGZkTMr09mPxM2WWDLAIU3PDCOu8FyqpajOqXwMhz6l6/mIA==
+@matra/site-generation@0.1.0-site.5
+sha512-6hwjWxhYd2lPpbJ3pUgJT5U9qSIEcB0SeM57Iu2MMKor66evMvSuGpzYviez8GIkyfs/gG58iV0QVO/Bb+Pvzw==
+@matra/cli@0.3.2-alpha.3
+sha512-xfAO4F+42CV03FdOwtM/fBnS17z3M1/84FTzuMVYtOD3d0QoKt0pCPFXhVOwKj6iBJDELSGlrKCgUk1IPmN8gA==
+```

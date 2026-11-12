@@ -3,7 +3,7 @@
 ## 日本語
 
 興味のある開発者が試すための実験的配布です。安定版・正式サポートの宣言ではありません。
-この候補は`0.3.2-alpha.2`です。既存のZIPやタグは変更せず、署名や専用インストーラーは
+この候補は`0.3.2-alpha.3`です。既存のZIPやタグは変更せず、署名や専用インストーラーは
 今後の改善とします。
 
 ### 今回の変更
@@ -11,7 +11,9 @@
 - `site.components`で指定した`.matra`の関数をページ・layout間で再利用できます。
 - `fn Card(props, children) { ... }`を定義し、`Card({ title: "見出し" }, [p { "本文" }])`で呼び出します。
 - 通常のHTMLへ展開し、Shadow DOMや新文法は導入しません。
-- Core `0.3.1-site.3`とsite-generation `0.1.0-site.4`を含むnpm候補です。公開は未実施です。
+- `generateSite()`でJavaScriptからroute・source・layout・dataを直接登録できます。
+- ページデータのJSON化や中間Markdownなしで部品へデータを渡せます。既存のファイル方式も維持します。
+- Core `0.3.1-site.4`とsite-generation `0.1.0-site.5`を含むnpm候補です。公開は未実施です。
 
 ### Windowsの既知のダウンロード警告
 
@@ -41,7 +43,7 @@ checksumを確認して展開してください。展開したフォルダーを
 
 ## English
 
-This `0.3.2-alpha.2` candidate is an experimental distribution, not a stable release or
+This `0.3.2-alpha.3` candidate is an experimental distribution, not a stable release or
 an official support guarantee. Existing ZIPs and tags remain unchanged; signing and a
 dedicated installer are future improvements.
 
@@ -50,7 +52,9 @@ dedicated installer are future improvements.
 - Reuse functions from `.matra` files registered through `site.components` across pages and layouts.
 - Define `fn Card(props, children) { ... }` and call `Card({ title: "Heading" }, [p { "Body" }])`.
 - Components expand to ordinary HTML without Shadow DOM or new grammar.
-- The npm candidate includes Core `0.3.1-site.3` and site-generation `0.1.0-site.4`; it has not been published.
+- `generateSite()` registers routes, sources, layouts, and data directly from JavaScript.
+- Pass data into components without JSON serialization or intermediate Markdown; file-based builds remain supported.
+- The npm candidate includes Core `0.3.1-site.4` and site-generation `0.1.0-site.5`; it has not been published.
 
 ### Known Windows download warning
 
@@ -86,15 +90,15 @@ Save the ZIP and checksum together and adjust filenames for your target.
 
 ```sh
 # macOS arm64
-shasum -a 256 -c matra-0.3.2-alpha.2-darwin-arm64.zip.sha256
+shasum -a 256 -c matra-0.3.2-alpha.3-darwin-arm64.zip.sha256
 # Linux x64
-sha256sum -c matra-0.3.2-alpha.2-linux-x64.zip.sha256
+sha256sum -c matra-0.3.2-alpha.3-linux-x64.zip.sha256
 ```
 
 Windows PowerShell（x64の例 / x64 example）：
 
 ```powershell
-$zip = "matra-0.3.2-alpha.2-win32-x64.zip"
+$zip = "matra-0.3.2-alpha.3-win32-x64.zip"
 $expected = ((Get-Content "$zip.sha256" -Raw) -split '\s+')[0]
 if ((Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) {
     throw "Checksum mismatch"
@@ -107,12 +111,12 @@ if ((Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected)
 
 ```sh
 # macOS arm64 example
-export PATH="/absolute/path/to/matra-0.3.2-alpha.2-darwin-arm64:$PATH"
+export PATH="/absolute/path/to/matra-0.3.2-alpha.3-darwin-arm64:$PATH"
 ```
 
 ```powershell
 # Windows x64 example
-$env:Path = "C:\path\to\matra-0.3.2-alpha.2-win32-x64;$env:Path"
+$env:Path = "C:\path\to\matra-0.3.2-alpha.3-win32-x64;$env:Path"
 ```
 
 ```sh
