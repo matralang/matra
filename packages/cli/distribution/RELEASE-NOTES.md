@@ -13,7 +13,7 @@
 - 通常のHTMLへ展開し、Shadow DOMや新文法は導入しません。
 - `generateSite()`でJavaScriptからroute・source・layout・dataを直接登録できます。
 - ページデータのJSON化や中間Markdownなしで部品へデータを渡せます。既存のファイル方式も維持します。
-- Core `0.3.1-site.4`とsite-generation `0.1.0-site.5`を含むnpm候補です。公開は未実施です。
+- Core `0.3.1-site.4`とsite-generation `0.1.0-site.5`を含むnpm preview版を2026年11月12日に公開しました。
 
 ### Windowsの既知のダウンロード警告
 
@@ -54,7 +54,7 @@ dedicated installer are future improvements.
 - Components expand to ordinary HTML without Shadow DOM or new grammar.
 - `generateSite()` registers routes, sources, layouts, and data directly from JavaScript.
 - Pass data into components without JSON serialization or intermediate Markdown; file-based builds remain supported.
-- The npm candidate includes Core `0.3.1-site.4` and site-generation `0.1.0-site.5`; it has not been published.
+- The npm preview release includes Core `0.3.1-site.4` and site-generation `0.1.0-site.5` and was published on November 12, 2026.
 
 ### Known Windows download warning
 

@@ -287,9 +287,10 @@ and downloaded tarball bytes matched the previously verified candidate tarballs.
 npm install --global @matra/cli@0.3.2-alpha.2
 ```
 
-### Direct JavaScript page registration candidate
+### Direct JavaScript page registration candidate and publication record
 
-Prepare Core `0.3.1-site.4`, site-generation `0.1.0-site.5`, and CLI `0.3.2-alpha.3`.
+Core `0.3.1-site.4`, site-generation `0.1.0-site.5`, and CLI `0.3.2-alpha.3` were published on November 12, 2026.
+The preparation contract and checks follow; publication results are recorded at the end.
 The new `generateSite()` and `buildMatraProgram()` APIs pass JavaScript routes, sources, layouts,
 and data into components without intermediate Markdown. File-based builds, grammar, and compiler ABI remain unchanged.
 Do not republish Command `0.1.0`, HTML `0.3.1-site.0`, or Styles `0.1.0`.
@@ -312,4 +313,28 @@ sha512-wTam4blLSwrcTGyqqmOt1BNFUXOAbbvs2q6VdRcGZkTMr09mPxM2WWDLAIU3PDCOu8FyqpajO
 sha512-6hwjWxhYd2lPpbJ3pUgJT5U9qSIEcB0SeM57Iu2MMKor66evMvSuGpzYviez8GIkyfs/gG58iV0QVO/Bb+Pvzw==
 @matra/cli@0.3.2-alpha.3
 sha512-xfAO4F+42CV03FdOwtM/fBnS17z3M1/84FTzuMVYtOD3d0QoKt0pCPFXhVOwKj6iBJDELSGlrKCgUk1IPmN8gA==
+```
+
+#### Direct page registration publication results
+
+All four [npm CLI CI](https://github.com/matralang/matra/actions/runs/43158810145) configurations,
+six [distribution CI](https://github.com/matralang/matra/actions/runs/43158810098) targets and provenance checks,
+and six [portable CI](https://github.com/matralang/matra/actions/runs/43158810116) configurations passed
+for candidate commit `75b9713773b2b67fbd8787982a09555a4e5900bb`.
+Non-interactive Core publication stopped at npm's additional authentication requirement;
+the user published all three packages interactively.
+Downloaded registry tarball bytes and SHA-512 integrities matched all three verified candidates above.
+
+- All three `preview` tags point to the published versions above.
+- `latest` remains Core `0.3.0`, site-generation `0.1.0-site.0`, and CLI `0.3.2-alpha.0`.
+- On macOS arm64 / Node.js 24.17.0 / npm 11.13.0, CLI `0.3.2-alpha.3` alone was installed globally
+  from the registry into a temporary prefix. Dependency versions and Core resolution, version, init/build,
+  site install/build, nested components, escaping, basePath, and dev HTTP 200/body checks passed.
+- The same installation passed direct API checks for two pages, props, escaping, absence of intermediate
+  input files, and preservation of old HTML/manifests on invalid source.
+- Registry installation and interactive operations on a physical Windows machine remain unverified.
+  No website deployment, existing ZIP, or Git tag was changed.
+
+```sh
+npm install --global @matra/cli@0.3.2-alpha.3
 ```

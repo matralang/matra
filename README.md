@@ -188,7 +188,7 @@ await generateSite({
 
 Build `pages` with `map()` over an existing data array to reuse a template across routes.
 The `source` field also accepts Matra source strings loaded with `readFile()`.
-This API is included in release candidates Core `0.3.1-site.4`, site-generation `0.1.0-site.5`, and CLI `0.3.2-alpha.3`.
+This API is included in published preview releases Core `0.3.1-site.4`, site-generation `0.1.0-site.5`, and CLI `0.3.2-alpha.3`.
 
 ### Local preview
 

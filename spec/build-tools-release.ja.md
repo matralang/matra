@@ -274,9 +274,10 @@ registryで上記3 packageのversion・依存・integrityを照合し、
 npm install --global @matra/cli@0.3.2-alpha.2
 ```
 
-### JavaScript直接ページ登録の公開候補
+### JavaScript直接ページ登録の公開候補と記録
 
-Core `0.3.1-site.4`、site-generation `0.1.0-site.5`、CLI `0.3.2-alpha.3`を準備します。
+Core `0.3.1-site.4`、site-generation `0.1.0-site.5`、CLI `0.3.2-alpha.3`を2026年11月12日に公開しました。
+以下は準備時の契約と検証記録です。公開結果は末尾に記録します。
 `generateSite()`と`buildMatraProgram()`を追加し、JavaScriptのroute・source・layout・dataを
 中間Markdownなしで部品へ渡します。既存のファイル方式、文法、compiler ABIは維持します。
 Command `0.1.0`、HTML `0.3.1-site.0`、Styles `0.1.0`は再公開しません。
@@ -298,4 +299,26 @@ sha512-wTam4blLSwrcTGyqqmOt1BNFUXOAbbvs2q6VdRcGZkTMr09mPxM2WWDLAIU3PDCOu8FyqpajO
 sha512-6hwjWxhYd2lPpbJ3pUgJT5U9qSIEcB0SeM57Iu2MMKor66evMvSuGpzYviez8GIkyfs/gG58iV0QVO/Bb+Pvzw==
 @matra/cli@0.3.2-alpha.3
 sha512-xfAO4F+42CV03FdOwtM/fBnS17z3M1/84FTzuMVYtOD3d0QoKt0pCPFXhVOwKj6iBJDELSGlrKCgUk1IPmN8gA==
+```
+
+#### 直接ページ登録APIの公開結果
+
+候補commit `75b9713773b2b67fbd8787982a09555a4e5900bb`について、
+[npm CLI CI](https://github.com/matralang/matra/actions/runs/43158810145)の4構成、
+[配布CI](https://github.com/matralang/matra/actions/runs/43158810098)の6対象と出典検証、
+[portable CI](https://github.com/matralang/matra/actions/runs/43158810116)の6構成が成功しました。
+非対話環境でのCore公開はnpmの追加認証要求で停止し、利用者が対話環境で3 packageを公開しました。
+registryから取得した3 tarballの実bytesとSHA-512 integrityは、上記の検証済み候補と一致しました。
+
+- 3 packageの`preview`は上記の公開versionを指します。
+- `latest`はCore `0.3.0`、site-generation `0.1.0-site.0`、CLI `0.3.2-alpha.0`のままです。
+- macOS arm64 / Node.js 24.17.0 / npm 11.13.0で、registryからCLI `0.3.2-alpha.3`だけを
+  一時prefixへglobal installし、依存version・Core解決先、version、init/build、site install/build、
+  部品の入れ子・escape・basePath、devのHTTP 200と本文を確認しました。
+- 同じ導入環境で直接ページ登録APIによる2ページ生成、props連携、escape、中間入力ファイルなし、
+  不正source時の旧HTML・manifest保持を確認しました。
+- Windows実機でのregistry installと対話操作は未確認です。website deploy、既存ZIP、Git tagは変更していません。
+
+```sh
+npm install --global @matra/cli@0.3.2-alpha.3
 ```

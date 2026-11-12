@@ -185,7 +185,7 @@ await generateSite({
 
 `pages`を既存のデータ配列から`map()`で作れば、同じテンプレートを複数routeで使えます。
 `source`には`readFile()`したMatraソース文字列も渡せます。
-このAPIはCore `0.3.1-site.4`・site-generation `0.1.0-site.5`・CLI `0.3.2-alpha.3`の公開候補に含まれます。
+このAPIは公開済みpreview版のCore `0.3.1-site.4`・site-generation `0.1.0-site.5`・CLI `0.3.2-alpha.3`に含まれます。
 
 ### ローカルプレビュー
 
