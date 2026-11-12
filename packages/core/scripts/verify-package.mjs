@@ -88,11 +88,14 @@ import { parse as parseAsync } from "@matra/core/browser-async"
 import { staticValueToAST } from "@matra/core"
 import {
   buildLiterate,
+  buildMatraComponent,
+  buildMatraProgram,
   getLiterateDependencyDirectory,
   runLiterate,
   LiterateError,
 } from "@matra/core/experimental/literate"
 import { toHTML } from "@matra/html"
+import { generateSite } from "@matra/site-generation"
 assert.deepEqual(
   staticValueToBrowserAST(evaluate(parse('article { h1 { "Browser entry" } }'))),
   { tag: "article", props: {}, children: [{ tag: "h1", props: {}, children: ["Browser entry"] }] },
@@ -102,6 +105,24 @@ await assert.rejects(import("@matra/core/literate"), {
   code: "ERR_PACKAGE_PATH_NOT_EXPORTED",
 })
 try {
+const raw = await buildMatraProgram('p { page.title }')
+assert.deepEqual(await runLiterate(raw, { globals: { page: { title: "Raw source" } } }), {
+  tag: "p", props: {}, children: ["Raw source"],
+})
+const card = await buildMatraComponent('fn Card(props, children) { article { h2 { props.title }; ...children } }')
+assert.equal(card.name, "Card")
+await generateSite({
+  root: process.cwd(),
+  output: "direct-site",
+  defaultLayout: "default",
+  layouts: { default: { source: "html { head {}; body { ...page.content } }" } },
+  components: { Card: { source: card.entry.source } },
+  pages: [{
+    kind: "matra", route: "/", data: { title: "<Direct>" },
+    source: 'Card({ title: page.data.title }, [p { "Packed body" }])',
+  }],
+})
+assert.match(await readFile("direct-site/index.html", "utf8"), /<article><h2>&lt;Direct&gt;<\\/h2><p>Packed body<\\/p><\\/article>/)
   const bundle = await buildLiterate(await readFile("web-page.md", "utf8"))
   const html = toHTML(staticValueToAST(await runLiterate(bundle)))
   assert.match(html, /すべて読む目安：24分/)
@@ -302,11 +323,13 @@ try {
   await writeFile(
     join(root, "types.mts"),
     `
-import { buildLiterate, runLiterate, LiterateError } from "@matra/core/experimental/literate"
+import { buildLiterate, buildMatraProgram, runLiterate, LiterateError } from "@matra/core/experimental/literate"
 import type { LiterateBundle, LiterateBuildOptions, LiterateRunOptions } from "@matra/core/experimental/literate"
 import { evaluate, parse, staticValueToAST } from "@matra/core/browser"
 const options: LiterateBuildOptions = { document: "example.md" }
 const bundle: LiterateBundle = await buildLiterate("", options)
+const raw: LiterateBundle = await buildMatraProgram("p {}", { document: "pages/raw.matra" })
+await runLiterate(raw)
 await runLiterate(bundle)
 const runOptions: LiterateRunOptions = { globals: { page: { title: "Host data" } }, moduleRoot: "." }
 await runLiterate(bundle, runOptions)

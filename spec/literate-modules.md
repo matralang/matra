@@ -21,6 +21,11 @@ Questions outside the initial contract remain for later stages.
 
 ## Additive API for site components
 
+`buildMatraProgram(source, { document })` compiles pure Matra source without FrontMatter or fences
+into an existing `matra-literate-1` bundle. `document` defaults to `program.matra`;
+diagnostics use original source lines/columns. Values and external dependencies are empty.
+Use existing `runLiterate()` with plain-data globals and components. No intermediate Markdown is generated.
+
 `buildMatraComponent(source, { document })` from `@matra/core/experimental/literate`
 builds a `matra-component-1` bundle from pure Matra source.
 The source contains exactly one top-level function with two parameters; its name is the public name.

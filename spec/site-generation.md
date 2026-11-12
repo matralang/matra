@@ -131,7 +131,73 @@ main {
 
 This is a compatible site-generation extension, not a change to Matra Program/compiler source grammar,
 AST/data model, or compiler ABI. Component calls using `Card(title="...") { ... }` or `<Card>`,
-Shadow DOM, browser state management, and direct JavaScript page registration are out of scope.
+Shadow DOM and browser state management are out of scope.
+
+## Direct page registration from JavaScript
+
+`generateSite(options)` from `@matra/site-generation` generates a JavaScript page list directly.
+Existing `buildSite(directory)` remains unchanged. This API does not read configuration files or page/layout
+directories and needs no JSON serialization, FrontMatter, literate fences, or intermediate files.
+For example, given a JavaScript array `products` and Matra source strings `layoutSource` and `cardSource`:
+
+```js
+import { generateSite } from "@matra/site-generation"
+
+await generateSite({
+  root: process.cwd(),
+  data: { title: "Products" },
+  defaultLayout: "default",
+  layouts: { default: { source: layoutSource } },
+  components: { Card: { source: cardSource } },
+  pages: products.map(product => ({
+    kind: "matra",
+    route: `/products/${product.slug}/`,
+    source: "Card({ title: page.data.title }, [p { page.data.description }])",
+    data: product,
+  })),
+})
+```
+
+A layout is pure Matra source such as `html { head {}; body { ...page.content } }`.
+Components use the existing `fn Card(props, children) { ... }` definition.
+Passing `page.data` into props and between components requires no serialization.
+
+### Inputs and compatibility
+
+- `root` is an existing project directory, defaulting to the current directory.
+  `output`, `format`, `assets`, `basePath`, `data`, and `defaultLayout` have the same meanings and defaults
+  as file-based generation. Output cannot be the root itself.
+- `pages` is a required array, including an empty array. Each entry has `kind` (`matra` or `markdown`),
+  `route`, `source`, and optional `layout`, `data`, and `document`.
+  `layout: false` disables layouts; omission uses `defaultLayout`.
+  Kind is never inferred, and failed Matra compilation never falls back to Markdown.
+- `layouts` and `components` map names to `{ source, document? }`, defaulting to empty objects.
+  A component key must match its function name. Layout/component names differing only in case are duplicates.
+  All `source` fields are strings, never paths to read. Callers may pass source read with `readFile()`.
+- `document` is a project-relative logical path for diagnostics and Markdown links, not a file to create.
+  Defaults are `pages/<route without trailing slash>.matra` or `.md` (root uses `pages/index.*`),
+  `layouts/<name>.matra`, and `components/<name>.matra`.
+  Relative links resolve against this path, not the route.
+  Absolute paths, empty segments, `.`/`..`, backslashes, invalid segments, case-insensitive duplicates,
+  and paths overlapping output are rejected.
+- `documents` optionally specifies a directory or list of directories of reference-only Markdown.
+  Omission collects none. Registered Markdown pages also appear in `site.documents`, with their logical
+  path as ID, `data` as metadata, and converted nodes as content.
+  Only explicitly registered pages are published. Duplicate document IDs or collected file paths
+  conflicting with registered logical source paths are diagnosed.
+- Markdown source is body text, not a FrontMatter container. FrontMatter is not interpreted as data or
+  route controls, and Matra/JavaScript fences are never executed. API arguments own all page controls/data.
+- Unknown options/entry keys and invalid data, routes, or layout references are diagnosed.
+  Site/page data are plain objects containing finite numbers, strings, booleans, null, dense arrays, and
+  plain objects, cloned at API invocation. Functions, undefined, class instances, cycles, accessors, and symbol
+  properties are rejected. Sources and registrations are also validated and snapshotted before the first await.
+- Rendering, route/asset collisions, link resolution, escaping, basePath, manifest, and publication are shared
+  with file-based builds. Success returns absolute generated file paths; failure preserves old output.
+  Equivalent routes, sources, and data generate the same HTML as file-based builds.
+
+This adds site-generation/Core host APIs without changes to Matra Program/compiler source grammar,
+AST/data model, or compiler ABI. Automatic JS configuration execution, CLI discovery, implicit merging with
+file-based input, watching, and direct JS/Python fence registration are excluded.
 
 ## Purpose
 

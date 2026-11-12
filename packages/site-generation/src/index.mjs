@@ -1,1 +1,6 @@
-export { buildSite, getSiteProgramDocuments, renderLiterateDocument } from "./site.mjs"
+export {
+  buildSite,
+  generateSite,
+  getSiteProgramDocuments,
+  renderLiterateDocument,
+} from "./site.mjs"

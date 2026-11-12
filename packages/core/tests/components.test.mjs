@@ -3,6 +3,7 @@ import { test } from "node:test"
 import {
   buildLiterate,
   buildMatraComponent,
+  buildMatraProgram,
   LiterateError,
   runLiterate,
 } from "@matra/core/experimental/literate"
@@ -14,6 +15,43 @@ const page = source =>
 const component = (source, document = "components/Card.matra") =>
   buildMatraComponent(source, { document })
 const card = "fn Card(props, children) { article { h2 { props.title }; ...children } }"
+
+test("raw Matra programs compile without Markdown and use globals and component bundles", async () => {
+  const bundle = await buildMatraProgram('Card({ title: page.title }, [p { "Body" }])', {
+    document: "pages/raw.matra",
+  })
+  assert.equal(bundle.entry.source, 'Card({ title: page.title }, [p { "Body" }])')
+  assert.equal(bundle.entry.line, 1)
+  assert.deepEqual(bundle.values, [])
+  assert.deepEqual(
+    await runLiterate(JSON.parse(JSON.stringify(bundle)), {
+      globals: { page: { title: "From JS" } },
+      components: [await component(card)],
+    }),
+    {
+      tag: "article",
+      props: {},
+      children: [
+        { tag: "h2", props: {}, children: ["From JS"] },
+        { tag: "p", props: {}, children: ["Body"] },
+      ],
+    },
+  )
+  assert.equal((await buildMatraProgram("p {}")).entry.document, "program.matra")
+  await assert.rejects(buildMatraProgram("p {\n", { document: "pages/raw.matra" }), error => {
+    assert.equal(error.code, "MATRA_COMPILE")
+    assert.match(error.message, /pages\/raw\.matra:2:1/)
+    return true
+  })
+  for (const [source, options] of [
+    [null, {}],
+    ["p {}", null],
+    ["p {}", { document: "" }],
+    ["p {}", { values: [] }],
+  ]) {
+    await assert.rejects(buildMatraProgram(source, options), { code: "INVALID_OPTIONS" })
+  }
+})
 
 test("component bundles survive JSON round trips and compose with props and children", async () => {
   const components = await Promise.all([

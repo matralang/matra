@@ -19,6 +19,11 @@ parserは変更しない。literate hostの設定APIとCLIは、呼び出し側�
 
 ## サイト部品用の追加API
 
+`buildMatraProgram(source, { document })`はFrontMatterやfenceのない純粋なMatraソースを
+既存の`matra-literate-1` bundleへcompileします。`document`は省略時`program.matra`で、
+元ソースの行・列を診断に使います。values・外部依存は空で、既存の`runLiterate()`から
+plain-data globalsと部品を渡して実行します。中間Markdownは生成しません。
+
 `@matra/core/experimental/literate`の`buildMatraComponent(source, { document })`は、
 純粋なMatraソースから`matra-component-1`形式の部品bundleを生成します。
 ソースは引数2つのトップレベル関数1つだけとし、関数名を公開名にします。

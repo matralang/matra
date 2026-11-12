@@ -601,6 +601,38 @@ function componentName(entry) {
   return definition.name
 }
 
+/** @returns {Promise<import("../literate.js").LiterateBundle>} */
+export async function buildMatraProgram(source, options = {}) {
+  const entry = {
+    document: options?.document ?? "program.matra",
+    path: "main.matra",
+    source,
+    line: 1,
+  }
+  if (
+    options === null ||
+    typeof options !== "object" ||
+    Array.isArray(options) ||
+    Object.keys(options).some(key => key !== "document") ||
+    typeof entry.document !== "string" ||
+    !entry.document ||
+    typeof source !== "string"
+  ) {
+    fail(
+      "INVALID_OPTIONS",
+      { ...entry, document: "program.matra" },
+      "Expected Matra source and a document name",
+    )
+  }
+  return {
+    format: "matra-literate-1",
+    abi: LITERATE_ABI,
+    entry,
+    values: [],
+    wasm: await compileMatra(entry),
+  }
+}
+
 /** @returns {Promise<import("../literate.js").MatraComponentBundle>} */
 export async function buildMatraComponent(source, options = {}) {
   const entry = {

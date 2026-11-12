@@ -12,8 +12,14 @@ import {
   writeFile,
 } from "node:fs/promises"
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path"
+import { types } from "node:util"
 import { evaluateStatic, parse, staticValueToAST } from "@matra/core"
-import { buildLiterate, buildMatraComponent, runLiterate } from "@matra/core/experimental/literate"
+import {
+  buildLiterate,
+  buildMatraComponent,
+  buildMatraProgram,
+  runLiterate,
+} from "@matra/core/experimental/literate"
 import { toHTML } from "@matra/html"
 import { load as loadYaml } from "js-yaml"
 import { markdownToNodes } from "./markdown.mjs"
@@ -36,20 +42,35 @@ export async function renderLiterateDocument(markdown, options = {}) {
 }
 
 export async function buildSite(directory) {
-  const { root, settings, documents, layouts, pages } = await loadSite(resolve(directory))
-  settings.components = []
+  const site = await loadSite(resolve(directory))
+  const { root, settings } = site
+  const components = []
   if (settings.componentsDirectory) {
-    const names = new Set()
     for (const path of await walkFiles(settings.componentsDirectory)) {
       if (!path.endsWith(".matra")) continue
-      const component = await buildMatraComponent(await readFile(path, "utf8"), {
+      components.push({
+        source: await readFile(path, "utf8"),
         document: relative(root, path).split(sep).join("/"),
       })
-      const key = component.name.toLowerCase()
-      if (names.has(key)) throw new Error(`${path}: Duplicate component name: ${component.name}`)
-      names.add(key)
-      settings.components.push(component)
     }
+  }
+  return generateLoadedSite({ ...site, components })
+}
+
+async function generateLoadedSite({ root, settings, documents, layouts, pages, components }) {
+  settings.components = []
+  const names = new Set()
+  for (const source of components) {
+    const component = await buildMatraComponent(source.source, { document: source.document })
+    if (source.name !== undefined && source.name !== component.name) {
+      throw new Error(`${source.document}: component name must match '${source.name}'`)
+    }
+    const key = component.name.toLowerCase()
+    if (names.has(key)) {
+      throw new Error(`${source.document}: Duplicate component name: ${component.name}`)
+    }
+    names.add(key)
+    settings.components.push(component)
   }
   const assets = settings.assetsDirectory ? await collectAssets(settings.assetsDirectory) : []
   const outputPlan = planOutput(pages, assets, settings)
@@ -61,7 +82,7 @@ export async function buildSite(directory) {
   settings.documents = documents.map(document => ({
     id: document.id,
     path: document.id,
-    metadata: metadataValues(document.metadata),
+    metadata: document.metadataIsData ? document.metadata : metadataValues(document.metadata),
     content: markdownToNodes(
       document.body,
       settings.routes.has(document.path)
@@ -72,17 +93,11 @@ export async function buildSite(directory) {
     ),
   }))
   for (const layout of layouts.values()) {
-    layout.bundle = await buildLiterate(layout.source, {
-      document: layout.document,
-      moduleRoot: root,
-    })
+    layout.bundle = await buildTemplate(layout, root)
   }
   for (const page of pages) {
     if (page.kind === "program") {
-      page.bundle = await buildLiterate(page.source, {
-        document: page.document,
-        moduleRoot: root,
-      })
+      page.bundle = await buildTemplate(page, root)
     }
   }
 
@@ -92,7 +107,7 @@ export async function buildSite(directory) {
     const document = page.layout
       ? await renderLayout(layouts.get(page.layout), content, page, settings)
       : content
-    assertCompleteDocument(document, page.source)
+    assertCompleteDocument(document, page.path)
     rendered.push({
       path: outputPlan.routes.get(page.route),
       content: `<!doctype html>\n${toHTML(document, { basePath: settings.basePath })}\n`,
@@ -101,6 +116,182 @@ export async function buildSite(directory) {
   for (const asset of assets) rendered.push({ path: asset.output, content: asset.content })
   await publish(root, settings.outputDirectory, rendered)
   return rendered.map(file => join(settings.outputDirectory, file.path))
+}
+
+function buildTemplate(template, root) {
+  return template.sourceKind === "matra"
+    ? buildMatraProgram(template.source, { document: template.document })
+    : buildLiterate(template.source, { document: template.document, moduleRoot: root })
+}
+
+export async function generateSite(options) {
+  const site = normalizeDirectSite(options)
+  const { root, settings } = site
+  const info = await lstat(root)
+  if (!info.isDirectory()) throw new Error(`Expected a project directory: ${root}`)
+  for (const directory of [
+    ...settings.documentDirectories,
+    ...(settings.assetsDirectory ? [settings.assetsDirectory] : []),
+  ]) {
+    assertInputOutputSeparation(directory, settings.outputDirectory)
+    await assertDirectory(root, directory)
+  }
+  const documents = await collectDocuments(root, settings)
+  const logicalPaths = new Set([
+    ...site.pages.map(page => page.path.toLowerCase()),
+    ...[...site.layouts.values()].map(layout => layout.path.toLowerCase()),
+    ...site.components.map(component => component.path.toLowerCase()),
+  ])
+  for (const document of documents) {
+    if (logicalPaths.has(document.path.toLowerCase())) {
+      throw new Error(`Collected document conflicts with a logical document: ${document.path}`)
+    }
+  }
+  const ids = new Set(documents.map(document => document.id.toLowerCase()))
+  for (const page of site.pages.filter(page => page.kind === "markdown")) {
+    const id = page.document
+    if (ids.has(id.toLowerCase())) throw new Error(`Duplicate document ID ignoring case: ${id}`)
+    ids.add(id.toLowerCase())
+    documents.push({
+      id,
+      path: page.path,
+      body: page.body,
+      metadata: page.data,
+      metadataIsData: true,
+    })
+  }
+  documents.sort((left, right) => left.id.localeCompare(right.id, "en"))
+  return generateLoadedSite({ ...site, documents })
+}
+
+function normalizeDirectSite(input) {
+  if (!isRecord(input)) throw new TypeError("generateSite options must be an object")
+  assertPlainData(input, "generateSite options")
+  const options = structuredClone(input)
+  rejectUnknownKeys(
+    options,
+    new Set([
+      "root",
+      "output",
+      "format",
+      "assets",
+      "basePath",
+      "data",
+      "defaultLayout",
+      "pages",
+      "layouts",
+      "components",
+      "documents",
+    ]),
+    "generateSite",
+  )
+  if (options.root !== undefined && (typeof options.root !== "string" || !options.root)) {
+    throw new TypeError("root must be a non-empty path")
+  }
+  const root = resolve(options.root ?? process.cwd())
+  const siteOptions = Object.fromEntries(
+    ["output", "format", "assets", "basePath", "data", "defaultLayout", "documents"]
+      .filter(key => Object.hasOwn(options, key))
+      .map(key => [key, options[key]]),
+  )
+  const settings = normalizeSettings({ version: 1, site: siteOptions }, root)
+  if (settings.outputDirectory === root) throw new Error("site.output must not be the project root")
+  const documentDirectories =
+    typeof options.documents === "string" ? [options.documents] : (options.documents ?? [])
+  settings.documentDirectories = [...new Set(documentDirectories.map(path => resolve(root, path)))]
+  const documents = new Set()
+  const sourceEntry = (entry, fallback, label) => {
+    if (!isRecord(entry)) throw new TypeError(`${label} must be an object`)
+    if (typeof entry.source !== "string") throw new TypeError(`${label}.source must be a string`)
+    const document = entry.document === undefined ? fallback : entry.document
+    if (
+      typeof document !== "string" ||
+      !document ||
+      isAbsolute(document) ||
+      document.includes("\\") ||
+      document.includes("%") ||
+      document.split("/").some(part => !isSafeSegment(part))
+    ) {
+      throw new TypeError(`${label}.document must be a safe project-relative logical path`)
+    }
+    const key = document.toLowerCase()
+    if (documents.has(key))
+      throw new Error(`Duplicate logical document path ignoring case: ${document}`)
+    documents.add(key)
+    const path = resolve(root, document)
+    assertInputOutputSeparation(path, settings.outputDirectory)
+    return { source: entry.source, document, path, sourceKind: "matra" }
+  }
+  const namedSources = (entries, label) => {
+    if (entries === undefined) return new Map()
+    if (!isRecord(entries)) throw new TypeError(`${label} must be an object`)
+    const names = new Set()
+    return new Map(
+      Object.entries(entries).map(([name, entry]) => {
+        if (!/^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/.test(name)) {
+          throw new TypeError(`Invalid ${label} name: ${name}`)
+        }
+        if (names.has(name.toLowerCase())) throw new Error(`Duplicate ${label} name: ${name}`)
+        names.add(name.toLowerCase())
+        if (!isRecord(entry)) throw new TypeError(`${label}.${name} must be an object`)
+        rejectUnknownKeys(entry, new Set(["source", "document"]), `${label}.${name}`)
+        return [name, { ...sourceEntry(entry, `${label}/${name}.matra`, `${label}.${name}`), name }]
+      }),
+    )
+  }
+  const layouts = namedSources(options.layouts, "layouts")
+  selectedLayout(undefined, settings.defaultLayout, layouts, "defaultLayout")
+  const components = [...namedSources(options.components, "components").values()]
+  if (!Array.isArray(options.pages)) throw new TypeError("pages must be an array")
+  const pages = options.pages.map((entry, index) => {
+    const label = `pages[${index}]`
+    if (!isRecord(entry)) throw new TypeError(`${label} must be an object`)
+    rejectUnknownKeys(
+      entry,
+      new Set(["kind", "route", "source", "layout", "data", "document"]),
+      label,
+    )
+    if (!["matra", "markdown"].includes(entry.kind))
+      throw new TypeError(`${label}.kind must be 'matra' or 'markdown'`)
+    if (typeof entry.route !== "string") throw new TypeError(`${label}.route must be a string`)
+    const controls = siteControls(
+      {
+        site: {
+          ...(Object.hasOwn(entry, "layout") ? { layout: entry.layout } : {}),
+          ...(Object.hasOwn(entry, "data") ? { data: entry.data } : {}),
+        },
+      },
+      label,
+    )
+    const route = normalizeRoute(entry.route, settings.format, label)
+    const stem = route === "/" ? "index" : route.slice(1).replace(/\/$/, "")
+    const source = sourceEntry(
+      entry,
+      `pages/${stem}.${entry.kind === "matra" ? "matra" : "md"}`,
+      label,
+    )
+    return {
+      ...source,
+      kind: entry.kind === "matra" ? "program" : "markdown",
+      id: source.document,
+      body: entry.source,
+      route,
+      data: controls.data ?? {},
+      layout: selectedLayout(controls.layout, settings.defaultLayout, layouts, source.document),
+    }
+  })
+  sortAndValidateRoutes(pages)
+  return { root, settings, layouts, pages, components }
+}
+
+function assertInputOutputSeparation(input, output) {
+  if (
+    input === output ||
+    input.startsWith(`${output}${sep}`) ||
+    output.startsWith(`${input}${sep}`)
+  ) {
+    throw new Error("site.output must not overlap a site input directory or logical document")
+  }
 }
 
 export async function getSiteProgramDocuments(directory) {
@@ -121,13 +312,7 @@ async function loadSite(root) {
     ...(settings.componentsDirectory ? [settings.componentsDirectory] : []),
     ...(settings.assetsDirectory ? [settings.assetsDirectory] : []),
   ]) {
-    if (
-      input === settings.outputDirectory ||
-      input.startsWith(`${settings.outputDirectory}${sep}`) ||
-      settings.outputDirectory.startsWith(`${input}${sep}`)
-    ) {
-      throw new Error("site.output must not overlap a site input directory")
-    }
+    assertInputOutputSeparation(input, settings.outputDirectory)
   }
   await Promise.all([
     assertDirectory(root, settings.pagesDirectory),
@@ -394,6 +579,11 @@ async function collectPages(root, settings, documents, layouts) {
       layout: selectedLayout(controls.layout, settings.defaultLayout, layouts, path),
     })
   }
+  sortAndValidateRoutes(pages)
+  return pages
+}
+
+function sortAndValidateRoutes(pages) {
   pages.sort((left, right) => left.route.localeCompare(right.route, "en"))
   const routes = new Set()
   for (const page of pages) {
@@ -401,7 +591,6 @@ async function collectPages(root, settings, documents, layouts) {
     if (routes.has(key)) throw new Error(`Duplicate route: ${page.route}`)
     routes.add(key)
   }
-  return pages
 }
 
 function parseFrontMatter(source, path) {
@@ -522,7 +711,7 @@ async function renderPage(page, settings) {
 
 async function renderLayout(layout, content, page, settings) {
   if (content.tag === "html") {
-    throw new TypeError(`${page.source}: a complete HTML document cannot be placed inside a layout`)
+    throw new TypeError(`${page.path}: a complete HTML document cannot be placed inside a layout`)
   }
   const pageContent = content.tag === "$root" ? content.children : [content]
   const globals = globalsFor(page, settings, pageContent)
@@ -550,7 +739,9 @@ function globalsFor(page, settings, content) {
 
 function resolveMarkdownLink(href, kind, page, settings) {
   if (/^(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)/.test(href) || href.startsWith("#")) return href
-  const [pathname, suffix = ""] = href.split(/(?=[?#])/, 2)
+  const suffixStart = href.search(/[?#]/)
+  const pathname = suffixStart === -1 ? href : href.slice(0, suffixStart)
+  const suffix = suffixStart === -1 ? "" : href.slice(suffixStart)
   if (!pathname) return href
   if (pathname.startsWith("/")) {
     const route = normalizeRoute(pathname, settings.format, page.path)
@@ -573,7 +764,7 @@ function resolveMarkdownLink(href, kind, page, settings) {
     const assetPath = relative(assetRoot, target).split(sep).join("/")
     return `/assets/${assetPath}${suffix}`
   }
-  if (extname(target) === ".md" || pathname.endsWith(".matra.md")) {
+  if (settings.routes.has(target) || extname(target) === ".md" || pathname.endsWith(".matra.md")) {
     const route = settings.routes.get(target)
     if (!route) throw new Error(`${page.path}: local Markdown link does not resolve: ${href}`)
     return `${route}${suffix}`
@@ -835,15 +1026,32 @@ function rejectUnknownKeys(value, allowed, label) {
 function assertPlainData(value, label, active = new Set()) {
   if (value === null || typeof value === "string" || typeof value === "boolean") return
   if (typeof value === "number" && Number.isFinite(value)) return
-  if (typeof value !== "object" || active.has(value)) {
+  if (typeof value !== "object" || active.has(value) || types.isProxy(value)) {
     throw new TypeError(`${label} must contain only finite plain data`)
   }
   if (!Array.isArray(value) && !isRecord(value)) {
     throw new TypeError(`${label} must contain only plain objects and arrays`)
   }
+  const descriptors = Object.getOwnPropertyDescriptors(value)
+  const keys = Reflect.ownKeys(descriptors)
+  const array = Array.isArray(value)
+  if (
+    array &&
+    (keys.length !== value.length + 1 ||
+      keys.some(
+        key => key !== "length" && (typeof key !== "string" || !/^(0|[1-9]\d*)$/.test(key)),
+      ))
+  ) {
+    throw new TypeError(`${label} must contain dense arrays without extra properties`)
+  }
   active.add(value)
-  for (const item of Array.isArray(value) ? value : Object.values(value)) {
-    assertPlainData(item, label, active)
+  for (const key of keys) {
+    if (array && key === "length") continue
+    const descriptor = descriptors[key]
+    if (typeof key !== "string" || !descriptor.enumerable || !Object.hasOwn(descriptor, "value")) {
+      throw new TypeError(`${label} must contain enumerable string-keyed data properties`)
+    }
+    assertPlainData(descriptor.value, label, active)
   }
   active.delete(value)
 }

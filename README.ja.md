@@ -160,6 +160,33 @@ __all__ = ["value"]
 部品を定義でき、ページ・layoutから`Card({ title: "見出し" }, [p { "本文" }])`として再利用できます。
 部品は通常のHTMLへ展開され、FrontMatterやShadow DOMは不要です。
 
+JavaScriptでページデータを管理する場合は、`@matra/site-generation`の`generateSite()`へ
+直接渡せます。設定ファイル・ページごとのFrontMatter・中間Markdownは不要です。
+
+```js
+import { generateSite } from "@matra/site-generation"
+
+await generateSite({
+  defaultLayout: "default",
+  layouts: {
+    default: { source: "html { head {}; body { ...page.content } }" },
+  },
+  components: {
+    Card: { source: "fn Card(props, children) { article { h2 { props.title }; ...children } }" },
+  },
+  pages: [{
+    kind: "matra",
+    route: "/",
+    source: 'Card({ title: page.data.title }, [p { page.data.body }])',
+    data: { title: "見出し", body: "本文" },
+  }],
+})
+```
+
+`pages`を既存のデータ配列から`map()`で作れば、同じテンプレートを複数routeで使えます。
+`source`には`readFile()`したMatraソース文字列も渡せます。
+このAPIは開発中の追加機能で、公開済みCLI `0.3.2-alpha.2`の依存packageにはまだ含まれません。
+
 ### ローカルプレビュー
 
 作成したプロジェクト内で実行します。

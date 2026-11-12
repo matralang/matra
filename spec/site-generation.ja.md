@@ -126,7 +126,74 @@ main {
 
 これはsite-generationの互換拡張です。Matra Program・compiler sourceの文法、AST/data model、
 compiler ABIは変更しません。`Card(title="...") { ... }`や`<Card>`によるcomponent呼び出し、
-Shadow DOM、ブラウザの状態管理、JavaScriptからの直接ページ登録APIは本変更に含めません。
+Shadow DOMとブラウザの状態管理は含みません。
+
+## JavaScriptからの直接ページ登録
+
+`@matra/site-generation`の`generateSite(options)`は、JavaScriptで作ったページ一覧を直接生成します。
+既存の`buildSite(directory)`は維持し、このAPIでは設定ファイルやページ・layoutディレクトリを読みません。
+ページdataのJSON化、FrontMatter、literate fence、中間ファイルは不要です。
+以下はJavaScriptの配列`products`とMatraソース文字列`layoutSource`、`cardSource`を使う例です。
+
+```js
+import { generateSite } from "@matra/site-generation"
+
+await generateSite({
+  root: process.cwd(),
+  data: { title: "商品一覧" },
+  defaultLayout: "default",
+  layouts: { default: { source: layoutSource } },
+  components: { Card: { source: cardSource } },
+  pages: products.map(product => ({
+    kind: "matra",
+    route: `/products/${product.slug}/`,
+    source: "Card({ title: page.data.title }, [p { page.data.description }])",
+    data: product,
+  })),
+})
+```
+
+layoutは例えば`html { head {}; body { ...page.content } }`という純粋なMatraソースです。
+部品は既存と同じ`fn Card(props, children) { ... }`で定義します。
+`page.data`からprops、propsから別部品への受け渡しに、シリアライズを挟みません。
+
+### 入力と互換性
+
+- `root`は既存のprojectディレクトリで、省略時は現在のディレクトリです。
+  `output`、`format`、`assets`、`basePath`、`data`、`defaultLayout`はファイル方式と同じ意味・既定値です。
+  outputにroot自身は指定できません。
+- `pages`は必須の配列で、各項目は`kind`（`matra`または`markdown`）、`route`、`source`、
+  省略可能な`layout`、`data`、`document`を持ちます。空配列も受理します。
+  `layout: false`はlayoutを無効化し、未指定は`defaultLayout`を使います。
+  `kind`は推測せず、Matra sourceのコンパイル失敗をMarkdownへfallbackしません。
+- `layouts`と`components`は名前をkey、`{ source, document? }`を値とするobjectで、省略時は空です。
+  部品のkeyは定義関数名と一致させます。大小文字だけ違うlayout名・部品名も重複として拒否します。
+  layout・部品・ページの`source`は文字列であり、pathとして読み込みません。
+  呼び出し側で`readFile()`したソースも、そのまま渡せます。
+- `document`は診断・Markdown相対リンク用のproject相対論理パスです。実ファイルは作成しません。
+  省略時はページが`pages/<routeから末尾slashを除いた部分>.matra`または`.md`
+  （root routeは`pages/index.*`）、layoutが`layouts/<name>.matra`、
+  部品が`components/<name>.matra`です。相対リンクはrouteでなくこのパスを基準に解決します。
+  絶対パス、空segment、`.`・`..`、backslash、不正segment、大小文字を無視した重複、
+  outputと重なる論理パスを拒否します。
+- `documents`には参照専用Markdownを収集するディレクトリまたはその配列を指定できます。
+  省略時は収集しません。登録したMarkdownページも`site.documents`に含み、
+  そのIDは論理パス、metadataは`data`、contentは変換済みノードです。
+  明示的な登録ページだけを公開し、収集文書は自動公開しません。
+  重複IDや、収集文書の実パスと登録ソースの論理パスの重複は診断にします。
+- Markdown sourceは本文そのものです。FrontMatterをデータやrouteの指示として解釈せず、
+  fence内のMatra・JavaScriptも実行しません。ページ制御とdataはAPI引数に一本化します。
+- 未知のoption・入力key、不正data・route・layout参照は診断にします。
+  site/page dataはplain objectで、有限数、文字列、boolean、null、密な配列、plain objectのみを受理し、
+  API呼び出し時に複製します。関数、undefined、class instance、循環、accessor、symbol propertyは拒否します。
+  Matra・layout・部品のソースと登録情報も、最初の非同期処理前に検証・snapshotします。
+- 描画・route/asset衝突・リンク解決・HTML escape・basePath・manifest・公開処理はファイル方式と共用します。
+  成功時は生成ファイルの絶対パス配列を返し、失敗時は旧出力を維持します。
+  同じroute・source・dataからはファイル方式と同じHTMLを生成します。
+
+これはsite-generationとCore host APIの追加で、Matra Program・compiler sourceの文法、
+AST/data model、compiler ABIは変更しません。JS設定ファイルの自動実行、CLIからの新APIの自動検出、
+ファイル方式との暗黙merge、watch、JS/Python fenceの直接登録は対象外です。
 
 ## 目的
 

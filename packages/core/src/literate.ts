@@ -1,6 +1,7 @@
 import {
   buildLiterate as build,
   buildMatraComponent as buildComponent,
+  buildMatraProgram as buildProgram,
   getLiterateDependencyDirectory as getDependencyDirectory,
   getPythonPackageTarget as getPythonTarget,
   readLiteratePackages as readPackageNames,
@@ -119,4 +120,11 @@ export async function buildMatraComponent(
   options: Pick<LiterateBuildOptions, "document"> = {},
 ): Promise<MatraComponentBundle> {
   return buildComponent(source, options)
+}
+
+export async function buildMatraProgram(
+  source: string,
+  options: Pick<LiterateBuildOptions, "document"> = {},
+): Promise<LiterateBundle> {
+  return buildProgram(source, options)
 }

@@ -163,6 +163,33 @@ Set `site.components` to a directory of `.matra` files defining components such 
 `fn Card(props, children) { ... }`. Pages and layouts can reuse them with
 `Card({ title: "Heading" }, [p { "Body" }])`. Components produce ordinary HTML without FrontMatter or Shadow DOM.
 
+When managing page data in JavaScript, pass it directly to `generateSite()` from `@matra/site-generation`.
+No configuration file, per-page FrontMatter, or intermediate Markdown is needed.
+
+```js
+import { generateSite } from "@matra/site-generation"
+
+await generateSite({
+  defaultLayout: "default",
+  layouts: {
+    default: { source: "html { head {}; body { ...page.content } }" },
+  },
+  components: {
+    Card: { source: "fn Card(props, children) { article { h2 { props.title }; ...children } }" },
+  },
+  pages: [{
+    kind: "matra",
+    route: "/",
+    source: 'Card({ title: page.data.title }, [p { page.data.body }])',
+    data: { title: "Heading", body: "Body" },
+  }],
+})
+```
+
+Build `pages` with `map()` over an existing data array to reuse a template across routes.
+The `source` field also accepts Matra source strings loaded with `readFile()`.
+This additive API is under development and is not included in the dependencies of published CLI `0.3.2-alpha.2` yet.
+
 ### Local preview
 
 Run inside the generated project:
