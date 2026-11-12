@@ -1,5 +1,6 @@
 import {
   buildLiterate as build,
+  buildMatraComponent as buildComponent,
   getLiterateDependencyDirectory as getDependencyDirectory,
   getPythonPackageTarget as getPythonTarget,
   readLiteratePackages as readPackageNames,
@@ -42,6 +43,15 @@ export interface LiterateBundle {
 export interface LiterateRunOptions {
   globals?: Record<string, StaticValue>
   moduleRoot?: string
+  components?: MatraComponentBundle[]
+}
+
+export interface MatraComponentBundle {
+  format: "matra-component-1"
+  abi: "matra-value-1"
+  name: string
+  entry: LiterateBlock
+  wasm: string
 }
 
 export interface LiteratePythonWheel {
@@ -102,4 +112,11 @@ export async function runLiterate(
   options: LiterateRunOptions = {},
 ): Promise<StaticValue> {
   return run(bundle, options)
+}
+
+export async function buildMatraComponent(
+  source: string,
+  options: Pick<LiterateBuildOptions, "document"> = {},
+): Promise<MatraComponentBundle> {
+  return buildComponent(source, options)
 }

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
 import { getLiterateDependencyDirectory } from "@matra/core/experimental/literate"
-import { buildSite } from "../src/site.mjs"
+import { buildSite, getSiteProgramDocuments } from "../src/site.mjs"
 
 const layout = `---
 matra:
@@ -49,6 +49,157 @@ site:
   )
   return root
 }
+
+async function enableComponents(root) {
+  await mkdir(join(root, "components"))
+  const configPath = join(root, "matra.site.yaml")
+  const config = await readFile(configPath, "utf8")
+  await writeFile(
+    configPath,
+    config.replace("  layouts: layouts", "  layouts: layouts\n  components: components"),
+  )
+}
+
+test("reuses function components in program pages and Markdown layouts without intermediate files", async t => {
+  const root = await project(t)
+  await enableComponents(root)
+  await mkdir(join(root, "components", "shared"))
+  await writeFile(
+    join(root, "components", "shared", "card.matra"),
+    `fn Card(props, children) {
+  article.card {
+    h2 { props.title }
+    a(href="/guide/") { "Guide" }
+    ...children
+  }
+}`,
+  )
+  await writeFile(
+    join(root, "components", "Frame.matra"),
+    `fn Frame(props, children) {
+  main { Card(props, children) }
+}`,
+  )
+  await writeFile(
+    join(root, "layouts", "default.matra.md"),
+    layout.replace("main { ...page.content }", "Frame({ title: page.data.title }, page.content)"),
+  )
+  const configPath = join(root, "matra.site.yaml")
+  await writeFile(configPath, `${await readFile(configPath, "utf8")}  basePath: /preview\n`)
+  await writeFile(join(root, "pages", "index.md"), '---\ntitle: "<Markdown>"\n---\n# Body')
+  await writeFile(
+    join(root, "pages", "about.matra.md"),
+    `---
+matra:
+  entry: main.matra
+site:
+  data:
+    title: About
+---
+\`\`\`main.matra
+Card({ title: page.data.title }, [p { "<Body>" }])
+\`\`\`
+`,
+  )
+
+  await buildSite(root)
+
+  const home = await readFile(join(root, "dist", "index.html"), "utf8")
+  const about = await readFile(join(root, "dist", "about", "index.html"), "utf8")
+  assert.match(home, /<article class="card"><h2>&lt;Markdown&gt;<\/h2>/)
+  assert.match(home, /<h1>Body<\/h1>/)
+  assert.match(home, /href="\/preview\/guide\/"/)
+  assert.doesNotMatch(home, /&amp;lt;/)
+  assert.equal((about.match(/<article class="card">/g) ?? []).length, 2)
+  assert.match(about, /<p>&lt;Body&gt;<\/p>/)
+  assert.doesNotMatch(about, /Markdown/)
+  assert.deepEqual(await getSiteProgramDocuments(root), [
+    "layouts/default.matra.md",
+    "pages/about.matra.md",
+  ])
+  const previous = home
+  await writeFile(
+    join(root, "components", "shared", "card.matra"),
+    `fn Card(props, children) {
+  article.updated { h2 { props.title }; ...children }
+}`,
+  )
+  await buildSite(root)
+  assert.match(await readFile(join(root, "dist", "index.html"), "utf8"), /class="updated"/)
+  assert.notEqual(await readFile(join(root, "dist", "index.html"), "utf8"), previous)
+})
+
+test("component failures preserve previous HTML, assets, and the ownership manifest", async t => {
+  const root = await project(t)
+  await enableComponents(root)
+  await mkdir(join(root, "public"))
+  await writeFile(join(root, "public", "keep.txt"), "asset")
+  const configPath = join(root, "matra.site.yaml")
+  await writeFile(configPath, `${await readFile(configPath, "utf8")}  assets: public\n`)
+  const componentPath = join(root, "components", "Card.matra")
+  await writeFile(componentPath, "fn Card(props, children) { article { ...children } }")
+  await writeFile(
+    join(root, "layouts", "default.matra.md"),
+    layout.replace("main { ...page.content }", "main { Card({}, page.content) }"),
+  )
+  await writeFile(join(root, "pages", "index.md"), "---\ntitle: Original\n---\n# Original")
+  await buildSite(root)
+  await writeFile(join(root, "dist", "keep.txt"), "keep")
+  const previous = await readFile(join(root, "dist", "index.html"), "utf8")
+  const manifest = await readFile(join(root, "dist", ".matra-site-manifest.json"), "utf8")
+  await writeFile(join(root, "pages", "index.md"), "---\ntitle: Changed\n---\n# Changed")
+  for (const [source, expected] of [
+    ["fn Card(props, children) {", /components\/Card\.matra:1:27: parse error/],
+    ["fn Card(props) { p {} }", /two parameters/],
+    ["fn Card(props, children) { Card(props, children) }", /Card -> Card/],
+    ['fn Card(props, children) { "not a node" }', /Expected one document node/],
+    ["fn Card(props, children) { p { props.missing } }", /Unknown member: missing/],
+  ]) {
+    await writeFile(componentPath, source)
+    await assert.rejects(buildSite(root), expected)
+    assert.equal(await readFile(join(root, "dist", "index.html"), "utf8"), previous)
+    assert.equal(await readFile(join(root, "dist", ".matra-site-manifest.json"), "utf8"), manifest)
+    assert.equal(await readFile(join(root, "dist", "keep.txt"), "utf8"), "keep")
+    assert.equal(await readFile(join(root, "dist", "assets", "keep.txt"), "utf8"), "asset")
+  }
+})
+
+test("component registration is explicit and duplicate names are rejected even without pages", async t => {
+  const root = await project(t)
+  await mkdir(join(root, "components"))
+  await writeFile(join(root, "components", "ignored.matra"), "invalid component source")
+  await writeFile(join(root, "pages", "index.md"), "---\ntitle: Page\n---\n# Page")
+  await buildSite(root)
+  await rm(join(root, "components", "ignored.matra"))
+  await rm(join(root, "pages", "index.md"))
+  await writeFile(join(root, "components", "first.matra"), "fn Card(props, children) { p {} }")
+  await writeFile(join(root, "components", "second.matra"), "fn card(props, children) { p {} }")
+  const configPath = join(root, "matra.site.yaml")
+  await writeFile(configPath, `${await readFile(configPath, "utf8")}  components: components\n`)
+  await assert.rejects(buildSite(root), /Duplicate component name: card/)
+})
+
+test("component directories and files follow existing input path protections", async t => {
+  const root = await project(t)
+  const configPath = join(root, "matra.site.yaml")
+  const config = await readFile(configPath, "utf8")
+  for (const [directory, expected] of [
+    ["../outside", /inside the project/],
+    ["dist/components", /must not overlap/],
+    ["missing", /ENOENT/],
+    [false, /relative path/],
+  ]) {
+    await writeFile(configPath, `${config}  components: ${JSON.stringify(directory)}\n`)
+    await assert.rejects(buildSite(root), expected)
+  }
+  await mkdir(join(root, "components"))
+  await symlink(join(root, "layouts"), join(root, "linked-components"), "dir")
+  await writeFile(configPath, `${config}  components: linked-components\n`)
+  await assert.rejects(buildSite(root), /not a symlink/)
+  await symlink(join(root, "layouts", "default.matra.md"), join(root, "components", "Card.matra"))
+  await writeFile(configPath, `${config}  components: components\n`)
+  await assert.rejects(buildSite(root), /Unsupported input file type/)
+})
 
 test("builds Markdown and Matra pages with isolated data and a shared layout", async t => {
   const root = await project(t)

@@ -156,6 +156,9 @@ __all__ = ["value"]
 従来の単一ページ`matra build`とは独立しています。
 サイト内の実行ページとlayoutの依存は、`matra site install`で一括準備できます。
 確認を省略する場合は`matra site install --yes`を使います。
+`site.components`で指定したディレクトリの`.matra`には`fn Card(props, children) { ... }`のように
+部品を定義でき、ページ・layoutから`Card({ title: "見出し" }, [p { "本文" }])`として再利用できます。
+部品は通常のHTMLへ展開され、FrontMatterやShadow DOMは不要です。
 
 ### ローカルプレビュー
 

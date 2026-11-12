@@ -19,6 +19,18 @@ source of truth.
 The [grammar specification](./grammar.md) and existing compiler source bootstrap contracts remain intact.
 Questions outside the initial contract remain for later stages.
 
+## Additive API for site components
+
+`buildMatraComponent(source, { document })` from `@matra/core/experimental/literate`
+builds a `matra-component-1` bundle from pure Matra source.
+The source contains exactly one top-level function with two parameters; its name is the public name.
+Register component bundles through `runLiterate(bundle, { components: [...] })` to call them synchronously by name.
+Component bundles support JSON round trips and use the existing `matra-value-1` ABI.
+The `globals` option still accepts only plain data, not injected functions.
+Arguments, results, isolated scopes, and cycle diagnostics follow the
+[site component contract](./site-generation.md).
+Existing bundles and API calls remain unchanged; neither grammar nor compiler source changes.
+
 ## Initial implementation contract
 
 This is host interoperation for ordinary Matra Programs, not a change to Matra or compiler source

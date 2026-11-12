@@ -8,6 +8,7 @@ import { types } from "node:util"
 import { createContext, Script } from "node:vm"
 import { parse as parseJavaScript } from "acorn"
 import { load as loadYaml } from "js-yaml"
+import { parse } from "../program.js"
 import { LITERATE_ABI, loadCompiler } from "./compiler.mjs"
 import { formatCompilerDiagnostic, reserveCompilerWorkspace } from "./compiler-host.mjs"
 import {
@@ -17,7 +18,7 @@ import {
   resolvePythonPackages,
   validatePythonWheels as validatePythonWheelsRuntime,
 } from "./python-runtime.mjs"
-import { instantiateMatra } from "./value-host.mjs"
+import { instantiateMatra, instantiateMatraSync } from "./value-host.mjs"
 
 export class LiterateError extends Error {
   /**
@@ -558,6 +559,81 @@ function selectBlocks(
   }
 }
 
+/** @returns {Promise<string>} */
+async function compileMatra(entry) {
+  let compiler
+  try {
+    compiler = await loadCompiler()
+  } catch (error) {
+    fail("COMPILER_LOAD", entry, error.message, error)
+  }
+  const { alloc, compile, memory } = compiler.instance.exports
+  const source = new TextEncoder().encode("\n".repeat(entry.line - 1) + entry.source)
+  memory.grow(Math.ceil(source.length / 65536) + 2)
+  const pointer = alloc(source.length)
+  new Uint8Array(memory.buffer, pointer, source.length).set(source)
+  reserveCompilerWorkspace(compiler.instance.exports, pointer, source.length)
+  const result = compile(pointer, source.length)
+  const record = new DataView(memory.buffer, result, 36)
+  if (record.getInt32(0, true) !== 0) {
+    fail("MATRA_COMPILE", entry, formatCompilerDiagnostic(source, memory, result, entry.document))
+  }
+  return Buffer.from(
+    new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true)),
+  ).toString("base64")
+}
+
+function componentName(entry) {
+  let syntax
+  try {
+    syntax = parse(entry.source)
+  } catch (error) {
+    fail("COMPONENT_DEFINITION", entry, error.message, error)
+  }
+  const [definition] = syntax.statements
+  if (
+    syntax.statements.length !== 1 ||
+    definition.kind !== "fn" ||
+    definition.parameters.length !== 2
+  ) {
+    fail("COMPONENT_DEFINITION", entry, "Expected exactly one top-level fn with two parameters")
+  }
+  return definition.name
+}
+
+/** @returns {Promise<import("../literate.js").MatraComponentBundle>} */
+export async function buildMatraComponent(source, options = {}) {
+  const entry = {
+    document: options?.document ?? "component.matra",
+    path: "component.matra",
+    source,
+    line: 1,
+  }
+  if (
+    options === null ||
+    typeof options !== "object" ||
+    Array.isArray(options) ||
+    Object.keys(options).some(key => key !== "document") ||
+    typeof entry.document !== "string" ||
+    !entry.document ||
+    typeof source !== "string"
+  ) {
+    fail(
+      "INVALID_OPTIONS",
+      { ...entry, document: "component.matra" },
+      "Expected Matra source and a document name",
+    )
+  }
+  const wasm = await compileMatra(entry)
+  return {
+    format: "matra-component-1",
+    abi: LITERATE_ABI,
+    name: componentName(entry),
+    entry,
+    wasm,
+  }
+}
+
 /** @returns {Promise<import("../literate.js").LiterateBundle>} */
 export async function buildLiterate(markdown, options = {}) {
   const registration = registerLiterate(markdown, options)
@@ -605,26 +681,7 @@ export async function buildLiterate(markdown, options = {}) {
     new Map([...values, ...pythonBlocks].map(block => [block.path, block])),
     python?.exports,
   )
-  let compiler
-  try {
-    compiler = await loadCompiler()
-  } catch (error) {
-    fail("COMPILER_LOAD", entry, error.message, error)
-  }
-  const { alloc, compile, memory } = compiler.instance.exports
-  const source = new TextEncoder().encode("\n".repeat(entry.line - 1) + entry.source)
-  memory.grow(Math.ceil(source.length / 65536) + 2)
-  const pointer = alloc(source.length)
-  new Uint8Array(memory.buffer, pointer, source.length).set(source)
-  reserveCompilerWorkspace(compiler.instance.exports, pointer, source.length)
-  const result = compile(pointer, source.length)
-  const record = new DataView(memory.buffer, result, 36)
-  if (record.getInt32(0, true) !== 0) {
-    fail("MATRA_COMPILE", entry, formatCompilerDiagnostic(source, memory, result, entry.document))
-  }
-  const wasm = Buffer.from(
-    new Uint8Array(memory.buffer, record.getInt32(4, true), record.getInt32(8, true)),
-  ).toString("base64")
+  const wasm = await compileMatra(entry)
   return {
     format: "matra-literate-1",
     abi: LITERATE_ABI,
@@ -866,27 +923,12 @@ function validateBundle(bundle) {
   }
 }
 
-export async function runLiterate(bundle, options = {}) {
-  validateBundle(bundle)
-  if (
-    options === null ||
-    typeof options !== "object" ||
-    Array.isArray(options) ||
-    Object.keys(options).some(key => key !== "globals" && key !== "moduleRoot") ||
-    (options.moduleRoot !== undefined &&
-      (typeof options.moduleRoot !== "string" || options.moduleRoot.length === 0)) ||
-    (options.globals !== undefined &&
-      (options.globals === null ||
-        typeof options.globals !== "object" ||
-        Array.isArray(options.globals)))
-  ) {
-    fail("INVALID_OPTIONS", bundle.entry, "Expected globals to be a plain object")
-  }
+async function loadWasm(wasm, entry) {
   let module
   try {
-    module = await WebAssembly.compile(Buffer.from(bundle.wasm, "base64"))
+    module = await WebAssembly.compile(Buffer.from(wasm, "base64"))
   } catch (error) {
-    fail("INVALID_BUNDLE", bundle.entry, "Invalid program Wasm", error)
+    fail("INVALID_BUNDLE", entry, "Invalid program Wasm", error)
   }
   const expectedImports = new Set([
     "literal",
@@ -921,8 +963,130 @@ export async function runLiterate(bundle, options = {}) {
       WebAssembly.Module.exports(module).some(item => item.name === name && item.kind === kind),
     )
   ) {
-    fail("INVALID_BUNDLE", bundle.entry, "Unsupported program ABI")
+    fail("INVALID_BUNDLE", entry, "Unsupported program ABI")
   }
+  return module
+}
+
+async function prepareComponents(components) {
+  const prepared = []
+  const names = new Set()
+  for (const component of components) {
+    const location = { document: "<component>", path: "<component>", line: 1 }
+    if (
+      component?.format !== "matra-component-1" ||
+      component.abi !== LITERATE_ABI ||
+      typeof component.name !== "string" ||
+      typeof component.entry?.document !== "string" ||
+      !component.entry.document ||
+      component.entry.path !== "component.matra" ||
+      component.entry.line !== 1 ||
+      typeof component.entry.source !== "string" ||
+      typeof component.wasm !== "string" ||
+      !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(component.wasm)
+    ) {
+      fail("INVALID_BUNDLE", location, "Invalid or unsupported component bundle")
+    }
+    const { entry, name } = component
+    if (componentName(entry) !== name) {
+      fail("INVALID_BUNDLE", entry, "Component name does not match its function definition")
+    }
+    const key = name.toLowerCase()
+    if (names.has(key)) fail("COMPONENT_COLLISION", entry, `Duplicate component name: ${name}`)
+    names.add(key)
+    prepared.push({ entry, name, module: await loadWasm(component.wasm, entry) })
+  }
+  return prepared
+}
+
+function componentFunctions(components, caller, prototypes) {
+  const functions = Object.create(null)
+  const active = []
+  for (const { entry, name, module } of components) {
+    functions[name] = (...args) => {
+      const chain = [...active, name].join(" -> ")
+      const context = `${chain}, called from ${caller.document} (${caller.path})`
+      if (active.includes(name)) {
+        fail("COMPONENT_CYCLE", entry, `Cyclic component call: ${context}`)
+      }
+      if (
+        args.length !== 2 ||
+        args[0] === null ||
+        typeof args[0] !== "object" ||
+        Array.isArray(args[0]) ||
+        !Array.isArray(args[1])
+      ) {
+        fail(
+          "COMPONENT_ARGUMENTS",
+          entry,
+          `Expected a props object and a children array: ${context}`,
+        )
+      }
+      active.push(name)
+      try {
+        const input = args.map(value =>
+          copyValue(value, { block: entry, prototypes, functions: false }),
+        )
+        const globals = Object.fromEntries(
+          Object.entries(functions).filter(([other]) => other !== name),
+        )
+        const program = instantiateMatraSync(module, { globals })
+        program.run()
+        const fn = program.getBinding(name)
+        if (typeof fn !== "function") {
+          fail("COMPONENT_DEFINITION", entry, `Component binding is not a function: ${context}`)
+        }
+        program.setBinding(name, functions[name])
+        const result = copyValue(fn(...input), { block: entry, prototypes, functions: false })
+        if (
+          result === null ||
+          typeof result !== "object" ||
+          typeof result.tag !== "string" ||
+          result.props === null ||
+          typeof result.props !== "object" ||
+          Array.isArray(result.props) ||
+          !Array.isArray(result.children)
+        ) {
+          fail("COMPONENT_RESULT", entry, `Expected one document node: ${context}`)
+        }
+        return result
+      } catch (error) {
+        if (error instanceof LiterateError && error.code === "UNSUPPORTED_VALUE") {
+          fail("COMPONENT_VALUE", entry, `${error.message}: ${context}`, error)
+        }
+        if (error instanceof LiterateError) throw error
+        fail("COMPONENT_RUNTIME", entry, `${error?.message ?? String(error)}: ${context}`, error)
+      } finally {
+        active.pop()
+      }
+    }
+  }
+  return functions
+}
+
+export async function runLiterate(bundle, options = {}) {
+  validateBundle(bundle)
+  if (
+    options === null ||
+    typeof options !== "object" ||
+    Array.isArray(options) ||
+    Object.keys(options).some(key => !["globals", "moduleRoot", "components"].includes(key)) ||
+    (options.moduleRoot !== undefined &&
+      (typeof options.moduleRoot !== "string" || options.moduleRoot.length === 0)) ||
+    (options.components !== undefined && !Array.isArray(options.components)) ||
+    (options.globals !== undefined &&
+      (options.globals === null ||
+        typeof options.globals !== "object" ||
+        Array.isArray(options.globals)))
+  ) {
+    fail(
+      "INVALID_OPTIONS",
+      bundle.entry,
+      "Expected plain-data globals, component bundles, and a module root",
+    )
+  }
+  const module = await loadWasm(bundle.wasm, bundle.entry)
+  const components = await prepareComponents(options.components ?? [])
   const context = createContext(Object.create(null), {
     codeGeneration: { strings: false, wasm: false },
   })
@@ -1023,6 +1187,18 @@ export async function runLiterate(bundle, options = {}) {
         fail("GLOBAL_COLLISION", bundle.entry, `Host global conflicts with a value module: ${name}`)
       }
       globals[name] = value
+    }
+    for (const [name, component] of Object.entries(
+      componentFunctions(components, bundle.entry, prototypes),
+    )) {
+      if (Object.hasOwn(globals, name)) {
+        fail(
+          "COMPONENT_COLLISION",
+          bundle.entry,
+          `Component conflicts with a global or value module: ${name}`,
+        )
+      }
+      globals[name] = component
     }
     try {
       const program = await instantiateMatra(module, { globals })

@@ -17,6 +17,17 @@ parserは変更しない。literate hostの設定APIとCLIは、呼び出し側�
 [文法仕様](./grammar.ja.md)と既存のcompiler sourceのbootstrap契約を維持する。
 以下の初版契約以外の未決事項は、後続段階で確定する。
 
+## サイト部品用の追加API
+
+`@matra/core/experimental/literate`の`buildMatraComponent(source, { document })`は、
+純粋なMatraソースから`matra-component-1`形式の部品bundleを生成します。
+ソースは引数2つのトップレベル関数1つだけとし、関数名を公開名にします。
+`runLiterate(bundle, { components: [...] })`で部品bundleを登録すると、その名前で同期呼び出しできます。
+部品bundleもJSON保存・復元可能で、既存の`matra-value-1` ABIを使います。
+`globals`は引き続きplain dataだけを受け付け、関数の注入は許可しません。
+部品の引数・戻り値・独立scope・循環診断は[サイト生成の部品契約](./site-generation.ja.md)に従います。
+既存bundleとAPI呼び出しは変更せず、文法とcompiler sourceの変更はありません。
+
 ## 初版の実装契約
 
 対象は一般のMatra Programのホスト連携であり、Matra文法とcompiler sourceは変更しない。

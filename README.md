@@ -159,6 +159,9 @@ Run `matra site install` to prepare dependencies declared by all executable page
 then run `matra site build` to generate routes under `dist/`. See the
 [site-generation contract](./spec/site-generation.md) for the configuration schema and limits.
 This command does not change the existing single-page `matra build` workflow.
+Set `site.components` to a directory of `.matra` files defining components such as
+`fn Card(props, children) { ... }`. Pages and layouts can reuse them with
+`Card({ title: "Heading" }, [p { "Body" }])`. Components produce ordinary HTML without FrontMatter or Shadow DOM.
 
 ### Local preview
 

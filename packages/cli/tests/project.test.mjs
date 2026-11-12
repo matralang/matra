@@ -165,11 +165,17 @@ test("site build is an explicit CLI command and does not replace single-page bui
   const root = await temporary(t)
   await mkdir(join(root, "pages"))
   await mkdir(join(root, "layouts"))
+  await mkdir(join(root, "components"))
   await writeFile(
     join(root, "matra.site.json"),
     JSON.stringify({
       version: 1,
-      site: { pages: "pages", layouts: "layouts", defaultLayout: "default" },
+      site: {
+        pages: "pages",
+        layouts: "layouts",
+        components: "components",
+        defaultLayout: "default",
+      },
     }),
   )
   await writeFile(
@@ -179,24 +185,29 @@ matra:
   entry: main.matra
 ---
 \`\`\`main.matra
-html { head {}; body { ...page.content } }
+html { head {}; body { Card({}, page.content) } }
 \`\`\`
 `,
   )
   await writeFile(join(root, "pages", "index.md"), "# Multi-page")
+  await writeFile(
+    join(root, "components", "Card.matra"),
+    "fn Card(props, children) { article.card { ...children } }",
+  )
 
   const result = invoke(root, "site", "build")
 
   assert.equal(result.status, 0, result.stderr)
   assert.match(result.stdout, /Generated 1 site file/)
   assert.match(await readFile(join(root, "dist", "index.html"), "utf8"), /<h1>Multi-page<\/h1>/)
+  assert.match(await readFile(join(root, "dist", "index.html"), "utf8"), /<article class="card">/)
   assert.match(invoke(root, "build").stderr, /index\.md/)
 })
 
 test("site install prepares only executable pages and layouts from configured directories", async t => {
   const root = await temporary(t)
   await Promise.all(
-    ["routes", "content", "shells"].map(path => mkdir(join(root, path), { recursive: true })),
+    ["routes", "content", "shells", "ui"].map(path => mkdir(join(root, path), { recursive: true })),
   )
   await writeFile(
     join(root, "matra.site.json"),
@@ -206,6 +217,7 @@ test("site install prepares only executable pages and layouts from configured di
         pages: "routes",
         documents: "content",
         layouts: "shells",
+        components: "ui",
         defaultLayout: "default",
       },
     }),
@@ -224,6 +236,10 @@ html { head {}; body {} }
   await writeFile(join(root, "routes", "about.md"), `# Ordinary Markdown\n`)
   await writeFile(join(root, "content", "shared.md"), `# Content data\n`)
   await writeFile(
+    join(root, "ui", "Card.matra"),
+    "fn Card(props, children) { article { ...children } }",
+  )
+  await writeFile(
     join(root, "shells", "default.matra.md"),
     `---
 matra:
@@ -241,7 +257,7 @@ html { head {}; body { ...page.content } }
   const output = result.stdout.replaceAll("\\", "/")
   assert.match(output, /No dependencies declared in routes\/index\.matra\.md/)
   assert.match(output, /No dependencies declared in shells\/default\.matra\.md/)
-  assert.doesNotMatch(result.stdout, /about\.md|shared\.md/)
+  assert.doesNotMatch(result.stdout, /about\.md|shared\.md|Card\.matra/)
 })
 
 test("build suggests installing dependencies when a Python lock is missing", async t => {

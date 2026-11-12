@@ -1,5 +1,10 @@
 /** 標準文法の暫定 host value ABI。制御フローは生成 Wasm が実行する。 */
 export async function instantiateMatra(bytes, { globals = {} } = {}) {
+  const module = bytes instanceof WebAssembly.Module ? bytes : await WebAssembly.compile(bytes)
+  return instantiateMatraSync(module, { globals })
+}
+
+export function instantiateMatraSync(module, { globals = {} } = {}) {
   const values = [undefined]
   const intern = value => {
     values.push(value)
@@ -37,6 +42,7 @@ export async function instantiateMatra(bytes, { globals = {} } = {}) {
     return result
   }
   let instance
+  let root
   const imports = {
     matra: {
       literal(pointer, length) {
@@ -55,6 +61,7 @@ export async function instantiateMatra(bytes, { globals = {} } = {}) {
             ? new Map()
             : new Map(Object.entries(globals).map(([name, item]) => [name, intern(item)])),
         })
+        if (!parent) root = scopes.length - 1
         return scopes.length - 1
       },
       bind(env, key, item) {
@@ -142,7 +149,15 @@ export async function instantiateMatra(bytes, { globals = {} } = {}) {
       },
     },
   }
-  const result = await WebAssembly.instantiate(bytes, imports)
-  instance = result instanceof WebAssembly.Instance ? result : result.instance
-  return { instance, run: () => value(instance.exports.run()) }
+  instance = new WebAssembly.Instance(module, imports)
+  return {
+    instance,
+    run: () => value(instance.exports.run()),
+    getBinding(name) {
+      return value(binding(root, name).bindings.get(name))
+    },
+    setBinding(name, item) {
+      binding(root, name).bindings.set(name, intern(item))
+    },
+  }
 }

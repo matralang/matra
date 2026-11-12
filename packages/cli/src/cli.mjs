@@ -25,7 +25,7 @@ deps   Install or update npm/Python packages declared by the selected document.
 install  Install both ecosystems (default document: index.md); alias of deps install.
 
 matra build executes selected JavaScript and Python in index.md.
-matra site build executes only explicitly named .matra.md pages and layouts.
+matra site build executes .matra.md pages/layouts and explicitly configured .matra components.
 matra deps install prompts before network access; npm lifecycle scripts are disabled.
 Only build trusted programs; JavaScript and Python execution has no OS sandbox or timeout.`
 

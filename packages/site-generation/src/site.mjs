@@ -13,7 +13,7 @@ import {
 } from "node:fs/promises"
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path"
 import { evaluateStatic, parse, staticValueToAST } from "@matra/core"
-import { buildLiterate, runLiterate } from "@matra/core/experimental/literate"
+import { buildLiterate, buildMatraComponent, runLiterate } from "@matra/core/experimental/literate"
 import { toHTML } from "@matra/html"
 import { load as loadYaml } from "js-yaml"
 import { markdownToNodes } from "./markdown.mjs"
@@ -30,12 +30,27 @@ export async function renderLiterateDocument(markdown, options = {}) {
   const value = await runLiterate(bundle, {
     globals: options.globals,
     moduleRoot: options.moduleRoot,
+    components: options.components,
   })
   return staticValueToAST(value)
 }
 
 export async function buildSite(directory) {
   const { root, settings, documents, layouts, pages } = await loadSite(resolve(directory))
+  settings.components = []
+  if (settings.componentsDirectory) {
+    const names = new Set()
+    for (const path of await walkFiles(settings.componentsDirectory)) {
+      if (!path.endsWith(".matra")) continue
+      const component = await buildMatraComponent(await readFile(path, "utf8"), {
+        document: relative(root, path).split(sep).join("/"),
+      })
+      const key = component.name.toLowerCase()
+      if (names.has(key)) throw new Error(`${path}: Duplicate component name: ${component.name}`)
+      names.add(key)
+      settings.components.push(component)
+    }
+  }
   const assets = settings.assetsDirectory ? await collectAssets(settings.assetsDirectory) : []
   const outputPlan = planOutput(pages, assets, settings)
   settings.routes = new Map(pages.map(page => [page.path, page.route]))
@@ -103,6 +118,7 @@ async function loadSite(root) {
     settings.pagesDirectory,
     ...settings.documentDirectories,
     settings.layoutsDirectory,
+    ...(settings.componentsDirectory ? [settings.componentsDirectory] : []),
     ...(settings.assetsDirectory ? [settings.assetsDirectory] : []),
   ]) {
     if (
@@ -117,6 +133,7 @@ async function loadSite(root) {
     assertDirectory(root, settings.pagesDirectory),
     ...settings.documentDirectories.map(path => assertDirectory(root, path)),
     assertDirectory(root, settings.layoutsDirectory, { optional: true }),
+    ...(settings.componentsDirectory ? [assertDirectory(root, settings.componentsDirectory)] : []),
     ...(settings.assetsDirectory ? [assertDirectory(root, settings.assetsDirectory)] : []),
   ])
   const documents = await collectDocuments(root, settings)
@@ -168,6 +185,7 @@ function normalizeSettings(config, root) {
       "pages",
       "documents",
       "layouts",
+      "components",
       "defaultLayout",
       "output",
       "format",
@@ -202,6 +220,10 @@ function normalizeSettings(config, root) {
     ]),
   ]
   const layoutsDirectory = resolveDirectory(site.layouts, "layouts", "layouts")
+  const componentsDirectory =
+    site.components === undefined
+      ? undefined
+      : resolveDirectory(site.components, "components", site.components)
   const outputDirectory = resolveDirectory(site.output, "output", "dist")
   const assetsDirectory =
     site.assets === undefined ? undefined : resolveDirectory(site.assets, "assets", site.assets)
@@ -226,6 +248,7 @@ function normalizeSettings(config, root) {
     pagesDirectory,
     documentDirectories,
     layoutsDirectory,
+    componentsDirectory,
     outputDirectory,
     assetsDirectory,
     defaultLayout: site.defaultLayout === undefined ? false : site.defaultLayout,
@@ -492,6 +515,7 @@ async function renderPage(page, settings) {
   const value = await runLiterate(page.bundle, {
     globals: globalsFor(page, settings, []),
     moduleRoot: settings.root,
+    components: settings.components,
   })
   return staticValueToAST(value)
 }
@@ -502,7 +526,11 @@ async function renderLayout(layout, content, page, settings) {
   }
   const pageContent = content.tag === "$root" ? content.children : [content]
   const globals = globalsFor(page, settings, pageContent)
-  const value = await runLiterate(layout.bundle, { globals, moduleRoot: settings.root })
+  const value = await runLiterate(layout.bundle, {
+    globals,
+    moduleRoot: settings.root,
+    components: settings.components,
+  })
   return staticValueToAST(value)
 }
 

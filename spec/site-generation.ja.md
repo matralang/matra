@@ -73,6 +73,61 @@ directoryをswapして公開します。出力内の予約ファイル`.matra-si
 生成・検証・公開に失敗した場合は旧出力と一覧を維持します。
 外部拡張、watch、canonical URL生成、Desktop統合、公式サイト移行は含みません。
 
+## 再利用可能なMatra部品
+
+`site.components`に部品ディレクトリを指定すると、その配下の`.matra`を部品として登録します。
+省略時は部品を収集しません。指定したディレクトリは存在する必要があり、
+ほかの入力と同じproject root内・symlink禁止・outputとの重複禁止の検証を適用します。
+部品は公開ページでもliterate文書でもなく、FrontMatterやfenceは不要です。
+`matra site install`の依存install対象にも含めません。
+
+```yaml
+version: 1
+site:
+  components: components
+  defaultLayout: default
+```
+
+部品ファイルには、引数が2つのトップレベル`fn`を1つだけ定義します。
+公開名はファイル名でなく関数名で、ディレクトリ全体で大小文字だけ異なる名前も重複として拒否します。
+以下は`components/Card.matra`の例です。
+
+```matra
+fn Card(props, children) {
+  article.card {
+    h2 { props.title }
+    ...children
+  }
+}
+```
+
+実行ページとlayoutは、既存の関数呼び出しで部品を使えます。
+
+```matra
+main {
+  Card({ title: page.data.title }, [
+    p { "本文" }
+  ])
+}
+```
+
+- 引数はpropsのplain objectとchildrenの配列の2つを必須とします。
+  childrenなしは`[]`を渡します。parameter名自体は任意です。
+- 部品は単一の文書ノードを返します。文字列・配列・nullなどの戻り値は診断にします。
+  childrenはHTML文字列へ変換せず値として複製し、HTML escapeと`basePath`は最終出力時に適用します。
+- 部品から別の登録済み部品を呼べます。直接・間接の循環呼び出しは呼び出し経路付きの診断にします。
+- 呼び出しごとに独立したスコープを作り、props・childrenを複製します。
+  呼び出し元の変数、`page`、`site`、JavaScript/Python値moduleは暗黙に参照できません。
+  必要な値はpropsで明示的に渡します。補助関数・変数は部品関数の内側で定義できます。
+- ページ・layoutの値moduleやhost globalと公開名が衝突する場合は診断にします。
+  同じscopeでのローカル宣言との衝突は既存のduplicate-binding規則に従います。
+- 構文・定義・実行エラーは元の部品ファイルを示し、実行エラーには呼び出し元文書と部品の呼び出し経路を含めます。
+  部品の失敗でも新しい出力は公開せず、旧出力とmanifestを維持します。
+
+これはsite-generationの互換拡張です。Matra Program・compiler sourceの文法、AST/data model、
+compiler ABIは変更しません。`Card(title="...") { ... }`や`<Card>`によるcomponent呼び出し、
+Shadow DOM、ブラウザの状態管理、JavaScriptからの直接ページ登録APIは本変更に含めません。
+
 ## 目的
 
 通常のサイトは宣言だけで生成し、用途固有の外部処理だけをコードで拡張できるようにします。

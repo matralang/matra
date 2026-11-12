@@ -77,6 +77,62 @@ not ignored by silently discarding the manifest. Generation, validation, or publ
 output and manifest. External extensions, watching, canonical URL generation, Desktop integration,
 and migration of the official website are not included.
 
+## Reusable Matra components
+
+Set `site.components` to a component directory to register its `.matra` files.
+Omitting it disables component collection. The directory must exist and follows the same project-root,
+no-symlink, and no-output-overlap checks as other inputs.
+Components are neither published pages nor literate documents; they need no FrontMatter or fences.
+They are not dependency-install targets for `matra site install`.
+
+```yaml
+version: 1
+site:
+  components: components
+  defaultLayout: default
+```
+
+Each component file defines exactly one top-level `fn` with two parameters.
+The function name, not the filename, is its public name. Names differing only in case are duplicates
+across the entire directory. For example, `components/Card.matra`:
+
+```matra
+fn Card(props, children) {
+  article.card {
+    h2 { props.title }
+    ...children
+  }
+}
+```
+
+Executable pages and layouts use ordinary function calls:
+
+```matra
+main {
+  Card({ title: page.data.title }, [
+    p { "Body" }
+  ])
+}
+```
+
+- Both arguments are required: a plain props object and a children array.
+  Pass `[]` for no children. Parameter names are not prescribed.
+- Components return one document node. Strings, arrays, null, and other results are diagnosed.
+  Children are cloned as values, not rendered HTML; escaping and `basePath` apply at final HTML output.
+- Components may call other registered components. Direct and indirect cycles are diagnosed with the call chain.
+- Each call gets an isolated scope and cloned props/children. Caller variables, `page`, `site`, and
+  JavaScript/Python value modules are not implicitly available. Pass required data explicitly in props.
+  Helper functions and variables may be defined inside the component function.
+- Public names conflicting with page/layout value modules or host globals are diagnosed.
+  Local declarations in the same scope follow existing duplicate-binding rules.
+- Syntax, definition, and runtime errors identify the original component file. Runtime errors also include
+  the calling document and component call chain.
+  Component failures preserve the previous output and manifest without publishing partial output.
+
+This is a compatible site-generation extension, not a change to Matra Program/compiler source grammar,
+AST/data model, or compiler ABI. Component calls using `Card(title="...") { ... }` or `<Card>`,
+Shadow DOM, browser state management, and direct JavaScript page registration are out of scope.
+
 ## Purpose
 
 Generate ordinary sites from declarations, with code extensions only for use-specific external processing.
