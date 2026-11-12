@@ -238,8 +238,9 @@ html { head {}; body { ...page.content } }
   const result = invoke(root, "site", "install", "--yes")
 
   assert.equal(result.status, 0, result.stderr)
-  assert.match(result.stdout, /No dependencies declared in routes\/index\.matra\.md/)
-  assert.match(result.stdout, /No dependencies declared in shells\/default\.matra\.md/)
+  const output = result.stdout.replaceAll("\\", "/")
+  assert.match(output, /No dependencies declared in routes\/index\.matra\.md/)
+  assert.match(output, /No dependencies declared in shells\/default\.matra\.md/)
   assert.doesNotMatch(result.stdout, /about\.md|shared\.md/)
 })
 

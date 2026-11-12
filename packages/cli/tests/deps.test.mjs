@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
 import { deflateRawSync } from "node:zlib"
@@ -74,6 +74,17 @@ async function tempRoot(t) {
 async function executable(path, source) {
   await writeFile(path, `#!${process.execPath}\n${source}\n`)
   await chmod(path, 0o755)
+}
+
+async function npmMock(bin, source) {
+  if (process.platform !== "win32") {
+    await executable(join(bin, "npm"), source)
+    return undefined
+  }
+  const npmExecPath = join(bin, "node_modules", "npm", "bin", "npm-cli.js")
+  await mkdir(dirname(npmExecPath), { recursive: true })
+  await writeFile(npmExecPath, source)
+  return npmExecPath
 }
 
 test("Python deps install resolves unpinned packages into a per-document lock", {
@@ -193,8 +204,8 @@ export * from "matra-test-package"
   await writeFile(join(root, "index.md"), source)
   const dependencyRoot = getLiterateDependencyDirectory(root, "index.md", "javascript")
   const npmLog = join(root, "npm-args.json")
-  await executable(
-    join(bin, "npm"),
+  const npmExecPath = await npmMock(
+    bin,
     `const fs=require("node:fs"); const path=require("node:path"); const args=process.argv.slice(2);
 const root=args[args.indexOf("--prefix")+1];
 fs.writeFileSync(process.env.MATRA_TEST_NPM_LOG, JSON.stringify(args));
@@ -206,7 +217,7 @@ fs.writeFileSync(path.join(root,"package-lock.json"),JSON.stringify({lockfileVer
   const result = spawnSync(process.execPath, [cli, "deps", "install", "npm", "index.md", "--yes"], {
     cwd: root,
     encoding: "utf8",
-    env: { ...process.env, PATH: bin, MATRA_TEST_NPM_LOG: npmLog },
+    env: { ...process.env, PATH: bin, npm_execpath: npmExecPath, MATRA_TEST_NPM_LOG: npmLog },
   })
   assert.equal(result.status, 0, result.stderr)
   const args = JSON.parse(await readFile(npmLog, "utf8"))
@@ -227,7 +238,7 @@ fs.writeFileSync(path.join(root,"package-lock.json"),JSON.stringify({lockfileVer
   const updated = spawnSync(process.execPath, [cli, "deps", "update", "npm", "index.md", "--yes"], {
     cwd: root,
     encoding: "utf8",
-    env: { ...process.env, PATH: bin, MATRA_TEST_NPM_LOG: npmLog },
+    env: { ...process.env, PATH: bin, npm_execpath: npmExecPath, MATRA_TEST_NPM_LOG: npmLog },
   })
   assert.equal(updated.status, 0, updated.stderr)
   assert.equal(JSON.parse(await readFile(npmLog, "utf8"))[0], "update")
@@ -237,6 +248,7 @@ fs.writeFileSync(path.join(root,"package-lock.json"),JSON.stringify({lockfileVer
     env: {
       ...process.env,
       PATH: bin,
+      npm_execpath: npmExecPath,
       MATRA_PYTHON: join(root, "missing-python"),
       MATRA_TEST_NPM_LOG: npmLog,
     },
@@ -278,8 +290,8 @@ __all__ = ["answer"]
     "sample_wheel-1.0.dist-info/WHEEL":
       "Wheel-Version: 1.0\nRoot-Is-Purelib: true\nTag: py3-none-any\n\n",
   }).toString("base64")
-  await executable(
-    join(bin, "npm"),
+  const npmExecPath = await npmMock(
+    bin,
     `const fs=require("node:fs"); const path=require("node:path");
 fs.appendFileSync(process.env.MATRA_TEST_COMMAND_LOG,"npm\\n");
 if(process.env.MATRA_TEST_FAIL==="npm"){console.error("npm test failure");process.exit(1)}
@@ -303,6 +315,7 @@ fs.writeFileSync(path.join(args[args.indexOf("--dest")+1],"sample_wheel-1.0-py3-
   const env = {
     ...process.env,
     PATH: bin,
+    npm_execpath: npmExecPath,
     MATRA_PYTHON: python,
     MATRA_TEST_COMMAND_LOG: log,
   }
@@ -319,7 +332,9 @@ fs.writeFileSync(path.join(args[args.indexOf("--dest")+1],"sample_wheel-1.0-py3-
   }
 }
 
-test("install aliases prepare both ecosystems for default and explicit documents", async t => {
+test("install aliases prepare both ecosystems for default and explicit documents", {
+  skip: process.platform === "win32" && "Uses a POSIX shebang mock for pip",
+}, async t => {
   const { root, log, source, invoke } = await combinedProject(t)
   for (const [args, document] of [
     [["install", "--yes"], "index.md"],
@@ -345,7 +360,9 @@ test("install aliases prepare both ecosystems for default and explicit documents
   assert.equal(await readFile(log, "utf8"), "npm\npython\n".repeat(4))
 })
 
-test("combined install confirms once before either command and validates the whole declaration", async t => {
+test("combined install confirms once before either command and validates the whole declaration", {
+  skip: process.platform === "win32" && "Uses a POSIX shebang mock for pip",
+}, async t => {
   const { root, log, source, invoke } = await combinedProject(t)
   const unconfirmed = invoke(["install"])
   assert.equal(unconfirmed.status, 1)
@@ -360,7 +377,9 @@ test("combined install confirms once before either command and validates the who
   await assert.rejects(readFile(log), { code: "ENOENT" })
 })
 
-test("combined install skips Python after npm failure and reports partial Python failure", async t => {
+test("combined install skips Python after npm failure and reports partial Python failure", {
+  skip: process.platform === "win32" && "Uses a POSIX shebang mock for pip",
+}, async t => {
   const { root, log, invoke } = await combinedProject(t)
   const npmFailed = invoke(["install", "--yes"], { MATRA_TEST_FAIL: "npm" })
   assert.equal(npmFailed.status, 1)
@@ -414,14 +433,14 @@ matra:
   )
   const bin = join(root, "bin")
   await mkdir(bin)
-  await executable(
-    join(bin, "npm"),
+  const npmExecPath = await npmMock(
+    bin,
     `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "ran");`,
   )
   const result = spawnSync(process.execPath, [cli, "deps", "install", "npm", "index.md"], {
     cwd: root,
     encoding: "utf8",
-    env: { ...process.env, PATH: bin },
+    env: { ...process.env, PATH: bin, npm_execpath: npmExecPath },
   })
   assert.equal(result.status, 1)
   assert.match(result.stderr, /rerun with --yes/)
