@@ -8,11 +8,30 @@ npm/Python依存関係のinstall、localの開発previewを行えます。
 
 ## インストール
 
-Node.js 22または24が必要です。
+Node.js 22または24が必要です。推奨の導入経路は別名packageの
+[`matra`](../matra)で、短い名前でこのCLIを導入できます。
+
+```sh
+npm install --global matra
+```
+
+このpackageを直接installしても同等です。
 
 ```sh
 npm install --global @matra/cli
 ```
+
+installされるcommandは常に`matra`です。uninstallにはcommand名ではなく、
+installに使ったpackage名を指定します。
+
+```sh
+npm uninstall --global matra      # 別名package経由でinstallした場合
+npm uninstall --global @matra/cli # 直接installした場合
+```
+
+installされていない名前をuninstallしても何も削除されず、errorにもならないため、
+成功したように見誤りやすい点に注意してください。installされているpackage名は
+`npm ls --global --depth=0`で確認できます。
 
 ## クイックスタート
 

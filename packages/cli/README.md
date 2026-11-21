@@ -8,11 +8,30 @@ npm/Python dependencies, and serving a local development preview.
 
 ## Installation
 
-Node.js 22 or 24 is required.
+Node.js 22 or 24 is required. The recommended entry point is the alias
+package [`matra`](../matra), which installs this CLI under the shorter name:
+
+```sh
+npm install --global matra
+```
+
+Installing this package directly is equivalent:
 
 ```sh
 npm install --global @matra/cli
 ```
+
+The installed command is always `matra`; uninstall with the package name you
+installed, not the command name:
+
+```sh
+npm uninstall --global matra      # installed via the alias package
+npm uninstall --global @matra/cli # installed directly
+```
+
+Uninstalling a name that is not installed does not remove anything and exits
+without an error, which is easy to misread as success. Check the installed
+package name with `npm ls --global --depth=0`.
 
 ## Quick start
 

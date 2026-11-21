@@ -1,0 +1,33 @@
+{
+  "name": "matra",
+  "version": "0.3.2",
+  "description": "Matra CLI alias package. Installs @matra/cli and exposes the matra command",
+  "type": "module",
+  "bin": {
+    "matra": "src/cli.mjs"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "build": "node --check src/cli.mjs",
+    "check": "pnpm run build",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@matra/cli": "workspace:^"
+  },
+  "engines": {
+    "node": "^22.0.0 || ^24.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matralang/matra.git",
+    "directory": "packages/matra"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "license": "MIT"
+}

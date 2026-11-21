@@ -52,12 +52,16 @@ An alternative npm installation path requires Node.js 22/24. Install the stable 
 at a pinned version:
 
 ```sh
-npm install --global @matra/cli@0.3.2
+npm install --global matra@0.3.2
 matra init hello
 cd hello
 matra build
 matra dev
 ```
+
+The `matra` package is an alias that installs `@matra/cli`, so uninstalling
+uses the same name: `npm uninstall --global matra`. If you installed
+`@matra/cli` directly, pass that package name to uninstall instead.
 
 See the [npm installation record](spec/build-tools-release.md#npm-installation-release-preparation).
 
