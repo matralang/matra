@@ -379,7 +379,8 @@ npm view @matra/cli@0.3.2 dist.integrity dependencies
 macOS arm64 / Node.js 24.17.0で、候補4 package（Core・HTML・site-generation・CLI）のpackと、
 registryの既公開Command `0.1.0`・Styles `0.1.0`のtarballを使った隔離prefixへのnpm global
 installが成功し、依存解決・version・init/build・部品・直接ページ登録・失敗時の出力保持・
-devのsmoke検証を通過しました。CLI関連の37 test、markdownlint、biome、
+devのsmoke検証を通過しました。CLIの37 testのうち36件が成功し、1件はskipされました。
+markdownlint、biome、
 `git diff --check`も成功しました。検証したtarballのSHA-512 integrityは次のとおりです。
 候補の修正・再pack後は再検証します。
 
@@ -393,3 +394,19 @@ sha512-InBIgSfb6kUdZ4JJlTJJ2j9Zrd77BkWAX93/Woouaa5zw/HNL6HDpzmxQCQo9fbzoKmhPGQTm
 @matra/cli@0.3.2
 sha512-fTPi/tpN1EUiKoQ31SjLSZkZLCKgPKovTXP7xYCsDZ9a0um9BNxUcIAJfHcwd6eog5cIMRBQWgpeG3GuHn7TDw==
 ```
+
+#### 正式版の公開結果
+
+2026年11月21日、利用者がCore `0.3.1`、HTML `0.3.1`、site-generation `0.1.0`、
+CLI `0.3.2`をnpmへ公開しました。候補commitは`e51e1f08321bb22fdcb283e50dfe5a75f0a1b807`です。
+[npm CLI CI](https://github.com/matralang/matra/actions/runs/44906871324)の4構成、
+[配布CI](https://github.com/matralang/matra/actions/runs/44906871375)の6対象と出典検証、
+[portable CI](https://github.com/matralang/matra/actions/runs/44906871397)が成功しました。
+
+- 4 packageの`latest`は上記の安定版を指し、Core・site-generation・CLIの`preview`は従来のままです。
+- registry上のversion・依存・integrityと、取得した4 tarballのSHA-512を確認し、
+  上記の検証済み候補のintegrityと一致しました。
+- macOS arm64 / Node.js 24.17.0 / npm 11.13.0で、registryからCLI `0.3.2`だけを
+  一時prefixへglobal installし、依存version・CoreとHTMLの解決先、version、init/build、
+  devのHTTP 200と本文を確認しました。
+- Windows実機でのregistry installと対話操作は引き続き未確認です。

@@ -396,7 +396,8 @@ On macOS arm64 / Node.js 24.17.0, the four candidate packages (Core, HTML, site-
 were packed and installed globally into an isolated prefix together with the registry tarballs of
 the published Command `0.1.0` and Styles `0.1.0`. Dependency resolution, version, init/build,
 components, direct page registration, failure-output preservation, and dev smoke checks passed.
-The 37 CLI-related tests, markdownlint, biome, and `git diff --check` also passed.
+Of the 37 CLI tests, 36 passed and one was skipped. Markdownlint, biome, and `git diff --check`
+also passed.
 The verified tarball SHA-512 integrities follow; re-verify after any candidate change and repack.
 
 ```text
@@ -409,3 +410,19 @@ sha512-InBIgSfb6kUdZ4JJlTJJ2j9Zrd77BkWAX93/Woouaa5zw/HNL6HDpzmxQCQo9fbzoKmhPGQTm
 @matra/cli@0.3.2
 sha512-fTPi/tpN1EUiKoQ31SjLSZkZLCKgPKovTXP7xYCsDZ9a0um9BNxUcIAJfHcwd6eog5cIMRBQWgpeG3GuHn7TDw==
 ```
+
+#### Stable publication result
+
+On November 21, 2026, the user published Core `0.3.1`, HTML `0.3.1`, site-generation `0.1.0`,
+and CLI `0.3.2` to npm. The candidate commit was `e51e1f08321bb22fdcb283e50dfe5a75f0a1b807`.
+The four [npm CLI CI](https://github.com/matralang/matra/actions/runs/44906871324) configurations,
+the six [distribution CI](https://github.com/matralang/matra/actions/runs/44906871375) targets and
+provenance checks, and [portable CI](https://github.com/matralang/matra/actions/runs/44906871397) passed.
+
+- `latest` points to the stable versions above; the Core, site-generation, and CLI `preview` tags remain unchanged.
+- Registry versions, dependencies, and integrities were checked, and the SHA-512 hashes of all four
+  downloaded tarballs matched the verified candidate integrities above.
+- On macOS arm64 / Node.js 24.17.0 / npm 11.13.0, CLI `0.3.2` alone was installed globally
+  from the registry into a temporary prefix. Dependency versions, Core and HTML resolution,
+  version, init/build, and dev HTTP 200 and body checks passed.
+- Registry installation and interactive operations on a physical Windows machine remain unverified.
