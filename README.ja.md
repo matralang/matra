@@ -48,16 +48,12 @@ OS・CPUに合うZIPとchecksumを取得できます。興味のある開発者�
 Node.js 22/24とnpmを使う別の導入経路もあります。安定版をversion固定で導入します。
 
 ```sh
-npm install --global matra@0.3.2
+npm install --global @matra/cli@0.3.2
 matra init hello
 cd hello
 matra build
 matra dev
 ```
-
-`matra` packageは`@matra/cli`を導入する別名packageで、uninstallも同じ名前で
-`npm uninstall --global matra`と指定できます。`@matra/cli`を直接installした
-場合は、uninstallにもpackage名`@matra/cli`を指定します。
 
 詳細と公開記録は[npm導入経路](spec/build-tools-release.ja.md#npm導入経路の公開準備)を参照してください。
 
