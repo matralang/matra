@@ -48,11 +48,11 @@ This is for interested developers, not a stable release. See the release page fo
 checksum, extraction, PATH instructions, and verification scope.
 System Node.js, pnpm, and Rust are not needed. A dedicated installer is not yet provided.
 
-An alternative npm installation path requires Node.js 22/24. Install the experimental CLI
+An alternative npm installation path requires Node.js 22/24. Install the stable CLI
 at a pinned version:
 
 ```sh
-npm install --global @matra/cli@0.3.2-alpha.1
+npm install --global @matra/cli@0.3.2
 matra init hello
 cd hello
 matra build
@@ -188,7 +188,7 @@ await generateSite({
 
 Build `pages` with `map()` over an existing data array to reuse a template across routes.
 The `source` field also accepts Matra source strings loaded with `readFile()`.
-This API is included in published preview releases Core `0.3.1-site.4`, site-generation `0.1.0-site.5`, and CLI `0.3.2-alpha.3`.
+This API is included in Core `0.3.1`, site-generation `0.1.0`, and CLI `0.3.2` or later.
 
 ### Local preview
 
@@ -235,7 +235,7 @@ npm and pnpm are not included.
 The builder targets its native OS/CPU, never cross-compiling. Targets are
 `darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`, `win32-arm64`, and `win32-x64`.
 Linux requires a glibc environment supported by official Node.js; Alpine/musl is excluded.
-Outputs are `dist/releases/matra-0.3.2-alpha.1-TARGET/`, its `.zip`, and `.zip.sha256`.
+Outputs are `dist/releases/matra-0.3.2-TARGET/`, its `.zip`, and `.zip.sha256`.
 Both the staged folder and re-extracted ZIP are relocated to paths containing spaces
 and Japanese characters and tested with an empty PATH: launch, init/build/dev, rebuild,
 shutdown, compiler, and license checks. Existing artifacts are never overwritten.
@@ -252,7 +252,7 @@ See the [distribution guide](packages/cli/distribution/README.md).
 Use the real folder, not a relocated or symlinked launcher.
 
 ```sh
-export PATH="/absolute/path/to/matra-0.3.2-alpha.1-darwin-arm64:$PATH"
+export PATH="/absolute/path/to/matra-0.3.2-darwin-arm64:$PATH"
 matra init hello
 cd hello
 matra build
@@ -262,7 +262,7 @@ matra dev
 On Windows PowerShell, add the extracted folder to PATH:
 
 ```powershell
-$env:Path = "C:\path\to\matra-0.3.2-alpha.1-win32-x64;$env:Path"
+$env:Path = "C:\path\to\matra-0.3.2-win32-x64;$env:Path"
 matra init hello
 cd hello
 matra build
@@ -270,7 +270,7 @@ matra dev
 ```
 
 Recheck an extracted folder with
-`pnpm distribution:verify dist/releases/matra-0.3.2-alpha.1-darwin-arm64`.
+`pnpm distribution:verify dist/releases/matra-0.3.2-darwin-arm64`.
 macOS may require approval for downloaded software. This development distribution
 is not signed or notarized.
 The [distribution CI](.github/workflows/distribution.yml) runs CLI tests, ZIP creation,

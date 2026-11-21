@@ -29,6 +29,7 @@ jobs:
         shell: bash
         run: |
           pnpm --filter @matra/core pack --out "$RUNNER_TEMP/core.tgz"
+          pnpm --filter @matra/html pack --out "$RUNNER_TEMP/html.tgz"
           pnpm --filter @matra/site-generation pack --out "$RUNNER_TEMP/site-generation.tgz"
           npm pack @matra/command@0.1.0 --ignore-scripts --pack-destination "$RUNNER_TEMP"
           npm pack @matra/styles@0.1.0 --ignore-scripts --pack-destination "$RUNNER_TEMP"
@@ -41,4 +42,5 @@ jobs:
             "$RUNNER_TEMP/matra-styles-0.1.0.tgz" \
             "$RUNNER_TEMP/matra-command-0.1.0.tgz" \
             "$RUNNER_TEMP/core.tgz" \
-            "$RUNNER_TEMP/site-generation.tgz"
+            "$RUNNER_TEMP/site-generation.tgz" \
+            "$RUNNER_TEMP/html.tgz"

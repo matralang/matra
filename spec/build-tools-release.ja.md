@@ -322,3 +322,74 @@ registryから取得した3 tarballの実bytesとSHA-512 integrityは、上記�
 ```sh
 npm install --global @matra/cli@0.3.2-alpha.3
 ```
+
+### 正式リリース候補 0.3.2（安定版）
+
+CLI `0.3.2`をnpmの安定版として公開する候補です。中身は公開済み`0.3.2-alpha.3`
+（候補commit `75b9713773b2b67fbd8787982a09555a4e5900bb`）と機能的に同一で、
+versionとドキュメントの更新のみを含みます。文法、compiler ABI `matra-value-1`、
+既存のファイル方式・直接ページ登録APIは変更しません。
+
+| Package | 候補version | 備考 |
+| --- | --- | --- |
+| `@matra/core` | `0.3.1` | `0.3.1-site.4`と機能同一の安定版 |
+| `@matra/html` | `0.3.1` | Core peerは`^0.3.0 \|\| ^0.3.1-site.0`を維持 |
+| `@matra/site-generation` | `0.1.0` | Core `^0.3.1`、HTML `^0.3.1`に依存 |
+| `@matra/cli` | `0.3.2` | 依存は候補versionへ固定 |
+
+Command `0.1.0`とStyles `0.1.0`は再公開しません。既公開Commandの
+Core依存`^0.3.1-site.1`は安定版`0.3.1`を受理します。site-generationのHTML依存が
+`^0.3.1`になるため、HTMLも`0.3.1`として公開します。
+[npm CLI CI](../.github/workflows/npm-cli.yml)はHTML tarballも候補としてpackし、
+隔離installへ含めるよう更新しました。
+
+公開は別途承認を得た後、Core → HTML → site-generation → CLIの順で行います。
+安定版のため`--tag preview`を付けず、既定の`latest`で公開します。
+これによりCLIの`latest`が実験版`0.3.2-alpha.0`を指す状態も是正されます。
+`preview`タグは変更しません。
+
+```sh
+pnpm --filter @matra/core publish --access public
+pnpm --filter @matra/html publish --access public
+pnpm --filter @matra/site-generation publish --access public
+pnpm --filter @matra/cli publish --access public
+npm view @matra/core@0.3.1 dist.integrity
+npm view @matra/html@0.3.1 dist.integrity peerDependencies
+npm view @matra/site-generation@0.1.0 dist.integrity dependencies
+npm view @matra/cli@0.3.2 dist.integrity dependencies
+```
+
+公開前にはcleanな候補commitを固定し、lint・関連test、npm CLI CIの4構成、
+配布CIの6対象、portable CIの成功を確認します。公開後はregistryからCLI単独を
+隔離prefixへ導入し、依存解決・version・init/build/dev・integrityを再確認します。
+
+既知の制限と範囲は次のとおりです。
+
+- Windows実機でのregistry installと対話操作は未確認のまま公開します。
+  既知の制限としてここに明記し、報告があれば調査します。
+- build-tools ZIPチャネルは引き続き未署名の実験的配布です。
+  [verify-release.mjs](../packages/cli/scripts/verify-release.mjs)のprerelease必須の
+  制約は安定版公開に合わせて撤廃しましたが、タグ一致・clean checkout・6対象の
+  検証要件は維持します。`0.3.2`のZIP Draft作成はnpm公開とは別の判断であり、
+  作成する場合も従来どおり手動承認とPre-release扱いを維持します。
+  既存のZIP・Gitタグ・websiteは変更しません。
+
+#### ローカルの準備検証
+
+macOS arm64 / Node.js 24.17.0で、候補4 package（Core・HTML・site-generation・CLI）のpackと、
+registryの既公開Command `0.1.0`・Styles `0.1.0`のtarballを使った隔離prefixへのnpm global
+installが成功し、依存解決・version・init/build・部品・直接ページ登録・失敗時の出力保持・
+devのsmoke検証を通過しました。CLI関連の37 test、markdownlint、biome、
+`git diff --check`も成功しました。検証したtarballのSHA-512 integrityは次のとおりです。
+候補の修正・再pack後は再検証します。
+
+```text
+@matra/core@0.3.1
+sha512-sjaQr1EJt84OVCHFdkl/3o5oRxZ+e7DOVzTfzW208o+ehol6PBPWrucNj4SyMLNqqh1RSxczoa6amngeciG0tw==
+@matra/html@0.3.1
+sha512-pUbM+NYUAEVJYSQxo7unupnsqFbUd7D9q+Eyg2j3xQ+ENz2sQpnRfEuv4XHUn/r2pnmhFTS7MF7eyGS18TRh8A==
+@matra/site-generation@0.1.0
+sha512-InBIgSfb6kUdZ4JJlTJJ2j9Zrd77BkWAX93/Woouaa5zw/HNL6HDpzmxQCQo9fbzoKmhPGQTmWm+IS27wIqUpA==
+@matra/cli@0.3.2
+sha512-fTPi/tpN1EUiKoQ31SjLSZkZLCKgPKovTXP7xYCsDZ9a0um9BNxUcIAJfHcwd6eog5cIMRBQWgpeG3GuHn7TDw==
+```

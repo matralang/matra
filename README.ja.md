@@ -45,10 +45,10 @@ OS・CPUに合うZIPとchecksumを取得できます。興味のある開発者�
 取得・checksum確認・展開・PATH設定の案内と検証範囲はreleaseページを参照してください。
 利用側のNode.js・pnpm・Rustは不要です。専用インストーラーは未提供です。
 
-Node.js 22/24とnpmを使う別の導入経路もあります。実験版をversion固定で導入します。
+Node.js 22/24とnpmを使う別の導入経路もあります。安定版をversion固定で導入します。
 
 ```sh
-npm install --global @matra/cli@0.3.2-alpha.1
+npm install --global @matra/cli@0.3.2
 matra init hello
 cd hello
 matra build
@@ -185,7 +185,7 @@ await generateSite({
 
 `pages`を既存のデータ配列から`map()`で作れば、同じテンプレートを複数routeで使えます。
 `source`には`readFile()`したMatraソース文字列も渡せます。
-このAPIは公開済みpreview版のCore `0.3.1-site.4`・site-generation `0.1.0-site.5`・CLI `0.3.2-alpha.3`に含まれます。
+このAPIはCore `0.3.1`・site-generation `0.1.0`・CLI `0.3.2`以降に含まれます。
 
 ### ローカルプレビュー
 
@@ -231,7 +231,7 @@ npm・pnpm自体は同梱しません。
 実行しているOS・CPU向けに作成します。cross buildは行いません。
 対象は`darwin-arm64`、`darwin-x64`、`linux-arm64`、`linux-x64`、`win32-arm64`、`win32-x64`です。
 Linuxは公式Node.jsが対応するglibc環境向けで、Alpine / muslは対象外です。
-出力は`dist/releases/matra-0.3.2-alpha.1-TARGET/`、同名の`.zip`と`.zip.sha256`です。
+出力は`dist/releases/matra-0.3.2-TARGET/`、同名の`.zip`と`.zip.sha256`です。
 作成中のフォルダーとZIPの再展開先で、日本語・空白を含むパスへの移動、PATHが空の環境での
 起動・init/build/dev・変更監視・終了、compilerとライセンスの存在を検証します。
 Windowsは`matra.cmd`によるinit/buildと同梱Node.jsによるdevを検証し、
@@ -246,7 +246,7 @@ Windowsは`matra.cmd`によるinit/buildと同梱Node.jsによるdevを検証し
 実体のフォルダーを指定し、起動コマンドだけを別の場所へ移動・symlinkしないでください。
 
 ```sh
-export PATH="/absolute/path/to/matra-0.3.2-alpha.1-darwin-arm64:$PATH"
+export PATH="/absolute/path/to/matra-0.3.2-darwin-arm64:$PATH"
 matra init hello
 cd hello
 matra build
@@ -256,14 +256,14 @@ matra dev
 Windows PowerShellでは、展開したフォルダーを次のようにPATHへ追加します。
 
 ```powershell
-$env:Path = "C:\path\to\matra-0.3.2-alpha.1-win32-x64;$env:Path"
+$env:Path = "C:\path\to\matra-0.3.2-win32-x64;$env:Path"
 matra init hello
 cd hello
 matra build
 matra dev
 ```
 
-展開済みフォルダーは`pnpm distribution:verify dist/releases/matra-0.3.2-alpha.1-darwin-arm64`
+展開済みフォルダーは`pnpm distribution:verify dist/releases/matra-0.3.2-darwin-arm64`
 で再検証できます。macOSのdownload承認が必要になる場合があります。
 開発版のため署名・公証は行っていません。
 [配布CI](.github/workflows/distribution.yml)は6つのnative runnerでCLI test・ZIP作成・再展開を行い、

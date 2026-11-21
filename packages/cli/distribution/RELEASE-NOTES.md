@@ -1,19 +1,20 @@
-# Matra build tools — experimental prerelease
+# Matra build tools 0.3.2
 
 ## 日本語
 
-興味のある開発者が試すための実験的配布です。安定版・正式サポートの宣言ではありません。
-この候補は`0.3.2-alpha.3`です。既存のZIPやタグは変更せず、署名や専用インストーラーは
-今後の改善とします。
+CLI `0.3.2`はnpmの安定版releaseです。中身は公開済み`0.3.2-alpha.3`と機能的に同一で、
+Core `0.3.1`・HTML `0.3.1`・site-generation `0.1.0`・CLI `0.3.2`を安定版として公開します。
+このZIP配布は引き続き未署名の実験的配布です。既存のZIPやタグは変更せず、
+署名や専用インストーラーは今後の改善とします。
 
 ### 今回の変更
 
+- Core・HTML・site-generation・CLIをprereleaseから安定versionへ更新しました。機能変更はありません。
 - `site.components`で指定した`.matra`の関数をページ・layout間で再利用できます。
 - `fn Card(props, children) { ... }`を定義し、`Card({ title: "見出し" }, [p { "本文" }])`で呼び出します。
-- 通常のHTMLへ展開し、Shadow DOMや新文法は導入しません。
 - `generateSite()`でJavaScriptからroute・source・layout・dataを直接登録できます。
 - ページデータのJSON化や中間Markdownなしで部品へデータを渡せます。既存のファイル方式も維持します。
-- Core `0.3.1-site.4`とsite-generation `0.1.0-site.5`を含むnpm preview版を2026年11月12日に公開しました。
+- npmからは`npm install --global @matra/cli@0.3.2`で導入できます。
 
 ### Windowsの既知のダウンロード警告
 
@@ -26,7 +27,7 @@ ZIP内のREADMEにはこの報告がありません。取得前にこのrelease�
 
 ### 試し方
 
-Node.js同梱のMatraビルドツールの試験配布です。OS・CPUに合うZIPと`.zip.sha256`を取得し、
+Node.js同梱のMatraビルドツールの配布です。OS・CPUに合うZIPと`.zip.sha256`を取得し、
 checksumを確認して展開してください。展開したフォルダーをPATHへ追加すると、
 システムのNode.js・pnpm・Rustなしで`matra init hello`、`matra build`、`matra dev`を使えます。
 手順は同梱の`README.ja.md`、正確なversionとsource commitは`versions.json`を参照してください。
@@ -40,21 +41,24 @@ checksumを確認して展開してください。展開したフォルダーを
 - 外部packageは事前の`matra install`が必要です。buildは依存を自動installしません
 - 宣言的な複数ページサイトは`matra site build`で利用可能。詳細は同梱READMEを参照
 - ZIPのbyte再現性は保証しません。checksumは破損検出用で、電子署名ではありません
+- Windows実機でのnpm registryからの導入と対話操作は未確認です
 
 ## English
 
-This `0.3.2-alpha.3` candidate is an experimental distribution, not a stable release or
-an official support guarantee. Existing ZIPs and tags remain unchanged; signing and a
-dedicated installer are future improvements.
+CLI `0.3.2` is a stable npm release. It is functionally identical to the published
+`0.3.2-alpha.3`, publishing Core `0.3.1`, HTML `0.3.1`, site-generation `0.1.0`, and
+CLI `0.3.2` as stable versions. This ZIP distribution remains an unsigned experimental
+channel. Existing ZIPs and tags are unchanged; signing and a dedicated installer are
+future improvements.
 
-### Changes in this candidate
+### Changes in this release
 
+- Core, HTML, site-generation, and CLI moved from prerelease to stable versions without functional changes.
 - Reuse functions from `.matra` files registered through `site.components` across pages and layouts.
 - Define `fn Card(props, children) { ... }` and call `Card({ title: "Heading" }, [p { "Body" }])`.
-- Components expand to ordinary HTML without Shadow DOM or new grammar.
 - `generateSite()` registers routes, sources, layouts, and data directly from JavaScript.
 - Pass data into components without JSON serialization or intermediate Markdown; file-based builds remain supported.
-- The npm preview release includes Core `0.3.1-site.4` and site-generation `0.1.0-site.5` and was published on November 12, 2026.
+- Install from npm with `npm install --global @matra/cli@0.3.2`.
 
 ### Known Windows download warning
 
@@ -67,7 +71,7 @@ The bundled README does not include this report; read the latest release page be
 
 ### Trying the tools
 
-This experimental prerelease bundles Node.js with Matra build tools.
+This distribution bundles Node.js with Matra build tools.
 Download the ZIP for your OS/CPU and its `.zip.sha256`, verify the checksum, and extract.
 Add the extracted folder to PATH to use `matra init hello`, `matra build`, and `matra dev`
 without system Node.js, pnpm, or Rust. See the bundled `README.md` for instructions
@@ -82,6 +86,7 @@ and `versions.json` for exact versions and the source commit.
 - External packages require `matra install`; builds do not install dependencies automatically
 - Declarative multi-page sites are available with `matra site build`; see the bundled README
 - ZIP byte reproducibility is not guaranteed; checksums detect corruption, not signed authenticity
+- Registry installation and interactive operations on a physical Windows machine remain unverified
 
 ## 導入例 / Getting started
 
@@ -90,15 +95,15 @@ Save the ZIP and checksum together and adjust filenames for your target.
 
 ```sh
 # macOS arm64
-shasum -a 256 -c matra-0.3.2-alpha.3-darwin-arm64.zip.sha256
+shasum -a 256 -c matra-0.3.2-darwin-arm64.zip.sha256
 # Linux x64
-sha256sum -c matra-0.3.2-alpha.3-linux-x64.zip.sha256
+sha256sum -c matra-0.3.2-linux-x64.zip.sha256
 ```
 
 Windows PowerShell（x64の例 / x64 example）：
 
 ```powershell
-$zip = "matra-0.3.2-alpha.3-win32-x64.zip"
+$zip = "matra-0.3.2-win32-x64.zip"
 $expected = ((Get-Content "$zip.sha256" -Raw) -split '\s+')[0]
 if ((Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) {
     throw "Checksum mismatch"
@@ -111,12 +116,12 @@ if ((Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected)
 
 ```sh
 # macOS arm64 example
-export PATH="/absolute/path/to/matra-0.3.2-alpha.3-darwin-arm64:$PATH"
+export PATH="/absolute/path/to/matra-0.3.2-darwin-arm64:$PATH"
 ```
 
 ```powershell
 # Windows x64 example
-$env:Path = "C:\path\to\matra-0.3.2-alpha.3-win32-x64;$env:Path"
+$env:Path = "C:\path\to\matra-0.3.2-win32-x64;$env:Path"
 ```
 
 ```sh

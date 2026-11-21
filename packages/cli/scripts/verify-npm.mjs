@@ -8,18 +8,20 @@ import { dirname, join, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { runLauncher } from "./distribution-platform.mjs"
 
-const [cliArchive, stylesArchive, commandArchive, coreArchive, siteGenerationArchive] = process.argv
-  .slice(2)
-  .map(path => (path ? resolve(path) : undefined))
+const [cliArchive, stylesArchive, commandArchive, coreArchive, siteGenerationArchive, htmlArchive] =
+  process.argv.slice(2).map(path => (path ? resolve(path) : undefined))
 if (
   !cliArchive ||
   !stylesArchive ||
   !commandArchive ||
   !coreArchive ||
   !siteGenerationArchive ||
+  !htmlArchive ||
   !process.env.npm_execpath
 ) {
-  throw new Error("Run via npm with CLI, Styles, Command, Core, and Site Generation tarball paths")
+  throw new Error(
+    "Run via npm with CLI, Styles, Command, Core, Site Generation, and HTML tarball paths",
+  )
 }
 const npm = process.env.npm_execpath
 const work = await mkdtemp(join(tmpdir(), "matra-npm-"))
@@ -77,6 +79,7 @@ try {
     commandArchive,
     coreArchive,
     siteGenerationArchive,
+    htmlArchive,
   ])
   const cli = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"))
   const core = JSON.parse(

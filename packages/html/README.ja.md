@@ -4,8 +4,8 @@
 
 ドメイン非依存なMatra ASTにHTMLのセマンティクスを与えるパッケージです。
 
-試験版`0.3.1-site.0`はCoreの`^0.3.0 || ^0.3.1-site.0`をoptional peerとして受理します。
-`^0.3.0`だけではprereleaseを受理しないため、試験版の範囲を明示しています。
+`0.3.1`はCoreの`^0.3.0 || ^0.3.1-site.0`をoptional peerとして受理します。
+`^0.3.0`だけでは`0.3.1-site.*`のprereleaseを受理しないため、範囲を維持しています。
 変更対象はpackageの互換性metadataで、HTML描画の動作は変えません。
 
 ```ts

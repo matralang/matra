@@ -338,3 +338,74 @@ Downloaded registry tarball bytes and SHA-512 integrities matched all three veri
 ```sh
 npm install --global @matra/cli@0.3.2-alpha.3
 ```
+
+### Stable release candidate 0.3.2
+
+This candidate publishes CLI `0.3.2` as a stable npm release. It is functionally identical to the
+published `0.3.2-alpha.3` (candidate commit `75b9713773b2b67fbd8787982a09555a4e5900bb`) and only
+updates versions and documentation. Grammar, the `matra-value-1` compiler ABI, file-based builds,
+and the direct page registration API are unchanged.
+
+| Package | Candidate version | Notes |
+| --- | --- | --- |
+| `@matra/core` | `0.3.1` | Stable release functionally identical to `0.3.1-site.4` |
+| `@matra/html` | `0.3.1` | Keeps the Core peer range `^0.3.0 \|\| ^0.3.1-site.0` |
+| `@matra/site-generation` | `0.1.0` | Depends on Core `^0.3.1` and HTML `^0.3.1` |
+| `@matra/cli` | `0.3.2` | Dependencies pinned to the candidate versions |
+
+Command `0.1.0` and Styles `0.1.0` are not republished. The published Command's Core dependency
+`^0.3.1-site.1` accepts the stable `0.3.1`. Because site-generation now depends on HTML `^0.3.1`,
+HTML is also published as `0.3.1`. The [npm CLI CI](../.github/workflows/npm-cli.yml) was updated
+to pack the HTML tarball as a candidate and include it in the isolated installation.
+
+Publication happens only after separate approval, in the order Core → HTML → site-generation → CLI.
+Because this is a stable release, packages are published without `--tag preview`, using the default
+`latest` tag. This also corrects CLI's `latest` currently pointing at the experimental
+`0.3.2-alpha.0`. The `preview` tags are left unchanged.
+
+```sh
+pnpm --filter @matra/core publish --access public
+pnpm --filter @matra/html publish --access public
+pnpm --filter @matra/site-generation publish --access public
+pnpm --filter @matra/cli publish --access public
+npm view @matra/core@0.3.1 dist.integrity
+npm view @matra/html@0.3.1 dist.integrity peerDependencies
+npm view @matra/site-generation@0.1.0 dist.integrity dependencies
+npm view @matra/cli@0.3.2 dist.integrity dependencies
+```
+
+Before publication, freeze a clean candidate commit and confirm lint, the related tests, the four
+npm CLI CI configurations, the six distribution CI targets, and portable CI. After publication,
+install the CLI alone from the registry into an isolated prefix and re-verify dependency
+resolution, version, init/build/dev, and integrity.
+
+Known limitations and scope:
+
+- Registry installation and interactive operations on a physical Windows machine remain unverified
+  at publication time. This is recorded here as a known limitation; reports will be investigated.
+- The build-tools ZIP channel remains an unsigned experimental distribution. The
+  prerelease-only constraint in [verify-release.mjs](../packages/cli/scripts/verify-release.mjs)
+  was lifted for the stable release, while tag match, clean checkout, and six-target verification
+  requirements remain. Creating a ZIP Draft for `0.3.2` is a separate decision from the npm
+  publication and still requires manual approval with Pre-release status.
+  Existing ZIPs, Git tags, and the website are unchanged.
+
+#### Local preparation checks
+
+On macOS arm64 / Node.js 24.17.0, the four candidate packages (Core, HTML, site-generation, CLI)
+were packed and installed globally into an isolated prefix together with the registry tarballs of
+the published Command `0.1.0` and Styles `0.1.0`. Dependency resolution, version, init/build,
+components, direct page registration, failure-output preservation, and dev smoke checks passed.
+The 37 CLI-related tests, markdownlint, biome, and `git diff --check` also passed.
+The verified tarball SHA-512 integrities follow; re-verify after any candidate change and repack.
+
+```text
+@matra/core@0.3.1
+sha512-sjaQr1EJt84OVCHFdkl/3o5oRxZ+e7DOVzTfzW208o+ehol6PBPWrucNj4SyMLNqqh1RSxczoa6amngeciG0tw==
+@matra/html@0.3.1
+sha512-pUbM+NYUAEVJYSQxo7unupnsqFbUd7D9q+Eyg2j3xQ+ENz2sQpnRfEuv4XHUn/r2pnmhFTS7MF7eyGS18TRh8A==
+@matra/site-generation@0.1.0
+sha512-InBIgSfb6kUdZ4JJlTJJ2j9Zrd77BkWAX93/Woouaa5zw/HNL6HDpzmxQCQo9fbzoKmhPGQTmWm+IS27wIqUpA==
+@matra/cli@0.3.2
+sha512-fTPi/tpN1EUiKoQ31SjLSZkZLCKgPKovTXP7xYCsDZ9a0um9BNxUcIAJfHcwd6eog5cIMRBQWgpeG3GuHn7TDw==
+```

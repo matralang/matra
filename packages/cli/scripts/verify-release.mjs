@@ -14,7 +14,7 @@ export const releaseTag = `build-tools-v${cli.version}`
 const digest = bytes => createHash("sha256").update(bytes).digest("hex")
 
 export function verifyReleaseTag() {
-  assert.match(cli.version, /^\d+\.\d+\.\d+-[0-9A-Za-z.-]+$/, "Expected a prerelease version")
+  assert.match(cli.version, /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/, "Expected a valid version")
   const git = args => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim()
   assert.equal(
     git(["rev-parse", `${releaseTag}^{commit}`]),
