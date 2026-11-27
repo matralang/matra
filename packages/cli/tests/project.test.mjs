@@ -90,6 +90,36 @@ test("CLI initializes and builds an offline page outside the checkout without ex
   assert.equal(invoke(project, "build").status, 0)
 })
 
+test("CLI embeds Matra SVG output inline in the generated HTML", async t => {
+  const root = await temporary(t)
+  const project = await initProject(join(root, "project"))
+  await writeFile(
+    join(project, "index.md"),
+    `---
+matra:
+  entry: main.matra
+---
+\`\`\`main.matra
+html {
+  head { title { "SVG example" } }
+  body {
+    svg(width=64 height=64 viewBox="0 0 64 64") {
+      circle(cx=32 cy=32 r=20 fill="tomato") {}
+    }
+  }
+}
+\`\`\`
+`,
+  )
+
+  const result = invoke(project, "build")
+  assert.equal(result.status, 0, result.stderr)
+
+  const html = await readFile(join(project, "dist", "index.html"), "utf8")
+  assert.match(html, /<svg width="64" height="64" viewBox="0 0 64 64">/)
+  assert.match(html, /<circle cx="32" cy="32" r="20" fill="tomato"><\/circle>/)
+})
+
 test("init refuses existing files, empty directories, and nonempty directories without changing them", async t => {
   const root = await temporary(t)
   await writeFile(join(root, "file"), "keep")

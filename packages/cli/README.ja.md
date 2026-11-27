@@ -34,6 +34,22 @@ matra dev
 `matra dev`は`127.0.0.1:3000`（`--port`で変更可能）でprojectを配信し、
 変更を検知して再buildします。browserをreloadすると変更を確認できます。
 
+## SVG出力
+
+Matraの出力に`svg` nodeを含めると、`matra build`は生成HTMLへinline SVGとして出力します。
+SVGの属性は明示し、`viewBox`も指定してください。
+
+```matra
+html {
+  head { title { "SVG example" } }
+  body {
+    svg(width=64 height=64 viewBox="0 0 64 64") {
+      circle(cx=32 cy=32 r=20 fill="tomato") {}
+    }
+  }
+}
+```
+
 ## コマンド
 
 ```text

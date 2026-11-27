@@ -34,6 +34,22 @@ Open the HTML directly in a browser; viewing needs no network.
 `matra dev` serves the project on `127.0.0.1:3000` (configurable with
 `--port`) and rebuilds on changes. Refresh the browser to view changes.
 
+## SVG output
+
+Include an `svg` node in Matra output and `matra build` emits it as inline SVG
+in the generated HTML. Set SVG attributes explicitly, including `viewBox`.
+
+```matra
+html {
+  head { title { "SVG example" } }
+  body {
+    svg(width=64 height=64 viewBox="0 0 64 64") {
+      circle(cx=32 cy=32 r=20 fill="tomato") {}
+    }
+  }
+}
+```
+
 ## Commands
 
 ```text
