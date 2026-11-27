@@ -408,6 +408,38 @@ not valid Python !
   assert.deepEqual(await runLiterate(bundle), expected)
 })
 
+test("Python .part values expose one matching synchronous function without __all__", async () => {
+  const source = `---
+matra:
+  entry: main.matra
+  values: [calc/add.py.part]
+---
+\`\`\`main.matra
+p { calc.add(3, 5) }
+\`\`\`
+\`\`\`calc/add.py.part
+def add(x, y):
+    return x + y
+\`\`\`
+`
+  const bundle = await buildLiterate(source)
+  assert.deepEqual(await runLiterate(bundle), { tag: "p", props: {}, children: [8] })
+
+  for (const python of [
+    "def subtract(x, y): return x - y\n",
+    "def add(x, y): return x + y\ndef helper(): return 1\n",
+    "async def add(x, y): return x + y\n",
+    '__all__ = ["add"]\ndef add(x, y): return x + y\n',
+  ]) {
+    const invalid = source.replace("def add(x, y):\n    return x + y\n", python)
+    await assert.rejects(buildLiterate(invalid), error => {
+      assert.ok(error instanceof LiterateError)
+      assert.equal(error.code, "PY_EXPORT")
+      return true
+    })
+  }
+})
+
 test("Python packages use hash-locked local pure-Python wheels without runtime network access", async () => {
   const moduleRoot = await mkdtemp(join(tmpdir(), "matra-literate-python-wheel-"))
   try {

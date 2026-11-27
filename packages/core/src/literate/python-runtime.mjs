@@ -86,6 +86,12 @@ def _matra_analyze(source, filename):
         "imports": imports,
         "exports": exports,
         "validExports": valid_exports,
+        "hasExportsDeclaration": bool(writes),
+        "functions": [
+            {"name": node.name, "async": isinstance(node, ast.AsyncFunctionDef)}
+            for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        ],
         "stdlib": sorted(sys.stdlib_module_names),
     })
 
@@ -304,11 +310,28 @@ async function createRuntime() {
 }
 
 function moduleName(block) {
-  const stem = block.path.slice(0, -".py".length)
+  const suffix = block.path.endsWith(".py.part") ? ".py.part" : ".py"
+  const stem = block.path.slice(0, -suffix.length)
   if (stem.endsWith("/__init__")) {
     return stem.slice(0, -"/__init__".length).replaceAll("/", ".")
   }
   return stem.replaceAll("/", ".")
+}
+
+function pythonPartExportName(block) {
+  const stem = block.path.slice(0, -".py.part".length)
+  const name = stem.split("/").at(-1).split(".").at(-1)
+  if (name === "__init__" || !/^[A-Za-z_]\w*$/.test(name)) {
+    throw moduleError("PY_EXPORT", block, ".py.part must end with a Python function identifier")
+  }
+  return name
+}
+
+function moduleSource(block) {
+  if (!block.path.endsWith(".py.part")) return block.source
+  const exportName = pythonPartExportName(block)
+  const source = block.source.endsWith("\n") ? block.source : `${block.source}\n`
+  return `${source}__all__ = ${JSON.stringify([exportName])}\n`
 }
 
 function packageName(block) {
@@ -599,6 +622,25 @@ function analyzeWithRuntime(pyodide, roots, candidates, packages = []) {
     if (info.error) {
       throw moduleError(info.errorCode ?? "PY_SYNTAX", block, info.error, undefined, info.line)
     }
+    if (block.path.endsWith(".py.part")) {
+      const exportName = pythonPartExportName(block)
+      if (info.hasExportsDeclaration) {
+        throw moduleError("PY_EXPORT", block, ".py.part must not declare __all__")
+      }
+      if (
+        info.functions.length !== 1 ||
+        info.functions[0].name !== exportName ||
+        info.functions[0].async
+      ) {
+        throw moduleError(
+          "PY_EXPORT",
+          block,
+          `.py.part must define exactly one synchronous top-level function named ${exportName}`,
+        )
+      }
+      info.exports = [exportName]
+      info.validExports = true
+    }
     const parsed = { ...info, stdlib }
     infos.set(block.path, parsed)
     dependencies.set(block.path, importDependencies(block, parsed, modules, packageImports))
@@ -683,7 +725,7 @@ export async function loadPythonModules(roots, dependencies, packages, moduleRoo
       const path = posixPath.join(directory, ...moduleFilePath(block).split("/"))
       const parent = path.slice(0, path.lastIndexOf("/"))
       pyodide.FS.mkdirTree(parent)
-      pyodide.FS.writeFile(path, block.source, { encoding: "utf8" })
+      pyodide.FS.writeFile(path, moduleSource(block), { encoding: "utf8" })
     }
     const wheelDirectory = `${directory}/wheels`
     pyodide.FS.mkdirTree(wheelDirectory)

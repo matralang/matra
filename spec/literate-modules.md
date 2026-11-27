@@ -7,7 +7,7 @@
 This document separates the initial implementation contract from future design proposals.
 It is not a formal grammar specification. The implemented scope is the explicit entry, `.js.part`,
 relative imports between `.js` modules fenced in the Markdown document, preinstalled npm
-dependencies, and `.py` modules executed with Pyodide.
+dependencies, and `.py` modules and `.py.part` function values executed with Pyodide.
 It supplements the [common runtime roadmap](./portable-runtime.md).
 
 The scope is loading Markdown documents containing ordinary Matra Programs, module resolution,
@@ -48,8 +48,9 @@ pnpm literate -- run ROOT OUTPUT.json
 
 The YAML FrontMatter at the start of the document specifies `matra.entry` and
 `matra.values`. The entry is one `.matra` virtual file; values are a list of
-`.js.part`, `.js`, or `.py` paths. Standard JavaScript ESM modules may expose named exports
-or a default export alone. Python modules expose names listed in `__all__`.
+`.js.part`, `.js`, `.py`, or `.py.part` paths. Standard JavaScript ESM modules may expose named exports
+or a default export alone. Python modules expose names listed in `__all__`; `.py.part` exposes one synchronous
+Python function named after the final path component.
 Only modules selected by `matra.values` are exposed to Matra.
 Fenced modules reached by relative imports are included as dependencies but are not
 exposed under Matra names unless selected separately.
@@ -81,12 +82,15 @@ the total `60`. Run regressions with `node --test crates/matra-seed/tests/litera
   explanatory. Paths use `/`; components are ASCII identifiers optionally followed by dot suffixes.
   Reject `.`, `..`, empty components, absolute paths, backslashes, and queries.
   Paths are case-sensitive, but case-only duplicates are also rejected.
-- Registration rejects duplicate paths across all named fences. `.js`, `.js.part`, and `.py` are distinct formats.
+- Registration rejects duplicate paths across all named fences. `.js`, `.js.part`, `.py`, and `.py.part` are distinct formats.
   A `.js.part` public name is its path without the suffix; named exports from `.js` map to the module path
   plus the export name; a default-only export maps to the module path without the suffix. A module cannot
   mix default and named exports. Collisions among actual public names, including parent/child names, are errors.
 - Python names from `__all__` map to the Python module path plus the export name.
-- Only `.matra` entries and `.js.part`, `.js`, or `.py` values can be selected. Other formats and `?values`
+- A `.py.part` public name is its path without the suffix. Its body must define exactly one synchronous
+  top-level function whose name matches the final path component, and must not declare `__all__`.
+  For example, `calc/add.py.part` exposes `calc.add`.
+- Only `.matra` entries and `.js.part`, `.js`, `.py`, or `.py.part` values can be selected. Other formats and `?values`
   headers are diagnosed as unsupported, never inferred from the body.
 - A `.js` fence may use static ESM imports/re-exports to relative `.js` fences in the same document.
   Specifiers must start with `./` or `../`, end in `.js`, and resolve to a registered fence.
@@ -96,7 +100,7 @@ the total `60`. Run regressions with `node --test crates/matra-seed/tests/litera
   dynamic `import()`, import attributes, top-level await, and cyclic dependencies. Imported modules
   need not also be listed in `matra.values`.
   A public root colliding with a Matra binding uses the existing duplicate-binding diagnostic.
-- A `.py` fence may import other `.py` fences in the same document and Python's standard library.
+- A `.py` or `.py.part` fence may import other Python fences in the same document and Python's standard library.
   Resolve fenced modules using Python import names (path `/` becomes `.`) and include reachable
   dependencies in the bundle. Third-party packages are listed by name in `matra.python.packages`.
   The installer resolves compatible versions and records them in
@@ -107,8 +111,9 @@ the total `60`. Run regressions with `node --test crates/matra-seed/tests/litera
   purelib files, and every declared dependency must also be locked. Build validates hashes and
   metadata without executing package code. The bundle stores wheel references and hashes, not wheel
   bytes; run rechecks hashes and installs into its fresh runtime without network access. Build/run do
-  not resolve packages through PyPI or use `micropip`. Each selected module must declare `__all__` as a literal
-  list/tuple of string export names. Reject missing/invalid exports, cycles, and dynamic imports.
+  not resolve packages through PyPI or use `micropip`. Each selected `.py` module must declare `__all__` as a literal
+  list/tuple of string export names; `.py.part` files instead expose their one matching function without `__all__`.
+  Reject missing/invalid exports, cycles, and dynamic imports.
   For example, the front matter may contain `javascript: { packages: ["lodash-es"] }` and
   `python: { packages: ["idna"] }`. The Python lock file has this shape:
 
@@ -128,6 +133,18 @@ the total `60`. Run regressions with `node --test crates/matra-seed/tests/litera
 - Python exports are limited to common data values and synchronous functions. Copy `None`, booleans,
   safe-range integers, finite floats, strings, dense lists, and string-key dictionaries at each
   boundary. Reject class instances, tuples, sets, bytes, cycles, awaitables, and async functions.
+- A `.py.part` file exposes a single synchronous function as a value. For example, this definition is
+  callable from Matra as `calc.add(3, 5)`:
+
+  ````markdown
+
+  ```calc/add.py.part
+  def add(x, y):
+      return x + y
+  ```
+
+  ````
+
 - A `.js.part` body is syntax-checked as one parenthesized JavaScript expression in strict mode.
   Object/function/arrow expressions, newlines, and JavaScript comments are accepted.
   Import/export declarations, multiple statements, and trailing semicolons are rejected without fallback.
@@ -222,9 +239,8 @@ The CLI provides `matra-literate build ROOT DOCUMENT.md OUTPUT.json` and
 `matra-literate run ROOT OUTPUT.json`.
 Standard JavaScript ESM fences in Markdown, relative imports within the same
 document, bare imports of preinstalled npm packages, and Python `.py` modules
-through Pyodide are supported experimentally. Python modules are limited to the
-standard library. Browser execution and automatic npm/Python package installation
-are outside this API's scope.
+and `.py.part` function values through Pyodide are supported experimentally.
+Browser execution and automatic npm/Python package installation are outside this API's scope.
 
 This is a documented and tested public API, but stable-API compatibility is not
 guaranteed. Provide migration instructions for changes or moves. The unpublished

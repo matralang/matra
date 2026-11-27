@@ -6,7 +6,7 @@
 
 本書は初版の実装契約と将来の設計案を区別して記述する。正式な文法仕様ではない。
 実装範囲は次節の明示入口、`.js.part`、Markdown内`.js` moduleの相対importと事前install済みnpm依存、
-およびPyodideで実行する`.py` moduleである。
+およびPyodideで実行する`.py` moduleと`.py.part`関数値である。
 [共通ランタイムのロードマップ](./portable-runtime.ja.md)を補足する。
 
 対象は、一般のMatra Programを含むMarkdown文書の読み込み、モジュール解決、
@@ -44,9 +44,10 @@ pnpm literate -- run ROOT OUTPUT.json
 ```
 
 文書先頭のYAML FrontMatterに`matra.entry`と`matra.values`を指定する。
-入口は単一の`.matra`仮想ファイル、値は`.js.part`、`.js`または`.py`のlistとする。
+入口は単一の`.matra`仮想ファイル、値は`.js.part`、`.js`、`.py`または`.py.part`のlistとする。
 `.js`は標準JavaScript ESMとして扱い、named exportまたはdefault-only exportを公開できる。
 `.py`はPython moduleとして扱い、`__all__`で列挙したexportを公開する。
+`.py.part`は単一の同期Python関数を定義する値形式で、ファイル名の末尾要素と同名の関数を公開する。
 `matra.values`で選んだmoduleのみMatraへ公開し、相対importで到達するfenceはdependencyとして含めるが、
 別途選択されない限りMatra名へ公開しない。
 `matra.values`を省略した場合は空listとし、指定しないblockは初期化・実行しない。
@@ -74,12 +75,14 @@ JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結�
   ファイル名は`/`区切り、各componentはASCIIのidentifierまたはそれにdot接尾辞を付けた形とし、
   `.`・`..`、空component、絶対パス、backslash、queryを拒否する。
   パスは大小文字を区別するが、大小文字だけ異なる重複も拒否する。
-- 全名前付きfenceの重複パスを登録時に拒否する。`.js`、`.js.part`、`.py`は別形式とする。
+- 全名前付きfenceの重複パスを登録時に拒否する。`.js`、`.js.part`、`.py`、`.py.part`は別形式とする。
   `.js.part`の公開名は接尾辞を除いたpath、`.js`のnamed exportはmodule pathにexport名を追加したpath、
   default-only exportは接尾辞を除いたmodule pathとする。同じmoduleでdefaultとnamed exportを併用しない。
   `.py`の`__all__`に列挙したexportはmodule pathにexport名を追加したpathとする。
+  `.py.part`の公開名は接尾辞を除いたpathとする。本文には、そのpathの末尾要素と同名の同期top-level `def`を
+  ちょうど1つ定義し、`__all__`は書かない。例えば`calc/add.py.part`は`calc.add`として公開する。
   実際に公開される同名・親子名は衝突エラーとする。
-- 選択した入口は`.matra`、値は`.js.part`、`.js`または`.py`のみ受理する。
+- 選択した入口は`.matra`、値は`.js.part`、`.js`、`.py`または`.py.part`のみ受理する。
   その他の形式と`?values`引数ヘッダーは未対応として診断する。本文から形式を推測しない。
 - `.js` fenceは同じ文書内の`.js` fenceへの相対static ESM import/re-exportを使える。
   import pathは`./`または`../`で始まり、`.js`で終わり、登録済みfenceへ解決しなければならない。
@@ -88,7 +91,7 @@ JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結�
   import attributes、top-level await、循環依存は拒否する。
   import対象は`matra.values`へ重ねて列挙しなくてよい。
   Matraのbindingと同名の公開rootは既存のduplicate-binding診断で拒否する。
-- `.py` fenceは同一文書内の他の`.py` fenceとPython標準ライブラリをimportできる。
+- `.py`と`.py.part` fenceは同一文書内の他のPython fenceとPython標準ライブラリをimportできる。
   文書内moduleはPythonのimport名（pathの`/`を`.`へ変換）で解決し、build時に依存をbundleへ含める。
   外部packageは`matra.python.packages`にpackage名だけを記述する。versionはinstall時に自動解決し、
   文書ごとの`.matra/deps/<document-key>/python/matra.python.lock.json`へ対応entryを記録する。
@@ -115,11 +118,24 @@ JSONをstdoutへ1行で出力する。関数などJSONで表せない文書結�
   }
   ```
 
-  選択した各moduleは`__all__`を文字列のliteral list/tupleとして宣言し、各exportをmoduleの公開名に対応させる。
-  `__all__`未指定や不正なexport、循環依存はdiagnosticにする。動的importは未対応とする。
+  選択した`.py` moduleは`__all__`を文字列のliteral list/tupleとして宣言し、各exportをmoduleの公開名に対応させる。
+  `.py.part`はファイル名に対応する同期top-level関数を1つだけ定義し、`__all__`は宣言しない。
+  不正なexport、循環依存はdiagnosticにする。動的importは未対応とする。
 - `.py`の公開値は共通data valueまたは同期関数に限る。Python整数は安全なbinary64整数範囲に制限し、
   `None`、boolean、有限float、文字列、密なlist、文字列keyのdictを境界ごとにcopyする。
   class instance、tuple、set、bytes、循環、awaitable、async functionは拒否する。
+- `.py.part`はPython moduleではなく、単一の同期関数を公開する値形式である。例えば次の定義はMatraから
+  `calc.add(3, 5)`として呼び出せる。
+
+  ````markdown
+
+  ```calc/add.py.part
+  def add(x, y):
+      return x + y
+  ```
+
+  ````
+
 - `.js.part`はstrict modeで本文全体を括弧で囲んだ単一のJavaScript式として構文検証する。
   object式、関数式、arrow、改行とJavaScript commentを受理する。
   import/export宣言、複数文、末尾semicolonを拒否する。別形式へのfallbackはない。
@@ -643,7 +659,7 @@ JavaScriptの関数宣言の巻き上げは「最初に全コードを評価す�
 ## 初版実装の確認と後続検証
 
 初版契約のNode.js向け実装は実験的に提供する。`.js.part`、標準ESMと同文書内相対import、
-事前install済みnpm依存、標準ライブラリ限定のPyodide `.py` moduleを含む。
+事前install済みnpm依存、Pyodide `.py` moduleと`.py.part`関数値を含む。
 Python buildはASTとimport依存を解析するだけで文書コードを実行せず、runごとに新しいPyodide runtimeを使う。
 これはNode.js以外のhost、一般的なsandbox、全npm/Python packageとの互換性を保証しない。
 

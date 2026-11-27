@@ -41,7 +41,14 @@ function fail(code, block, message, cause) {
   throw new LiterateError(code, block, message, cause)
 }
 
+function isPythonBlock(block) {
+  return block.path.endsWith(".py") || block.path.endsWith(".py.part")
+}
+
 function publicName(block) {
+  if (block.path.endsWith(".py.part")) {
+    return block.path.slice(0, -".py.part".length).split(/[/.]/)
+  }
   if (block.path.endsWith(".py")) {
     const stem = block.path.slice(0, -".py".length)
     const packagePath = stem.endsWith("/__init__") ? stem.slice(0, -"/__init__".length) : stem
@@ -273,7 +280,7 @@ function publicBindings(selected, blocks, pythonExports = new Map()) {
   }
   for (const block of selected) {
     const parts = publicName(block)
-    if (block.path.endsWith(".js.part")) {
+    if (block.path.endsWith(".js.part") || block.path.endsWith(".py.part")) {
       add(parts, block)
       continue
     }
@@ -494,7 +501,7 @@ function selectBlocks(
     const key = path.toLowerCase()
     if (blocks.has(key)) fail("DUPLICATE_PATH", block, `Duplicate virtual path: ${path}`)
     blocks.set(key, block)
-    if (path.endsWith(".js.part")) {
+    if (path.endsWith(".js.part") || path.endsWith(".py.part")) {
       const parts = publicName(block)
       if (parts.some(part => !/^[A-Za-z_$][\w$]*$/.test(part))) {
         fail("INVALID_PATH", block, "Public path components must be identifiers")
@@ -532,6 +539,7 @@ function selectBlocks(
   const selected = values.map(path => {
     if (typeof path === "string" && path.endsWith(".js")) return select(path, ".js")
     if (typeof path === "string" && path.endsWith(".js.part")) return select(path, ".js.part")
+    if (typeof path === "string" && path.endsWith(".py.part")) return select(path, ".py.part")
     if (typeof path === "string" && path.endsWith(".py")) return select(path, ".py")
     const block = blocks.get(typeof path === "string" ? path.toLowerCase() : "")
     if (!block)
@@ -540,7 +548,7 @@ function selectBlocks(
         { document, path: path ?? "<value>", line: 1 },
         "Virtual file not found",
       )
-    return fail("UNSUPPORTED_FORMAT", block, "Expected .js, .js.part, or .py")
+    return fail("UNSUPPORTED_FORMAT", block, "Expected .js, .js.part, .py, or .py.part")
   })
   selected.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
   for (const block of selected) {
@@ -555,7 +563,7 @@ function selectBlocks(
     modules,
     javascriptPackages,
     pythonPackages,
-    pythonBlocks: [...blocks.values()].filter(block => block.path.endsWith(".py")),
+    pythonBlocks: [...blocks.values()].filter(isPythonBlock),
   }
 }
 
@@ -672,12 +680,16 @@ export async function buildLiterate(markdown, options = {}) {
   const { entry, values, pythonBlocks, javascriptPackages, pythonPackages, ...bundleRegistration } =
     registration
   const javascriptRoots = values.filter(block => block.path.endsWith(".js"))
-  const pythonRoots = values.filter(block => block.path.endsWith(".py"))
+  const pythonRoots = values.filter(isPythonBlock)
   if (javascriptPackages.length && javascriptRoots.length === 0) {
     fail("JS_PACKAGE_ROOT", entry, "JavaScript packages require at least one selected .js module")
   }
   if (pythonPackages.length && pythonRoots.length === 0) {
-    fail("PY_PACKAGE_LOCK", entry, "Python packages require at least one selected .py module")
+    fail(
+      "PY_PACKAGE_LOCK",
+      entry,
+      "Python packages require at least one selected .py or .py.part value",
+    )
   }
   const moduleRoot = options.moduleRoot ?? process.cwd()
   if (typeof moduleRoot !== "string" || moduleRoot.length === 0) {
@@ -942,13 +954,10 @@ function validateBundle(bundle) {
     fail("INVALID_BUNDLE", location, "Bundle module dependencies do not match selected imports")
   }
   if (
-    (bundle.values.some(block => block.path.endsWith(".py")) &&
-      bundle.pythonModules === undefined) ||
-    (!bundle.values.some(block => block.path.endsWith(".py")) &&
-      (bundle.pythonModules?.length ?? 0) > 0) ||
+    (bundle.values.some(isPythonBlock) && bundle.pythonModules === undefined) ||
+    (!bundle.values.some(isPythonBlock) && (bundle.pythonModules?.length ?? 0) > 0) ||
     (bundle.pythonModules ?? []).some(
-      block =>
-        !block.path.endsWith(".py") || bundle.values.some(value => value.path === block.path),
+      block => !isPythonBlock(block) || bundle.values.some(value => value.path === block.path),
     )
   ) {
     fail("INVALID_BUNDLE", location, "Invalid Python module dependency list")
@@ -1157,7 +1166,7 @@ export async function runLiterate(bundle, options = {}) {
   )
   let pythonRuntime
   try {
-    const pythonRoots = blocks.filter(block => block.path.endsWith(".py"))
+    const pythonRoots = blocks.filter(isPythonBlock)
     if (pythonRoots.length) {
       try {
         pythonRuntime = await loadPythonModules(
@@ -1190,10 +1199,11 @@ export async function runLiterate(bundle, options = {}) {
         const parts = publicName(block)
         const values = pythonRuntime.exports.get(block.path)
         for (const [name, value] of Object.entries(values)) {
+          const publicParts = block.path.endsWith(".py.part") ? parts : [...parts, name]
           const exposed = typeof value === "function" ? pythonRuntime.wrapFunction(value) : value
           bindPublicValue(
             globals,
-            [...parts, name],
+            publicParts,
             copyValue(exposed, {
               block,
               prototypes,

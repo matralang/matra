@@ -114,7 +114,7 @@ P2は動作を維持するが新しい完成条件を増やさない対象です
 | `@matra/core` | v0.3 parser、静的取得・明示評価、文書AST、変換・走査、JSONMatra補助API。今回、文書Morphion相互変換を追加 | P0 | 文書Morphionの往復・指数検証、Moduleと文書ASTの区別、文書構築・loop・JS接続経路、現行APIで動くREADME、診断の制限を明記 | 汎用`.jsonm`、全APIで統一したsource map、厳密な型システム |
 | `@matra/html` | escaping、void element、pretty出力、base path | P0 | 完全なHTML文書、本文・属性・値のescape、JSデータからの繰り返しを検証サンプルで検証 | Web framework全体、hydration、汎用site generator |
 | literate host / `matra-seed` | Rust seed、Matra製Wasm compiler、明示入口と`.js.part`、JSON bundle、portable file API | P0 | 検証文書のbuild→実行→HTML出力、元文書の診断、bootstrapのStage 2/3 byte equalityを維持 | 標準`.js` module/npm/Pythonの直接import、standalone runtime・package manager |
-| `@matra/core/experimental/literate` | 公開サブパス・型定義、build/run、同梱compiler、`matra-literate` CLIを実装。Core `0.3.0-alpha.1`をnpm `next`で公開済み。pack検証と6構成remote CIが成功 | P0：利用者への提供経路 | Node.js向け実験的API、FrontMatter設定、compiler Wasm同梱、通常のCore入口との依存分離、同じAPIを使うCLI、checkout外で動く導入作例 | ブラウザ対応、独自の評価系、一般的なsandbox保証、独立npm packageへの分離 |
+| `@matra/core/experimental/literate` | 公開サブパス・型定義、build/run、同梱compiler、`matra-literate` CLI、Pyodide `.py` moduleと`.py.part`関数値を実装。Core `0.3.0-alpha.1`をnpm `next`で公開済み。pack検証と6構成remote CIが成功 | P0：利用者への提供経路 | Node.js向け実験的API、FrontMatter設定、compiler Wasm同梱、通常のCore入口との依存分離、同じAPIを使うCLI、checkout外で動く導入作例 | ブラウザ対応、独自の評価系、一般的なsandbox保証、独立npm packageへの分離 |
 | `@matra/math` | MathJSON変換、object形式、Content MathML MVP、Morphion型 | P1 | 文書Morphionとの役割の区別、表現境界・保持する意味・制限を説明し、対応する数式を代表例で往復検証 | MathML全体、MathML 4、全数学的同値性の判定 |
 | `@matra/math-compute-engine` | 評価・簡約・数値化、Morphion化、property評価 | P1 | 有限和・同類項・関数原子・負の整数冪・256項制限の検証。ゼロ除算などの定義域と順序の再現性を確認 | engine非依存の完全な数式処理、一般式の同値判定 |
 | `@matra/styles` | no-class CSSと少数の補助class | P0：検証経路に必要な範囲 | 生成ページとCSSを同梱し、ネットワーク不要で読める出力を確認 | 新しいdesign system、theme拡充 |
