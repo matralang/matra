@@ -81,6 +81,27 @@ to reduce site-specific build JavaScript and custom placeholders.
 They are unimplemented and unscheduled, neither v0.3 release criteria nor prerequisites for the first Desktop version.
 Preserve the configuration-free single-page CLI, Matra grammar, compiler ABI, and existing Core/HTML public APIs.
 
+### Math fences for values and functions (post-v0.3 proposal)
+
+Consider exposing mathematical values and functions to Matra from named TeX math fences
+in Markdown documents. This would extend named fences and literate integration, not
+ordinary Matra Program grammar. It is outside v0.3 release criteria and does not commit
+to changes in grammar, compiler ABI, or public APIs.
+
+Prefer declaring the public name and ordered parameters in the fence or an explicit
+declaration instead of inferring them from free TeX variables. A fence without parameters
+would expose a mathematical value; one with parameters would expose a function over the
+corresponding symbols. Parse TeX as a mathematical expression and use MathJSON as the
+boundary to the Compute Engine adapter. Preserve symbolic expressions as values, with
+numeric approximation and simplification performed only by explicit evaluation. Unsupported
+TeX, undeclared free variables, and domain errors should produce diagnostics rather than
+being guessed or replaced with implicit values.
+
+The fence extension and public-name syntax, mapping of parameters to TeX symbols, Matra API
+for mathematical values, parse/render support without Compute Engine, and diagnostic and
+evaluation timing contracts remain undecided. First define the supported mathematical
+subset instead of implying support for arbitrary TeX.
+
 ## Philosophy and completion criteria
 
 | Principle | Evidence for v0.3 |

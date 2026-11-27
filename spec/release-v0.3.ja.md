@@ -72,6 +72,22 @@ Matra Program・compiler sourceの文法、compiler ABIは変更しません。
 未実装で着手時期は未定です。v0.3のrelease条件・Desktop初版の前提には含めず、
 既存の設定なし単一ページCLI、Matra文法、compiler ABI、Core・HTML公開APIは維持します。
 
+### 数式fenceによる値・関数（v0.3後の設計案）
+
+Markdown文書の名前付きTeX数式fenceから、Matraで使える数式値と関数値を公開する案を検討します。
+これは通常のMatra Program文法ではなく、既存の名前付きfence・literate連携を拡張する候補です。
+v0.3のrelease条件には含めず、文法・compiler ABI・公開APIの変更も約束しません。
+
+名前や引数をTeXの自由変数から推測せず、公開名と順序付き引数をfenceまたは明示的な宣言で指定する方針を推奨します。
+引数のないfenceは数式値、引数のあるfenceはその引数に対応する記号を持つ関数値として扱います。
+TeXは数式表現として解析し、MathJSONをCompute Engine adapterとの境界にします。
+数式値は記号式を保持し、数値化・簡約などの評価は明示的に呼び出す形を基本案とします。
+対応できないTeX構文、未宣言の自由変数、定義域エラーを推測や暗黙の値で置き換えず、diagnosticとして扱います。
+
+fenceの拡張子・公開名の記法、引数とTeX記号の対応、数式値をMatraから呼び出すAPI、
+Compute Engineなしでのparse/表示範囲、diagnosticと評価タイミングは未決定です。
+特に、TeX全体を受理するのではなく、Compute Engineが解釈できる数式部分集合をどのように示すかを先に定めます。
+
 ## 思想と完成の判断基準
 
 | 思想 | v0.3で確認すること |
