@@ -21,6 +21,34 @@ import { compile } from "@matra/graphics"
 const output = compile(source, { pretty: true })
 ```
 
+## Data charts
+
+`lineChart()` and `scatterPlot()` create single-series charts as SVG AST nodes:
+
+```ts
+import { lineChart, toSVG } from "@matra/graphics"
+
+const points = [
+  { x: 0, y: 1 },
+  { x: 1, y: 3 },
+  { x: 2, y: 2 },
+]
+
+const chart = lineChart(points, {
+  title: "Example",
+  xLabel: "time",
+  yLabel: "value",
+})
+const output = toSVG(chart)
+```
+
+Both APIs use linear axes with five tick marks and infer each domain from the
+data with 5% padding. Provide `xDomain` and `yDomain` as `[minimum, maximum]`
+tuples to set explicit ranges; all points must fall within those ranges.
+`lineChart()` connects points in input order. The default canvas is 480×320;
+`width`, `height`, and `color` can be set in the options. `title` is shown and
+also exposed as the SVG's accessible name.
+
 ## AST and renderer API
 
 The pure JavaScript API builds the same domain-neutral AST used by Matra:

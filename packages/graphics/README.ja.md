@@ -21,6 +21,33 @@ import { compile } from "@matra/graphics"
 const output = compile(source, { pretty: true })
 ```
 
+## データグラフ
+
+`lineChart()`と`scatterPlot()`は、単一系列のグラフをSVG AST nodeとして生成します。
+
+```ts
+import { lineChart, toSVG } from "@matra/graphics"
+
+const points = [
+  { x: 0, y: 1 },
+  { x: 1, y: 3 },
+  { x: 2, y: 2 },
+]
+
+const chart = lineChart(points, {
+  title: "Example",
+  xLabel: "time",
+  yLabel: "value",
+})
+const output = toSVG(chart)
+```
+
+どちらも線形軸と5個の目盛りを使い、dataから各domainを推定して5%の余白を加えます。
+`xDomain`と`yDomain`に`[minimum, maximum]` tupleを指定すると範囲を固定できます。
+その場合、すべての点は指定範囲内に置きます。`lineChart()`は入力順に点を結びます。
+canvasの既定サイズは480×320で、`width`、`height`、`color`をoptionsで変更できます。
+`title`は表示され、SVGのaccessibility nameにも使われます。
+
 ## ASTとrenderer API
 
 純粋なJavaScript APIでも、Matraと同じdomain-neutral ASTを組み立てられます。

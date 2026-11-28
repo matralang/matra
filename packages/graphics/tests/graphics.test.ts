@@ -3,7 +3,7 @@ import { readdir, readFile } from "node:fs/promises"
 import test from "node:test"
 import { renderWith } from "@matra/core"
 import { toHTML } from "@matra/html"
-import { compile, svgNode, svgRenderer, toSVG } from "../src/index.ts"
+import { compile, lineChart, scatterPlot, svgNode, svgRenderer, toSVG } from "../src/index.ts"
 
 test("renders a Matra graphics AST as SVG", () => {
   const ast = svgNode("svg", { width: 100, height: 80 }, [
@@ -37,6 +37,104 @@ test("compiles Matra source to SVG", () => {
   const result = compile('svg(width=64 height=64) { circle(cx=32 cy=32 r=20 fill="red") {} }')
   assert.match(result, /^<svg[^>]+viewBox="0 0 64 64"/)
   assert.match(result, /<circle cx="32" cy="32" r="20" fill="red"><\/circle>/)
+})
+
+test("lineChart builds an accessible SVG plot and connects points in input order", () => {
+  const chart = lineChart(
+    [
+      { x: 0, y: 0 },
+      { x: 2, y: 4 },
+    ],
+    {
+      width: 200,
+      height: 160,
+      xDomain: [0, 2],
+      yDomain: [0, 4],
+      title: "A & B",
+      xLabel: "time",
+      yLabel: "value",
+    },
+  )
+
+  const output = toSVG(chart)
+  assert.match(output, /<title>A &amp; B<\/title>/)
+  assert.match(output, /aria-label="A &amp; B"/)
+  assert.match(output, /<text[^>]*>A &amp; B<\/text>/)
+  assert.match(output, /<polyline[^>]*points="56,108 184,32"/)
+  assert.match(output, /<text[^>]*>time<\/text>/)
+  assert.match(output, /<text[^>]*>value<\/text>/)
+})
+
+test("scatterPlot renders each point and its SVG AST embeds in HTML", () => {
+  const chart = scatterPlot(
+    [
+      { x: 1, y: 3 },
+      { x: 2, y: 5 },
+    ],
+    { pointRadius: 6 },
+  )
+  const svg = toSVG(chart)
+  assert.equal((svg.match(/<circle\b/g) ?? []).length, 2)
+  assert.equal((svg.match(/ r="6"/g) ?? []).length, 2)
+  assert.match(
+    toHTML([{ tag: "article", props: {}, children: [chart] }]),
+    /^<article><svg\b[\s\S]*<\/svg><\/article>$/,
+  )
+})
+
+test("chart APIs reject invalid point sets, domains, and dimensions", () => {
+  assert.throws(() => lineChart([{ x: 0, y: 1 }]), /at least 2 point/)
+  assert.throws(() => scatterPlot([]), /at least 1 point/)
+  assert.throws(() => scatterPlot([{ x: Number.NaN, y: 1 }]), /finite numeric x and y values/)
+  assert.throws(
+    () =>
+      lineChart(
+        [
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+        ],
+        { xDomain: [1, 1] },
+      ),
+    /finite minimum smaller than its maximum/,
+  )
+  assert.throws(
+    () =>
+      lineChart(
+        [
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+        ],
+        {
+          xDomain: [0.25, 1],
+        },
+      ),
+    /within the explicit xDomain/,
+  )
+  assert.throws(() => scatterPlot([{ x: 0, y: 0 }], { width: 72 }), /larger than the plot margins/)
+  assert.throws(
+    () => scatterPlot([{ x: 0, y: 0 }], { pointRadius: 0 }),
+    /pointRadius must be a positive finite number/,
+  )
+})
+
+test("chart tick calculation remains finite for large numeric domains", () => {
+  const chart = scatterPlot(
+    [
+      { x: -1e308, y: -1e308 },
+      { x: 5e307, y: 5e307 },
+    ],
+    {
+      xDomain: [-1e308, 5e307],
+      yDomain: [-1e308, 5e307],
+    },
+  )
+
+  assert.doesNotMatch(toSVG(chart), /NaN|Infinity/)
+})
+
+test("scatterPlot handles a single point at finite numeric extremes", () => {
+  const chart = scatterPlot([{ x: Number.MAX_VALUE, y: -Number.MAX_VALUE }])
+  assert.doesNotMatch(toSVG(chart), /NaN|Infinity/)
 })
 
 test("compiles the whitespace-separated basic artwork example", async () => {
