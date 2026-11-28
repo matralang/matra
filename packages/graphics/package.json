@@ -1,6 +1,6 @@
 {
   "name": "@matra/graphics",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "SVG renderer and vector graphics library for the Matra language.",
   "type": "module",
   "main": "dist/index.js",
@@ -39,7 +39,7 @@
     "registry": "https://registry.npmjs.org"
   },
   "peerDependencies": {
-    "@matra/core": "workspace:^"
+    "@matra/core": "^0.3.1"
   },
   "devDependencies": {
     "@matra/core": "workspace:^",

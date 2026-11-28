@@ -66,6 +66,10 @@ try {
 
   const editorManifest = JSON.parse(await readFile(join(editorDirectory, "package.json"), "utf8"))
   assert.equal(editorManifest.name, "matra-vscode")
+  const graphicsManifest = JSON.parse(
+    await readFile(join(nodeModulesDirectory, "@matra/graphics/package.json"), "utf8"),
+  )
+  assert.equal(graphicsManifest.peerDependencies["@matra/core"], "^0.3.1")
   for (const relativePath of [
     "language-configuration.json",
     "syntaxes/matra.tmLanguage.json",
@@ -82,7 +86,7 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { compile } from "@matra/graphics"
+import { compile, lineChart, scatterPlot, toSVG } from "@matra/graphics"
 import { mathJsonToContentMathML, normalizeContentMathML, parseMath, serializeContentMathML } from "@matra/math"
 import { evaluateMatra } from "@matra/math-compute-engine"
 
@@ -90,6 +94,11 @@ const svg = compile('svg(width=64 height=64) { circle(cx=32 cy=32 r=20 fill="tom
 assert.match(svg, /^<svg\\b/)
 assert.match(svg, /width="64" height="64"/)
 assert.ok(svg.includes('<circle cx="32" cy="32" r="20" fill="tomato"></circle>'))
+const line = toSVG(lineChart([{ x: 0, y: 1 }, { x: 1, y: 3 }], { title: "Trend" }))
+assert.ok(line.includes("<polyline"))
+assert.ok(line.includes('<title>Trend</title>'))
+const scatter = toSVG(scatterPlot([{ x: 1, y: 2 }, { x: 2, y: 4 }]))
+assert.equal((scatter.match(/<circle\\b/g) ?? []).length, 2)
 assert.deepEqual(parseMath("Add(1, Power(x, 2))"), ["Add", 1, ["Power", "x", 2]])
 assert.equal(evaluateMatra("Add(1, 2, 3)"), 6)
 const mathML = serializeContentMathML(mathJsonToContentMathML(parseMath("Add(1, 2)")))
