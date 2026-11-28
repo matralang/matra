@@ -5,9 +5,11 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
+import { getLiterateDependencyDirectory } from "@matra/core/experimental/literate"
 import { buildProject, initProject } from "../src/project.mjs"
 
 const cli = fileURLToPath(new URL("../src/cli.mjs", import.meta.url))
+const graphicsPackage = fileURLToPath(new URL("../../graphics", import.meta.url))
 const css = new URL(import.meta.resolve("@matra/styles/matra.css"))
 
 async function temporary(t) {
@@ -118,6 +120,69 @@ html {
   const html = await readFile(join(project, "dist", "index.html"), "utf8")
   assert.match(html, /<svg width="64" height="64" viewBox="0 0 64 64">/)
   assert.match(html, /<circle cx="32" cy="32" r="20" fill="tomato"><\/circle>/)
+})
+
+test("CLI renders a chart from @matra/graphics as inline SVG", async t => {
+  const root = await temporary(t)
+  const project = await initProject(join(root, "project"))
+  await writeFile(
+    join(project, "index.md"),
+    `---
+matra:
+  entry: main.matra
+  values: [charts.js]
+  javascript:
+    packages: ["@matra/graphics"]
+---
+\`\`\`main.matra
+html {
+  head { title { "Quarterly sales" } }
+  body {
+    main {
+      h1 { "Quarterly sales" }
+      charts.chart
+    }
+  }
+}
+\`\`\`
+\`\`\`charts.js
+import { lineChart } from "@matra/graphics"
+
+export const chart = lineChart(
+  [
+    { x: 1, y: 24 },
+    { x: 2, y: 32 },
+    { x: 3, y: 28 },
+  ],
+  {
+    width: 320,
+    height: 200,
+    title: "Quarterly sales",
+    xLabel: "Quarter",
+    yLabel: "Sales",
+  },
+)
+\`\`\`
+`,
+  )
+
+  const dependencyRoot = getLiterateDependencyDirectory(project, "index.md", "javascript")
+  const packageDirectory = join(dependencyRoot, "node_modules", "@matra")
+  await mkdir(packageDirectory, { recursive: true })
+  await symlink(
+    graphicsPackage,
+    join(packageDirectory, "graphics"),
+    process.platform === "win32" ? "junction" : "dir",
+  )
+
+  const result = invoke(project, "build")
+  assert.equal(result.status, 0, result.stderr)
+
+  const html = await readFile(join(project, "dist", "index.html"), "utf8")
+  assert.match(html, /<svg[^>]*width="320"[^>]*height="200"/)
+  assert.match(html, /<title>Quarterly sales<\/title>/)
+  assert.match(html, /<polyline[^>]*points="[^"]+"/)
+  assert.doesNotMatch(html, /&lt;svg/)
 })
 
 test("init refuses existing files, empty directories, and nonempty directories without changing them", async t => {

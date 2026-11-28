@@ -50,6 +50,52 @@ html {
 }
 ```
 
+## Charts with `@matra/graphics`
+
+Declare `@matra/graphics` as a JavaScript package, then run `matra install` before
+building. A named export from a `.js` module can be used as a Matra node, so the
+chart is emitted inline in the generated HTML.
+
+````markdown
+---
+matra:
+  entry: main.matra
+  values: [charts.js]
+  javascript:
+    packages: ["@matra/graphics"]
+---
+
+```main.matra
+html {
+  head { title { "Quarterly sales" } }
+  body {
+    main {
+      h1 { "Quarterly sales" }
+      charts.chart
+    }
+  }
+}
+```
+
+```charts.js
+import { lineChart } from "@matra/graphics"
+
+export const chart = lineChart(
+  [
+    { x: 1, y: 24 },
+    { x: 2, y: 32 },
+    { x: 3, y: 28 },
+  ],
+  { title: "Quarterly sales", xLabel: "Quarter", yLabel: "Sales" },
+)
+```
+````
+
+```sh
+matra install
+matra build
+```
+
 ## Commands
 
 ```text

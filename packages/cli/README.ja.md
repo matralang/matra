@@ -50,6 +50,51 @@ html {
 }
 ```
 
+## `@matra/graphics`でグラフを作る
+
+JavaScript packageとして`@matra/graphics`を宣言し、build前に`matra install`を実行します。
+`.js` moduleのnamed exportはMatra nodeとして使えるため、生成HTMLへinline SVGで出力されます。
+
+````markdown
+---
+matra:
+  entry: main.matra
+  values: [charts.js]
+  javascript:
+    packages: ["@matra/graphics"]
+---
+
+```main.matra
+html {
+  head { title { "四半期売上" } }
+  body {
+    main {
+      h1 { "四半期売上" }
+      charts.chart
+    }
+  }
+}
+```
+
+```charts.js
+import { lineChart } from "@matra/graphics"
+
+export const chart = lineChart(
+  [
+    { x: 1, y: 24 },
+    { x: 2, y: 32 },
+    { x: 3, y: 28 },
+  ],
+  { title: "四半期売上", xLabel: "四半期", yLabel: "売上" },
+)
+```
+````
+
+```sh
+matra install
+matra build
+```
+
 ## コマンド
 
 ```text
